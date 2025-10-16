@@ -1,4 +1,4 @@
-// Kindle Incremental Library Fetcher v2.0.0 (Combined Pass 1+2 + Manifest)
+// Amazon Book Incremental Fetcher v3.0.0 (Combined Pass 1+2 + Manifest)
 // Fetches new books and enriches them with descriptions & reviews
 // Also generates a manifest file for the organizer to track updates
 // 
@@ -6,19 +6,19 @@
 // 1. Go to https://www.amazon.com/yourbooks (must be logged in)
 // 2. Open DevTools Console (F12 → Console tab)
 // 3. Paste this ENTIRE script and press Enter
-// 4. If you have existing data, select kindle-library.json when prompted
+// 4. If you have existing data, select amazon-library.json when prompted
 //    (If no existing file, just cancel the dialog - will fetch ALL books)
 // 5. Wait for completion (~5 min first time, ~2-3 hours with enrichment)
-// 6. Downloads kindle-library.json AND kindle-manifest.json
+// 6. Downloads amazon-library.json AND amazon-manifest.json
 // 7. Upload library file to organizer!
 
 (async function() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v2.0.0';
+    const FETCHER_VERSION = 'v3.0.0';
     const SCHEMA_VERSION = '2.0';
     
     console.log('========================================');
-    console.log(`Kindle Incremental Fetcher ${FETCHER_VERSION}`);
+    console.log(`Amazon Book Incremental Fetcher ${FETCHER_VERSION}`);
     console.log(`📄 Page: ${PAGE_TITLE}`);
     console.log('Combined Pass 1 (titles) + Pass 2 (enrichment) + Manifest');
     console.log('========================================\n');
@@ -33,14 +33,14 @@
     const PAGE_SIZE = 30;
     const FETCH_DELAY_MS = 2000; // 2 seconds between library pages
     const ENRICH_DELAY_MS = 3000; // 3 seconds between enrichment requests
-    const LIBRARY_FILENAME = 'kindle-library.json';
-    const MANIFEST_FILENAME = 'kindle-manifest.json';
+    const LIBRARY_FILENAME = 'amazon-library.json';
+    const MANIFEST_FILENAME = 'amazon-manifest.json';
     const startTime = Date.now();
     
     try {
         // Step 1: Load existing data (if any)
         console.log('[1/6] Checking for existing library data...');
-        console.log('   If you have kindle-library.json, select it.');
+        console.log('   If you have amazon-library.json, select it.');
         console.log('   If this is your first run, click Cancel.\n');
         
         let existingBooks = [];
@@ -570,7 +570,7 @@
         console.log('   3. Organizer will auto-detect manifest and show status');
         console.log('   4. Click status indicator to sync if needed');
         console.log('\n💡 Next time you run this script:');
-        console.log('   - Select kindle-library.json when prompted');
+        console.log('   - Select amazon-library.json when prompted');
         console.log('   - Only NEW books will be fetched & enriched');
         console.log('   - Both files will be updated automatically');
         console.log('   - Organizer will detect the update via manifest');

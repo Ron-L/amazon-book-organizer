@@ -4,7 +4,7 @@ A web-based tool for organizing and managing your Amazon Kindle book library wit
 
 ## Features
 
-- Import and organize your Amazon Kindle library
+- Import and organize your Amazon book library
 - Advanced filtering by author, series, and reading status
 - Sort books by various criteria
 - Export organized data
@@ -25,13 +25,13 @@ A web-based tool for organizing and managing your Amazon Kindle book library wit
 
 ## Files
 
-- `amazon-organizer.html` - Main application interface (v2.5.0)
-- `console-fetcher.js` - Data fetching utility (v2.0.0)
+- `amazon-organizer.html` - Main application interface (v3.0.0)
+- `console-fetcher.js` - Data fetching utility (v3.0.0)
 - `amazon-book-organizer.code-workspace` - VS Code workspace configuration
 
 ## Version
 
-Current version: 2.5.0
+Current version: 3.0.0
 
 ## License
 

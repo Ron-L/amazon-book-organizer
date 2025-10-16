@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kindle Library Organizer v2.5.0</title>
+    <title>Amazon Book Organizer v3.0.0</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -82,11 +82,11 @@
     
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v2.5.0";
-        const STORAGE_KEY = "kindle-organizer-state";
-        const CACHE_KEY = "kindle-enriched-cache";
-        const SETTINGS_KEY = "kindle-organizer-settings";
-        const DB_NAME = "KindleLibraryDB";
+        const APP_VERSION = "v3.0.0";
+        const STORAGE_KEY = "amazon-book-organizer-state";
+        const CACHE_KEY = "amazon-book-enriched-cache";
+        const SETTINGS_KEY = "amazon-book-organizer-settings";
+        const DB_NAME = "AmazonBookDB";
         const DB_VERSION = 1;
         const BOOKS_STORE = "books";
         const MANIFEST_CHECK_INTERVAL = 60000; // 60 seconds
@@ -153,7 +153,7 @@
             console.log('✅ Cleared IndexedDB');
         };
         
-        function KindleOrganizer() {
+        function AmazonBookOrganizer() {
             const [books, setBooks] = useState([]);
             const [columns, setColumns] = useState([{ id: 'unorganized', name: 'Unorganized', books: [] }]);
             const [searchTerm, setSearchTerm] = useState('');
@@ -224,7 +224,7 @@
                 
                 try {
                     // Try to read manifest file from same directory
-                    const response = await fetch('kindle-manifest.json');
+                    const response = await fetch('amazon-manifest.json');
                     if (response.ok) {
                         const manifest = await response.json();
                         setManifestData(manifest);
@@ -556,7 +556,7 @@ Would you like to copy the ASIN now?`;
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `kindle-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `amazon-book-backup-${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     URL.revokeObjectURL(url);
                     console.log('✅ Backup created');
@@ -1222,7 +1222,7 @@ Would you like to copy the ASIN now?`;
                             <div className="flex items-center gap-3">
                                 <div>
                                     <h1 className="text-2xl font-bold text-gray-900">
-                                        Kindle Library Organizer
+                                        Amazon Book Organizer
                                         {books.length > 0 && <span className="text-lg text-gray-500 ml-2">({books.length} books)</span>}
                                     </h1>
                                     <p className="text-sm text-gray-600 mt-1">
@@ -1424,7 +1424,7 @@ Would you like to copy the ASIN now?`;
                                         <h3 className="font-semibold text-gray-900 mb-1">📚 Getting Your Books</h3>
                                         <ul className="list-disc list-inside space-y-1 ml-2">
                                             <li><strong>Run Fetcher:</strong> Go to amazon.com/yourbooks and run the Console Fetcher script</li>
-                                            <li><strong>Auto-saves:</strong> Fetcher creates kindle-library.json in your Downloads</li>
+                                            <li><strong>Auto-saves:</strong> Fetcher creates amazon-library.json in your Downloads</li>
                                             <li><strong>First Load:</strong> Click status indicator to load library</li>
                                             <li><strong>Updates:</strong> Run fetcher again, then sync when you see 🥕 Stale</li>
                                         </ul>
@@ -1919,7 +1919,7 @@ Would you like to copy the ASIN now?`;
             );
         }
 
-        ReactDOM.render(<KindleOrganizer />, document.getElementById('root'));
+        ReactDOM.render(<AmazonBookOrganizer />, document.getElementById('root'));
     </script>
 </body>
 </html>
