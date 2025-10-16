@@ -9,7 +9,7 @@
 
 ## Fetcher Improvements - High Priority
 
-- [ ] Phase 0 API Testing - Validate Amazon API before fetching (fail fast with diagnostics)
+- [ ] Phase 0 API Testing - Validate BOTH library and enrichment queries before fetching (fail fast with diagnostics)
 - [ ] Remove 30-second timeout from file selection
 - [ ] Improve "WORKING DIRECTORY" messaging throughout
 - [ ] Match opening/closing dialog terminology
@@ -18,6 +18,7 @@
 ## Features - Approved
 
 - [ ] Add title & author text under book covers (~5-8K tokens)
+- [ ] Rename "Empty (No Library Loaded)" text → "Click here to load library"
 - [ ] Custom status icons - Replace Unicode with PNG images (~3-5K tokens) - User provides
 - [ ] Multi-select with Ctrl/Shift clicking (~15-25K tokens)
 - [ ] Commit each feature separately with detailed messages
