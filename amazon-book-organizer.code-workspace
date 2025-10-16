@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": ".",
+			"name": "Amazon Book Organizer"
+		}
+	],
+	"settings": {
+		// File handling
+		"files.eol": "\n",
+		"files.insertFinalNewline": true,
+		"files.trimTrailingWhitespace": true,
+
+		// Hide large data files from explorer
+		"files.exclude": {
+			"*-library.json": true,
+			"*-manifest.json": true
+		}
+	}
+}

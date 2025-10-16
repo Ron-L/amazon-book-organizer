@@ -1,0 +1,37 @@
+# Data files (user-specific)
+*-library.json
+*-manifest.json
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Python (if needed in future)
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+ENV/
+
+# Node modules (if needed in future)
+node_modules/
+
+# Build outputs
+dist/
+build/
+output/
+
+# Temporary files
+temp/
+*.tmp
