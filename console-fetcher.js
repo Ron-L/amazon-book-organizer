@@ -1,4 +1,4 @@
-// Amazon Book Incremental Fetcher v3.0.0 (Combined Pass 1+2 + Manifest)
+// Amazon Book Incremental Fetcher v3.1.0 (Combined Pass 1+2 + Manifest)
 // Fetches new books and enriches them with descriptions & reviews
 // Also generates a manifest file for the organizer to track updates
 // 
@@ -14,7 +14,7 @@
 
 (async function() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v3.0.0';
+    const FETCHER_VERSION = 'v3.1.0';
     const SCHEMA_VERSION = '2.0';
     
     console.log('========================================');
@@ -93,7 +93,194 @@
         
         const csrfToken = csrfMeta.getAttribute('content');
         console.log(`✅ Found CSRF token: ${csrfToken.substring(0, 10)}...\n`);
-        
+
+        // Phase 0: Validate API endpoints before fetching
+        console.log('[Phase 0] Validating Amazon API endpoints...');
+        console.log('   Testing library query...');
+
+        // Test library query with minimal request (1 book)
+        const testLibraryQuery = `query ccGetCustomerLibraryBooks {
+            getCustomerLibrary {
+                books(after: "", first: 1, sortBy: {sortField: ACQUISITION_DATE, sortOrder: DESCENDING}, selectionCriteria: {tags: [], query: "NOT (222711ade9d0f22714af93d1c8afec60 OR 858f501de8e2d7ece33f768936463ac8)"}, groupBySeries: false) {
+                    pageInfo {
+                        hasNextPage
+                        endCursor
+                    }
+                    totalCount {
+                        number
+                        relation
+                    }
+                    edges {
+                        node {
+                            asin
+                            product {
+                                asin
+                                title {
+                                    displayString
+                                }
+                            }
+                        }
+                    }
+                    __typename
+                }
+            }
+        }`;
+
+        try {
+            const testLibraryResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json, text/plain, */*',
+                    'content-type': 'application/json',
+                    'anti-csrftoken-a2z': csrfToken,
+                    'x-client-id': 'your-books'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    query: testLibraryQuery,
+                    operationName: 'ccGetCustomerLibraryBooks'
+                })
+            });
+
+            if (!testLibraryResponse.ok) {
+                throw new Error(`Library API returned HTTP ${testLibraryResponse.status}`);
+            }
+
+            const testLibraryData = await testLibraryResponse.json();
+
+            if (testLibraryData.errors) {
+                throw new Error(`Library API returned errors: ${JSON.stringify(testLibraryData.errors)}`);
+            }
+
+            const testLibrary = testLibraryData?.data?.getCustomerLibrary?.books;
+
+            if (!testLibrary || !testLibrary.edges) {
+                throw new Error('Library API returned unexpected structure');
+            }
+
+            console.log(`   ✅ Library API working (found ${testLibrary.totalCount?.number || 0} books)`);
+
+        } catch (error) {
+            console.error('\n❌ LIBRARY API VALIDATION FAILED');
+            console.error('========================================');
+            console.error('The library query failed. This usually means:');
+            console.error('1. You are not logged into Amazon');
+            console.error('2. Your session has expired');
+            console.error('3. Amazon API structure has changed');
+            console.error('4. Network/firewall issues');
+            console.error('');
+            console.error('Technical details:');
+            console.error(error.message);
+            console.error('========================================\n');
+            throw error;
+        }
+
+        // Test enrichment query with a sample ASIN
+        console.log('   Testing enrichment query...');
+
+        // Get a test ASIN from the library test result
+        let testAsin = 'B000FC0U6Q'; // Default fallback ASIN
+
+        try {
+            const testLibraryResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json, text/plain, */*',
+                    'content-type': 'application/json',
+                    'anti-csrftoken-a2z': csrfToken,
+                    'x-client-id': 'your-books'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    query: testLibraryQuery,
+                    operationName: 'ccGetCustomerLibraryBooks'
+                })
+            });
+
+            const testLibraryData = await testLibraryResponse.json();
+            const firstBook = testLibraryData?.data?.getCustomerLibrary?.books?.edges?.[0];
+            if (firstBook?.node?.product?.asin) {
+                testAsin = firstBook.node.product.asin;
+            }
+        } catch {
+            // Use fallback ASIN if we can't get one from library
+        }
+
+        const testEnrichQuery = `query enrichBook {
+            getProducts(input: [{asin: "${testAsin}"}]) {
+                asin
+                description {
+                    sections(filter: {types: PRODUCT_DESCRIPTION}) {
+                        content
+                    }
+                }
+                customerReviewsSummary {
+                    count {
+                        displayString
+                    }
+                    rating {
+                        value
+                    }
+                }
+            }
+        }`;
+
+        try {
+            const testEnrichResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json, text/plain, */*',
+                    'content-type': 'application/json',
+                    'anti-csrftoken-a2z': csrfToken,
+                    'x-client-id': 'your-books'
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    query: testEnrichQuery,
+                    operationName: 'enrichBook'
+                })
+            });
+
+            if (!testEnrichResponse.ok) {
+                throw new Error(`Enrichment API returned HTTP ${testEnrichResponse.status}`);
+            }
+
+            const testEnrichData = await testEnrichResponse.json();
+
+            if (testEnrichData.errors) {
+                throw new Error(`Enrichment API returned errors: ${JSON.stringify(testEnrichData.errors)}`);
+            }
+
+            const testProduct = testEnrichData?.data?.getProducts?.[0];
+
+            if (!testProduct) {
+                throw new Error('Enrichment API returned unexpected structure');
+            }
+
+            console.log(`   ✅ Enrichment API working (tested ASIN: ${testAsin})`);
+            console.log('');
+            console.log('✅ Phase 0 complete: All API endpoints validated\n');
+
+        } catch (error) {
+            console.error('\n❌ ENRICHMENT API VALIDATION FAILED');
+            console.error('========================================');
+            console.error('The enrichment query failed. This usually means:');
+            console.error('1. Amazon API structure has changed');
+            console.error('2. The test ASIN is invalid or restricted');
+            console.error('3. Network/firewall issues');
+            console.error('4. Rate limiting (unlikely on first request)');
+            console.error('');
+            console.error('Technical details:');
+            console.error(error.message);
+            console.error('');
+            console.error('⚠️  You can continue, but enrichment may fail.');
+            console.error('   Basic book data should still work.');
+            console.error('========================================\n');
+
+            // Don't throw - allow continuation with warning
+            console.log('⚠️  Continuing without enrichment validation...\n');
+        }
+
         // Step 3: Fetch new books (Pass 1)
         console.log('[3/6] Fetching new books from library...');
         console.log('   Will stop when we reach existing books\n');
@@ -565,7 +752,8 @@
         console.log(`   - ${MANIFEST_FILENAME}`);
         console.log(`⏱️  Time: ${elapsedMinutes}m ${remainingSeconds}s`);
         console.log('\n👉 Next steps:');
-        console.log('   1. Find both files in Downloads folder');
+        console.log('   1. Find both files in your browser\'s save location');
+        console.log('      (Check your Downloads folder or last save location)');
         console.log('   2. Place them in same folder as organizer HTML');
         console.log('   3. Organizer will auto-detect manifest and show status');
         console.log('   4. Click status indicator to sync if needed');

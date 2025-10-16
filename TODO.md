@@ -6,10 +6,11 @@
 - [x] Create project documentation
 - [x] Repository setup and organization
 - [x] Project renamed from Kindle Library Organizer to Amazon Book Organizer
+- [x] Phase 0 API Testing - Validate BOTH library and enrichment queries before fetching (fail fast with diagnostics)
+- [x] Improved file save location messaging (browser's save location vs Downloads folder)
 
 ## Fetcher Improvements - High Priority
 
-- [ ] Phase 0 API Testing - Validate BOTH library and enrichment queries before fetching (fail fast with diagnostics)
 - [ ] Remove 30-second timeout from file selection
 - [ ] Improve "WORKING DIRECTORY" messaging throughout
 - [ ] Match opening/closing dialog terminology

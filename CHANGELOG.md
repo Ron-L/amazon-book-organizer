@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2025-10-16
+
+### Added
+- **Phase 0 API Validation**: Console fetcher now tests both library and enrichment APIs before fetching
+  - Validates library query (ccGetCustomerLibraryBooks) with minimal request
+  - Validates enrichment query (enrichBook) with sample ASIN from user's library
+  - Provides detailed diagnostic messages for common failure scenarios
+  - Fails fast on library API issues, warns but continues on enrichment issues
+  - Reports total book count and tested ASIN on successful validation
+
+### Changed
+- Improved file save location messaging: Changed "Downloads folder" to "browser's save location" for accuracy
+
+### Technical
+- Console fetcher version 3.1.0
+- HTML interface version 3.0.0
+
 ## [3.0.0] - 2025-10-16
 
 ### Changed
