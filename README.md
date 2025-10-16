@@ -1,6 +1,6 @@
 # Amazon Book Organizer
 
-A web-based tool for organizing and managing your Amazon Kindle book library with advanced filtering, sorting, and organization features.
+A web-based tool for organizing and managing your Amazon book library with advanced filtering, sorting, and organization features.
 
 ## Features
 
