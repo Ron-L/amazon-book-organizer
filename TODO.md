@@ -24,6 +24,7 @@
 - [x] Session continuity - Created NOTES.md for tabled items and work context
 - [x] Project version management - README.md as source of truth for git tags
 - [x] Documentation updates - README with server setup, Skills workflow, NOTES.md
+- [x] Improve column rename discoverability - Added hover pencil icon (feature was working via double-click but not obvious to users)
 
 ## Fetcher Improvements - High Priority
 
@@ -33,7 +34,6 @@
 
 ## Features - Approved
 
-- [ ] Add ability to rename existing columns (edit mode exists but no UI trigger - maybe click column name to edit?)
 - [ ] Add title & author text under book covers (~5-8K tokens)
 - [ ] Multi-select with Ctrl/Shift clicking (~15-25K tokens)
 

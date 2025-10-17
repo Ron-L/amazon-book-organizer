@@ -47,6 +47,9 @@
             z-index: 100;
             pointer-events: none;
         }
+        .editable-title-container {
+            cursor: pointer;
+        }
         .editable-title {
             cursor: pointer;
         }
@@ -55,6 +58,13 @@
             border-radius: 4px;
             padding: 2px 4px;
             margin: -2px -4px;
+        }
+        .pencil-icon {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .editable-title-container:hover .pencil-icon {
+            opacity: 1;
         }
         .column-dragging {
             opacity: 0.5;
@@ -103,7 +113,7 @@
     
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.1.0";
+        const APP_VERSION = "v3.1.1";
         document.title = `Amazon Book Organizer ${APP_VERSION}`;
         const STORAGE_KEY = "amazon-book-organizer-state";
         const CACHE_KEY = "amazon-book-enriched-cache";
@@ -1870,7 +1880,7 @@ Would you like to copy the ASIN now?`;
                                         <div className="flex items-center gap-2 flex-1">
                                             <span className="text-gray-400">⋮⋮</span>
                                             {editingColumn === column.id ? (
-                                                <input 
+                                                <input
                                                     type="text"
                                                     value={editingName}
                                                     onChange={(e) => setEditingName(e.target.value)}
@@ -1880,13 +1890,16 @@ Would you like to copy the ASIN now?`;
                                                     autoFocus
                                                 />
                                             ) : (
-                                                <h2 
-                                                    className="text-lg font-semibold text-gray-900 editable-title"
-                                                    onDoubleClick={() => startEditingColumn(column.id, column.name)}
-                                                    title="Double-click to rename"
-                                                >
-                                                    {column.name}
-                                                </h2>
+                                                <div className="flex items-center gap-1 editable-title-container">
+                                                    <h2
+                                                        className="text-lg font-semibold text-gray-900 editable-title"
+                                                        onDoubleClick={() => startEditingColumn(column.id, column.name)}
+                                                        title="Double-click to rename"
+                                                    >
+                                                        {column.name}
+                                                    </h2>
+                                                    <span className="pencil-icon text-gray-400 text-sm">✏️</span>
+                                                </div>
                                             )}
                                             <span className="text-sm text-gray-500">({filteredBooks(column.books).length})</span>
                                         </div>
