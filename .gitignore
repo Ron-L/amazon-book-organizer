@@ -35,3 +35,7 @@ output/
 # Temporary files
 temp/
 *.tmp
+
+# Claude Skills (generated files - source .md files are tracked)
+SKILL.md
+SKILL-*.zip

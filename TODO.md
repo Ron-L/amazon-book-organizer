@@ -17,6 +17,13 @@
 - [x] Fix stale status after "Clear Everything" - Clear manifestData
 - [x] Improve button labels - "Sync Now" → "Load Updated Library"
 - [x] Terminology consistency - Replace "sync" with "load" throughout UI
+- [x] Dynamic title management - Browser title updates from APP_VERSION constant
+- [x] Search bar improvements - Add magnifying glass icon and better placeholder
+- [x] Add Column UX redesign - Button creates "New Column" with cursor ready to rename
+- [x] Claude Skills infrastructure - Created SKILL-*.md files and build scripts
+- [x] Session continuity - Created NOTES.md for tabled items and work context
+- [x] Project version management - README.md as source of truth for git tags
+- [x] Documentation updates - README with server setup, Skills workflow, NOTES.md
 
 ## Fetcher Improvements - High Priority
 
@@ -26,6 +33,7 @@
 
 ## Features - Approved
 
+- [ ] Add ability to rename existing columns (edit mode exists but no UI trigger - maybe click column name to edit?)
 - [ ] Add title & author text under book covers (~5-8K tokens)
 - [ ] Multi-select with Ctrl/Shift clicking (~15-25K tokens)
 

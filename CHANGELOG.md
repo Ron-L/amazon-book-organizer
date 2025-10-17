@@ -5,6 +5,67 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2025-10-17
+
+### Added
+- **Dynamic Title Management**: Browser title now automatically updates from APP_VERSION constant
+  - Version only needs to be updated in one place (APP_VERSION at line 106)
+  - No manual title tag updates required
+- **Search Improvements**: Enhanced search bar UX
+  - Added magnifying glass icon (🔍)
+  - Improved placeholder: "Search by title or author..."
+  - Better visual hierarchy with icon spacing
+- **Add Column UX Redesign**: Simplified column creation workflow
+  - Click "Add Column" button creates "New Column" immediately
+  - Column name enters edit mode automatically with cursor ready
+  - Follows Windows File Explorer convention (like creating new folder)
+  - Removed confusing "type name + click +" pattern
+- **Claude Skills Infrastructure**: Established AI assistant development workflow
+  - Created SKILL-Development-Ground-Rules.md (global development practices)
+  - Created SKILL-Amazon-Book-Organizer.md (project-specific context)
+  - Build scripts (build-skill-*.bat) to generate Skills zip files
+  - Documentation in README for Skills management
+- **Session Continuity**: NOTES.md file for tracking tabled discussion items
+  - Maintains context across Claude sessions
+  - Tracks work in progress, tabled items, and open questions
+  - Always committed with changes for backup
+
+### Changed
+- **Project Version Management**: README.md now source of truth for git tags
+  - Individual code files can have their own internal versions
+  - Git tags match README.md project version
+  - Prevents version conflicts when updating different files
+- **Documentation Updates**: Comprehensive README improvements
+  - Added local HTTP server setup instructions (CORS requirement)
+  - Documented Claude Skills workflow and enablement process
+  - Added NOTES.md to key documents list
+  - Clarified version management strategy
+
+### Technical
+- HTML interface version 3.1.0.c
+- Feature branch: feature-ux-improvements
+- Project version tracked in README.md
+
+### Technical Notes
+
+**Dynamic Title Management**:
+- Initial concern: Version appeared in two places (title tag + APP_VERSION constant)
+- Solution: Use JavaScript to set document.title dynamically from APP_VERSION
+- Result: Single source of truth for version in code
+
+**Add Column UX**:
+- Old pattern: User types name in input field, then clicks + button
+- Problem: Not intuitive, required two-step process
+- New pattern: Click button → creates "New Column" → enters edit mode immediately
+- Implementation: Leveraged existing setEditingColumn() functionality with setTimeout
+- Removed unused newColumnName state variable
+
+**Skills Build Process**:
+- Batch files cannot be run directly by Claude due to permissions
+- Solution: Claude runs PowerShell commands directly to execute build process
+- Build scripts kept as documentation and for manual developer use
+- Skills require YAML frontmatter (name and description in lowercase-with-hyphens)
+
 ## [3.1.0] - 2025-10-16
 
 ### Added

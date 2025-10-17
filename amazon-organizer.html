@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amazon Book Organizer v3.1.0</title>
+    <title>Amazon Book Organizer</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -104,6 +104,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "v3.1.0";
+        document.title = `Amazon Book Organizer ${APP_VERSION}`;
         const STORAGE_KEY = "amazon-book-organizer-state";
         const CACHE_KEY = "amazon-book-enriched-cache";
         const SETTINGS_KEY = "amazon-book-organizer-settings";
@@ -189,7 +190,6 @@
             const [isDragging, setIsDragging] = useState(false);
             const [isDraggingColumn, setIsDraggingColumn] = useState(false);
             const [dropTarget, setDropTarget] = useState(null);
-            const [newColumnName, setNewColumnName] = useState('');
             const [dataSource, setDataSource] = useState('none');
             const [blankImageBooks, setBlankImageBooks] = useState(new Set());
             const [editingColumn, setEditingColumn] = useState(null);
@@ -863,9 +863,10 @@ Would you like to copy the ASIN now?`;
             };
 
             const addColumn = () => {
-                if (!newColumnName.trim()) return;
-                setColumns([...columns, { id: `col-${Date.now()}`, name: newColumnName, books: [] }]);
-                setNewColumnName('');
+                const newId = `col-${Date.now()}`;
+                setColumns([...columns, { id: newId, name: 'New Column', books: [] }]);
+                // Set this column to edit mode immediately
+                setTimeout(() => setEditingColumn(newId), 0);
             };
 
             const startEditingColumn = (columnId, currentName) => {
@@ -1347,13 +1348,16 @@ Would you like to copy the ASIN now?`;
                         
                         <div className="flex gap-4 items-center">
                             <div className="flex-1 relative">
-                                <input type="text" 
-                                       placeholder="Search..." 
-                                       value={searchTerm} 
-                                       onChange={(e) => setSearchTerm(e.target.value)} 
-                                       className="w-full px-4 py-2 pr-10 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                                    🔍
+                                </span>
+                                <input type="text"
+                                       placeholder="Search by title or author..."
+                                       value={searchTerm}
+                                       onChange={(e) => setSearchTerm(e.target.value)}
+                                       className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
                                 {searchTerm && (
-                                    <button 
+                                    <button
                                         onClick={() => setSearchTerm('')}
                                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xl"
                                         title="Clear search">
@@ -1361,15 +1365,9 @@ Would you like to copy the ASIN now?`;
                                     </button>
                                 )}
                             </div>
-                            <input type="text" 
-                                   placeholder="Column name..." 
-                                   value={newColumnName} 
-                                   onChange={(e) => setNewColumnName(e.target.value)} 
-                                   onKeyPress={(e) => e.key === 'Enter' && addColumn()} 
-                                   className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                            <button onClick={addColumn} 
-                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-                                ➕
+                            <button onClick={addColumn}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2">
+                                ➕ Add Column
                             </button>
                         </div>
                     </div>
