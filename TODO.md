@@ -8,21 +8,26 @@
 - [x] Project renamed from Kindle Library Organizer to Amazon Book Organizer
 - [x] Phase 0 API Testing - Validate BOTH library and enrichment queries before fetching (fail fast with diagnostics)
 - [x] Improved file save location messaging (browser's save location vs Downloads folder)
+- [x] Rename "Empty (No Library Loaded)" text → "Click here to load library"
+- [x] Custom status icons - Replace Unicode with PNG images (busy, empty, fresh, stale, question-mark)
+- [x] Fix status icon display lag - Pre-load all icons and toggle with CSS
+- [x] Grammar fix - Singular/plural for "1 new book" vs "N new books"
+- [x] Dialog behavior fix - Close immediately when file picker opens
+- [x] Fix manifest caching issue - Add cache-busting to fetch
+- [x] Fix stale status after "Clear Everything" - Clear manifestData
+- [x] Improve button labels - "Sync Now" → "Load Updated Library"
+- [x] Terminology consistency - Replace "sync" with "load" throughout UI
 
 ## Fetcher Improvements - High Priority
 
 - [ ] Remove 30-second timeout from file selection
 - [ ] Improve "WORKING DIRECTORY" messaging throughout
 - [ ] Match opening/closing dialog terminology
-- [ ] Commit: "Feat: Add API validation and improve fetcher UX"
 
 ## Features - Approved
 
 - [ ] Add title & author text under book covers (~5-8K tokens)
-- [ ] Rename "Empty (No Library Loaded)" text → "Click here to load library"
-- [ ] Custom status icons - Replace Unicode with PNG images (~3-5K tokens) - User provides
 - [ ] Multi-select with Ctrl/Shift clicking (~15-25K tokens)
-- [ ] Commit each feature separately with detailed messages
 
 ## Features - Optional/Maybe
 

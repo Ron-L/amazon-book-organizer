@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Amazon Book Organizer v3.0.0</title>
+    <title>Amazon Book Organizer v3.1.0</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -75,6 +75,27 @@
         .status-indicator:hover {
             background-color: rgba(0, 0, 0, 0.05);
         }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        .icon-spin {
+            animation: spin 1s linear infinite;
+        }
+        .icon-pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+        .status-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
     </style>
 </head>
 <body>
@@ -82,7 +103,7 @@
     
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.0.0";
+        const APP_VERSION = "v3.1.0";
         const STORAGE_KEY = "amazon-book-organizer-state";
         const CACHE_KEY = "amazon-book-enriched-cache";
         const SETTINGS_KEY = "amazon-book-organizer-settings";
@@ -181,10 +202,16 @@
             const [showAllReviews, setShowAllReviews] = useState(false);
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
-            const [syncStatus, setSyncStatus] = useState('loading'); // 'loading', 'fresh', 'stale', 'none'
+            const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
             const [manifestData, setManifestData] = useState(null);
             const [statusModalOpen, setStatusModalOpen] = useState(false);
+            const [, forceUpdate] = useState({});
+
+            // Wrapper for setSyncStatus
+            const setSyncStatus = (newStatus) => {
+                setSyncStatusInternal(newStatus);
+            };
             const [settings, setSettings] = useState({
                 cacheExpirationDays: 30
             });
@@ -223,8 +250,8 @@
                 const effectiveLastSync = lastSync !== null ? lastSync : lastSyncTime;
                 
                 try {
-                    // Try to read manifest file from same directory
-                    const response = await fetch('amazon-manifest.json');
+                    // Try to read manifest file from same directory with cache-busting
+                    const response = await fetch(`amazon-manifest.json?t=${Date.now()}`);
                     if (response.ok) {
                         const manifest = await response.json();
                         setManifestData(manifest);
@@ -232,8 +259,11 @@
                         // Compare with last sync time
                         if (effectiveLastSync) {
                             const manifestTime = new Date(manifest.lastFetched).getTime();
-                            
-                            if (manifestTime > effectiveLastSync) {
+
+                            // Check if manifest has more books than we have loaded
+                            if (manifest.totalBooks > effectiveBooksCount) {
+                                setSyncStatus('stale');
+                            } else if (manifestTime > effectiveLastSync) {
                                 setSyncStatus('stale');
                             } else {
                                 // Check if data is older than expiration days
@@ -331,9 +361,11 @@
                                 setLastSyncTime(effectiveLastSync);
                             }
                         }
-                        
-                        // Check manifest after loading - pass loaded data to avoid race condition
-                        await checkManifest(loadedBooks.length, effectiveLastSync);
+
+                        // Check manifest after loading - delay slightly to ensure React state has updated
+                        setTimeout(() => {
+                            checkManifest(loadedBooks.length, effectiveLastSync);
+                        }, 100);
                     } catch (error) {
                         console.error('Failed to load data:', error);
                         setSyncStatus('none');
@@ -346,8 +378,10 @@
             // Periodic manifest checking
             useEffect(() => {
                 if (syncStatus !== 'loading') {
-                    manifestCheckTimer.current = setInterval(checkManifest, MANIFEST_CHECK_INTERVAL);
-                    
+                    manifestCheckTimer.current = setInterval(() => {
+                        checkManifest();
+                    }, MANIFEST_CHECK_INTERVAL);
+
                     return () => {
                         if (manifestCheckTimer.current) {
                             clearInterval(manifestCheckTimer.current);
@@ -355,6 +389,7 @@
                     };
                 }
             }, [syncStatus]);
+
 
             // Auto-save organization
             useEffect(() => {
@@ -419,6 +454,9 @@ Would you like to copy the ASIN now?`;
             };
 
             const syncNow = async () => {
+                // Close the dialog immediately when file picker opens
+                setStatusModalOpen(false);
+
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = '.json';
@@ -427,10 +465,33 @@ Would you like to copy the ASIN now?`;
                     if (file) {
                         try {
                             const text = await file.text();
-                            await loadEnrichedData(text);
-                            setStatusModalOpen(false);
-                            setLastSyncTime(Date.now());
-                            setSyncStatus('fresh');
+                            const parsedData = JSON.parse(text);
+                            const syncTime = Date.now();
+                            setLastSyncTime(syncTime);
+
+                            // Show loading status while waiting
+                            setSyncStatus('loading');
+
+                            let timeoutId;
+                            let callbackFired = false;
+
+                            // Setup timeout (5 seconds)
+                            timeoutId = setTimeout(() => {
+                                if (!callbackFired) {
+                                    console.error('⚠️ Status check timed out after 5 seconds');
+                                    setSyncStatus('unknown');
+                                    alert('Library loaded but status check timed out. Please refresh the page.');
+                                }
+                            }, 5000);
+
+                            // Load data with callback
+                            await loadEnrichedData(text, () => {
+                                callbackFired = true;
+                                clearTimeout(timeoutId);
+                                // Check manifest now that books are loaded
+                                checkManifest(parsedData.length, syncTime);
+                            });
+
                         } catch (error) {
                             console.error('Failed to sync:', error);
                             alert('Failed to load library file');
@@ -609,7 +670,7 @@ Would you like to copy the ASIN now?`;
                 if (!confirm('Clear ALL data including loaded books? You will need to re-sync your library. Continue?')) {
                     return;
                 }
-                
+
                 try {
                     await clearIndexedDB();
                     localStorage.removeItem(STORAGE_KEY);
@@ -619,6 +680,7 @@ Would you like to copy the ASIN now?`;
                     setDataSource('none');
                     setBlankImageBooks(new Set());
                     setLastSyncTime(null);
+                    setManifestData(null); // Clear manifest data so next load fetches fresh
                     setSyncStatus('none');
                     console.log('✅ Cleared everything');
                 } catch (error) {
@@ -676,7 +738,7 @@ Would you like to copy the ASIN now?`;
                 setDataSource('csv');
             };
 
-            const loadEnrichedData = async (content) => {
+            const loadEnrichedData = async (content, onComplete = null) => {
                 const data = JSON.parse(content);
                 
                 const extractDescription = (descData) => {
@@ -784,6 +846,7 @@ Would you like to copy the ASIN now?`;
                             setDataSource('enriched');
                             setLastSyncTime(Date.now());
                             setSyncStatus('fresh');
+                            if (onComplete) setTimeout(onComplete, 0);
                             return;
                         }
                     }
@@ -796,6 +859,7 @@ Would you like to copy the ASIN now?`;
                 setDataSource('enriched');
                 setLastSyncTime(Date.now());
                 setSyncStatus('fresh');
+                if (onComplete) setTimeout(onComplete, 0);
             };
 
             const addColumn = () => {
@@ -1183,34 +1247,49 @@ Would you like to copy the ASIN now?`;
             };
 
             const renderStatusIndicator = () => {
-                if (syncStatus === 'loading') {
-                    return <span className="text-sm text-gray-500">⏳ Loading...</span>;
-                }
-                
-                if (syncStatus === 'none') {
-                    return (
-                        <span className="status-indicator text-sm text-gray-500" onClick={() => setStatusModalOpen(true)}>
-                            ⚪ No library loaded
-                        </span>
-                    );
-                }
-                
-                if (syncStatus === 'fresh') {
-                    return (
-                        <span className="status-indicator text-sm text-green-700" onClick={() => setStatusModalOpen(true)}>
-                            🥬 Fresh {lastSyncTime && `(${getRelativeTime(lastSyncTime)})`}
-                        </span>
-                    );
-                }
-                
-                if (syncStatus === 'stale') {
-                    const newBooksCount = manifestData?.totalBooks - books.length;
-                    return (
-                        <span className="status-indicator text-sm text-orange-600" onClick={() => setStatusModalOpen(true)}>
-                            🥕 Stale {newBooksCount > 0 && `(${newBooksCount} new books)`}
-                        </span>
-                    );
-                }
+                const newBooksCount = manifestData?.totalBooks - books.length;
+                const bookWord = newBooksCount === 1 ? 'book' : 'books';
+
+                // Pre-load ALL icons and show/hide with CSS - no src changes, instant display
+                const iconStyle = (isVisible) => ({
+                    width: '16px',
+                    height: '16px',
+                    marginRight: '4px',
+                    verticalAlign: 'middle',
+                    display: isVisible ? 'inline-block' : 'none'
+                });
+
+                const statusText = {
+                    loading: 'Loading...',
+                    none: 'Click here to load library',
+                    fresh: `Fresh ${lastSyncTime ? `(${getRelativeTime(lastSyncTime)})` : ''}`,
+                    stale: `Stale ${newBooksCount > 0 ? `(${newBooksCount} new ${bookWord})` : ''}`,
+                    unknown: 'Unknown status - Please refresh'
+                };
+
+                const textClass = {
+                    loading: 'text-gray-500',
+                    none: 'text-gray-500',
+                    fresh: 'text-green-700',
+                    stale: 'text-orange-600',
+                    unknown: 'text-red-600'
+                };
+
+                const isClickable = syncStatus !== 'loading';
+
+                return (
+                    <span
+                        className={`text-sm ${textClass[syncStatus]} ${isClickable ? 'status-indicator' : ''}`}
+                        onClick={isClickable ? () => setStatusModalOpen(true) : undefined}
+                    >
+                        <img src="images/busy.png" alt="Loading" style={iconStyle(syncStatus === 'loading')} className={syncStatus === 'loading' ? 'icon-spin' : ''} />
+                        <img src="images/empty.png" alt="No library" style={iconStyle(syncStatus === 'none')} className={syncStatus === 'none' ? 'icon-pulse' : ''} />
+                        <img src="images/fresh.png" alt="Fresh" style={iconStyle(syncStatus === 'fresh')} />
+                        <img src="images/stale.png" alt="Stale" style={iconStyle(syncStatus === 'stale')} />
+                        <img src="images/question-mark.png" alt="Unknown" style={iconStyle(syncStatus === 'unknown')} />
+                        {statusText[syncStatus]}
+                    </span>
+                );
             };
 
             return (
@@ -1226,9 +1305,9 @@ Would you like to copy the ASIN now?`;
                                         {books.length > 0 && <span className="text-lg text-gray-500 ml-2">({books.length} books)</span>}
                                     </h1>
                                     <p className="text-sm text-gray-600 mt-1">
-                                        {dataSource === 'enriched' ? '✨ With ratings & reviews' : 
-                                         dataSource === 'csv' ? '📄 Basic CSV data' : 
-                                         '📂 No data loaded'} • {APP_VERSION} • {renderStatusIndicator()}
+                                        {dataSource === 'enriched' ? '✨ With ratings & reviews' :
+                                         dataSource === 'csv' ? '📄 Basic CSV data' :
+                                         '📂 No library loaded'} • {APP_VERSION} • {renderStatusIndicator()}
                                     </p>
                                 </div>
                             </div>
@@ -1299,10 +1378,11 @@ Would you like to copy the ASIN now?`;
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setStatusModalOpen(false)}>
                             <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start mb-4">
-                                    <h2 className="text-xl font-bold text-gray-900">
-                                        {syncStatus === 'fresh' && '🥬 Fresh Data'}
-                                        {syncStatus === 'stale' && '🥕 Stale Data'}
-                                        {syncStatus === 'none' && '📂 No Library Loaded'}
+                                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                        {syncStatus === 'fresh' && <><img src="images/fresh.png" alt="" className="status-icon" /> Fresh Data</>}
+                                        {syncStatus === 'stale' && <><img src="images/stale.png" alt="" className="status-icon" /> Stale Data</>}
+                                        {syncStatus === 'none' && <><img src="images/empty.png" alt="" className="status-icon" /> No Library Loaded</>}
+                                        {syncStatus === 'unknown' && <><img src="images/question-mark.png" alt="" className="status-icon" /> Unknown Status</>}
                                     </h2>
                                     <button onClick={() => setStatusModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                                 </div>
@@ -1314,11 +1394,11 @@ Would you like to copy the ASIN now?`;
                                         </p>
                                         <div className="text-sm text-gray-600">
                                             <p><strong>Books:</strong> {books.length}</p>
-                                            <p><strong>Last synced:</strong> {lastSyncTime && new Date(lastSyncTime).toLocaleString()}</p>
+                                            <p><strong>Library loaded:</strong> {lastSyncTime && new Date(lastSyncTime).toLocaleString()}</p>
                                         </div>
                                         <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
                                             <p><strong>To add new books:</strong></p>
-                                            <p className="mt-1">Run the fetcher console script on amazon.com/yourbooks, then click the 🥕 Stale indicator to sync.</p>
+                                            <p className="mt-1">Run the fetcher console script on amazon.com/yourbooks, then click the Stale indicator to load the updated library.</p>
                                         </div>
                                     </div>
                                 )}
@@ -1333,14 +1413,14 @@ Would you like to copy the ASIN now?`;
                                                 <p><strong>Manifest shows:</strong></p>
                                                 <p>• Total books in file: {manifestData.totalBooks}</p>
                                                 <p>• Your current books: {books.length}</p>
-                                                <p>• New books to sync: {manifestData.totalBooks - books.length}</p>
+                                                <p>• New books to load: {manifestData.totalBooks - books.length}</p>
                                                 <p className="mt-2"><strong>Last fetcher run:</strong> {new Date(manifestData.lastFetched).toLocaleString()}</p>
                                             </div>
                                         )}
-                                        <button 
+                                        <button
                                             onClick={syncNow}
                                             className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-                                            Sync Now
+                                            Load Updated Library
                                         </button>
                                     </div>
                                 )}
@@ -1361,6 +1441,23 @@ Would you like to copy the ASIN now?`;
                                             onClick={syncNow}
                                             className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
                                             Load Library
+                                        </button>
+                                    </div>
+                                )}
+
+                                {syncStatus === 'unknown' && (
+                                    <div className="space-y-3">
+                                        <p className="text-sm text-gray-700">
+                                            ⚠️ <strong>Status check timed out.</strong>
+                                        </p>
+                                        <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-gray-700">
+                                            <p>The library was loaded but the status verification didn't complete in time.</p>
+                                            <p className="mt-2"><strong>Please refresh the page to continue.</strong></p>
+                                        </div>
+                                        <button
+                                            onClick={() => window.location.reload()}
+                                            className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">
+                                            Refresh Page
                                         </button>
                                     </div>
                                 )}
@@ -1426,15 +1523,15 @@ Would you like to copy the ASIN now?`;
                                             <li><strong>Run Fetcher:</strong> Go to amazon.com/yourbooks and run the Console Fetcher script</li>
                                             <li><strong>Auto-saves:</strong> Fetcher creates amazon-library.json in your Downloads</li>
                                             <li><strong>First Load:</strong> Click status indicator to load library</li>
-                                            <li><strong>Updates:</strong> Run fetcher again, then sync when you see 🥕 Stale</li>
+                                            <li><strong>Updates:</strong> Run fetcher again, then sync when you see Stale indicator</li>
                                         </ul>
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">🥬 Status Indicator</h3>
+                                        <h3 className="font-semibold text-gray-900 mb-1">Status Indicator</h3>
                                         <ul className="list-disc list-inside space-y-1 ml-2">
-                                            <li><strong>🥬 Fresh:</strong> Your library is up to date</li>
-                                            <li><strong>🥕 Stale:</strong> New books available - click to sync</li>
-                                            <li><strong>⚪ No library:</strong> Click to load your first library</li>
+                                            <li><strong>Fresh:</strong> Your library is up to date</li>
+                                            <li><strong>Stale:</strong> New books available - click to load updated library</li>
+                                            <li><strong>Click here to load library:</strong> Click to load your first library</li>
                                         </ul>
                                     </div>
                                     <div>
