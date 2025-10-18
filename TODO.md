@@ -34,6 +34,11 @@
 
 ## Features - Approved
 
+- [ ] Column name filtering - Extend search to filter by column names (anticipating 100s of columns with 2336 books)
+  - **Approach to try first**: Simple case - search filters title, author, AND column name simultaneously
+  - **Fallback options if simple case is confusing**:
+    - Option #2: Prefix syntax (e.g., `column:sci-fi`, `author:smith`) - no UI chrome, power user friendly
+    - Option #4: Smart filtering - if search matches column name exactly, prioritize that column
 - [ ] Add title & author text under book covers (~5-8K tokens)
 - [ ] Multi-select with Ctrl/Shift clicking (~15-25K tokens)
 
