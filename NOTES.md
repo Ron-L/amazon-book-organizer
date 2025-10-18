@@ -24,14 +24,16 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Current Work in Progress
 
-### v3.1.1 - IN PROGRESS ⚙️
+### v3.1.1 - RELEASED ✅
 - **Started**: 2025-10-17
-- **Branch**: feature-column-rename-trigger
+- **Completed**: 2025-10-17
+- **Released**: 2025-10-17
+- **Branch**: feature-column-rename-trigger (merged to main)
 - **Changes Made**:
   - Added pencil icon (✏️) that appears on hover over column names
   - Icon fades in smoothly to indicate editability
   - Double-click functionality already existed, this improves discoverability
-- **Status**: Testing v3.1.1.a completed, ready to finalize
+- **Status**: Successfully merged to main, tagged as v3.1.1, and pushed to GitHub
 - **Lesson Learned**: During this session, Claude violated BOTH Core Ground Rules:
   - Rule #1 (Version Management): Made code changes BEFORE incrementing version - must increment BEFORE any code edit
   - Rule #2 (Approval Workflow): Made multiple changes without waiting for explicit "yes"/"go ahead"/"proceed" approval
