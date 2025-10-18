@@ -43,8 +43,8 @@ This file tracks tabled discussion items, work in progress context, and open que
 ### Collection & Read Status API Exploration
 - **Date**: 2025-10-18
 - **Context**: Extract collection membership and "read" status from Amazon's FIONA API for integration into organizer
-- **Status**: Ready to start exploration - awaiting Step 1 network traffic capture
-- **Priority**: Explore API first to verify data availability before implementation
+- **Status**: ✅ API DISCOVERED - Step 1 Complete! Ready for POC script development
+- **Priority**: Build proof-of-concept script to validate data extraction
 
 **Background:**
 - User marks finished books as "Read" in Amazon collections
@@ -91,7 +91,19 @@ This file tracks tabled discussion items, work in progress context, and open que
    - Determine safe request rate
    - Test full pagination flow
 
-**Next Step:** User will capture network traffic from the Manage Content page and share findings about API endpoints and response structure.
+**API Discovery Results (2025-10-18):**
+- ✅ Endpoint identified: `https://www.amazon.com/hz/mycd/ajax`
+- ✅ Activity: `GetContentOwnershipData`
+- ✅ Returns per book: ASIN, title, authors, readStatus ("READ"/"UNREAD"/"UNKNOWN"), collectionList array with collectionId + collectionName
+- ✅ Pagination: batchSize 25, startIndex increments, hasMoreItems flag
+- ✅ Total library count: numberOfItems field
+- ✅ Authentication: CSRF token + session cookies (same pattern as existing fetcher)
+- ✅ Network traffic captured in: Collections Traffic Capture.txt
+
+**Next Steps:**
+1. Create technical specification document
+2. Build POC script to fetch 2 pages and validate fields
+3. If successful, build full fetcher with rate limiting and pagination
 
 ### Column Name Filtering Feature
 - **Date**: 2025-10-17
