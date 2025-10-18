@@ -47,8 +47,8 @@ Browsers block JavaScript from loading local files (like your library JSON) when
 
 ## Files
 
-- `amazon-organizer.html` - Main application interface (v3.0.0)
-- `console-fetcher.js` - Data fetching utility (v3.0.0)
+- `amazon-organizer.html` - Main application interface
+- `console-fetcher.js` - Data fetching utility
 - `amazon-book-organizer.code-workspace` - VS Code workspace configuration
 
 ## Development with Claude
@@ -103,7 +103,7 @@ When the source files (`SKILL-*.md`) are modified, the zip files are automatical
 
 ## Version
 
-**Project Version: 3.1.0**
+**Project Version: v3.1.2**
 
 This is the project-level version used for git tags. Individual code files may have their own internal versions (e.g., `APP_VERSION` in amazon-organizer.html).
 

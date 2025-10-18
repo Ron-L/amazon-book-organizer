@@ -14,7 +14,7 @@
 
 (async function() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v3.1.0';
+    const FETCHER_VERSION = 'v3.1.2';
     const SCHEMA_VERSION = '2.0';
     
     console.log('========================================');
@@ -164,10 +164,10 @@
             console.error('\n❌ LIBRARY API VALIDATION FAILED');
             console.error('========================================');
             console.error('The library query failed. This usually means:');
-            console.error('1. You are not logged into Amazon');
-            console.error('2. Your session has expired');
-            console.error('3. Amazon API structure has changed');
-            console.error('4. Network/firewall issues');
+            console.error('1. You are not logged into Amazon - Log in and try again');
+            console.error('2. Your session has expired - Refresh the page and try again');
+            console.error('3. Amazon API structure has changed - Report this issue');
+            console.error('4. Network/firewall issues - Check your connection');
             console.error('');
             console.error('Technical details:');
             console.error(error.message);

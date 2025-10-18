@@ -38,6 +38,17 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Current Work in Progress
 
+### v3.1.2 - RELEASED ✅
+- **Started**: 2025-10-18
+- **Completed**: 2025-10-18
+- **Released**: 2025-10-18
+- **Branch**: feature-improve-error-messages (merged to main)
+- **Changes Made**:
+  - Improved console fetcher Phase 0 error messages with actionable recovery steps
+  - Authentication/session expiration errors now tell users exactly what to do
+  - No functional changes, only improved user guidance
+- **Status**: Successfully merged to main, tagged as v3.1.2, and pushed to GitHub
+
 ### v3.1.1 - RELEASED ✅
 - **Started**: 2025-10-17
 - **Completed**: 2025-10-17

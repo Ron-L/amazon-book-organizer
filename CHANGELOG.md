@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.2] - 2025-10-18
+
+### Changed
+- **Improved Error Messages**: Console fetcher Phase 0 validation now provides actionable recovery steps
+  - Authentication failures now include specific instructions (e.g., "Refresh the page and try again")
+  - Session expiration guidance more clear and actionable
+  - Each error condition includes next steps for user to resolve
+
+### Technical
+- Console fetcher version 3.1.2
+- Feature branch: feature-improve-error-messages
+- Changes only affect error message display, no functional changes to API logic
+
+### Technical Notes
+
+**Error Message Improvements**:
+- User concern: What happens if auth tokens/cookies expire during fetching?
+- Investigation: Tokens pulled dynamically each run, cookies sent via `credentials: 'include'`
+- Current state: Phase 0 mentions session expiration but doesn't provide clear recovery steps
+- Solution: Added actionable recovery instructions to each error scenario:
+  - "Log in and try again"
+  - "Refresh the page and try again"
+  - "Report this issue"
+  - "Check your connection"
+- Result: Users now have clear next steps when authentication fails
+
 ## [3.1.1] - 2025-10-17
 
 ### Added
