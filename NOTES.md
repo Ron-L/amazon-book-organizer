@@ -14,15 +14,25 @@ If you haven't done the above, STOP and read those SKILL files NOW.
 
 ⚠️ **RELEASE WORKFLOW - Follow this checklist when finalizing ANY version** ⚠️
 
+BEFORE starting work:
+- [ ] Present COMPLETE plan (all files, all steps) to user for approval
+- [ ] Identify which files need version updates (only files being changed)
+- [ ] Determine project version increment (README.md)
+
 Before running `git tag`:
 - [ ] CHANGELOG.md updated with version entry and technical notes
 - [ ] NOTES.md Current Work in Progress updated (change to RELEASED ✅)
 - [ ] TODO.md tasks marked complete
-- [ ] Version suffix removed (e.g., .a → final version)
+- [ ] Version suffix removed (e.g., .a → final version) in ALL updated files
+- [ ] README.md project version updated
 - [ ] **STOP: Present this checklist to user for review and get explicit approval before proceeding**
 - [ ] All changes committed to feature branch
 - [ ] Merged to main
 - [ ] THEN and ONLY THEN: git tag, git push --tags
+
+AFTER release:
+- [ ] Conduct post-mortem review with user
+- [ ] Document lessons learned in NOTES.md
 
 ---
 

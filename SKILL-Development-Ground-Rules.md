@@ -22,8 +22,6 @@ description: Core development workflow rules including version management, appro
 
 ### 1. Version Management
 - **BEFORE** making ANY code change, increment the version letter (e.g., v3.1.0.a → v3.1.0.b)
-- Version is located in ONE place only: `APP_VERSION` constant in amazon-organizer.html (around line 106)
-- The browser title dynamically displays this version via `document.title`
 - **Exception**: Documentation and meta files do NOT require version increment:
   - README.md, CHANGELOG.md, TODO.md, NOTES.md
   - SKILL-*.md files
@@ -31,11 +29,25 @@ description: Core development workflow rules including version management, appro
   - .gitignore
 - Violation of this rule is a "cardinal sin"
 
+#### File-Specific Versioning
+- Only increment versions in files that are actually being modified
+- If changing console-fetcher.js, update FETCHER_VERSION only
+- If changing amazon-organizer.html, update APP_VERSION only
+- Project version in README.md increments independently (see Project Versioning below)
+
 ### 2. Approval Workflow
 - **STOP and ASK** before making any code changes, commits, reverts, or git operations
 - Questions like "should we?", "thoughts?", "what do you think?", "your thoughts?", etc. are requests for **DISCUSSION**, NOT approval
 - Wait for explicit "yes", "go ahead", "please proceed", or similar confirmation
 - **NEVER** "get ahead of yourself" by implementing during discussion
+
+#### Approval Language Interpretation
+- "Proceed with edits" = Make file edits ONLY, then STOP
+- "Proceed with commit" = Commit ONLY, then STOP
+- "Proceed with push" = Push ONLY, then STOP
+- "Proceed with X and Y" = Do both X and Y, then STOP
+- "Proceed" alone = Clarify what to proceed with
+- When in doubt, do ONE operation and STOP
 
 ### 3. Update Before Commit
 - Always run git pull/fetch before committing to ensure local is current
@@ -51,6 +63,13 @@ description: Core development workflow rules including version management, appro
 - Tag the release: `git tag v3.1.0` (use actual version number, not this example)
 - Push with tags: `git push origin main --tags`
 
+### Documentation-Only Changes
+- Documentation files (README, CHANGELOG, TODO, NOTES, SKILL-*.md, .gitignore) can be modified directly on main branch
+- No feature branch required
+- No version increment or tagging
+- Commit directly to main with descriptive message
+- Still requires approval before commit/push (Ground Rule #2)
+
 ### Commit Messages
 - Use conventional commit format: `Type: Brief description`
 - Types: Feat, Fix, Update, Refactor, Docs, Test, Chore, Rename
@@ -63,13 +82,23 @@ description: Core development workflow rules including version management, appro
   Co-Authored-By: Claude <noreply@anthropic.com>
   ```
 
+### Project Versioning
+- Project version tracked in README.md "Version" section (format: "Project Version: vX.Y.Z")
+- Project version increments ONLY for releases that include code/executable changes (HTML, JS, etc.)
+- **Documentation-only changes** (README, CHANGELOG, TODO, NOTES, SKILL-*.md) do NOT increment project version, do NOT create tags, and can be committed directly to main branch (see Git Workflow Patterns > Documentation-Only Changes)
+- When project version increments, it's based on the nature of the release:
+  - Major (X): Breaking changes or major feature sets
+  - Minor (Y): New features or significant improvements
+  - Patch (Z): Bug fixes, minor improvements
+- Project version is independent of individual file versions
+- Git tags MUST match project version
+- Always use "v" prefix for consistency and findability
+- Tags mark released versions only (not letter versions)
+
 ### Tagging Releases
-- **Project version** is tracked in README.md "Version" section (single source of truth)
-- Git tags MUST match the README.md project version
 - Tag format: `v3.1.0` (use actual current version, not this example)
 - Tag message: Include brief summary of changes
-- Tags mark released versions only (not letter versions)
-- Individual code files may have their own internal versions (e.g., APP_VERSION in HTML)
+- Only tag when project version increments (code releases, not documentation-only)
 
 ## Documentation Standards
 
@@ -115,6 +144,13 @@ description: Core development workflow rules including version management, appro
 ### Review Before Proposing
 - **ALWAYS** review CHANGELOG Technical Notes before suggesting approaches
 - This prevents proposing solutions that have already been exhausted
+
+### Post-Release Review
+- After EVERY code release (when project version increments), conduct a brief post-mortem with user
+- Review: What mistakes were made? What lessons learned? What worked well?
+- Update ground rules if patterns emerge
+- Document lessons in NOTES.md under the release entry
+- This does not apply to documentation-only changes
 
 ## Communication Protocol
 
