@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2025-10-17
+
+### Added
+- **Column Rename Discoverability**: Pencil icon (✏️) now appears on hover over column names
+  - Indicates that column names are editable
+  - Fades in smoothly with 0.2s transition
+  - Works alongside existing double-click rename feature
+  - Addresses user confusion about how to rename columns
+
+### Changed
+- Enhanced column header UI with hover state for better editability indication
+
+### Technical
+- HTML interface version 3.1.1
+- Feature branch: feature-column-rename-trigger
+- Double-click rename functionality was already present but lacked discoverability
+
+### Technical Notes
+
+**Column Rename Feature**:
+- Initial report: User believed column rename feature didn't exist
+- Investigation: Feature was fully implemented via double-click with tooltip
+- Root cause: Lack of visual affordance - users didn't discover the feature
+- Solution: Added pencil icon that appears on hover to signal editability
+- Implementation: Wrapped column name in container div, added pencil span with CSS opacity transition
+- Result: Feature is now discoverable without changing the double-click interaction pattern
+
+**Process Improvements**:
+- Added Session Startup Checklist to NOTES.md to ensure ground rules are reviewed
+- Documented ground rule violations (version management, approval workflow) as lessons learned
+- Established pattern: documentation updates don't require version increment but still need approval
+
 ## [3.1.0] - 2025-10-17
 
 ### Added
