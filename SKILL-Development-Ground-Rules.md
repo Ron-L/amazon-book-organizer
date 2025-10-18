@@ -10,10 +10,11 @@ description: Core development workflow rules including version management, appro
 ### 0. Recursive Rule Display (Unbreakable)
 - **At the start of EVERY response**, display this reminder:
   ```
-  📋 CORE RULES:
+  📋 CORE RULES - Read full details in SKILL files (Development-Ground-Rules.md & Amazon-Book-Organizer.md):
   #1: Version BEFORE code changes
   #2: STOP and ASK before commits/git ops - wait for explicit "yes"/"go ahead"/"proceed"
   #3: Update before commit (git fetch)
+  ⚠️ Also: CHANGELOG before finalizing, use correct build scripts for Skills
   ```
 - This rule ensures all other rules stay visible throughout the conversation
 - The reminder MUST appear even in responses that acknowledge this rule
