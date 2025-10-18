@@ -33,8 +33,8 @@ This file tracks tabled discussion items, work in progress context, and open que
 ### Column Name Filtering Feature
 - **Date**: 2025-10-17
 - **Context**: User has an idea about filtering that also involves filtering column names
-- **Status**: Deferred for later discussion
-- **Priority**: TBD
+- **Status**: ✅ Moved to TODO.md with documented approaches (simple case, prefix syntax, smart filtering)
+- **Priority**: Pending user decision on next task priority
 
 ## Current Work in Progress
 
