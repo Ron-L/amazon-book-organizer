@@ -1,0 +1,399 @@
+// Amazon Collections Fetcher v1.0.0
+// Fetches collection membership and read status for all books in your library
+//
+// Instructions:
+// 1. Go to https://www.amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/
+// 2. Open DevTools Console (F12 → Console tab)
+// 3. Paste this ENTIRE script and press Enter
+// 4. Wait for completion (will take several minutes for large libraries)
+// 5. Downloads amazon-collections.json when complete
+// 6. Upload to organizer along with amazon-library.json
+
+(async function() {
+    const FETCHER_VERSION = 'v1.0.0';
+    const SCHEMA_VERSION = '1.0';
+    const PAGE_TITLE = document.title;
+
+    console.log('========================================');
+    console.log(`Amazon Collections Fetcher ${FETCHER_VERSION}`);
+    console.log(`📄 Page: ${PAGE_TITLE}`);
+    console.log('Fetches collection membership and read status');
+    console.log('========================================\n');
+
+    const startTime = Date.now();
+    const ENDPOINT = 'https://www.amazon.com/hz/mycd/digital-console/ajax';
+    const BATCH_SIZE = 25;
+    const FETCH_DELAY_MS = 2000; // 2 seconds between requests
+    const FILENAME = 'amazon-collections.json';
+
+    // ==========================================
+    // Phase 0: Pre-flight Validation
+    // ==========================================
+    console.log('[Phase 0] Pre-flight validation...\n');
+
+    // 0.1: Verify we're on the right page
+    console.log('  [0.1] Checking page URL...');
+    if (!window.location.href.includes('amazon.com/hz/mycd/digital-console')) {
+        console.error('❌ WRONG PAGE');
+        console.error('   Current URL:', window.location.href);
+        console.error('   Required URL: https://www.amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/');
+        console.error('\n📋 DIAGNOSTIC:');
+        console.error('   You must run this script on the Amazon "Manage Your Content and Devices" page');
+        console.error('   Navigate to the URL above and try again');
+        return;
+    }
+    console.log('  ✅ Page URL correct\n');
+
+    // 0.2: Extract CSRF token
+    console.log('  [0.2] Extracting CSRF token...');
+    const csrfToken = window.csrfToken;
+
+    if (!csrfToken) {
+        console.error('❌ CSRF TOKEN NOT FOUND');
+        console.error('   Checked: window.csrfToken');
+        console.error('\n📋 DIAGNOSTIC:');
+        console.error('   Amazon may have changed their page structure');
+        console.error('   The CSRF token is required for API authentication');
+        console.error('\n🔍 DEBUG STEPS FOR FUTURE CLAUDE:');
+        console.error('   1. Check if window.csrfToken exists: window.csrfToken');
+        console.error('   2. Search for csrf in cookies: document.cookie');
+        console.error('   3. Search page scripts for token: Look for "csrfToken" in <script> tags');
+        console.error('   4. Check Network tab for working AJAX calls to see token location');
+        return;
+    }
+    console.log('  ✅ CSRF token extracted:', csrfToken.substring(0, 20) + '...\n');
+
+    // 0.3: Test API endpoint with minimal request
+    console.log('  [0.3] Testing API endpoint...');
+
+    const testActivityInput = {
+        contentType: 'Ebook',
+        contentCategoryReference: 'booksAll',
+        itemStatusList: ['Active', 'Expired'],
+        excludeExpiredItemsFor: [
+            'KOLL', 'Purchase', 'Pottermore', 'FreeTrial',
+            'DeviceRegistration', 'KindleUnlimited', 'Sample',
+            'Prime', 'ComicsUnlimited', 'Comixology'
+        ],
+        originTypes: [
+            'Purchase', 'PublicLibraryLending', 'PersonalLending',
+            'Sample', 'ComicsUnlimited', 'KOLL', 'RFFLending',
+            'Pottermore', 'Prime', 'Rental', 'DeviceRegistration',
+            'FreeTrial', 'KindleUnlimited', 'Comixology'
+        ],
+        showSharedContent: true,
+        fetchCriteria: {
+            sortOrder: 'DESCENDING',
+            sortIndex: 'DATE',
+            startIndex: 0,
+            batchSize: 1, // Just 1 book for testing
+            totalContentCount: -1
+        },
+        surfaceType: 'Tablet'
+    };
+
+    try {
+        const testBody = new URLSearchParams({
+            activity: 'GetContentOwnershipData',
+            activityInput: JSON.stringify(testActivityInput),
+            clientId: 'MYCD_WebService',
+            csrfToken: csrfToken
+        });
+
+        const testResponse = await fetch(ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json, text/plain, */*'
+            },
+            body: testBody.toString(),
+            credentials: 'include'
+        });
+
+        if (!testResponse.ok) {
+            console.error('❌ API TEST FAILED - HTTP ERROR');
+            console.error('   Status:', testResponse.status, testResponse.statusText);
+            console.error('   Endpoint:', ENDPOINT);
+            console.error('\n📋 DIAGNOSTIC:');
+            if (testResponse.status === 401 || testResponse.status === 403) {
+                console.error('   Authentication/session error');
+                console.error('   1. Your session may have expired - Refresh the page and try again');
+                console.error('   2. You may not be logged in - Log in to Amazon and try again');
+            } else if (testResponse.status === 404) {
+                console.error('   API endpoint not found');
+                console.error('   Amazon may have changed their API structure');
+            } else {
+                console.error('   Network or server error');
+                console.error('   Check your internet connection');
+            }
+            console.error('\n🔍 DEBUG STEPS FOR FUTURE CLAUDE:');
+            console.error('   1. Check Network tab in DevTools for failed request');
+            console.error('   2. Look for working AJAX calls to identify correct endpoint');
+            console.error('   3. Verify CSRF token format hasn\'t changed');
+            return;
+        }
+
+        const testData = await testResponse.json();
+
+        // 0.4: Validate response structure
+        console.log('  [0.4] Validating response structure...');
+
+        if (!testData.GetContentOwnershipData) {
+            console.error('❌ UNEXPECTED API RESPONSE STRUCTURE');
+            console.error('   Response keys:', Object.keys(testData));
+            console.error('   Expected key: "GetContentOwnershipData"');
+            console.error('\n📋 DIAGNOSTIC:');
+            console.error('   Amazon API structure has changed');
+            console.error('\n🔍 DEBUG STEPS FOR FUTURE CLAUDE:');
+            console.error('   1. Full response:', JSON.stringify(testData, null, 2));
+            console.error('   2. Check Network tab for working API calls');
+            console.error('   3. Look for new response structure in recent AJAX calls');
+            return;
+        }
+
+        const ownershipData = testData.GetContentOwnershipData;
+
+        if (!ownershipData.items || ownershipData.items.length === 0) {
+            console.error('❌ API RETURNED NO BOOKS');
+            console.error('   Response:', ownershipData);
+            console.error('\n📋 DIAGNOSTIC:');
+            console.error('   Either your library is empty (unlikely) or API filtering is incorrect');
+            console.error('\n🔍 DEBUG STEPS FOR FUTURE CLAUDE:');
+            console.error('   1. Check if numberOfItems field exists:', ownershipData.numberOfItems);
+            console.error('   2. Full response:', JSON.stringify(ownershipData, null, 2));
+            return;
+        }
+
+        // 0.5: Validate book data structure
+        console.log('  [0.5] Validating book data structure...');
+
+        const sampleBook = ownershipData.items[0];
+        const requiredFields = ['asin', 'title', 'readStatus', 'collectionList'];
+        const missingFields = requiredFields.filter(field => !(field in sampleBook));
+
+        if (missingFields.length > 0) {
+            console.error('❌ MISSING REQUIRED FIELDS IN BOOK DATA');
+            console.error('   Missing fields:', missingFields);
+            console.error('   Sample book keys:', Object.keys(sampleBook));
+            console.error('\n📋 DIAGNOSTIC:');
+            console.error('   Amazon API response structure has changed');
+            console.error('\n🔍 DEBUG STEPS FOR FUTURE CLAUDE:');
+            console.error('   1. Sample book data:', JSON.stringify(sampleBook, null, 2));
+            console.error('   2. Check Network tab for field name changes');
+            console.error('   3. Look for alternative field names (e.g., "collections" vs "collectionList")');
+            return;
+        }
+
+        const totalBooks = ownershipData.numberOfItems || 0;
+        console.log('  ✅ API test successful\n');
+        console.log('✅ Phase 0 validation complete!');
+        console.log(`   Total books in library: ${totalBooks}`);
+        console.log(`   Estimated pages: ${Math.ceil(totalBooks / BATCH_SIZE)}`);
+        console.log(`   Estimated time: ${Math.ceil((totalBooks / BATCH_SIZE) * FETCH_DELAY_MS / 1000 / 60)} minutes\n`);
+
+    } catch (error) {
+        console.error('❌ PHASE 0 VALIDATION FAILED - EXCEPTION');
+        console.error('   Error:', error.message);
+        console.error('\n📋 DIAGNOSTIC:');
+        console.error('   Unexpected error during API test');
+        console.error('\n🔍 DEBUG STEPS FOR FUTURE CLAUDE:');
+        console.error('   1. Full error:', error);
+        console.error('   2. Stack trace:', error.stack);
+        console.error('   3. Check browser console for additional errors');
+        return;
+    }
+
+    // ==========================================
+    // Phase 1: Fetch All Books
+    // ==========================================
+    console.log('[Phase 1] Fetching all books with collections and read status...\n');
+
+    const activityInput = {
+        contentType: 'Ebook',
+        contentCategoryReference: 'booksAll',
+        itemStatusList: ['Active', 'Expired'],
+        excludeExpiredItemsFor: [
+            'KOLL', 'Purchase', 'Pottermore', 'FreeTrial',
+            'DeviceRegistration', 'KindleUnlimited', 'Sample',
+            'Prime', 'ComicsUnlimited', 'Comixology'
+        ],
+        originTypes: [
+            'Purchase', 'PublicLibraryLending', 'PersonalLending',
+            'Sample', 'ComicsUnlimited', 'KOLL', 'RFFLending',
+            'Pottermore', 'Prime', 'Rental', 'DeviceRegistration',
+            'FreeTrial', 'KindleUnlimited', 'Comixology'
+        ],
+        showSharedContent: true,
+        fetchCriteria: {
+            sortOrder: 'DESCENDING',
+            sortIndex: 'DATE',
+            startIndex: 0,
+            batchSize: BATCH_SIZE,
+            totalContentCount: -1
+        },
+        surfaceType: 'Tablet'
+    };
+
+    let allBooks = [];
+    let totalCount = 0;
+    let pageNum = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+        const startIndex = pageNum * BATCH_SIZE;
+        activityInput.fetchCriteria.startIndex = startIndex;
+
+        const estimatedPages = totalCount > 0 ? Math.ceil(totalCount / BATCH_SIZE) : '?';
+        console.log(`  Fetching page ${pageNum + 1}/${estimatedPages} (books ${startIndex + 1}-${startIndex + BATCH_SIZE})...`);
+
+        try {
+            const bodyParams = new URLSearchParams({
+                activity: 'GetContentOwnershipData',
+                activityInput: JSON.stringify(activityInput),
+                clientId: 'MYCD_WebService',
+                csrfToken: csrfToken
+            });
+
+            const response = await fetch(ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json, text/plain, */*'
+                },
+                body: bodyParams.toString(),
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                console.error(`\n❌ Error fetching page ${pageNum + 1}`);
+                console.error(`   HTTP ${response.status}: ${response.statusText}`);
+                console.error('   Session may have expired or network error occurred');
+                console.error('   Progress saved up to page', pageNum);
+                console.error('   You can try running the script again');
+                return;
+            }
+
+            const data = await response.json();
+            const ownershipData = data.GetContentOwnershipData;
+
+            if (!ownershipData || !ownershipData.items) {
+                console.error(`\n❌ Unexpected response on page ${pageNum + 1}`);
+                console.error('   API may have changed or returned error');
+                console.error('   Response:', data);
+                return;
+            }
+
+            totalCount = ownershipData.numberOfItems || totalCount;
+            const books = ownershipData.items || [];
+
+            console.log(`  ✅ Received ${books.length} books`);
+            allBooks = allBooks.concat(books);
+
+            // Check if we have more pages
+            hasMore = ownershipData.hasMoreItems === true;
+
+            if (!hasMore) {
+                console.log(`  📊 Reached end of library (no more items)\n`);
+                break;
+            }
+
+            pageNum++;
+
+            // Rate limiting - delay before next request
+            if (hasMore) {
+                console.log(`  ⏳ Waiting ${FETCH_DELAY_MS}ms before next request...\n`);
+                await new Promise(resolve => setTimeout(resolve, FETCH_DELAY_MS));
+            }
+
+        } catch (error) {
+            console.error(`\n❌ Exception on page ${pageNum + 1}:`, error.message);
+            console.error('   Progress saved up to page', pageNum);
+            console.error('   You may be able to retry');
+            return;
+        }
+    }
+
+    console.log('✅ Phase 1 complete!');
+    console.log(`   Total books fetched: ${allBooks.length}`);
+    console.log(`   Total pages fetched: ${pageNum + 1}\n`);
+
+    // ==========================================
+    // Phase 2: Process and Format Data
+    // ==========================================
+    console.log('[Phase 2] Processing book data...\n');
+
+    let booksWithCollections = 0;
+    const processedBooks = allBooks.map(book => {
+        // Transform collectionList into simpler format
+        const collections = (book.collectionList || []).map(col => ({
+            id: col.collectionId,
+            name: col.collectionName
+        }));
+
+        if (collections.length > 0) {
+            booksWithCollections++;
+        }
+
+        return {
+            asin: book.asin,
+            title: book.title || 'Unknown Title',
+            readStatus: book.readStatus || 'UNKNOWN',
+            collections: collections
+        };
+    });
+
+    // Count read status breakdown
+    const readStatusCounts = { READ: 0, UNREAD: 0, UNKNOWN: 0 };
+    processedBooks.forEach(book => {
+        readStatusCounts[book.readStatus] = (readStatusCounts[book.readStatus] || 0) + 1;
+    });
+
+    console.log('  📊 Statistics:');
+    console.log(`     Books with collections: ${booksWithCollections}`);
+    console.log(`     Books without collections: ${processedBooks.length - booksWithCollections}`);
+    console.log(`     Read status breakdown:`, readStatusCounts);
+    console.log('');
+
+    // ==========================================
+    // Phase 3: Generate JSON and Download
+    // ==========================================
+    console.log('[Phase 3] Generating JSON file...\n');
+
+    const outputData = {
+        schemaVersion: SCHEMA_VERSION,
+        generatedAt: Date.now(),
+        fetcherVersion: FETCHER_VERSION,
+        totalBooksScanned: processedBooks.length,
+        booksWithCollections: booksWithCollections,
+        books: processedBooks
+    };
+
+    const jsonString = JSON.stringify(outputData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const downloadLink = document.createElement('a');
+    downloadLink.href = url;
+    downloadLink.download = FILENAME;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+    URL.revokeObjectURL(url);
+
+    const elapsedMs = Date.now() - startTime;
+    const elapsedMin = Math.floor(elapsedMs / 60000);
+    const elapsedSec = Math.floor((elapsedMs % 60000) / 1000);
+
+    console.log(`✅ File downloaded: ${FILENAME}`);
+    console.log(`   File size: ${(jsonString.length / 1024).toFixed(2)} KB`);
+    console.log(`   Time elapsed: ${elapsedMin}m ${elapsedSec}s\n`);
+
+    console.log('========================================');
+    console.log('✅ COLLECTIONS FETCH COMPLETE!');
+    console.log('========================================');
+    console.log('Next steps:');
+    console.log('1. Locate the downloaded file in your browser\'s download location');
+    console.log('2. Upload both amazon-library.json AND amazon-collections.json to the organizer');
+    console.log('3. The organizer will merge the data and enable collection filtering\n');
+
+})();

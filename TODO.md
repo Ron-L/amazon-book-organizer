@@ -26,6 +26,37 @@
 - [x] Documentation updates - README with server setup, Skills workflow, NOTES.md
 - [x] Improve column rename discoverability - Added hover pencil icon (feature was working via double-click but not obvious to users)
 
+## Collections & Read Status Feature - In Progress
+
+**Status**: POC validated, ready for full fetcher development
+**Branch**: `feature-collection-read-status-exploration`
+
+- [x] Network traffic capture and API discovery
+- [x] Technical specification document created
+- [x] Build POC script (fetch 2 pages, validate data) ✅ **COMPLETE**
+- [ ] Build full collections-fetcher.js with pagination and rate limiting
+- [ ] Test collections fetcher with full library
+- [ ] **REFACTOR: Split HTML into separate CSS/JS files BEFORE integration**
+  - `amazon-organizer.html` - Minimal shell
+  - `organizer.css` - All styles
+  - `organizer.js` - Main React app
+  - Reason: Clean separation before adding significant HTML changes for collection merge/filtering
+- [ ] Integrate collections data into organizer (merge by ASIN)
+- [ ] Add filtering UI for collections and read status
+- [ ] Add visual indicators (badges) for read status and collections
+- [ ] Release collections feature
+
+**Design Decisions:**
+- **Two separate JSON files**: `amazon-library.json` + `amazon-collections.json`
+- **Collections JSON includes ALL books** (even with no collections) for "Uncollected" support
+- **Output format**: `{asin, title, readStatus, collections: [{id, name}]}`
+- **"Uncollected" = computed pseudo-collection** (books with `collections: []`)
+- **Edge cases**:
+  - Books in collections but not library → Show dialog after full scan
+  - Books in library but not collections → Normal, no collections/readStatus
+  - Missing collections.json → App works, no collection features
+  - Schema mismatch → Handle gracefully
+
 ## Fetcher Improvements - High Priority
 
 - [ ] Remove 30-second timeout from file selection
