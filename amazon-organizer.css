@@ -1,0 +1,98 @@
+/* Amazon Book Organizer CSS v3.2.0 */
+body { margin: 0; padding: 0; overflow: hidden; }
+.dragging { opacity: 0.3; }
+.drop-target { background-color: rgba(59, 130, 246, 0.1); }
+.drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.9;
+}
+.drop-indicator {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: #3b82f6;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 10;
+}
+.drop-indicator::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: -4px;
+    width: 10px;
+    height: 10px;
+    background-color: #3b82f6;
+    border-radius: 50%;
+}
+.column-drop-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: #3b82f6;
+    z-index: 100;
+    pointer-events: none;
+}
+.editable-title-container {
+    cursor: pointer;
+}
+.editable-title {
+    cursor: pointer;
+}
+.editable-title:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+}
+.pencil-icon {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.editable-title-container:hover .pencil-icon {
+    opacity: 1;
+}
+.column-dragging {
+    opacity: 0.5;
+}
+.book-clickable {
+    cursor: pointer;
+}
+.book-clickable:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s;
+}
+.status-indicator {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+.status-indicator:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}
+.icon-spin {
+    animation: spin 1s linear infinite;
+}
+.icon-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+.status-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    margin-right: 4px;
+}

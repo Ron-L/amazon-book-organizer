@@ -5,6 +5,59 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2025-10-19
+
+### Changed
+- **HTML Refactoring**: Split monolithic HTML file into modular structure
+  - Extracted CSS to `amazon-organizer.css` (97 lines)
+  - Extracted JavaScript to `amazon-organizer.js` (1,916 lines)
+  - HTML reduced from 2,032 lines to 17 lines (99% reduction)
+  - Improved maintainability and code organization
+- **Version Management**: Enhanced version tracking and cache busting
+  - Added HTML version comment for easy identification
+  - Implemented query string cache busting (`?v=3.2.0`) for CSS/JS resources
+  - Added version comments to CSS and JS files
+  - Added footer version display (bottom-right corner) for easy verification
+  - Version now displayed in: tab title, page header, and footer
+- **Git Pre-Commit Hook**: Automated SKILL zip file rebuilding
+  - Hook automatically detects SKILL-*.md changes on commit
+  - Rebuilds corresponding .zip files using PowerShell
+  - Eliminates manual rebuild steps and prevents forgetting
+
+### Technical
+- HTML shell version 3.2.0
+- JavaScript version 3.2.0
+- CSS version 3.2.0
+- Feature branch: feature-html-refactor
+- All functional behavior unchanged (refactoring only)
+
+### Technical Notes
+
+**HTML Refactoring Rationale**:
+- Preparation for collections integration feature
+- Large monolithic file becoming difficult to navigate and maintain
+- Separation allows independent versioning of HTML structure, styles, and logic
+- Query string versioning forces browser cache refresh when files change
+
+**Version Display Strategy**:
+- Tab title: Standard web app pattern (Amazon Book Organizer v3.2.0)
+- Page header: Compact display with freshness indicator
+- Footer: Small, unobtrusive corner display for quick dev verification
+- HTML version comment: View source shows deployment version
+- Query strings: Ensure browser loads correct CSS/JS versions
+
+**Git Pre-Commit Hook Implementation**:
+- Located at `.git/hooks/pre-commit` (repository-local, not tracked)
+- Detects staged SKILL-*.md files via `git diff --cached`
+- Executes PowerShell build commands for each changed file
+- Provides friendly output during commit process
+- Falls back to manual build scripts if hook not present (e.g., fresh clone)
+
+**File Versions After Refactor**:
+- HTML, CSS, JS all start at v3.2.0 (reflects history as part of HTML since v3.0.0+)
+- Each can now evolve independently
+- README.md project version remains source of truth for git tags
+
 ## [3.1.2] - 2025-10-18
 
 ### Changed
