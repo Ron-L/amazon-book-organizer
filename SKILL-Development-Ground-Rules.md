@@ -134,20 +134,24 @@ description: Core development workflow rules including version management, appro
   description: Brief description of the skill
   ---
   ```
-- **IMMEDIATELY after ANY change to SKILL-*.md files, you MUST rebuild the .zip file**:
-  1. Read the corresponding build script to understand the exact steps
-  2. Follow the build script steps EXACTLY using PowerShell commands:
-     - `build-skill-ground-rules.bat` creates `SKILL-Development-Ground-Rules.zip`
-     - `build-skill-organizer.bat` creates `SKILL-Amazon-Book-Organizer.zip`
-  3. The build process: Copy SKILL-*.md to SKILL.md → Zip as SKILL.md → Delete temp file
-  4. IMPORTANT: The file inside the zip MUST be named `SKILL.md` (not the original filename)
-  5. The .zip file is generated but NOT committed (it's in .gitignore)
-  6. Commit only the .md file changes
-- Developer must then upload new zip to Claude Skills interface:
+- **Automatic .zip rebuilding via git pre-commit hook**:
+  - A git pre-commit hook (`.git/hooks/pre-commit`) automatically detects when SKILL-*.md files are committed
+  - The hook rebuilds the corresponding .zip files automatically using PowerShell
+  - Build process: Copy SKILL-*.md to SKILL.md → Zip as SKILL.md → Delete temp file
+  - IMPORTANT: The file inside the zip MUST be named `SKILL.md` (not the original filename)
+  - The .zip file is generated but NOT committed (it's in .gitignore)
+  - You'll see output during commit: "🔨 Pre-commit hook: Rebuilding SKILL zip files..."
+  - **No manual action required** - just commit the .md file changes normally
+- **Manual build scripts** (backup method if hook fails):
+  - `build-skill-ground-rules.bat` creates `SKILL-Development-Ground-Rules.zip`
+  - `build-skill-organizer.bat` creates `SKILL-Amazon-Book-Organizer.zip`
+  - These can be run manually if the git hook is not working
+- **Uploading to Claude Skills interface**:
   - Drag and drop the .zip file onto the Skills page
   - If skill name already exists, it will prompt to replace it
   - No need to manually delete the old skill first
 - Only source `.md` files are tracked in git (zips are generated locally, not committed)
+- **Note**: The git hook is repository-local (`.git/hooks/` is not tracked by git). If cloning to a new location, the hook will need to be recreated
 
 ### Review Before Proposing
 - **ALWAYS** review CHANGELOG Technical Notes before suggesting approaches
