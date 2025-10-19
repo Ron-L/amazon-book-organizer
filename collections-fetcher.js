@@ -325,7 +325,7 @@
             }
 
             // Rate limiting - delay before next request
-            console.log(`  ⏳ Waiting ${FETCH_DELAY_MS}ms before next request...\n`);
+            console.log(`  ⏳ Waiting ${FETCH_DELAY_MS / 1000} seconds before next request...\n`);
             await new Promise(resolve => setTimeout(resolve, FETCH_DELAY_MS));
 
         } catch (error) {
