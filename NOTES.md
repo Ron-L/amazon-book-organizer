@@ -40,96 +40,6 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Tabled Items
 
-### Collection & Read Status Feature - Collections Fetcher Complete
-- **Date Started**: 2025-10-18
-- **Date Completed**: 2025-10-19
-- **Context**: Extract collection membership and "read" status from Amazon's API for integration into organizer
-- **Status**: ✅ COLLECTIONS FETCHER COMPLETE - Ready for HTML refactor
-- **Priority**: Refactor HTML before integration (separate branch strategy)
-
-**Background:**
-- User marks finished books as "Read" in Amazon collections
-- Main goal: Know which collection(s) each book belongs to (especially "Read" collection)
-- Secondary: Read status (boolean, separate from reading progress %)
-- Amazon uses FIONA (File Infrastructure for Online Network Access) system
-- Target page: amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/
-- Collections info appears inline on page (expands on click) - likely in initial API response, no extra calls
-- Previous work: fatso83/amazon_fiona_js has reverse-engineered older FIONA API
-
-**Integration Plan (once data extracted):**
-1. Visual indicators on book covers (badge/icon)
-2. Metadata display for each book
-3. Filterable attribute (filter by collection/read status)
-
-**Fetching Strategy:**
-- Separate fetcher from current console-fetcher.js (different amazon.com pages)
-- NOT on-demand - batch fetch
-- If API supports "recently modified" sort: fetch until hit known status (incremental)
-- Otherwise: Must fetch all books each run (user may have just finished last book in sort order)
-- Pagination: Likely 25 books per page (like current fetcher)
-- Rate limiting required (reuse existing pattern)
-
-**Exploration Steps (Proof of Concept):**
-1. Network Traffic Analysis:
-   - Capture API calls on page load (initial 25 books)
-   - Capture "Show More" pagination
-   - Collection data should be in basic book info (visible inline, no extra API call)
-   - Identify endpoints with "fiona", "mycd", "ajax", or "contentlist"
-   - Document headers, authentication (CSRF tokens, cookies)
-
-2. Data Structure Investigation:
-   - Find fields for: collection membership, read status, ASIN, modification timestamp
-   - Check available sort orders (need "recently modified" for incremental)
-   - Understand pagination mechanism
-
-3. Build Proof of Concept Script:
-   - Minimal console script to fetch first page
-   - Extract: ASIN, collection(s), read status
-   - Output JSON to console
-   - Validate authentication works
-
-4. Rate Limiting & Pagination Test:
-   - Determine safe request rate
-   - Test full pagination flow
-
-**API Discovery Results (2025-10-18):**
-- ✅ Endpoint identified: `https://www.amazon.com/hz/mycd/ajax`
-- ✅ Activity: `GetContentOwnershipData`
-- ✅ Returns per book: ASIN, title, authors, readStatus ("READ"/"UNREAD"/"UNKNOWN"), collectionList array with collectionId + collectionName
-- ✅ Pagination: batchSize 25, startIndex increments, hasMoreItems flag
-- ✅ Total library count: numberOfItems field
-- ✅ Authentication: CSRF token + session cookies (same pattern as existing fetcher)
-- ✅ Network traffic captured in: Collections Traffic Capture.txt
-
-**Completed Work:**
-- ✅ API endpoint identified and tested
-- ✅ POC script validated (2 pages, 50 books)
-- ✅ Full collections-fetcher.js built with Phase 0 validation
-- ✅ Robust pagination (3 stop conditions, dynamic safety limit)
-- ✅ Successfully tested: 2,280/2,280 books fetched in 3m 56s
-- ✅ Generated amazon-collections.json (505 KB)
-- ✅ All changes committed to feature-collection-read-status-exploration branch
-
-**Key Statistics from Test:**
-- Total books: 2,280
-- Books with collections: 1,399 (61%)
-- Books without collections: 881 (39% - will show as "Uncollected")
-- Read status: 722 READ, 1 UNREAD, 1,557 UNKNOWN
-
-**Next Steps (New Session):**
-1. Create feature-html-refactor branch from main
-2. Refactor HTML: Split into organizer.css + organizer.js + minimal HTML shell
-3. Test refactored version works
-4. Merge refactor to main as v3.2.0
-5. Pull main into feature-collection-read-status-exploration (resolve doc conflicts)
-6. Begin collections integration on refactored codebase
-
-**Important Decisions Made:**
-- Using separate branch for refactor (cleaner history, independent release)
-- Two separate JSON files (library + collections, merged in HTML)
-- "Uncollected" computed as pseudo-collection (books with collections: [])
-- Output includes title field for better error reporting
-
 ### Column Name Filtering Feature
 - **Date**: 2025-10-17
 - **Context**: User has an idea about filtering that also involves filtering column names
@@ -137,6 +47,43 @@ This file tracks tabled discussion items, work in progress context, and open que
 - **Priority**: Pending user decision on next task priority
 
 ## Current Work in Progress
+
+### Collections & Read Status Integration - HTML Refactor Phase
+- **Started**: 2025-10-19
+- **Branch**: feature-html-refactor (to be created from main)
+- **Context**: Refactor HTML before integrating collections data
+- **Status**: 🔨 IN PROGRESS - Refactoring HTML structure
+
+**Background:**
+- User marks finished books as "Read" in Amazon collections
+- Collections fetcher complete: `collections-fetcher.js` successfully fetches all 2,280 books
+- Generated `amazon-collections.json` (505 KB) with collection membership and read status
+- Amazon FIONA API endpoint: `https://www.amazon.com/hz/mycd/digital-console/ajax`
+
+**Current Phase - HTML Refactor:**
+1. Split `amazon-organizer.html` into modular files:
+   - `amazon-organizer.css` (extracted styles)
+   - `amazon-organizer.js` (extracted scripts)
+   - Minimal HTML shell
+2. Merge refactor to main as v3.2.0
+3. Pull refactored code into feature-collection-read-status-exploration
+4. Then integrate collections data on clean codebase
+
+**Integration Plan (after refactor):**
+1. Visual indicators on book covers (badge/icon for collections)
+2. Metadata display for each book (show which collections)
+3. Filterable attribute (filter by collection/read status)
+
+**Key Decisions:**
+- Two separate JSON files: `amazon-library.json` + `amazon-collections.json` (merged in HTML)
+- "Uncollected" computed as pseudo-collection (books with `collections: []`)
+- Separate branch for refactor (cleaner history, independent release)
+
+**Collections Fetcher Stats:**
+- Total books: 2,280 (fetched in 3m 56s)
+- Books with collections: 1,399 (61%)
+- Books without collections: 881 (39%)
+- Read status: 722 READ, 1 UNREAD, 1,557 UNKNOWN
 
 ### v3.1.2 - RELEASED ✅
 - **Started**: 2025-10-18
