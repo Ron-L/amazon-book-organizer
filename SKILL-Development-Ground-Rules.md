@@ -134,12 +134,20 @@ description: Core development workflow rules including version management, appro
   description: Brief description of the skill
   ---
   ```
-- **After ANY change to SKILL-*.md files**:
-  - Claude will automatically run build scripts using PowerShell:
-    - `build-skill-ground-rules.bat`
-    - `build-skill-organizer.bat`
-  - Developer must then upload new zips to Claude Skills interface (delete old, upload new)
-- Only source `.md` files are tracked in git (zips are generated)
+- **IMMEDIATELY after ANY change to SKILL-*.md files, you MUST rebuild the .zip file**:
+  1. Read the corresponding build script to understand the exact steps
+  2. Follow the build script steps EXACTLY using PowerShell commands:
+     - `build-skill-ground-rules.bat` creates `SKILL-Development-Ground-Rules.zip`
+     - `build-skill-organizer.bat` creates `SKILL-Amazon-Book-Organizer.zip`
+  3. The build process: Copy SKILL-*.md to SKILL.md → Zip as SKILL.md → Delete temp file
+  4. IMPORTANT: The file inside the zip MUST be named `SKILL.md` (not the original filename)
+  5. The .zip file is generated but NOT committed (it's in .gitignore)
+  6. Commit only the .md file changes
+- Developer must then upload new zip to Claude Skills interface:
+  - Drag and drop the .zip file onto the Skills page
+  - If skill name already exists, it will prompt to replace it
+  - No need to manually delete the old skill first
+- Only source `.md` files are tracked in git (zips are generated locally, not committed)
 
 ### Review Before Proposing
 - **ALWAYS** review CHANGELOG Technical Notes before suggesting approaches
