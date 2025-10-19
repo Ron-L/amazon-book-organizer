@@ -48,42 +48,52 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Current Work in Progress
 
-### Collections & Read Status Integration - HTML Refactor Phase
+### Collections & Read Status Integration - IN PROGRESS
 - **Started**: 2025-10-19
-- **Branch**: feature-html-refactor (to be created from main)
-- **Context**: Refactor HTML before integrating collections data
-- **Status**: 🔨 IN PROGRESS - Refactoring HTML structure
+- **Branch**: feature-collection-read-status-exploration
+- **Status**: HTML refactor v3.2.0 merged to main, ready for integration
+- **Next Steps**:
+  1. ✅ HTML refactor complete (v3.2.0 released)
+  2. ✅ Pulled refactored main into collections branch
+  3. Integrate collections data into organizer
+  4. Add visual indicators (badges) and filtering
 
 **Background:**
 - User marks finished books as "Read" in Amazon collections
-- Collections fetcher complete: `collections-fetcher.js` successfully fetches all 2,280 books
-- Generated `amazon-collections.json` (505 KB) with collection membership and read status
-- Amazon FIONA API endpoint: `https://www.amazon.com/hz/mycd/digital-console/ajax`
+- Collections fetcher complete: `collections-fetcher.js` v1.0.0
+- Generated `amazon-collections.json` (505 KB) with 2,280 books
+- Amazon FIONA API: `https://www.amazon.com/hz/mycd/digital-console/ajax`
 
-**Current Phase - HTML Refactor:**
-1. Split `amazon-organizer.html` into modular files:
-   - `amazon-organizer.css` (extracted styles)
-   - `amazon-organizer.js` (extracted scripts)
-   - Minimal HTML shell
-2. Merge refactor to main as v3.2.0
-3. Pull refactored code into feature-collection-read-status-exploration
-4. Then integrate collections data on clean codebase
+**Integration Plan:**
+1. Load and merge collections data with library data (merge by ASIN)
+2. Visual indicators on book covers (badge/icon for collections)
+3. Metadata display for each book (show which collections)
+4. Filterable attribute (filter by collection/read status)
+5. "Uncollected" pseudo-collection (books with `collections: []`)
 
-**Integration Plan (after refactor):**
-1. Visual indicators on book covers (badge/icon for collections)
-2. Metadata display for each book (show which collections)
-3. Filterable attribute (filter by collection/read status)
-
-**Key Decisions:**
-- Two separate JSON files: `amazon-library.json` + `amazon-collections.json` (merged in HTML)
-- "Uncollected" computed as pseudo-collection (books with `collections: []`)
-- Separate branch for refactor (cleaner history, independent release)
-
-**Collections Fetcher Stats:**
+**Collections Stats:**
 - Total books: 2,280 (fetched in 3m 56s)
 - Books with collections: 1,399 (61%)
 - Books without collections: 881 (39%)
 - Read status: 722 READ, 1 UNREAD, 1,557 UNKNOWN
+
+### v3.2.0 - HTML Refactor - RELEASED ✅
+- **Started**: 2025-10-19
+- **Completed**: 2025-10-19
+- **Released**: 2025-10-19
+- **Branch**: feature-html-refactor (merged to main)
+- **Changes Made**:
+  - Split monolithic HTML (2,032 lines) into modular structure:
+    - amazon-organizer.css (97 lines)
+    - amazon-organizer.js (1,916 lines)
+    - amazon-organizer.html (17 lines)
+  - Enhanced version management:
+    - Query string cache busting (?v=3.2.0)
+    - Footer version display (bottom-right corner)
+    - Version comments in all files
+  - Implemented git pre-commit hook for automatic SKILL zip rebuilding
+  - Updated README.md and CHANGELOG.md
+- **Status**: Successfully merged to main, tagged as v3.2.0, and pushed to GitHub
 
 ### v3.1.2 - RELEASED ✅
 - **Started**: 2025-10-18

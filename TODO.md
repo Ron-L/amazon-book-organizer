@@ -25,6 +25,26 @@
 - [x] Project version management - README.md as source of truth for git tags
 - [x] Documentation updates - README with server setup, Skills workflow, NOTES.md
 - [x] Improve column rename discoverability - Added hover pencil icon (feature was working via double-click but not obvious to users)
+- [x] Improve console fetcher error messages - Added actionable recovery steps for auth failures
+- [x] HTML refactoring - Split monolithic HTML into separate CSS/JS files (v3.2.0)
+- [x] Version management enhancements - Query string cache busting, footer display, version comments
+- [x] Git pre-commit hook - Automatic SKILL zip rebuilding on commit
+- [x] Collections fetcher - Built collections-fetcher.js to extract collection membership and read status (v1.0.0)
+
+## Collections Integration - IN PROGRESS
+
+- [x] Build collections fetcher script (collections-fetcher.js v1.0.0)
+- [x] Test collections fetcher (successfully fetched 2,280 books in 3m 56s)
+- [x] Generate amazon-collections.json with all collection data
+- [x] HTML refactor complete (v3.2.0) - modular structure ready for integration
+- [ ] Merge v3.2.0 refactor to main
+- [ ] Pull refactored main into feature-collection-read-status-exploration
+- [ ] Load and merge collections data with library data in organizer
+- [ ] Add visual indicators (badges/icons) for collections on book covers
+- [ ] Add metadata display showing which collections each book belongs to
+- [ ] Add filtering by collection name
+- [ ] Add filtering by read status (READ/UNREAD/UNKNOWN)
+- [ ] Implement "Uncollected" pseudo-collection (books with no collections)
 
 ## Collections & Read Status Feature - In Progress
 

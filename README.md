@@ -47,8 +47,11 @@ Browsers block JavaScript from loading local files (like your library JSON) when
 
 ## Files
 
-- `amazon-organizer.html` - Main application interface
-- `console-fetcher.js` - Data fetching utility
+- `amazon-organizer.html` - Main application HTML shell (v3.2.0)
+- `amazon-organizer.js` - Application JavaScript (v3.2.0)
+- `amazon-organizer.css` - Application styles (v3.2.0)
+- `console-fetcher.js` - Library data fetching utility (v1.2.0)
+- `collections-fetcher.js` - Collections data fetching utility (v1.0.0)
 - `amazon-book-organizer.code-workspace` - VS Code workspace configuration
 
 ## Development with Claude
@@ -110,9 +113,9 @@ build-skill-organizer.bat
 
 ## Version
 
-**Project Version: v3.1.2**
+**Project Version: v3.2.0**
 
-This is the project-level version used for git tags. Individual code files may have their own internal versions (e.g., `APP_VERSION` in amazon-organizer.html).
+This is the project-level version used for git tags. Individual code files may have their own internal versions (e.g., `APP_VERSION` in amazon-organizer.js, version comments in CSS/JS files).
 
 ## License
 
