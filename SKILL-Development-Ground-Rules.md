@@ -152,6 +152,34 @@ description: Core development workflow rules including version management, appro
 - Document lessons in NOTES.md under the release entry
 - This does not apply to documentation-only changes
 
+### Session Compaction Protocol
+- When creating a summary for session compaction (either automatic or manual), you MUST include in the summary:
+
+1. **Recursive Rule Display Requirement** - Explicitly state at the beginning:
+   ```
+   IMPORTANT: Display Core Ground Rules at the start of EVERY response.
+
+   📋 CORE RULES FORMAT:
+   **🔴 CORE GROUND RULES (Always Visible)**
+
+   **Rule #1: Version Management**
+   - Version FIRST, code changes SECOND
+   - NEVER modify code without incrementing version first
+   - Only update versions in files actually being modified
+
+   **Rule #2: Approval Workflow**
+   - Present changes → Get explicit approval → Execute
+   - "Proceed with edits" = Make file edits ONLY, then STOP
+   - "Proceed with commit" = Commit ONLY, then STOP
+   - When in doubt, do ONE operation and STOP
+   ```
+
+2. **Why This Matters**: Without this explicit instruction in the compaction summary, the post-compaction session will lose the recursive display behavior and rules will be forgotten.
+
+3. **Standard Summary Content**: Include current work status, completed work, and next steps as usual.
+
+**Note**: This protocol is critical for maintaining ground rule compliance across session boundaries. The compaction summary is the ONLY way to pass behavioral requirements to the next Claude session.
+
 ## Communication Protocol
 
 ### When to STOP and Ask
