@@ -48,6 +48,33 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Current Work in Progress
 
+### v3.2.0 - HTML Refactor (Ready to Release)
+- **Started**: 2025-10-19
+- **Completed**: 2025-10-19
+- **Branch**: feature-html-refactor
+- **Changes Made**:
+  - Split monolithic HTML (2,032 lines) into modular structure:
+    - amazon-organizer.css (97 lines)
+    - amazon-organizer.js (1,916 lines)
+    - amazon-organizer.html (17 lines)
+  - Enhanced version management:
+    - Query string cache busting (?v=3.2.0)
+    - Footer version display (bottom-right corner)
+    - Version comments in all files
+  - Implemented git pre-commit hook for automatic SKILL zip rebuilding
+  - Updated README.md and CHANGELOG.md
+- **Status**: Committed to feature-html-refactor, ready to merge to main and tag
+- **Next**: Merge to main, tag v3.2.0, pull into feature-collection-read-status-exploration
+
+### Collections & Read Status Integration - IN PROGRESS
+- **Started**: 2025-10-19
+- **Branch**: feature-collection-read-status-exploration
+- **Status**: Collections fetcher complete, waiting for HTML refactor merge
+- **Next Steps**:
+  1. Pull refactored main into collections branch
+  2. Integrate collections data into organizer
+  3. Add visual indicators (badges) and filtering
+
 ### v3.1.2 - RELEASED ✅
 - **Started**: 2025-10-18
 - **Completed**: 2025-10-18
