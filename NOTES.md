@@ -40,11 +40,12 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Tabled Items
 
-### Collection & Read Status API Exploration
-- **Date**: 2025-10-18
-- **Context**: Extract collection membership and "read" status from Amazon's FIONA API for integration into organizer
-- **Status**: ✅ API DISCOVERED - Step 1 Complete! Ready for POC script development
-- **Priority**: Build proof-of-concept script to validate data extraction
+### Collection & Read Status Feature - Collections Fetcher Complete
+- **Date Started**: 2025-10-18
+- **Date Completed**: 2025-10-19
+- **Context**: Extract collection membership and "read" status from Amazon's API for integration into organizer
+- **Status**: ✅ COLLECTIONS FETCHER COMPLETE - Ready for HTML refactor
+- **Priority**: Refactor HTML before integration (separate branch strategy)
 
 **Background:**
 - User marks finished books as "Read" in Amazon collections
@@ -100,10 +101,34 @@ This file tracks tabled discussion items, work in progress context, and open que
 - ✅ Authentication: CSRF token + session cookies (same pattern as existing fetcher)
 - ✅ Network traffic captured in: Collections Traffic Capture.txt
 
-**Next Steps:**
-1. Create technical specification document
-2. Build POC script to fetch 2 pages and validate fields
-3. If successful, build full fetcher with rate limiting and pagination
+**Completed Work:**
+- ✅ API endpoint identified and tested
+- ✅ POC script validated (2 pages, 50 books)
+- ✅ Full collections-fetcher.js built with Phase 0 validation
+- ✅ Robust pagination (3 stop conditions, dynamic safety limit)
+- ✅ Successfully tested: 2,280/2,280 books fetched in 3m 56s
+- ✅ Generated amazon-collections.json (505 KB)
+- ✅ All changes committed to feature-collection-read-status-exploration branch
+
+**Key Statistics from Test:**
+- Total books: 2,280
+- Books with collections: 1,399 (61%)
+- Books without collections: 881 (39% - will show as "Uncollected")
+- Read status: 722 READ, 1 UNREAD, 1,557 UNKNOWN
+
+**Next Steps (New Session):**
+1. Create feature-html-refactor branch from main
+2. Refactor HTML: Split into organizer.css + organizer.js + minimal HTML shell
+3. Test refactored version works
+4. Merge refactor to main as v3.2.0
+5. Pull main into feature-collection-read-status-exploration (resolve doc conflicts)
+6. Begin collections integration on refactored codebase
+
+**Important Decisions Made:**
+- Using separate branch for refactor (cleaner history, independent release)
+- Two separate JSON files (library + collections, merged in HTML)
+- "Uncollected" computed as pseudo-collection (books with collections: [])
+- Output includes title field for better error reporting
 
 ### Column Name Filtering Feature
 - **Date**: 2025-10-17
