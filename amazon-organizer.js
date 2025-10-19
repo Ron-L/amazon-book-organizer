@@ -103,6 +103,9 @@
             const [lastSyncTime, setLastSyncTime] = useState(null);
             const [manifestData, setManifestData] = useState(null);
             const [statusModalOpen, setStatusModalOpen] = useState(false);
+            const [collectionsData, setCollectionsData] = useState(null); // Map of ASIN -> {readStatus, collections[]}
+            const [collectionFilter, setCollectionFilter] = useState(''); // Filter by collection name or special values
+            const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
             const [, forceUpdate] = useState({});
 
             // Wrapper for setSyncStatus
@@ -220,12 +223,19 @@
                         }
 
                         // Load books from IndexedDB
-                        const loadedBooks = await loadBooksFromIndexedDB();
-                        
-                        let effectiveLastSync = null;
-                        
+                        let loadedBooks = await loadBooksFromIndexedDB();
+
+                        // Merge collections data into loaded books
                         if (loadedBooks.length > 0) {
+                            loadedBooks = await mergeCollectionsIntoBooks(loadedBooks);
                             setBooks(loadedBooks);
+                            // Update IndexedDB with merged data
+                            await saveBooksToIndexedDB(loadedBooks);
+                        }
+
+                        let effectiveLastSync = null;
+
+                        if (loadedBooks.length > 0) {
                             
                             // Load organization from localStorage
                             const saved = localStorage.getItem(STORAGE_KEY);
@@ -315,6 +325,11 @@
             useEffect(() => {
                 localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
             }, [settings]);
+
+            // Expose books to window for debugging
+            useEffect(() => {
+                window.books = books;
+            }, [books]);
 
             const saveSettings = (newSettings) => {
                 setSettings(newSettings);
@@ -635,9 +650,90 @@ Would you like to copy the ASIN now?`;
                 setDataSource('csv');
             };
 
+            const loadCollectionsData = async () => {
+                try {
+                    // Try to fetch collections data from same directory with cache-busting
+                    const response = await fetch(`amazon-collections.json?t=${Date.now()}`);
+                    if (!response.ok) {
+                        console.log('No collections data file found (this is optional)');
+                        return null;
+                    }
+
+                    const collectionsJson = await response.json();
+
+                    // Validate schema version
+                    if (collectionsJson.schemaVersion !== '1.0') {
+                        console.warn('Collections data schema version mismatch, skipping');
+                        return null;
+                    }
+
+                    // Create a Map indexed by ASIN for O(1) lookup
+                    const collectionsMap = new Map();
+
+                    collectionsJson.books.forEach(book => {
+                        collectionsMap.set(book.asin, {
+                            readStatus: book.readStatus,
+                            collections: book.collections || []
+                        });
+                    });
+
+                    console.log(`✅ Loaded collections data for ${collectionsMap.size} books`);
+                    console.log(`   - ${collectionsJson.booksWithCollections} books have collections`);
+                    console.log(`   - Fetcher version: ${collectionsJson.fetcherVersion}`);
+
+                    setCollectionsData(collectionsMap);
+                    return collectionsMap;
+                } catch (error) {
+                    console.log('Could not load collections data (this is optional):', error.message);
+                    return null;
+                }
+            };
+
+            const mergeCollectionsIntoBooks = async (booksToMerge) => {
+                // Load collections data if not already loaded
+                const collections = collectionsData || await loadCollectionsData();
+                if (!collections) {
+                    console.log('No collections data available to merge');
+                    return booksToMerge;
+                }
+
+                // Merge collections into each book
+                const mergedBooks = booksToMerge.map(book => {
+                    const bookCollections = collections.get(book.asin) || { readStatus: 'UNKNOWN', collections: [] };
+                    return {
+                        ...book,
+                        readStatus: bookCollections.readStatus,
+                        collections: bookCollections.collections
+                    };
+                });
+
+                // Log results
+                const booksWithCollections = mergedBooks.filter(b => b.collections.length > 0).length;
+                const readBooks = mergedBooks.filter(b => b.readStatus === 'READ').length;
+                const unreadBooks = mergedBooks.filter(b => b.readStatus === 'UNREAD').length;
+                console.log(`📚 Collections data merged:`);
+                console.log(`   - ${booksWithCollections} books have collections`);
+                console.log(`   - ${readBooks} READ, ${unreadBooks} UNREAD, ${mergedBooks.length - readBooks - unreadBooks} UNKNOWN`);
+
+                // Show sample book with collections for verification
+                const sampleBook = mergedBooks.find(b => b.collections.length > 0);
+                if (sampleBook) {
+                    console.log(`\n📖 Sample book with collections:`);
+                    console.log(`   Title: ${sampleBook.title}`);
+                    console.log(`   ASIN: ${sampleBook.asin}`);
+                    console.log(`   Read Status: ${sampleBook.readStatus}`);
+                    console.log(`   Collections: ${sampleBook.collections.map(c => c.name).join(', ')}`);
+                }
+
+                return mergedBooks;
+            };
+
             const loadEnrichedData = async (content, onComplete = null) => {
                 const data = JSON.parse(content);
-                
+
+                // Load collections data (optional, non-blocking)
+                const collections = await loadCollectionsData();
+
                 const extractDescription = (descData) => {
                     if (!descData?.sections?.[0]?.content) return '';
                     
@@ -669,7 +765,10 @@ Would you like to copy the ASIN now?`;
                 
                 const processedBooks = data.map((item, i) => {
                     const isNewFormat = !item.amazonData;
-                    
+
+                    // Get collections data for this book (if available)
+                    const bookCollections = collections?.get(item.asin) || { readStatus: 'UNKNOWN', collections: [] };
+
                     if (isNewFormat) {
                         return {
                             id: `book-${i}`,
@@ -686,7 +785,10 @@ Would you like to copy the ASIN now?`;
                             topReviews: item.topReviews || [],
                             binding: item.binding || 'Kindle eBook',
                             coverUrl: item.coverUrl,
-                            hasEnrichedData: true
+                            hasEnrichedData: true,
+                            // Collections data
+                            readStatus: bookCollections.readStatus,
+                            collections: bookCollections.collections
                         };
                     } else {
                         const amazonData = item.amazonData?.data?.getProduct;
@@ -717,11 +819,34 @@ Would you like to copy the ASIN now?`;
                             topReviews: amazonData?.customerReviewsTop?.reviews || [],
                             binding: amazonData?.bindingInformation?.binding?.displayString || 'Kindle eBook',
                             coverUrl: coverUrl,
-                            hasEnrichedData: true
+                            hasEnrichedData: true,
+                            // Collections data
+                            readStatus: bookCollections.readStatus,
+                            collections: bookCollections.collections
                         };
                     }
                 });
-                
+
+                // Log collections merge results
+                if (collections) {
+                    const booksWithCollections = processedBooks.filter(b => b.collections.length > 0).length;
+                    const readBooks = processedBooks.filter(b => b.readStatus === 'READ').length;
+                    const unreadBooks = processedBooks.filter(b => b.readStatus === 'UNREAD').length;
+                    console.log(`📚 Collections data merged:`);
+                    console.log(`   - ${booksWithCollections} books have collections`);
+                    console.log(`   - ${readBooks} READ, ${unreadBooks} UNREAD, ${processedBooks.length - readBooks - unreadBooks} UNKNOWN`);
+
+                    // Show sample book with collections for verification
+                    const sampleBook = processedBooks.find(b => b.collections.length > 0);
+                    if (sampleBook) {
+                        console.log(`\n📖 Sample book with collections:`);
+                        console.log(`   Title: ${sampleBook.title}`);
+                        console.log(`   ASIN: ${sampleBook.asin}`);
+                        console.log(`   Read Status: ${sampleBook.readStatus}`);
+                        console.log(`   Collections: ${sampleBook.collections.map(c => c.name).join(', ')}`);
+                    }
+                }
+
                 // Save to IndexedDB
                 await saveBooksToIndexedDB(processedBooks);
                 setBooks(processedBooks);
@@ -1137,11 +1262,41 @@ Would you like to copy the ASIN now?`;
                 setDropTarget(null);
             };
 
+            const getAllCollectionNames = () => {
+                const collectionNames = new Set();
+                books.forEach(book => {
+                    if (book.collections && book.collections.length > 0) {
+                        book.collections.forEach(c => collectionNames.add(c.name));
+                    }
+                });
+                return Array.from(collectionNames).sort();
+            };
+
             const filteredBooks = (bookIds) => {
-                return bookIds.map(id => books.find(b => b.id === id)).filter(book => book && (
-                    book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    book.author.toLowerCase().includes(searchTerm.toLowerCase())
-                ));
+                return bookIds.map(id => books.find(b => b.id === id)).filter(book => {
+                    if (!book) return false;
+
+                    // Text search filter
+                    const matchesSearch = !searchTerm ||
+                        book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        book.author.toLowerCase().includes(searchTerm.toLowerCase());
+
+                    // Read status filter
+                    const matchesReadStatus = !readStatusFilter || book.readStatus === readStatusFilter;
+
+                    // Collection filter
+                    let matchesCollection = true;
+                    if (collectionFilter) {
+                        if (collectionFilter === 'UNCOLLECTED') {
+                            matchesCollection = !book.collections || book.collections.length === 0;
+                        } else {
+                            matchesCollection = book.collections &&
+                                book.collections.some(c => c.name === collectionFilter);
+                        }
+                    }
+
+                    return matchesSearch && matchesReadStatus && matchesCollection;
+                });
             };
 
             const renderStatusIndicator = () => {
@@ -1262,6 +1417,30 @@ Would you like to copy the ASIN now?`;
                                     </button>
                                 )}
                             </div>
+
+                            <select
+                                value={readStatusFilter}
+                                onChange={(e) => setReadStatusFilter(e.target.value)}
+                                className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                title="Filter by read status">
+                                <option value="">All Status</option>
+                                <option value="READ">✓ Read</option>
+                                <option value="UNREAD">○ Unread</option>
+                                <option value="UNKNOWN">? Unknown</option>
+                            </select>
+
+                            <select
+                                value={collectionFilter}
+                                onChange={(e) => setCollectionFilter(e.target.value)}
+                                className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                title="Filter by collection">
+                                <option value="">🗂️ All Collections</option>
+                                <option value="UNCOLLECTED">📚 Uncollected</option>
+                                {getAllCollectionNames().map(name => (
+                                    <option key={name} value={name}>{name}</option>
+                                ))}
+                            </select>
+
                             <button onClick={addColumn}
                                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2">
                                 ➕ Add Column
@@ -1843,7 +2022,10 @@ Would you like to copy the ASIN now?`;
                                                                  if (!isDragging) {
                                                                      openBookModal(book, column.id);
                                                                  }
-                                                             }}>
+                                                             }}
+                                                             title={book.collections && book.collections.length > 0
+                                                                ? `Collections:\n${book.collections.map(c => c.name).join('\n')}`
+                                                                : '📭 No collections'}>
                                                             <div className="relative">
                                                                 {blankImageBooks.has(book.id) ? (
                                                                     <div className="w-full aspect-[2/3] rounded shadow-lg overflow-hidden flex flex-col" 
@@ -1869,6 +2051,19 @@ Would you like to copy the ASIN now?`;
                                                                         ★ {book.rating.toFixed(1)}
                                                                     </div>
                                                                 )}
+                                                                {book.readStatus === 'READ' && (
+                                                                    <div className="read-ribbon">
+                                                                        READ
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-2 text-xs">
+                                                                <div className="font-medium text-gray-800 leading-tight line-clamp-2" title={book.title}>
+                                                                    {book.title}
+                                                                </div>
+                                                                <div className="text-gray-600 mt-1 leading-tight line-clamp-1" title={book.author}>
+                                                                    {book.author}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>

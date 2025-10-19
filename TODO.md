@@ -37,14 +37,18 @@
 - [x] Test collections fetcher (successfully fetched 2,280 books in 3m 56s)
 - [x] Generate amazon-collections.json with all collection data
 - [x] HTML refactor complete (v3.2.0) - modular structure ready for integration
-- [ ] Merge v3.2.0 refactor to main
-- [ ] Pull refactored main into feature-collection-read-status-exploration
-- [ ] Load and merge collections data with library data in organizer
+- [x] Merge v3.2.0 refactor to main
+- [x] Pull refactored main into feature-collection-read-status-exploration
+- [x] Load and merge collections data with library data in organizer
 - [ ] Add visual indicators (badges/icons) for collections on book covers
 - [ ] Add metadata display showing which collections each book belongs to
 - [ ] Add filtering by collection name
 - [ ] Add filtering by read status (READ/UNREAD/UNKNOWN)
 - [ ] Implement "Uncollected" pseudo-collection (books with no collections)
+
+## Bugs - High Priority
+
+- [ ] **Description fetching is broken** - Console fetcher should fetch descriptions during library scan, but descriptions are empty in amazon-library.json. The app incorrectly shows "📝 Description not loaded yet" with a manual fetch button. This manual fetch workflow was proposed and rejected - descriptions should be fetched automatically by console-fetcher.js during the library scan. Need to investigate why console-fetcher.js is not fetching descriptions.
 
 ## Collections & Read Status Feature - In Progress
 
