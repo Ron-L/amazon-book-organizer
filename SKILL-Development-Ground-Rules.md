@@ -5,6 +5,8 @@ description: Core development workflow rules including version management, appro
 
 # Software Development Ground Rules
 
+<!-- Test comment to verify pre-commit hook auto-rebuilds .zip files -->
+
 ## Core Rules (NEVER violate these)
 
 ### 0. Recursive Rule Display (Unbreakable)
