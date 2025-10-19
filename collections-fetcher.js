@@ -185,11 +185,15 @@
         }
 
         const totalBooks = ownershipData.numberOfItems || 0;
+        const expectedPages = totalBooks > 0 ? Math.ceil(totalBooks / BATCH_SIZE) : 0;
+        const safetyLimit = expectedPages + 2; // Allow 2 extra pages for API inconsistencies
+
         console.log('  ✅ API test successful\n');
         console.log('✅ Phase 0 validation complete!');
         console.log(`   Total books in library: ${totalBooks}`);
-        console.log(`   Estimated pages: ${Math.ceil(totalBooks / BATCH_SIZE)}`);
-        console.log(`   Estimated time: ${Math.ceil((totalBooks / BATCH_SIZE) * FETCH_DELAY_MS / 1000 / 60)} minutes\n`);
+        console.log(`   Expected pages: ${expectedPages}`);
+        console.log(`   Safety limit: ${safetyLimit} pages (expected + 2 buffer)`);
+        console.log(`   Estimated time: ${Math.ceil(expectedPages * FETCH_DELAY_MS / 1000 / 60)} minutes\n`);
 
     } catch (error) {
         console.error('❌ PHASE 0 VALIDATION FAILED - EXCEPTION');
@@ -236,10 +240,11 @@
 
     let allBooks = [];
     let totalCount = 0;
+    let expectedPages = 0;
+    let safetyLimit = 0;
     let pageNum = 0;
-    let hasMore = true;
 
-    while (hasMore) {
+    while (true) {
         const startIndex = pageNum * BATCH_SIZE;
         activityInput.fetchCriteria.startIndex = startIndex;
 
@@ -283,27 +288,45 @@
                 return;
             }
 
+            // Update total count and calculate safety limit
             totalCount = ownershipData.numberOfItems || totalCount;
+            if (pageNum === 0 && totalCount > 0) {
+                expectedPages = Math.ceil(totalCount / BATCH_SIZE);
+                safetyLimit = expectedPages + 2;
+            }
+
             const books = ownershipData.items || [];
 
             console.log(`  ✅ Received ${books.length} books`);
-            allBooks = allBooks.concat(books);
 
-            // Check if we have more pages
-            hasMore = ownershipData.hasMoreItems === true;
-
-            if (!hasMore) {
-                console.log(`  📊 Reached end of library (no more items)\n`);
+            // Stop condition 1: Empty response (API says "no more")
+            if (books.length === 0) {
+                console.log(`  📊 Received 0 books - end of data\n`);
                 break;
             }
 
+            allBooks = allBooks.concat(books);
             pageNum++;
 
-            // Rate limiting - delay before next request
-            if (hasMore) {
-                console.log(`  ⏳ Waiting ${FETCH_DELAY_MS}ms before next request...\n`);
-                await new Promise(resolve => setTimeout(resolve, FETCH_DELAY_MS));
+            // Stop condition 2: Safety limit reached
+            if (safetyLimit > 0 && pageNum >= safetyLimit) {
+                console.error(`\n❌ SAFETY LIMIT REACHED`);
+                console.error(`   Expected ${expectedPages} pages, fetched ${pageNum}`);
+                console.error(`   API may be returning duplicate data or stuck in a loop`);
+                console.error(`   Stopping to prevent infinite fetch`);
+                console.error(`   Working with ${allBooks.length} books fetched so far\n`);
+                break;
             }
+
+            // Stop condition 3: We have all books based on count
+            if (totalCount > 0 && allBooks.length >= totalCount) {
+                console.log(`  📊 Fetched all books based on total count\n`);
+                break;
+            }
+
+            // Rate limiting - delay before next request
+            console.log(`  ⏳ Waiting ${FETCH_DELAY_MS}ms before next request...\n`);
+            await new Promise(resolve => setTimeout(resolve, FETCH_DELAY_MS));
 
         } catch (error) {
             console.error(`\n❌ Exception on page ${pageNum + 1}:`, error.message);
@@ -315,7 +338,21 @@
 
     console.log('✅ Phase 1 complete!');
     console.log(`   Total books fetched: ${allBooks.length}`);
-    console.log(`   Total pages fetched: ${pageNum + 1}\n`);
+    console.log(`   Total pages fetched: ${pageNum}\n`);
+
+    // Validate book count matches expected
+    if (totalCount > 0 && allBooks.length !== totalCount) {
+        console.warn('⚠️  BOOK COUNT MISMATCH');
+        console.warn(`   API reported total: ${totalCount}`);
+        console.warn(`   Actually fetched: ${allBooks.length}`);
+        console.warn(`   Difference: ${Math.abs(allBooks.length - totalCount)}`);
+        if (allBooks.length < totalCount) {
+            console.warn('   Some books may be missing from the fetch');
+        } else {
+            console.warn('   Fetched more books than expected (possible duplicates?)');
+        }
+        console.warn('   Proceeding with fetched data...\n');
+    }
 
     // ==========================================
     // Phase 2: Process and Format Data
