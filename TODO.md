@@ -48,7 +48,7 @@
 
 ## Bugs - High Priority
 
-- [ ] **Description fetching is broken** - Library fetcher should fetch descriptions during library scan, but descriptions are empty in amazon-library.json. The app incorrectly shows "📝 Description not loaded yet" with a manual fetch button. This manual fetch workflow was proposed and rejected - descriptions should be fetched automatically by library-fetcher.js during the library scan. Need to investigate why library-fetcher.js is not fetching descriptions.
+- [x] **Description fetching is broken** - FIXED in v3.1.2 - Description extraction now works correctly
 
 ## Collections & Read Status Feature - In Progress
 
@@ -81,7 +81,53 @@
   - Missing collections.json → App works, no collection features
   - Schema mismatch → Handle gracefully
 
-## Fetcher Improvements - High Priority
+## Fetcher Improvements - Phase 2 (Description Tracking & Reporting)
+
+**Goal**: Add comprehensive tracking and reporting for books without descriptions
+
+### Schema v2.0.0 Changes
+- [ ] **Add metadata section to amazon-library.json**:
+  - `metadata.fetchDate`, `metadata.totalBooks`, `metadata.booksWithoutDescriptions`
+  - `metadata.schemaVersion = "2.0.0"`
+  - `booksWithoutDescriptions` array: `[{asin, title, authors}]`
+
+### Library Fetcher Enhancements
+- [ ] **Track missing descriptions during Pass 2**:
+  - Build `booksWithoutDescriptions` array for books where `extractDescription()` returns empty
+  - Add metadata section to output JSON
+  - Include schema version in metadata
+
+- [ ] **Add end-of-run summary to console**:
+  - Show total books, books with complete data, books missing descriptions
+  - List all books without descriptions (ASIN, title, author)
+
+### Collections Fetcher (if needed)
+- [ ] Review if similar tracking/metadata would be useful
+
+## Fetcher Improvements - Phase 3 (UI Error Handling)
+
+**Goal**: Improve error messaging in organizer for missing descriptions
+
+### Organizer Updates
+- [ ] **Handle new JSON schema v2.0.0**:
+  - Load and parse `metadata` and `booksWithoutDescriptions`
+  - Backward compatible with old schema
+
+- [ ] **Improve book dialog error messaging**:
+  - If empty + in `booksWithoutDescriptions`: "⚠️ Description not available from Amazon"
+  - If empty + NOT in array: "❌ Error: Description should exist but wasn't found"
+  - Remove "📥 Fetch Description & Reviews" manual fetch button
+
+- [ ] **Add warning banner on library load**:
+  - Dismissible banner if books missing descriptions
+  - Store dismissed state in localStorage
+
+- [ ] **Add "View Books Missing Descriptions" feature**:
+  - Button/menu to view list anytime
+  - Table with title, author, ASIN
+  - Link to book dialog
+
+## Fetcher Improvements - Other
 
 - [ ] Remove 30-second timeout from file selection
 - [ ] Improve "WORKING DIRECTORY" messaging throughout
