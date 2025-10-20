@@ -586,18 +586,6 @@
                                             }
                                         }
                                     }
-                                    pastPurchase {
-                                        purchaseHistory {
-                                            lastOrderDate
-                                            lastOrderDateV2
-                                            orderLink {
-                                                data {
-                                                    displayString
-                                                }
-                                                url
-                                            }
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -650,10 +638,8 @@
                     
                     if (!product) continue;
                     
-                    const acquisitionDate = node.relationshipCreationDate || 
-                                          product.pastPurchase?.purchaseHistory?.lastOrderDate ||
-                                          product.pastPurchase?.purchaseHistory?.lastOrderDateV2 ||
-                                          null;
+                    // Use relationshipCreationDate (always present in the node)
+                    const acquisitionDate = node.relationshipCreationDate || null;
                     
                     // Check if this book already exists (by ASIN and date)
                     if (mostRecentDate && acquisitionDate) {
