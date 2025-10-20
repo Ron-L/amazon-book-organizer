@@ -537,14 +537,10 @@
                                             hiRes {
                                                 physicalId
                                                 extension
-                                                height
-                                                width
                                             }
                                             lowRes {
                                                 physicalId
                                                 extension
-                                                height
-                                                width
                                             }
                                         }
                                     }
