@@ -1,4 +1,4 @@
-// Amazon Library Fetcher v3.1.2.a (Combined Pass 1+2 + Manifest)
+// Amazon Library Fetcher v3.1.2 (Combined Pass 1+2 + Manifest)
 // Fetches library books and enriches them with descriptions & reviews
 // Also generates a manifest file for the organizer to track updates
 //
@@ -14,7 +14,7 @@
 
 (async function() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v3.1.2.a';
+    const FETCHER_VERSION = 'v3.1.2';
     const SCHEMA_VERSION = '2.0';
     
     console.log('========================================');

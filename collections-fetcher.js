@@ -1,4 +1,4 @@
-// Amazon Collections Fetcher v1.0.0.a
+// Amazon Collections Fetcher v1.0.0
 // Fetches collection membership and read status for all books in your library
 //
 // Instructions:
@@ -10,7 +10,7 @@
 // 6. Upload to organizer along with amazon-library.json
 
 (async function() {
-    const FETCHER_VERSION = 'v1.0.0.a';
+    const FETCHER_VERSION = 'v1.0.0';
     const SCHEMA_VERSION = '1.0';
     const PAGE_TITLE = document.title;
 
