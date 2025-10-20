@@ -31,7 +31,7 @@ description: Core development workflow rules including version management, appro
 
 #### File-Specific Versioning
 - Only increment versions in files that are actually being modified
-- If changing console-fetcher.js, update FETCHER_VERSION only
+- If changing library-fetcher.js, update FETCHER_VERSION only
 - If changing amazon-organizer.html, update APP_VERSION only
 - Project version in README.md increments independently (see Project Versioning below)
 

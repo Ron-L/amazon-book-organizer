@@ -25,7 +25,7 @@
 - [x] Project version management - README.md as source of truth for git tags
 - [x] Documentation updates - README with server setup, Skills workflow, NOTES.md
 - [x] Improve column rename discoverability - Added hover pencil icon (feature was working via double-click but not obvious to users)
-- [x] Improve console fetcher error messages - Added actionable recovery steps for auth failures
+- [x] Improve library fetcher error messages - Added actionable recovery steps for auth failures
 - [x] HTML refactoring - Split monolithic HTML into separate CSS/JS files (v3.2.0)
 - [x] Version management enhancements - Query string cache busting, footer display, version comments
 - [x] Git pre-commit hook - Automatic SKILL zip rebuilding on commit
@@ -48,7 +48,7 @@
 
 ## Bugs - High Priority
 
-- [ ] **Description fetching is broken** - Console fetcher should fetch descriptions during library scan, but descriptions are empty in amazon-library.json. The app incorrectly shows "📝 Description not loaded yet" with a manual fetch button. This manual fetch workflow was proposed and rejected - descriptions should be fetched automatically by console-fetcher.js during the library scan. Need to investigate why console-fetcher.js is not fetching descriptions.
+- [ ] **Description fetching is broken** - Library fetcher should fetch descriptions during library scan, but descriptions are empty in amazon-library.json. The app incorrectly shows "📝 Description not loaded yet" with a manual fetch button. This manual fetch workflow was proposed and rejected - descriptions should be fetched automatically by library-fetcher.js during the library scan. Need to investigate why library-fetcher.js is not fetching descriptions.
 
 ## Collections & Read Status Feature - In Progress
 

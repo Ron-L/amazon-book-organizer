@@ -115,7 +115,7 @@ activityInput={JSON_PAYLOAD}
 ### CSRF Token Extraction
 - Token must be extracted from the page before making requests
 - Look for token in page source or existing JavaScript variables
-- Same pattern as current `console-fetcher.js` (uses `anti-csrftoken-a2z` cookie)
+- Same pattern as current `library-fetcher.js` (uses `anti-csrftoken-a2z` cookie)
 
 ### Session Cookies
 - Uses standard Amazon session cookies

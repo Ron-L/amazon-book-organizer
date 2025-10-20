@@ -1,7 +1,7 @@
-// Amazon Book Incremental Fetcher v3.1.0 (Combined Pass 1+2 + Manifest)
-// Fetches new books and enriches them with descriptions & reviews
+// Amazon Library Fetcher v3.1.2.a (Combined Pass 1+2 + Manifest)
+// Fetches library books and enriches them with descriptions & reviews
 // Also generates a manifest file for the organizer to track updates
-// 
+//
 // Instructions:
 // 1. Go to https://www.amazon.com/yourbooks (must be logged in)
 // 2. Open DevTools Console (F12 → Console tab)
@@ -14,11 +14,11 @@
 
 (async function() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v3.1.2';
+    const FETCHER_VERSION = 'v3.1.2.a';
     const SCHEMA_VERSION = '2.0';
     
     console.log('========================================');
-    console.log(`Amazon Book Incremental Fetcher ${FETCHER_VERSION}`);
+    console.log(`Amazon Library Fetcher ${FETCHER_VERSION}`);
     console.log(`📄 Page: ${PAGE_TITLE}`);
     console.log('Combined Pass 1 (titles) + Pass 2 (enrichment) + Manifest');
     console.log('========================================\n');
@@ -36,7 +36,78 @@
     const LIBRARY_FILENAME = 'amazon-library.json';
     const MANIFEST_FILENAME = 'amazon-manifest.json';
     const startTime = Date.now();
-    
+
+    // ============================================================================
+    // Shared Extraction Functions
+    // These ensure Phase 0, Pass 1, and Pass 2 all extract data identically
+    // ============================================================================
+
+    const extractDescription = (product) => {
+        let description = '';
+        const descSection = product.description?.sections?.[0];
+        const descContent = descSection?.content;
+
+        if (descContent) {
+            // Try different possible structures
+            if (typeof descContent === 'string') {
+                // Direct string
+                description = descContent;
+            } else if (descContent.text) {
+                // Object with text property
+                description = descContent.text;
+            } else if (descContent.fragments) {
+                // Rich content with fragments
+                const textParts = [];
+                descContent.fragments.forEach(frag => {
+                    if (frag.text) {
+                        textParts.push(frag.text);
+                    } else if (frag.semanticContent?.content?.text) {
+                        textParts.push(frag.semanticContent.content.text);
+                    } else if (frag.semanticContent?.content?.fragments) {
+                        frag.semanticContent.content.fragments.forEach(subfrag => {
+                            if (subfrag.text) textParts.push(subfrag.text);
+                            if (subfrag.semanticContent?.content?.text) {
+                                textParts.push(subfrag.semanticContent.content.text);
+                            }
+                        });
+                    }
+                });
+                description = textParts.join(' ').trim();
+            }
+        }
+
+        return description;
+    };
+
+    const extractAuthors = (product) => {
+        return product.byLine?.contributors
+            ?.map(c => c.name || c.contributor?.author?.profile?.displayName)
+            .filter(Boolean)
+            .join(', ') || 'Unknown Author';
+    };
+
+    const extractCoverUrl = (product) => {
+        const images = product.images?.images?.[0];
+        if (images?.hiRes?.physicalId && images?.hiRes?.extension) {
+            return `https://images-na.ssl-images-amazon.com/images/I/${images.hiRes.physicalId}.${images.hiRes.extension}`;
+        } else if (images?.lowRes?.physicalId && images?.lowRes?.extension) {
+            return `https://images-na.ssl-images-amazon.com/images/I/${images.lowRes.physicalId}.${images.lowRes.extension}`;
+        } else {
+            return `https://images-na.ssl-images-amazon.com/images/P/${product.asin}.01.LZZZZZZZ.jpg`;
+        }
+    };
+
+    const extractReviews = (product) => {
+        return product.customerReviewsTop?.reviews?.map(review => ({
+            stars: review.stars,
+            title: review.title,
+            text: review.contentAbstract?.textAbstract || '',
+            reviewer: review.contributor?.publicProfile?.publicProfile?.publicName?.displayString || 'Anonymous'
+        })) || [];
+    };
+
+    // ============================================================================
+
     try {
         // Step 1: Load existing data (if any)
         console.log('[1/6] Checking for existing library data...');
@@ -209,9 +280,31 @@
         const testEnrichQuery = `query enrichBook {
             getProducts(input: [{asin: "${testAsin}"}]) {
                 asin
-                description {
-                    sections(filter: {types: PRODUCT_DESCRIPTION}) {
-                        content
+                title {
+                    displayString
+                }
+                byLine {
+                    contributors {
+                        name
+                        contributor {
+                            author {
+                                profile {
+                                    displayName
+                                }
+                            }
+                        }
+                    }
+                }
+                images {
+                    images {
+                        hiRes {
+                            physicalId
+                            extension
+                        }
+                        lowRes {
+                            physicalId
+                            extension
+                        }
                     }
                 }
                 customerReviewsSummary {
@@ -220,6 +313,65 @@
                     }
                     rating {
                         value
+                    }
+                }
+                bookSeries {
+                    singleBookView {
+                        series {
+                            title
+                            position
+                        }
+                    }
+                }
+                bindingInformation {
+                    binding {
+                        displayString
+                    }
+                }
+                description {
+                    sections(filter: {types: PRODUCT_DESCRIPTION}) {
+                        content {
+                            ... on ProductTextContent {
+                                text
+                            }
+                            ... on ProductRichContent {
+                                text
+                                fragments {
+                                    text
+                                    semanticContent {
+                                        content {
+                                            text
+                                            fragments {
+                                                text
+                                                semanticContent {
+                                                    content {
+                                                        text
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                customerReviewsTop {
+                    reviews {
+                        contentAbstract {
+                            textAbstract
+                        }
+                        contributor {
+                            publicProfile {
+                                publicProfile {
+                                    publicName {
+                                        displayString
+                                    }
+                                }
+                            }
+                        }
+                        title
+                        stars
                     }
                 }
             }
@@ -258,8 +410,93 @@
             }
 
             console.log(`   ✅ Enrichment API working (tested ASIN: ${testAsin})`);
+
+            // Now validate that we can actually extract ALL the data
+            console.log('   Testing data extraction...');
+
+            const extractionResults = [];
+
+            // Test title extraction (Pass 1)
+            const testTitle = testProduct.title?.displayString;
+            if (testTitle) {
+                extractionResults.push(`✅ Title: "${testTitle.substring(0, 40)}${testTitle.length > 40 ? '...' : ''}"`);
+            } else {
+                extractionResults.push(`❌ Title: FAILED`);
+            }
+
+            // Test author extraction (Pass 1) - using shared function
+            const testAuthors = extractAuthors(testProduct);
+            if (testAuthors && testAuthors !== 'Unknown Author') {
+                extractionResults.push(`✅ Author: "${testAuthors}"`);
+            } else {
+                extractionResults.push(`⚠️  Author: empty (may be unavailable)`);
+            }
+
+            // Test cover URL extraction (Pass 1) - using shared function
+            const testCoverUrl = extractCoverUrl(testProduct);
+            const testImages = testProduct.images?.images?.[0];
+            if (testImages?.hiRes?.physicalId) {
+                extractionResults.push(`✅ Cover: hiRes`);
+            } else if (testImages?.lowRes?.physicalId) {
+                extractionResults.push(`✅ Cover: lowRes`);
+            } else {
+                extractionResults.push(`⚠️  Cover: fallback URL (no image data)`);
+            }
+
+            // Test rating extraction (Pass 1)
+            const testRating = testProduct.customerReviewsSummary?.rating?.value;
+            const testReviewCount = testProduct.customerReviewsSummary?.count?.displayString;
+            if (testRating) {
+                extractionResults.push(`✅ Rating: ${testRating} (${testReviewCount || '0'} reviews)`);
+            } else {
+                extractionResults.push(`⚠️  Rating: none (may be unavailable)`);
+            }
+
+            // Test series extraction (Pass 1)
+            const testSeriesData = testProduct.bookSeries?.singleBookView?.series;
+            if (testSeriesData?.title) {
+                extractionResults.push(`✅ Series: "${testSeriesData.title}" #${testSeriesData.position || '?'}`);
+            } else {
+                extractionResults.push(`⚠️  Series: none (may not be in series)`);
+            }
+
+            // Test binding extraction (Pass 1)
+            const testBinding = testProduct.bindingInformation?.binding?.displayString;
+            if (testBinding) {
+                extractionResults.push(`✅ Binding: ${testBinding}`);
+            } else {
+                extractionResults.push(`⚠️  Binding: empty (may be unavailable)`);
+            }
+
+            // Test description extraction (Pass 2) - using shared function
+            const testDescription = extractDescription(testProduct);
+
+            if (testDescription) {
+                extractionResults.push(`✅ Description: ${testDescription.length} characters`);
+            } else {
+                extractionResults.push(`❌ Description: FAILED (empty)`);
+                const testDescSection = testProduct.description?.sections?.[0];
+                if (testDescSection) {
+                    console.log(`      Structure: ${JSON.stringify(testDescSection).substring(0, 200)}...`);
+                }
+            }
+
+            // Test reviews extraction (Pass 2) - using shared function
+            const testReviews = extractReviews(testProduct);
+
+            if (testReviews.length > 0) {
+                extractionResults.push(`✅ Reviews: ${testReviews.length} top reviews`);
+            } else {
+                extractionResults.push(`⚠️  Reviews: none (may be unavailable)`);
+            }
+
+            // Report all extraction results
             console.log('');
-            console.log('✅ Phase 0 complete: All API endpoints validated\n');
+            console.log('   📊 Field Extraction Results:');
+            extractionResults.forEach(result => console.log(`      ${result}`));
+
+            console.log('');
+            console.log('✅ Phase 0 complete: All API endpoints and extraction logic validated\n');
 
         } catch (error) {
             console.error('\n❌ ENRICHMENT API VALIDATION FAILED');
@@ -456,23 +693,10 @@
                         }
                     }
                     
-                    // Extract book data
+                    // Extract book data - using shared functions
                     const title = product.title?.displayString || 'Unknown Title';
-                    
-                    const authors = product.byLine?.contributors
-                        ?.map(c => c.name || c.contributor?.author?.profile?.displayName)
-                        .filter(Boolean)
-                        .join(', ') || 'Unknown Author';
-                    
-                    let coverUrl = null;
-                    const images = product.images?.images?.[0];
-                    if (images?.hiRes?.physicalId && images?.hiRes?.extension) {
-                        coverUrl = `https://images-na.ssl-images-amazon.com/images/I/${images.hiRes.physicalId}.${images.hiRes.extension}`;
-                    } else if (images?.lowRes?.physicalId && images?.lowRes?.extension) {
-                        coverUrl = `https://images-na.ssl-images-amazon.com/images/I/${images.lowRes.physicalId}.${images.lowRes.extension}`;
-                    } else {
-                        coverUrl = `https://images-na.ssl-images-amazon.com/images/P/${product.asin}.01.LZZZZZZZ.jpg`;
-                    }
+                    const authors = extractAuthors(product);
+                    const coverUrl = extractCoverUrl(product);
                     
                     const rating = product.customerReviewsSummary?.rating?.value || null;
                     const reviewCount = product.customerReviewsSummary?.count?.displayString || null;
@@ -572,7 +796,30 @@
                         asin
                         description {
                             sections(filter: {types: PRODUCT_DESCRIPTION}) {
-                                content
+                                content {
+                                    ... on ProductTextContent {
+                                        text
+                                    }
+                                    ... on ProductRichContent {
+                                        text
+                                        fragments {
+                                            text
+                                            semanticContent {
+                                                content {
+                                                    text
+                                                    fragments {
+                                                        text
+                                                        semanticContent {
+                                                            content {
+                                                                text
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                         customerReviewsSummary {
@@ -641,24 +888,17 @@
                     continue;
                 }
                 
-                // Extract description
-                let description = '';
-                const descContent = product.description?.sections?.[0]?.content;
-                if (descContent) {
-                    if (descContent.text) {
-                        description = descContent.text;
-                    } else if (descContent.__typename === 'ProductRichContent' && descContent.text) {
-                        description = descContent.text;
+                // Extract data - using shared functions
+                const description = extractDescription(product);
+                const topReviews = extractReviews(product);
+
+                // Debug logging if description is still empty
+                if (!description) {
+                    const descSection = product.description?.sections?.[0];
+                    if (descSection) {
+                        console.log(`   ⚠️  No description extracted. Structure: ${JSON.stringify(descSection).substring(0, 200)}...`);
                     }
                 }
-                
-                // Extract reviews
-                const topReviews = product.customerReviewsTop?.reviews?.map(review => ({
-                    stars: review.stars,
-                    title: review.title,
-                    text: review.contentAbstract?.textAbstract || '',
-                    reviewer: review.contributor?.publicProfile?.publicProfile?.publicName?.displayString || 'Anonymous'
-                })) || [];
                 
                 // Update book
                 newBooks[i].description = description;

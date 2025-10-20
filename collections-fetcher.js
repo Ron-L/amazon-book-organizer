@@ -1,4 +1,4 @@
-// Amazon Collections Fetcher v1.0.0
+// Amazon Collections Fetcher v1.0.0.a
 // Fetches collection membership and read status for all books in your library
 //
 // Instructions:
@@ -10,7 +10,7 @@
 // 6. Upload to organizer along with amazon-library.json
 
 (async function() {
-    const FETCHER_VERSION = 'v1.0.0';
+    const FETCHER_VERSION = 'v1.0.0.a';
     const SCHEMA_VERSION = '1.0';
     const PAGE_TITLE = document.title;
 
@@ -184,11 +184,62 @@
             return;
         }
 
+        // 0.6: Test actual data extraction
+        console.log('  [0.6] Testing data extraction...');
+
+        // Test the same transformation logic that Phase 2 will use
+        const testCollections = (sampleBook.collectionList || []).map(col => ({
+            id: col.collectionId,
+            name: col.collectionName
+        }));
+
+        const testOutput = {
+            asin: sampleBook.asin,
+            title: sampleBook.title || 'Unknown Title',
+            readStatus: sampleBook.readStatus || 'UNKNOWN',
+            collections: testCollections
+        };
+
+        // Validate extraction results
+        const extractionResults = [];
+
+        if (testOutput.asin) {
+            extractionResults.push(`✅ ASIN: ${testOutput.asin}`);
+        } else {
+            extractionResults.push(`❌ ASIN: FAILED`);
+        }
+
+        if (testOutput.title && testOutput.title !== 'Unknown Title') {
+            extractionResults.push(`✅ Title: "${testOutput.title.substring(0, 40)}${testOutput.title.length > 40 ? '...' : ''}"`);
+        } else {
+            extractionResults.push(`⚠️  Title: empty or missing`);
+        }
+
+        if (['READ', 'UNREAD', 'UNKNOWN'].includes(testOutput.readStatus)) {
+            extractionResults.push(`✅ Read Status: ${testOutput.readStatus}`);
+        } else {
+            extractionResults.push(`⚠️  Read Status: unexpected value "${testOutput.readStatus}"`);
+        }
+
+        if (testCollections.length > 0) {
+            const collectionNames = testCollections.map(c => c.name).join(', ');
+            extractionResults.push(`✅ Collections: ${testCollections.length} (${collectionNames})`);
+        } else {
+            extractionResults.push(`⚠️  Collections: none (book may not be in any collections)`);
+        }
+
+        console.log('');
+        console.log('  📊 Extraction Test Results:');
+        extractionResults.forEach(result => console.log(`     ${result}`));
+        console.log('');
+        console.log('  Sample output:');
+        console.log('  ', JSON.stringify(testOutput, null, 2).split('\n').join('\n  '));
+
         const totalBooks = ownershipData.numberOfItems || 0;
         const expectedPages = totalBooks > 0 ? Math.ceil(totalBooks / BATCH_SIZE) : 0;
         const safetyLimit = expectedPages + 2; // Allow 2 extra pages for API inconsistencies
 
-        console.log('  ✅ API test successful\n');
+        console.log('');
         console.log('✅ Phase 0 validation complete!');
         console.log(`   Total books in library: ${totalBooks}`);
         console.log(`   Expected pages: ${expectedPages}`);
