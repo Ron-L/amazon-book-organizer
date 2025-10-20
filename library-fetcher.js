@@ -330,30 +330,7 @@
                 }
                 description {
                     sections(filter: {types: PRODUCT_DESCRIPTION}) {
-                        content {
-                            ... on ProductTextContent {
-                                text
-                            }
-                            ... on ProductRichContent {
-                                text
-                                fragments {
-                                    text
-                                    semanticContent {
-                                        content {
-                                            text
-                                            fragments {
-                                                text
-                                                semanticContent {
-                                                    content {
-                                                        text
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        content
                     }
                 }
                 customerReviewsTop {
@@ -796,30 +773,7 @@
                         asin
                         description {
                             sections(filter: {types: PRODUCT_DESCRIPTION}) {
-                                content {
-                                    ... on ProductTextContent {
-                                        text
-                                    }
-                                    ... on ProductRichContent {
-                                        text
-                                        fragments {
-                                            text
-                                            semanticContent {
-                                                content {
-                                                    text
-                                                    fragments {
-                                                        text
-                                                        semanticContent {
-                                                            content {
-                                                                text
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                                content
                             }
                         }
                         customerReviewsSummary {
