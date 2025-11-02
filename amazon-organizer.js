@@ -1,6 +1,6 @@
-        // Amazon Book Organizer JS v3.2.0
+        // Amazon Book Organizer JS v3.2.1.a
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.2.0";
+        const APP_VERSION = "v3.2.1.a";
         document.title = `Amazon Book Organizer ${APP_VERSION}`;
         const STORAGE_KEY = "amazon-book-organizer-state";
         const CACHE_KEY = "amazon-book-enriched-cache";
@@ -334,35 +334,6 @@
             const saveSettings = (newSettings) => {
                 setSettings(newSettings);
                 setSettingsOpen(false);
-            };
-
-            const fetchBookDescription = async (book) => {
-                if (!book.asin) {
-                    alert('No ASIN available for this book');
-                    return;
-                }
-
-                const instructions = `To fetch description & reviews:
-
-1. Copy this ASIN: ${book.asin}
-2. Go to https://www.amazon.com/yourbooks in a new tab
-3. Open Console (F12 → Console tab)
-4. Paste the "Description Fetcher" console script
-5. Replace YOUR_ASIN_HERE with: ${book.asin}
-6. Press Enter and wait ~2 seconds
-7. Come back to this tab and click the book again!
-
-The description will appear automatically.
-
-Would you like to copy the ASIN now?`;
-
-                if (confirm(instructions)) {
-                    navigator.clipboard.writeText(book.asin).then(() => {
-                        alert(`✅ ASIN copied: ${book.asin}\n\nNow go to amazon.com/yourbooks and run the console script!`);
-                    }).catch(() => {
-                        alert(`ASIN: ${book.asin}\n\n(Copy this manually)`);
-                    });
-                }
             };
 
             const syncNow = async () => {
@@ -1860,17 +1831,12 @@ Would you like to copy the ASIN now?`;
                                     {!modalBook.description && (
                                         <div className="mb-6 pb-6 border-b border-gray-200">
                                             <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
-                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                                <p className="text-sm text-gray-700 mb-3">
-                                                    📝 <strong>Description not loaded yet</strong>
+                                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                                <p className="text-sm text-gray-700">
+                                                    ⚠️ <strong>Description not available</strong>
                                                 </p>
-                                                <button
-                                                    onClick={() => fetchBookDescription(modalBook)}
-                                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
-                                                    📥 Fetch Description & Reviews
-                                                </button>
                                                 <p className="text-xs text-gray-600 mt-2">
-                                                    Clicking will show instructions and copy the ASIN for you.
+                                                    This book may not have a description in Amazon's database, or the description wasn't captured during the library fetch.
                                                 </p>
                                             </div>
                                         </div>
