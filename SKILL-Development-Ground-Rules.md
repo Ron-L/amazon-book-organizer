@@ -200,6 +200,69 @@ Before removing version letter (finalizing release):
 - Always use "v" prefix for consistency and findability
 - Tags mark released versions only (not letter versions)
 
+#### Project Version vs File Version Relationship
+
+**Key Principle:** Project version and file versions are INDEPENDENT and serve different purposes.
+
+**Project Version (README.md):**
+- User-facing version representing the overall project state
+- Tracks releases that change user experience
+- Follows semantic versioning based on user impact:
+  - Patch (Z): Bug fixes, minor UX improvements (e.g., v3.1.2 → v3.1.3)
+  - Minor (Y): New features, significant enhancements (e.g., v3.1.3 → v3.2.0)
+  - Major (X): Breaking changes, major rewrites (e.g., v3.2.0 → v4.0.0)
+- Does NOT increment for documentation-only changes
+- Used for git tags
+
+**File Versions (APP_VERSION, FETCHER_VERSION, etc.):**
+- Developer-facing version for tracking individual file changes
+- Each file has its own independent version
+- Can increment independently based on file modifications
+- May be higher OR lower than project version
+
+**Common Mistake:** Assuming project version should match file versions.
+
+**Examples:**
+```
+Scenario 1: Bug fix in organizer UI
+- amazon-organizer.js: v3.1.0 → v3.2.1.a → v3.2.1 (file changed significantly)
+- Project version: v3.1.2 → v3.1.3 (patch fix for users)
+- Why different: File had multiple iterations, but user impact is just a patch
+
+Scenario 2: Major UI refactor
+- amazon-organizer.js: v3.1.9 → v3.2.0 (major refactor)
+- Project version: v3.1.9 → v3.2.0 (minor release for users)
+- Why same: File and project both had minor/significant changes
+
+Scenario 3: Documentation updates
+- README.md, CHANGELOG.md updated
+- Project version: v3.1.3 → v3.1.3 (no change)
+- Why: Documentation doesn't affect user functionality
+```
+
+#### Before Proposing Project Version
+
+Before proposing a project version change, Claude MUST:
+
+1. **Check current project version** in README.md (not file versions)
+2. **Assess user impact** of the changes:
+   - Does this fix a bug users experience? → Patch
+   - Does this add new functionality users can use? → Minor
+   - Does this break existing functionality or require migration? → Major
+   - Is this documentation/meta-work only? → No increment
+3. **Calculate new version** based on impact (independent of file versions)
+4. **State reasoning explicitly** before proposing
+
+**Example Protocol:**
+```
+Checking project version for release...
+Current project version: v3.1.2 (from README.md)
+File version being released: amazon-organizer.js v3.2.1
+User impact: Bug fix - removed misleading button
+Assessment: Patch-level change (no new features, no breaking changes)
+Next project version: v3.1.3 ✓
+```
+
 ### Tagging Releases
 - Tag format: `v3.1.0` (use actual current version, not this example)
 - Tag message: Include brief summary of changes
@@ -366,6 +429,37 @@ User: "The zip file wasn't updated"
 "You're right, the zip file wasn't updated. Should I investigate the root cause
 before proposing a fix? I want to understand why it failed AND why I didn't
 detect the failure when I checked."
+```
+
+#### Distinguishing Questions from Problems
+
+When user asks "why did you [action]?", assess context to determine if root cause analysis is needed:
+
+**Triggers for Root Cause Analysis** (likely a problem):
+- Action contradicts stated rules/patterns
+- Action had negative/unexpected consequences
+- User expresses confusion or surprise
+- Question follows a failure or error
+- Tone suggests concern (e.g., "why did you X when we agreed Y?")
+
+**Does NOT trigger** (likely learning/curiosity):
+- Action was successful and met requirements
+- User is exploring alternative approaches
+- Question is theoretical ("why did you choose X over Y?")
+- User explicitly says "I'm curious" or "just wondering"
+- No evidence of problems or rule violations
+
+**When uncertain:** Ask clarifying question: "Are you asking because something went wrong, or are you curious about the approach I took?"
+
+**Examples:**
+```
+User: "Why did you tie the project version to the file version?"
+Context: This contradicts stated rule that versions are independent
+Assessment: Problem - trigger root cause analysis ✓
+
+User: "Why did you use approach X instead of Y?"
+Context: Approach X was successful and met all requirements
+Assessment: Learning/curiosity - explain reasoning, no root cause analysis needed
 ```
 
 ### Project Context Assessment Protocol
