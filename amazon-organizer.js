@@ -1,6 +1,6 @@
-        // Amazon Book Organizer JS v3.2.1.a
+        // Amazon Book Organizer JS v3.2.1
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.2.1.a";
+        const APP_VERSION = "v3.2.1";
         document.title = `Amazon Book Organizer ${APP_VERSION}`;
         const STORAGE_KEY = "amazon-book-organizer-state";
         const CACHE_KEY = "amazon-book-enriched-cache";

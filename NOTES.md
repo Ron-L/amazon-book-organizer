@@ -43,6 +43,18 @@ This file tracks tabled discussion items, work in progress context, and open que
 - Books without collections: 881 (39%)
 - Read status: 722 READ, 1 UNREAD, 1,557 UNKNOWN
 
+### v3.2.1 - Book Dialog UX Fix - RELEASED ✅
+- **Started**: 2025-11-01
+- **Completed**: 2025-11-01
+- **Released**: 2025-11-01
+- **Branch**: main (no feature branch - simple fix)
+- **Changes Made**:
+  - Removed misleading "Fetch Description & Reviews" button from book dialog
+  - Replaced with honest "Description not available" warning message
+  - Removed dead `fetchBookDescription()` function (28 lines)
+  - Net: -34 lines, cleaner and more honest code
+- **Status**: Successfully released as project v3.1.3
+
 ### v3.2.0 - HTML Refactor - RELEASED ✅
 - **Started**: 2025-10-19
 - **Completed**: 2025-10-19
