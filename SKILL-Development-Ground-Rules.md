@@ -21,7 +21,7 @@ description: Core development workflow rules including version management, appro
 - Exception: Skip reminder only if user explicitly requests it be turned off
 
 ### 1. Version Management
-- **BEFORE** making ANY code change, increment the version letter (e.g., v3.1.0.a → v3.1.0.b)
+- **BEFORE** making ANY code change, increment the version letter
 - **Exception**: Documentation and meta files do NOT require version increment:
   - README.md, CHANGELOG.md, TODO.md, NOTES.md
   - SKILL-*.md files
@@ -29,10 +29,15 @@ description: Core development workflow rules including version management, appro
   - .gitignore
 - Violation of this rule is a "cardinal sin"
 
+#### Version Patterns
+- **Starting new work**: Increment version number AND add letter (e.g., v3.2.0 → v3.2.1.a)
+- **Iterating on work**: Increment letter only (e.g., v3.2.1.a → v3.2.1.b → v3.2.1.c)
+- **Releasing to main**: Remove letter (e.g., v3.2.1.c → v3.2.1)
+
 #### File-Specific Versioning
 - Only increment versions in files that are actually being modified
 - If changing library-fetcher.js, update FETCHER_VERSION only
-- If changing amazon-organizer.html, update APP_VERSION only
+- If changing amazon-organizer.js, update APP_VERSION only
 - Project version in README.md increments independently (see Project Versioning below)
 
 ### 2. Approval Workflow
@@ -52,6 +57,106 @@ description: Core development workflow rules including version management, appro
 ### 3. Update Before Commit
 - Always run git pull/fetch before committing to ensure local is current
 - Check for conflicts and resolve before pushing
+
+## Rule Enforcement Protocol
+
+**Purpose**: Ensure Ground Rules are actively applied, not just passively available in context.
+
+When taking rule-sensitive actions, Claude MUST explicitly check the relevant rule:
+
+### Before Proposing a Version Change:
+1. State: "**Checking Ground Rule #1 (Version Management)...**"
+2. Quote the current version
+3. Quote the relevant pattern (starting new work / iterating / releasing)
+4. Show the calculated next version with reasoning
+5. Then propose the change
+
+**Example:**
+```
+Checking Ground Rule #1 (Version Management)...
+Current version: v3.2.0
+Action: Starting new work (improving book dialog)
+Pattern: Increment version number AND add letter
+Next version: v3.2.1.a
+```
+
+### Before Any Git Operation:
+1. State: "**Checking Ground Rule #2 (Approval Workflow)...**"
+2. Quote what the user approved (exact words)
+3. Confirm the operation matches the approval
+4. Then execute
+
+**Example:**
+```
+Checking Ground Rule #2 (Approval Workflow)...
+User approval: "yes, proceed with commit"
+Operation: git commit
+Match: ✓ Approved operation
+Proceeding with commit...
+```
+
+### Before Any Commit:
+1. State: "**Checking Ground Rule #3 (Update Before Commit)...**"
+2. Run: `git fetch`
+3. Check for upstream changes
+4. If conflicts exist, resolve before proceeding
+5. Then commit
+
+### Before Modifying Any Code File:
+1. State: "**Checking Ground Rule #1 (Version Management)...**"
+2. Verify version was already incremented in this session
+3. If not incremented yet, STOP and increment first
+4. Show verification before editing
+
+**Example:**
+```
+Checking Ground Rule #1 (Version Management)...
+Version already incremented: v3.2.1.a ✓
+Proceeding with code changes...
+```
+
+### After Completing File Changes (Before Commit):
+1. State: "**Documentation/code changes complete**"
+2. List all modified/created files
+3. Summarize what changed in each
+4. Ask: "Should I proceed with committing these changes?"
+5. STOP and wait for explicit approval
+6. Only when approved, proceed to "Before Any Commit" protocol
+
+**Example:**
+```
+Documentation changes complete:
+- README.md: Replaced "FOR CLAUDE" section with Documentation Guide
+- NOTES.md: Removed redundant checklists
+- CONTRIBUTING.md: Created comprehensive reference (NEW FILE)
+- SKILL-Development-Ground-Rules.md: Added all protocols
+
+Should I proceed with committing these changes?
+[STOP AND WAIT]
+```
+
+**Critical:** This protocol triggers even for documentation-only changes. Ground Rule #2 applies to ALL commits, not just code commits.
+
+### Documentation Update Check:
+Before any commit, verify:
+1. **CHANGELOG.md** - Updated for code releases (not doc-only changes)
+2. **NOTES.md** - Updated if work context changed
+3. **TODO.md** - Marked completed tasks
+
+### Release Finalization Check:
+Before removing version letter (finalizing release):
+1. Verify: CHANGELOG.md updated with version entry
+2. Verify: NOTES.md marked as RELEASED ✅
+3. Verify: TODO.md tasks marked complete
+4. Verify: README.md project version updated
+5. Show checklist completion status
+6. Then remove letter and tag
+
+**Important Notes:**
+- This protocol is NOT optional - it must happen even if it feels repetitive
+- The user prefers seeing rules applied visibly rather than having them violated silently
+- Only adds verbosity when rules are actually being invoked (not every response)
+- Estimated token cost: ~50-100 tokens per check (negligible vs rule violations)
 
 ## Git Workflow Patterns
 
@@ -206,6 +311,121 @@ description: Core development workflow rules including version management, appro
 - Challenge ideas if you see potential issues
 - Propose alternative approaches with reasoning
 - Say "I disagree because..." when warranted
+
+### Foundation-First Principle
+
+**User's Working Style:**
+The user prioritizes fixing foundations before building features. This is a deliberate pattern, not a distraction.
+
+**When user identifies a foundational issue** (rules not working, docs unclear, structure confusing):
+1. **Don't apologize for "going off track"** - this IS the track
+2. **Embrace the detour** - it's an investment in future velocity
+3. **Ask: "Should we fix this foundation issue before continuing with [original task]?"**
+4. **Wait for explicit decision** on whether to continue with foundation or return to feature
+
+**When proposing a feature implementation, Claude should ask:**
+- "Are the current rules/docs/structure adequate for this change?"
+- "Would fixing [foundation issue] make this easier/safer?"
+- "Should we address [underlying issue] before proceeding?"
+
+**Examples of foundation-first thinking:**
+- Fix version management rules BEFORE implementing feature
+- Clarify documentation structure BEFORE adding new docs
+- Improve error handling patterns BEFORE fixing specific errors
+- Test with real data BEFORE building complex UI
+
+**This is not "analysis paralysis"** - it's deliberate investment in quality and maintainability.
+
+### When User Reports a Problem
+
+**STOP. Do NOT immediately try to fix it.**
+
+1. **Acknowledge the problem explicitly**: "You're right, the [thing] failed/didn't work."
+2. **Ask for analysis permission**: "Should I investigate the root cause before proposing a fix?"
+3. **If yes, perform root cause analysis**:
+   - What happened? (the symptom)
+   - Why did it happen? (the direct cause)
+   - Why didn't I detect it? (the detection failure)
+   - What systemic issues allowed this? (the underlying pattern)
+4. **Present findings BEFORE proposing solutions**
+5. **Wait for decision** on whether to fix now or continue with analysis
+
+**This prevents:**
+- Superficial fixes that don't address underlying issues
+- Missing opportunities to improve the system
+- Violating Foundation-First pattern
+- Rushing to "fix it" mode before understanding "why it broke"
+
+**Example:**
+```
+User: "The zip file wasn't updated"
+
+❌ Bad response: "Let me try running it differently..." [immediately attempts fix]
+
+✓ Good response:
+"You're right, the zip file wasn't updated. Should I investigate the root cause
+before proposing a fix? I want to understand why it failed AND why I didn't
+detect the failure when I checked."
+```
+
+### Project Context Assessment Protocol
+
+**Before starting ANY new project or major feature, assess the context to choose the right approach:**
+
+#### Context Questions (Ask These First):
+1. **Lifespan:** Is this a weekend hack, learning experiment, or long-term project?
+2. **Scope trajectory:** Fixed scope or likely to grow?
+3. **Team size:** Solo exploration or collaborative work?
+4. **Consequences:** What's the cost of bugs? (learning tool vs production system)
+5. **Certainty:** Are requirements clear or still being discovered?
+
+#### Decision Matrix:
+
+**Ship Fast Pattern** (appropriate for):
+- ✅ Prototypes, POCs, throwaway code
+- ✅ Learning experiments, exploring unknowns
+- ✅ Requirements unclear, testing hypotheses
+- ✅ Solo work, short lifespan
+- ✅ Low consequence of failure
+- Example: "Let me try this API to see if it works"
+
+**Foundation First Pattern** (appropriate for):
+- ✅ Production code with users
+- ✅ Long-term maintenance expected
+- ✅ Collaborative work across sessions/developers
+- ✅ Complex domain with growing scope
+- ✅ High consequence of bugs
+- ✅ Clear requirements, known direction
+- Example: "Building a 2666-book organizer I'll use for years"
+
+**Hybrid Pattern** (appropriate for):
+- Start fast to validate approach
+- STOP and invest in foundation when you see:
+  - Repeated bugs in same area
+  - Difficulty making changes
+  - Scope starting to grow
+  - Others wanting to contribute
+  - Moving from exploration to production
+- Example: "Started as experiment, now it's useful"
+
+#### Red Flags for Technical Debt:
+Watch for these signals that foundation work is overdue:
+- 🚩 "Quick fix" creates new bugs
+- 🚩 Every change takes longer than the last
+- 🚩 Fear of touching certain code
+- 🚩 Copy-paste code because changing shared code is scary
+- 🚩 "Works but I don't know why" comments
+- 🚩 Planning a rewrite instead of improving existing code
+
+#### For This Project:
+Amazon Book Organizer is clearly **Foundation First**:
+- ✓ Long lifespan (ongoing development)
+- ✓ Growing complexity (collections, tracking, features)
+- ✓ Collaborative (user + Claude across sessions)
+- ✓ Real consequences (managing 2666 books)
+- ✓ Clear requirements, known direction
+
+**When proposing implementations, Claude should reference this assessment and confirm the approach fits the context.**
 
 ### General Feedback
 - When proposing a change that adds code, consider whether the same goal can be achieved by REMOVING code instead

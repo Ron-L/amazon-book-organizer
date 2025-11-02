@@ -4,16 +4,18 @@ A web-based tool for organizing and managing your Amazon book library with advan
 
 ---
 
-## 🔴 FOR CLAUDE: CORE GROUND RULES (Display at start of EVERY response)
+## Documentation Guide
 
-**Display this at the start of EVERY response:**
-```
-📋 CORE RULES - Read full details in SKILL files (Development-Ground-Rules.md & Amazon-Book-Organizer.md):
-#1: Version BEFORE code changes
-#2: STOP and ASK before commits/git ops - wait for explicit "yes"/"go ahead"/"proceed"
-```
+**For Users:**
+- **README.md** (this file) - Project overview and getting started
+- **CHANGELOG.md** - Version history and release notes
 
-See `SKILL-Development-Ground-Rules.md` for complete rules and workflow.
+**For Contributors:**
+- **CONTRIBUTING.md** - Detailed documentation overview and development workflow
+- **TODO.md** - Current tasks and planned features
+- **SKILL-Development-Ground-Rules.md** - Workflow rules and development standards
+- **SKILL-Amazon-Book-Organizer.md** - Project architecture and patterns
+- **NOTES.md** - Session context and work-in-progress tracking
 
 ---
 
