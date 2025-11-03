@@ -81,37 +81,60 @@
   - Missing collections.json → App works, no collection features
   - Schema mismatch → Handle gracefully
 
-## Fetcher Improvements - Phase 2 (Description Tracking & Reporting)
+## Fetcher Improvements - Phase 2 (Description Tracking & Reporting) ✅ COMPLETE
 
 **Goal**: Add comprehensive tracking and reporting for books without descriptions
 
-### Schema v2.0.0 Changes
-- [ ] **Add metadata section to amazon-library.json**:
+**Status**: Completed and committed (commit e058725)
+
+### Schema v3.0.0 Changes ✅
+- [x] **Add metadata section to amazon-library.json**:
   - `metadata.fetchDate`, `metadata.totalBooks`, `metadata.booksWithoutDescriptions`
-  - `metadata.schemaVersion = "2.0.0"`
+  - `metadata.schemaVersion = "3.0.0"`
   - `booksWithoutDescriptions` array: `[{asin, title, authors}]`
 
-### Library Fetcher Enhancements
-- [ ] **Track missing descriptions during Pass 2**:
+### Library Fetcher Enhancements ✅
+- [x] **Track missing descriptions during Pass 2**:
   - Build `booksWithoutDescriptions` array for books where `extractDescription()` returns empty
   - Add metadata section to output JSON
   - Include schema version in metadata
 
-- [ ] **Add end-of-run summary to console**:
+- [x] **Add end-of-run summary to console**:
   - Show total books, books with complete data, books missing descriptions
   - List all books without descriptions (ASIN, title, author)
 
-### Collections Fetcher (if needed)
-- [ ] Review if similar tracking/metadata would be useful
+### Organizer Support ✅
+- [x] **Handle new JSON schema v3.0.0**:
+  - Validates `{metadata, books}` structure
+  - Extracts and logs metadata information
+  - Throws helpful error for invalid schemas
+
+### Collections Fetcher ✅
+- [x] Added named function wrapper for reusability (`fetchAmazonCollections()`)
+
+## Fetcher Improvements - Phase 2.5 (Description Investigation)
+
+**Goal**: Investigate why some books lack descriptions and explore alternative extraction methods
+
+**Status**: NEXT - Creating investigation script
+
+- [ ] **Create throwaway investigation script**:
+  - Load library JSON to get ASINs of books without descriptions
+  - Iteratively fetch those books using enrichBook API
+  - Log full response structure to console
+  - Identify where description data might be located in response
+  - Document findings for potential extraction improvements
+
+**Purpose**: Understand if descriptions exist elsewhere in API response or if books genuinely lack descriptions in Amazon's database
 
 ## Fetcher Improvements - Phase 3 (UI Error Handling)
 
 **Goal**: Improve error messaging in organizer for missing descriptions
 
 ### Organizer Updates
-- [ ] **Handle new JSON schema v2.0.0**:
+- [x] **Handle new JSON schema v3.0.0** - COMPLETED in Phase 2
   - Load and parse `metadata` and `booksWithoutDescriptions`
-  - Backward compatible with old schema
+  - No backward compatibility (requires fetcher v3.1.3+)
 
 - [x] **Improve book dialog error messaging** - COMPLETED in v3.2.1
   - ~~If empty + in `booksWithoutDescriptions`: "⚠️ Description not available from Amazon"~~

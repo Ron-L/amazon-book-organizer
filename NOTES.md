@@ -14,6 +14,34 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Current Work in Progress
 
+### Phase 2.5 - Description Investigation - IN PROGRESS
+- **Started**: 2025-11-03
+- **Status**: Creating throwaway investigation script
+- **Goal**: Understand why some books lack descriptions
+- **Approach**:
+  1. Create browser console script to load library JSON
+  2. Extract ASINs of books without descriptions from metadata
+  3. Iteratively fetch those books using Amazon's enrichBook API
+  4. Log full response structure to identify alternative description locations
+  5. Document findings to determine if extraction can be improved
+- **Context**: User has 2 books (out of 5 new) without descriptions after Phase 2 implementation
+- **Next Steps**: Create and test investigation script, then document findings
+
+### Phase 2 - Schema v3.0.0 & Description Tracking - RELEASED ✅
+- **Started**: 2025-11-03
+- **Completed**: 2025-11-03
+- **Committed**: commit e058725
+- **Changes Made**:
+  - **Library Fetcher v3.1.3.b**: Tracks books without descriptions, outputs schema v3.0.0 with metadata
+  - **Organizer v3.3.0.a**: Validates schema v3.0.0, extracts and logs metadata
+  - **Collections Fetcher v1.0.1.a**: Added named function wrapper for reusability
+  - **Documentation**: Updated CHANGELOG.md with Unreleased section, updated TODO.md
+- **Schema v3.0.0**: `{metadata: {...}, books: [...]}`
+  - Metadata includes: schemaVersion, fetcherVersion, fetchDate, totalBooks, booksWithoutDescriptions
+  - Tracks detailed list of books missing descriptions
+- **Testing**: Successfully tested with user's library (5 new books, 2 without descriptions)
+- **Status**: Complete and committed, ready for release
+
 ### Collections & Read Status Integration - IN PROGRESS
 - **Started**: 2025-10-19
 - **Branch**: feature-collection-read-status-exploration
