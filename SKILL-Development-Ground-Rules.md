@@ -134,6 +134,29 @@ Should I proceed with committing these changes?
 
 **Critical:** This protocol triggers even for documentation-only changes. Ground Rule #2 applies to ALL commits, not just code commits.
 
+### Phase Completion Protocol:
+When marking a TODO phase/task as complete:
+
+1. **Update TODO.md**:
+   - Mark all completed checkboxes [x]
+   - Update phase status to "COMPLETE" or add completion date
+   - Add commit reference if applicable
+
+2. **Update NOTES.md**:
+   - Move phase from "IN PROGRESS" to completed section
+   - Add completion date and commit reference
+   - Document any lessons learned or findings
+
+3. **Update CHANGELOG.md**:
+   - Add entry to Unreleased or new version section
+   - Include technical notes if applicable
+
+4. **Verify documentation consistency**:
+   - Check that TODO.md, NOTES.md, and CHANGELOG.md all tell the same story
+   - Ensure no orphaned references to "in progress" work
+
+5. **Ask for approval** before committing documentation updates
+
 ### Documentation Update Check:
 Before any commit, verify:
 1. **CHANGELOG.md** - Updated for code releases (not doc-only changes)
@@ -457,6 +480,32 @@ Assessment: Problem - trigger root cause analysis ✓
 User: "Why did you use approach X instead of Y?"
 Context: Approach X was successful and met all requirements
 Assessment: Learning/curiosity - explain reasoning, no root cause analysis needed
+```
+
+#### Implicit Problem Signals
+
+User asking you to "review", "check", or "verify" work you JUST completed is likely an implicit problem report.
+
+**Red flags:**
+- "Can you review [files you just worked with]?"
+- "I think [statement about your work] - is that right?"
+- "Please check if [something you should have done]"
+- User asks about documentation files immediately after you committed code
+
+**Response Protocol:**
+1. **STOP and assess**: "Did I complete this work correctly?"
+2. **Review what you did** vs. what should have been done (check Phase Completion Protocol)
+3. **If gap found**:
+   - Acknowledge: "You're right, I missed updating [files]"
+   - Perform root cause analysis (without being asked)
+   - Propose fix
+4. **If no gap found**: Respond to review request normally
+
+**Example:**
+```
+User: "Please review the doc files"
+Context: You just committed Phase 2 code but didn't update TODO.md or NOTES.md
+Assessment: Implicit problem signal - should trigger self-review and root cause analysis ✓
 ```
 
 ### Project Context Assessment Protocol
