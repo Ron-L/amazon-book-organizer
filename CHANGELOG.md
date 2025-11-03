@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Schema v3.0.0 Support**: Organizer now handles new library JSON format with metadata
+  - Validates incoming JSON structure (`{metadata, books}`)
+  - Extracts and logs metadata information (schema version, total books, fetch date, etc.)
+  - Displays books without descriptions count from metadata
+  - No backward compatibility - requires library-fetcher.js v3.1.3+ to generate schema v3.0.0 files
+
+### Changed
+- **Library Fetcher v3.1.3.b**: Added Phase 2 description tracking and reporting
+  - Tracks books without descriptions during Pass 2 enrichment
+  - Outputs schema v3.0.0: `{metadata, books}` instead of plain array
+  - Metadata includes: schema version, fetcher version, fetch date, total books, books without descriptions
+  - Console summary shows detailed list of books missing descriptions
+  - Temporary backward compatibility for one-time schema migration (marked for removal before release)
+
+- **Collections Fetcher v1.0.1.a**: Added named function wrapper for reusability
+  - Script can now be re-run with `fetchAmazonCollections()` without re-pasting
+  - Improved UX for users who need to refresh collections data
+
+### Technical
+- JavaScript version 3.3.0.a (organizer)
+- Library Fetcher version 3.1.3.b
+- Collections Fetcher version 1.0.1.a
+- Schema version 3.0.0
+
+## [3.2.1] - 2025-11-01
+
+### Fixed
+- **Book Dialog UX**: Replaced misleading "Fetch Description & Reviews" button with honest "Description not available" message
+  - Changed from blue action button to yellow warning indicator
+  - Updated message from "Description not loaded yet" to "Description not available"
+  - Added explanation: may not be in Amazon's database or wasn't captured during fetch
+  - Removed dead `fetchBookDescription()` function (28 lines)
+  - Net: -34 lines, cleaner and more honest code
+
+### Technical
+- JavaScript version 3.2.1
+- Rationale: Descriptions should be fetched by library-fetcher.js script, not in the UI
+- The organizer is a viewer/organizer, not a data fetcher
+- Honest messaging prevents user confusion and sets correct expectations
+
 ## [3.2.0] - 2025-10-19
 
 ### Changed

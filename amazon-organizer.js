@@ -1,6 +1,6 @@
-        // Amazon Book Organizer JS v3.2.1
+        // Amazon Book Organizer JS v3.3.0.a
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.2.1";
+        const APP_VERSION = "v3.3.0.a";
         document.title = `Amazon Book Organizer ${APP_VERSION}`;
         const STORAGE_KEY = "amazon-book-organizer-state";
         const CACHE_KEY = "amazon-book-enriched-cache";
@@ -700,7 +700,24 @@
             };
 
             const loadEnrichedData = async (content, onComplete = null) => {
-                const data = JSON.parse(content);
+                const parsedData = JSON.parse(content);
+
+                // Schema v3.0.0 - object with metadata and books array
+                if (!parsedData.metadata || !parsedData.books) {
+                    console.error('❌ Invalid library JSON format');
+                    console.error('   Expected schema v3.0.0: {metadata, books}');
+                    console.error('   Received:', Object.keys(parsedData));
+                    throw new Error('Invalid library JSON format - please re-fetch your library using the latest fetcher');
+                }
+
+                const data = parsedData.books;
+                const metadata = parsedData.metadata;
+
+                console.log(`📋 Loaded schema ${metadata.schemaVersion}`);
+                console.log(`   Total books: ${metadata.totalBooks}`);
+                console.log(`   Books without descriptions: ${metadata.booksWithoutDescriptions}`);
+                console.log(`   Fetched: ${new Date(metadata.fetchDate).toLocaleString()}`);
+                console.log(`   Fetcher version: ${metadata.fetcherVersion}`);
 
                 // Load collections data (optional, non-blocking)
                 const collections = await loadCollectionsData();

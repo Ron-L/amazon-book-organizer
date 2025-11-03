@@ -113,10 +113,12 @@
   - Load and parse `metadata` and `booksWithoutDescriptions`
   - Backward compatible with old schema
 
-- [ ] **Improve book dialog error messaging**:
-  - If empty + in `booksWithoutDescriptions`: "⚠️ Description not available from Amazon"
-  - If empty + NOT in array: "❌ Error: Description should exist but wasn't found"
-  - Remove "📥 Fetch Description & Reviews" manual fetch button
+- [x] **Improve book dialog error messaging** - COMPLETED in v3.2.1
+  - ~~If empty + in `booksWithoutDescriptions`: "⚠️ Description not available from Amazon"~~
+  - ~~If empty + NOT in array: "❌ Error: Description should exist but wasn't found"~~
+  - ~~Remove "📥 Fetch Description & Reviews" manual fetch button~~
+  - **Simple implementation:** Removed misleading button, added honest "Description not available" message
+  - **Note:** Schema-aware messaging (booksWithoutDescriptions) deferred to Phase 3
 
 - [ ] **Add warning banner on library load**:
   - Dismissible banner if books missing descriptions
@@ -132,6 +134,13 @@
 - [ ] Remove 30-second timeout from file selection
 - [ ] Improve "WORKING DIRECTORY" messaging throughout
 - [ ] Match opening/closing dialog terminology
+- [ ] **BEFORE RELEASE v3.1.3**: Remove temporary schema v2.0 backward compatibility code from library-fetcher.js (search for "TODO: REMOVE BEFORE RELEASE")
+
+## Development Process Improvements
+
+- [ ] Consider adding "grep for TODO comments in code files" to release procedure in ground rules
+  - Review all in-code TODOs before finalizing release
+  - Ensures temporary code doesn't become permanent
 
 ## Features - Approved
 

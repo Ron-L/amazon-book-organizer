@@ -1,6 +1,7 @@
-// Amazon Library Fetcher v3.1.2 (Combined Pass 1+2 + Manifest)
+// Amazon Library Fetcher v3.1.3.b (Combined Pass 1+2 + Manifest)
 // Fetches library books and enriches them with descriptions & reviews
 // Also generates a manifest file for the organizer to track updates
+// Schema Version: 3.0.0 (Compatible with: Organizer v3.3.0+ when released)
 //
 // Instructions:
 // 1. Go to https://www.amazon.com/yourbooks (must be logged in)
@@ -11,11 +12,13 @@
 // 5. Wait for completion (~5 min first time, ~2-3 hours with enrichment)
 // 6. Downloads amazon-library.json AND amazon-manifest.json
 // 7. Upload library file to organizer!
+//
+// Re-run: After pasting once, you can re-run with: fetchAmazonLibrary()
 
-(async function() {
+async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v3.1.2';
-    const SCHEMA_VERSION = '2.0';
+    const FETCHER_VERSION = 'v3.1.3.b';
+    const SCHEMA_VERSION = '3.0.0';
     
     console.log('========================================');
     console.log(`Amazon Library Fetcher ${FETCHER_VERSION}`);
@@ -132,8 +135,28 @@
         
         if (file) {
             const fileText = await file.text();
-            existingBooks = JSON.parse(fileText);
-            
+            const parsedData = JSON.parse(fileText);
+
+            // TODO: REMOVE BEFORE RELEASE v3.1.3 - Temporary backward compatibility for one-time schema migration
+            // Handle both old schema v2.0 (array) and new schema v3.0.0+ (object with metadata)
+            // This code allows loading existing v2.0 data and converting to v3.0.0 format
+            // After first fetch with new schema, this compatibility code is no longer needed
+            if (Array.isArray(parsedData)) {
+                // Old schema v2.0 - array format
+                existingBooks = parsedData;
+                console.log('   📋 Loaded schema v2.0 (array format) - will convert to v3.0.0');
+            } else if (parsedData.metadata && parsedData.books) {
+                // New schema v3.0.0+ - object with metadata
+                existingBooks = parsedData.books;
+                console.log(`   📋 Loaded schema ${parsedData.metadata.schemaVersion} (object format)`);
+            } else {
+                console.error('   ❌ Unknown JSON format - cannot parse');
+                console.error('   Expected: array OR {metadata, books}');
+                console.error('   Received:', Object.keys(parsedData));
+                return;
+            }
+            // END TODO: REMOVE BEFORE RELEASE v3.1.3
+
             // Find most recent acquisition date
             for (const book of existingBooks) {
                 if (book.acquisitionDate) {
@@ -143,7 +166,7 @@
                     }
                 }
             }
-            
+
             console.log(`✅ Loaded ${existingBooks.length} existing books`);
             if (mostRecentDate) {
                 const date = new Date(mostRecentDate);
@@ -738,9 +761,10 @@
         console.log('[4/6] Enriching new books with descriptions & reviews...');
         const estimatedTime = Math.ceil((newBooks.length * ENRICH_DELAY_MS) / 1000 / 60);
         console.log(`   Estimated time: ~${estimatedTime} minutes\n`);
-        
+
         let enrichedCount = 0;
         let errorCount = 0;
+        const booksWithoutDescriptions = []; // Track books where description extraction failed
         
         for (let i = 0; i < newBooks.length; i++) {
             const book = newBooks[i];
@@ -828,8 +852,14 @@
                 const description = extractDescription(product);
                 const topReviews = extractReviews(product);
 
-                // Debug logging if description is still empty
+                // Track books without descriptions
                 if (!description) {
+                    booksWithoutDescriptions.push({
+                        asin: book.asin,
+                        title: book.title,
+                        authors: book.authors
+                    });
+
                     const descSection = product.description?.sections?.[0];
                     if (descSection) {
                         console.log(`   ⚠️  No description extracted. Structure: ${JSON.stringify(descSection).substring(0, 200)}...`);
@@ -867,11 +897,24 @@
         
         // Step 5: Merge and save library
         console.log('[5/6] Merging with existing data and saving library...');
-        
+
         // Prepend new books (most recent first)
         const finalBooks = [...newBooks, ...existingBooks];
-        
-        const jsonData = JSON.stringify(finalBooks, null, 2);
+
+        // Create output with metadata (Schema v3.0.0)
+        const outputData = {
+            metadata: {
+                schemaVersion: SCHEMA_VERSION,
+                fetcherVersion: FETCHER_VERSION,
+                fetchDate: new Date().toISOString(),
+                totalBooks: finalBooks.length,
+                booksWithoutDescriptions: booksWithoutDescriptions.length,
+                booksWithoutDescriptionsDetails: booksWithoutDescriptions
+            },
+            books: finalBooks
+        };
+
+        const jsonData = JSON.stringify(outputData, null, 2);
         const blob = new Blob([jsonData], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -927,6 +970,25 @@
         console.log(`   - ${LIBRARY_FILENAME}`);
         console.log(`   - ${MANIFEST_FILENAME}`);
         console.log(`⏱️  Time: ${elapsedMinutes}m ${remainingSeconds}s`);
+
+        // Show books without descriptions summary
+        if (booksWithoutDescriptions.length > 0) {
+            console.log('\n⚠️  BOOKS WITHOUT DESCRIPTIONS');
+            console.log('========================================');
+            console.log(`Found ${booksWithoutDescriptions.length} book(s) with missing descriptions:`);
+            console.log('');
+            booksWithoutDescriptions.forEach((book, index) => {
+                console.log(`${index + 1}. ${book.title}`);
+                console.log(`   Author: ${book.authors}`);
+                console.log(`   ASIN: ${book.asin}`);
+                console.log('');
+            });
+            console.log('These books are tracked in the library JSON metadata.');
+            console.log('The organizer will display appropriate warnings for them.');
+            console.log('========================================');
+        } else {
+            console.log('\n✅ All books have descriptions!');
+        }
         console.log('\n👉 Next steps:');
         console.log('   1. Find both files in your browser\'s save location');
         console.log('      (Check your Downloads folder or last save location)');
@@ -947,4 +1009,7 @@
         console.error(error);
         console.error('========================================\n');
     }
-})();
+}
+
+// Auto-run on first paste
+fetchAmazonLibrary();

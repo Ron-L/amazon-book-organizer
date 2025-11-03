@@ -1,4 +1,4 @@
-// Amazon Collections Fetcher v1.0.0
+// Amazon Collections Fetcher v1.0.1.a
 // Fetches collection membership and read status for all books in your library
 //
 // Instructions:
@@ -8,9 +8,12 @@
 // 4. Wait for completion (will take several minutes for large libraries)
 // 5. Downloads amazon-collections.json when complete
 // 6. Upload to organizer along with amazon-library.json
+//
+// Re-run: After pasting once, you can re-run anytime in the same console session
+//         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
-(async function() {
-    const FETCHER_VERSION = 'v1.0.0';
+async function fetchAmazonCollections() {
+    const FETCHER_VERSION = 'v1.0.1.a';
     const SCHEMA_VERSION = '1.0';
     const PAGE_TITLE = document.title;
 
@@ -484,4 +487,7 @@
     console.log('2. Upload both amazon-library.json AND amazon-collections.json to the organizer');
     console.log('3. The organizer will merge the data and enable collection filtering\n');
 
-})();
+}
+
+// Auto-run on first paste
+fetchAmazonCollections();
