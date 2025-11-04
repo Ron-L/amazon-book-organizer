@@ -12,7 +12,7 @@ description: Core development workflow rules including version management, appro
   ```
   📋 Ground Rules Active - Full rules in SKILL-Development-Ground-Rules.md
   ```
-- **ALWAYS add 2 blank lines after the summary before continuing with your response**
+- **ALWAYS follow the one-liner with a horizontal rule separator (`---`) before continuing with your response**
 - This rule ensures rules remain visible throughout the conversation
 - The reminder MUST appear even in responses that acknowledge this rule
 - Exception: Skip reminder only if user explicitly requests it be turned off
