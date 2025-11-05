@@ -567,6 +567,42 @@ Amazon Book Organizer is clearly **Foundation First**:
 
 **When proposing implementations, Claude should reference this assessment and confirm the approach fits the context.**
 
+### Diagnostic and Test Script Naming Convention
+
+**All temporary/throwaway scripts and outputs MUST follow this naming pattern:**
+
+**Diagnostic Scripts:** `diag-NN-description.js`
+- Example: `diag-01-isbn-asin-problem.js`, `diag-02-api-timeout.js`
+
+**Test Scripts:** `test-NN-description.js`
+- Example: `test-01-isbn-enrichment.js`, `test-02-phase1-dedup.js`
+
+**Output Files:** `output-NN-description.txt` or `.json`
+- Example: `output-01-isbn-test-results.json`, `output-02-fetch-stats.txt`
+
+**Where NN = two-digit incrementing counter:**
+- 01, 02, 03, ..., 99
+- Counter increments with each new script or output file
+- Groups related files together when sorted by name
+
+**Script Name in Console Output:**
+- EVERY diagnostic/test script MUST print its filename in the console output header
+- Format: `Script: filename.js`
+- Example:
+  ```
+  ========================================
+  ISBN vs ASIN DIAGNOSTIC TOOL
+  Script: diag-01-isbn-asin-problem.js
+  ========================================
+  ```
+- This allows quick verification that the correct script is running
+
+**Rationale:**
+- Makes it easy to identify the latest/newest script when sorted by filename
+- Groups related diagnostic/test files together
+- Prevents confusion when user runs wrong script
+- Facilitates cleanup after investigation completes
+
 ### General Feedback
 - When proposing a change that adds code, consider whether the same goal can be achieved by REMOVING code instead
 - Always prefer simplification over adding complexity
