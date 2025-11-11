@@ -7,6 +7,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.3.2] - 2025-11-11
+
+### Fixed
+- **Clear Library Feature** - Complete app reset now works correctly (amazon-organizer.js v3.3.2)
+  - **REPLACED**: Complex "Clear Everything" dialog (with checkboxes) replaced with simple "Clear Library" button
+  - **BASED ON**: Proven v3.2.1 clearEverything pattern (avoided reinventing, copied working code)
+  - **BEHAVIOR**: Single button performs complete reset - unloads library, removes columns, clears organization, resets to pristine state
+  - **UX**: Simple confirm() dialog with clear explanation of what will be cleared
+  - **TESTED**: User confirmed "works exactly as expected!"
+  - **LESSON**: When struggling with complex approach, look back at previous working versions
+
+- **Partial GraphQL Errors** - Enrichment now handles partial errors correctly (library-fetcher.js v3.3.2)
+  - **PROBLEM**: 3/2666 books failed during fetch with "Customer Id or Marketplace Id is invalid" error
+  - **ROOT CAUSE**: Amazon's GraphQL API returns BOTH `data` (valid description) AND `errors` (customerReviewsTop failed) in same response
+  - **OLD BEHAVIOR**: Rejected entire response if any errors present, discarding valid description data
+  - **NEW BEHAVIOR**: Checks if product data exists despite errors, continues extraction if data present
+  - **VALIDATION**: Overnight fetch successful - all 3 problem books now have descriptions
+  - **IMPACT**: 5 books had partial errors during validation fetch, all recovered successfully
+  - **STATISTICS**: Added comprehensive tracking for partial errors (position, title, ASIN, error details)
+  - **LOGGING**: Enhanced error logging with raw response dumps for future debugging
+
+### Improved
+- **Load Library Instructions** - Better guidance for first-time users (amazon-organizer.js v3.3.2)
+  - **CLARIFIED**: "If you haven't already" makes it clear fetcher script is optional when just resetting
+  - **ADDED**: File location detail (Downloads folder) with instruction to move to project folder
+  - **ADDED**: README reference for complete fetcher instructions
+  - **TODO ADDED**: In-code comment about updating for GitHub Pages bookmarklet deployment
+
+### Changed
+- **Library Fetcher v3.3.2.b**: Statistics tracking for partial errors
+  - **ADDED: Partial error tracking** - comprehensive statistics for books with partial errors
+    - New stat: `stats.partialErrorBooks` array tracks all books that had partial errors
+    - Each entry includes: position, title, ASIN, error message, and error path
+    - Displayed in final summary before "DATA QUALITY NOTES" section
+    - Shows complete list with full details for debugging and monitoring
+  - **IMPROVED: Final summary reporting** - distinguishes partial errors from total failures
+    - New section: "⚠️ PARTIAL ERRORS (Got data anyway)" shows all books that had errors but still got data
+    - Helps user understand which books had issues during enrichment but were still successfully processed
+    - Provides visibility into API behavior patterns (e.g., customerReviewsTop failures)
+
+- **Library Fetcher v3.3.2.a**: Partial error handling for GraphQL responses
+  - **FIXED: Enrichment failures** - now handles partial GraphQL errors correctly
+    - GraphQL can return BOTH `data` AND `errors` in the same response (partial errors)
+    - Previous behavior: Rejected entire response if any errors present, discarding valid description data
+    - New behavior: Checks if product data exists despite errors, continues extraction if present
+    - Only fails if errors present AND no data returned (total failure)
+  - **IMPROVED: Error logging** - comprehensive debugging information
+    - Logs error message, error path, and raw error details for partial errors
+    - Dumps full raw response for all error paths (total failures, no data, HTTP errors)
+    - Future issues can be diagnosed immediately from console logs
+  - **IMPACT**: Fixes 3 books that were failing during full library fetch:
+    - "99 Reasons to Hate Cats" (ASIN B0085HN8N6)
+    - "Queen's Ransom" (ASIN 0684862670)
+    - "To Ruin A Queen" (ASIN 0684862689)
+  - These books return valid descriptions but have `customerReviewsTop` errors
+  - Root cause: Amazon's API returns "Customer Id or Marketplace Id is invalid" for review field under certain cumulative load conditions
+  - See NOTES.md Test 14 for detailed investigation findings
+
 ### Added
 - **Schema v3.0.0 Support**: Organizer now handles new library JSON format with metadata
   - Validates incoming JSON structure (`{metadata, books}`)
@@ -15,20 +73,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No backward compatibility - requires library-fetcher.js v3.1.3+ to generate schema v3.0.0 files
 
 ### Changed
-- **Library Fetcher v3.1.3.b**: Added Phase 2 description tracking and reporting
-  - Tracks books without descriptions during Pass 2 enrichment
-  - Outputs schema v3.0.0: `{metadata, books}` instead of plain array
-  - Metadata includes: schema version, fetcher version, fetch date, total books, books without descriptions
-  - Console summary shows detailed list of books missing descriptions
-  - Temporary backward compatibility for one-time schema migration (marked for removal before release)
+- **Library Fetcher v3.3.0**: Reliability, data quality, and comprehensive statistics
+  - **NEW: Retry logic with exponential backoff** - automatically retries ALL API requests
+    - Applied to Phase 0 validation (library + enrichment tests)
+    - Applied to Pass 1 library page fetching
+    - Applied to Pass 2 individual book enrichment
+    - Retries up to 3 times with 5s, 10s, 20s delays between attempts
+    - Prevents data loss from temporary network issues
+    - Console shows `⏳ Retry X/3 after Ys...` during retry attempts
+    - Only marks as failed after all retries exhausted
+  - **NEW: Comprehensive statistics output** - detailed summary of fetch session
+    - ⏱️ TIMING: phase-by-phase duration breakdown (Phase 0, Pass 1, Pass 2, Merge, Manifest)
+    - 🔄 API RELIABILITY: retry histogram showing % of calls succeeding on first try vs. requiring retries
+    - 📊 FETCH RESULTS: total fetched, non-books filtered, books kept
+    - 📝 ENRICHMENT RESULTS: success rate with list of failed books after retries
+    - ⚠️ DATA QUALITY NOTES: books without descriptions, authors, AI summaries used
+    - 💾 FILES SAVED: confirmation of output files
+    - Statistics shown even when no new books found (validation-only mode)
+  - **NEW: Non-book item filter** - automatically excludes non-book items from library
+    - Filters out: DVDs, Audio CDs, CD-ROMs, Maps, Shoes, Product Bundles, Misc.
+    - Only includes: Kindle Edition, Paperback, Hardcover, Mass Market Paperback, Board book, Unknown Binding, Audible Audiobook, Library Binding
+    - Console shows `⏭️  Skipping non-book: [title] ([binding])` when item filtered
+    - Statistics show how many non-books filtered with examples
+  - **FIXED: Early exit bug** - statistics now shown even when library is up-to-date
+    - Previously: script exited immediately when no new books found, showing no statistics
+    - Now: shows validation timing, API reliability, and library status even with no new books
+  - **REMOVED: Backward compatibility code** - cleaned up temporary schema v2.0 → v3.0.0 migration code
+    - Code was marked for removal after fresh fetch validates v3.0.0 schema
+    - Removed lines 221-234 (schema v2.0 array format handling)
+    - Simplified codebase now only supports schema v3.0.0+
+
+- **Library Fetcher v3.2.0**: Comprehensive description extraction improvements (99.9% coverage)
+  - **NEW: Recursive fragment extraction** - handles arbitrarily deep nesting (4+ levels)
+  - **NEW: AI summaries fallback** - uses `auxiliaryStoreRecommendations` when traditional description missing
+  - **IMPROVED: Description extraction** - added `extractTextFromFragments()` recursive function
+  - Updated GraphQL queries in Phase 0 and Pass 2 to fetch AI summaries
+  - Console shows `📝 Using AI summary (X chars)` when fallback is used
+  - Expected description coverage: ~99.9% (only books genuinely lacking descriptions will be empty)
+  - See DESCRIPTION-RECOVERY-SUMMARY.md for complete investigation details
 
 - **Collections Fetcher v1.0.1.a**: Added named function wrapper for reusability
   - Script can now be re-run with `fetchAmazonCollections()` without re-pasting
   - Improved UX for users who need to refresh collections data
 
+### Fixed
+- **Description Recovery**: Recovered 1,526 out of 1,528 missing descriptions (99.91%)
+  - Traditional descriptions: 1,517 recovered (paragraph wrappers, nested semanticContent)
+  - AI summaries: 7 recovered (auxiliaryStoreRecommendations field)
+  - Recursive extractions: 2 recovered (deep nested fragments)
+  - Only 2 books genuinely lack descriptions on Amazon
+- **API Error Resilience**: Fresh fetch with v3.2.0 had 5 API errors (0.21% error rate)
+  - v3.3.0 retry logic should reduce this to near-zero failed requests
+  - Improves from 99.79% success rate to expected 99.95%+ success rate
+
 ### Technical
 - JavaScript version 3.3.0.a (organizer)
-- Library Fetcher version 3.1.3.b
+- Library Fetcher version 3.3.0
 - Collections Fetcher version 1.0.1.a
 - Schema version 3.0.0
 
