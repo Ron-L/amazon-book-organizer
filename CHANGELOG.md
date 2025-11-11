@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [3.3.2] - 2025-11-11
 
+**Full post-mortem analysis:** [post-mortems/v3.3.2-2025-11-11.md](post-mortems/v3.3.2-2025-11-11.md)
+
 ### Fixed
 - **Clear Library Feature** - Complete app reset now works correctly (amazon-organizer.js v3.3.2)
   - **REPLACED**: Complex "Clear Everything" dialog (with checkboxes) replaced with simple "Clear Library" button

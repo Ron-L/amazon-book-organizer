@@ -8,12 +8,13 @@ description: Core development workflow rules including version management, appro
 ## Core Rules (NEVER violate these)
 
 ### 0. Recursive Rule Display (Unbreakable)
-- **At the start of EVERY response**, display this one-liner:
+- **At the start of EVERY response**, display this one-liner with current timestamp:
   ```
-  📋 Ground Rules Active - Full rules in SKILL-Development-Ground-Rules.md
+  📋 Ground Rules Active - Full rules in SKILL-Development-Ground-Rules.md [YYYY-MM-DD HH:MM:SS Local]
   ```
 - **ALWAYS follow the one-liner with a horizontal rule separator (`---`) before continuing with your response**
-- This rule ensures rules remain visible throughout the conversation
+- Timestamp format: User's local time in ISO 8601 format (e.g., `[2025-11-05 18:45:12 Local]`)
+- This rule ensures rules remain visible throughout the conversation and provides temporal context
 - The reminder MUST appear even in responses that acknowledge this rule
 - Exception: Skip reminder only if user explicitly requests it be turned off
 
@@ -353,32 +354,47 @@ Next project version: v3.1.3 ✓
 - This does not apply to documentation-only changes
 
 ### Session Compaction Protocol
-- When creating a summary for session compaction (either automatic or manual), you MUST include in the summary:
 
-1. **Recursive Rule Display Requirement** - Explicitly state at the beginning:
+**CRITICAL**: When creating a summary for session compaction (automatic or manual), you MUST include these directives at the very beginning of the summary:
+
+1. **Ground Rules File Access** - State explicitly:
    ```
-   IMPORTANT: Display Core Ground Rules at the start of EVERY response.
-
-   📋 CORE RULES FORMAT:
-   **🔴 CORE GROUND RULES (Always Visible)**
-
-   **Rule #1: Version Management**
-   - Version FIRST, code changes SECOND
-   - NEVER modify code without incrementing version first
-   - Only update versions in files actually being modified
-
-   **Rule #2: Approval Workflow**
-   - Present changes → Get explicit approval → Execute
-   - "Proceed with edits" = Make file edits ONLY, then STOP
-   - "Proceed with commit" = Commit ONLY, then STOP
-   - When in doubt, do ONE operation and STOP
+   IMMEDIATELY after reading this summary, BEFORE your first response:
+   1. Read SKILL-Development-Ground-Rules.md in full
+   2. Read CONTRIBUTING.md for decision frameworks
+   3. These files contain critical behavioral requirements including:
+      - Recursive rule display (MUST appear at start of EVERY response)
+      - Version management protocol
+      - Approval workflow requirements
+      - Ship Fast vs. Build Solid decision framework
    ```
 
-2. **Why This Matters**: Without this explicit instruction in the compaction summary, the post-compaction session will lose the recursive display behavior and rules will be forgotten.
+2. **Recursive Rule Display Format** - Include the exact current format:
+   ```
+   At the start of EVERY response, display:
+   📋 Ground Rules Active - Full rules in SKILL-Development-Ground-Rules.md [YYYY-MM-DD HH:MM:SS Local]
+   ---
+
+   Then continue with your response.
+
+   This display is MANDATORY per Rule #0 in SKILL-Development-Ground-Rules.md
+   Exception: Only skip if user explicitly requests it be turned off
+   ```
 
 3. **Standard Summary Content**: Include current work status, completed work, and next steps as usual.
 
-**Note**: This protocol is critical for maintaining ground rule compliance across session boundaries. The compaction summary is the ONLY way to pass behavioral requirements to the next Claude session.
+**Why This Matters**:
+- The compaction summary is the ONLY way to pass behavioral requirements across session boundaries
+- Without explicit file read directives, ground rules are forgotten
+- Without the recursive display directive, the rule reminder disappears
+- Loss of these protocols causes rule violations and workflow disruption
+
+**Post-Compaction Checklist for Next Session**:
+- [ ] Read SKILL-Development-Ground-Rules.md
+- [ ] Read CONTRIBUTING.md
+- [ ] Display recursive rule reminder in first response
+- [ ] Apply Rule #1 (Version Management) before any code changes
+- [ ] Apply Rule #2 (Approval Workflow) before any operations
 
 ## Communication Protocol
 
@@ -418,6 +434,63 @@ The user prioritizes fixing foundations before building features. This is a deli
 - Test with real data BEFORE building complex UI
 
 **This is not "analysis paralysis"** - it's deliberate investment in quality and maintainability.
+
+### Ship Fast vs. Build Solid: Decision Framework
+
+**Before starting work on ANY bug or feature**, evaluate it against this framework:
+
+**KEY QUESTION: "Does this affect data correctness or completeness?"**
+
+**Ship Fast When:**
+- UI polish issues (colors, spacing, minor UX tweaks)
+- Nice-to-have features (additional sorting, filter variations)
+- Performance optimizations (unless critical to usability)
+- Edge cases affecting <0.01% with NO data loss
+- Cosmetic improvements that don't affect core functionality
+
+**Build Solid Foundation When:**
+- ✅ **Data integrity issues** (loss, corruption, incorrect processing)
+- ✅ **Core functionality bugs** (search, filtering, display, organization)
+- ✅ **API contract changes** (endpoint deprecation, schema changes)
+- ✅ **State management bugs** (persistence, ID stability, synchronization)
+- ✅ **Error handling gaps** (silent failures, missing validation)
+
+**Why This Project Requires "Build Solid" Approach:**
+1. Library management - Users trust us with their book collection metadata
+2. Long-term use - Not a throwaway prototype, built for ongoing use
+3. Data permanence - Books represent purchased content, reading history
+4. Cross-session reliability - Must work consistently over months/years
+5. Foundation compounds - Solid patterns prevent future issues
+
+**Comparison Context:**
+- Social media prototype: 3/2000 missing posts? Ship it.
+- E-commerce recommendations: 3 products don't load? Ship it.
+- Financial transactions: 3 failed transfers? NEVER ship.
+- **Personal library manager: 3 missing books?** → Closer to financial than social media.
+
+**Time Investment is Justified When:**
+Spending a few days to achieve:
+- 100% data coverage instead of 99.85%
+- Understanding of API behavior patterns
+- Robust error handling for future edge cases
+- Comprehensive logging for rapid future diagnosis
+
+**Red Herrings Are Learning:**
+If investigation takes unexpected turns but yields:
+- Fixed bugs (even if different than expected)
+- Documented API behavior
+- Improved error handling
+- Transferable knowledge for future issues
+
+...then it was NOT wasted time - it was education and foundation building.
+
+**Application Protocol:**
+1. When user reports a bug or requests a feature
+2. Explicitly evaluate against this framework
+3. State which category it falls into and why
+4. Document the decision reasoning before proceeding
+
+**See also:** CONTRIBUTING.md "Ship Fast vs. Build Solid: Decision Framework" for detailed examples and context.
 
 ### When User Reports a Problem
 
@@ -602,6 +675,88 @@ Amazon Book Organizer is clearly **Foundation First**:
 - Groups related diagnostic/test files together
 - Prevents confusion when user runs wrong script
 - Facilitates cleanup after investigation completes
+
+### Simplicity First for Rare Operations
+
+**Pattern:** Operations used rarely (dev/testing/maintenance) don't need complex UIs.
+
+**When to Apply:**
+- Feature is used infrequently (< weekly)
+- User is developer/maintainer (not end-user)
+- Operation is non-critical or recoverable
+- Clear documentation can replace UI complexity
+
+**Complexity Triggers** (signs you're over-engineering):
+- More than 3 iterations on same feature without user testing
+- Implementation requires multiple dialog states or complex logic
+- Adding checkboxes/options "just in case" for rare scenarios
+- Every use case is an edge case
+
+**Response Protocol:**
+1. **Question complexity early**: "Is there a simpler way?"
+2. **Look at previous working versions**: Use `git show <commit>:<file>` to examine old code patterns
+3. **Propose simplest solution first**: Get user feedback before adding complexity
+4. **Example comparison**: Show simple vs complex approach with clear tradeoffs
+
+**Git History as Reference:**
+```bash
+# Find previous working version
+git log --oneline --all | grep "feature-name"
+
+# Examine specific file at that commit
+git show <commit-hash>:path/to/file.js | grep -A 30 "functionName"
+```
+
+**Real Example from v3.3.2:**
+- ❌ Complex: Dialog with checkboxes for selective clearing (organization vs library)
+- ✅ Simple: Single "Clear Library" button with confirm() dialog
+- Result: Worked perfectly first try, user confirmed satisfaction
+- Lesson: Rare operations (full reset) don't need multiple options
+
+### API Debugging Protocol
+
+**Pattern:** When debugging API issues, investigate raw responses before assuming error structures.
+
+**Initial Response to API Errors:**
+1. **Add raw response logging FIRST** - `console.log(JSON.stringify(rawResponse, null, 2))`
+2. **Examine actual data structure** - Don't assume based on error presence
+3. **Check for partial success** - API may return BOTH data AND errors (partial errors are valid)
+4. **Document findings** - Update GraphQL-API-Reference.md or similar docs
+
+**GraphQL Partial Errors Pattern:**
+```javascript
+// ❌ WRONG: Assume errors means total failure
+if (response.errors) {
+    reject(); // Lost valid data!
+}
+
+// ✅ CORRECT: Check for data presence despite errors
+if (response.errors && !response.data?.getProducts?.[0]) {
+    reject(); // Only fail if truly no data
+} else if (response.data?.getProducts?.[0]) {
+    // Use data even if errors present
+    // Log partial error for monitoring
+}
+```
+
+**Real Example from v3.3.2:**
+- Problem: 3/2666 books failed with "Customer Id or Marketplace Id is invalid"
+- Root Cause: Amazon returns BOTH valid description data AND customerReviewsTop error in same response
+- Old Behavior: Rejected entire response, discarding valid description
+- New Behavior: Accept partial data, only fail if NO data present
+- Impact: Recovered 5/5 partial errors (100% success)
+
+**Enhanced Logging Guidelines:**
+- Add comprehensive logging at error points
+- Log: error message, error path, raw response
+- Mark as TEMPORARY - remove after issue resolved
+- Include in commit message: "Added temp logging for [issue]"
+
+**Investigation Priority:**
+- Investigate raw response BEFORE changing query structure
+- Investigate raw response BEFORE changing headers
+- Investigate raw response BEFORE trying alternative endpoints
+- Pattern: "Understand THEN fix" not "Try random changes"
 
 ### General Feedback
 - When proposing a change that adds code, consider whether the same goal can be achieved by REMOVING code instead
