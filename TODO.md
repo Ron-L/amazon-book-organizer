@@ -1,5 +1,22 @@
 # TODO
 
+**See [PLAN-Feature-Roadmap.md](PLAN-Feature-Roadmap.md) for detailed implementation plans and prioritization.**
+
+---
+
+## Current Priorities (User-Defined)
+
+1. 🎯 **Multi-Select with Ctrl/Shift Clicking** (v3.4.0) - 4-6 hours
+2. 🌐 **GitHub Pages Distribution** - 3-6 hours
+3. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
+4. 📚 **Collections Integration - UI Features** (v3.4.0) - 4-8 hours
+5. 🔄 **Phase 3 Retry Logic** (v3.4.0) - 8-12 hours (optional)
+6. ✨ **UX Quick Wins** (various) - 1-3 hours each
+
+**Detailed specifications**: See [PLAN-Feature-Roadmap.md](PLAN-Feature-Roadmap.md)
+
+---
+
 ## Completed
 - [x] Initialize git repository
 - [x] Setup GitHub remote
