@@ -217,44 +217,38 @@
   - Verify README.md file versions are current
   - Review CONTRIBUTING.md for any needed updates
 
-## Release v3.3.2
+## Release v3.3.2 ✅ COMPLETE
 
-**Goal**: Official release after Phase 2.6 validation and Clear Library feature
+**Released**: 2025-11-11
+**Tag**: [v3.3.2](https://github.com/Ron-L/amazon-book-organizer/releases/tag/v3.3.2)
 
-**Prerequisites**:
+**Completed**:
 - ✅ Overnight fetch validation successful (all 3 problem books recovered)
-- ✅ Clear Library feature implemented and tested (v3.3.2.m)
-- ✅ Load Library instruction text improved (v3.3.2.n)
-- ⏳ Cleanup tasks (post-release): diagnostic scripts archived, NOTES.md restructured
-- ⏳ Documentation (in progress): CHANGELOG.md, TODO.md updates
+- ✅ Clear Library feature implemented and tested (v3.3.2.m → v3.3.2)
+- ✅ Load Library instruction text improved (v3.3.2.n → v3.3.2)
+- ✅ Version Management: library-fetcher.js v3.3.2, amazon-organizer.js v3.3.2
+- ✅ Documentation: CHANGELOG.md updated with complete v3.3.2 entry
+- ✅ Git Workflow: Committed, tagged v3.3.2, pushed with tags
+- ✅ Post-Release Review: Comprehensive post-mortem completed
+  - Created [post-mortems/v3.3.2-2025-11-11.md](post-mortems/v3.3.2-2025-11-11.md)
+  - Extracted 3 actionable patterns to Ground Rules
+  - Documented what worked well, mistakes made, lessons learned
+- ✅ Post-Release Cleanup: 77 investigation files archived
+  - Created `/future` directory for specification documents (2 files)
+  - Organized `archived-investigations/phase-2.0-description-recovery/` (17 files)
+  - Organized `archived-investigations/phase-2.6-partial-errors/` (60 files)
+  - Root directory: 100% cleanup of investigation artifacts
+- ✅ GraphQL Quick Reference: Created concise 1-page reference document
 
-**Release Tasks** (MUST follow Ground Rules):
-- [ ] **Version Management** (Ground Rule #1):
-  - Update library-fetcher.js: `v3.3.2.b` → `v3.3.2` (remove letter)
-  - Update amazon-organizer.js: `v3.3.2.n` → `v3.3.2` (remove letter)
-  - Update README.md project version if needed
-  - Verify version consistency across all files
+**Key Achievements**:
+- Fixed partial GraphQL error handling (recovered 5/5 books with partial errors)
+- Simplified Clear Library feature (based on v3.2.1 working pattern)
+- Improved load library instructions for first-time users
+- 100% data coverage achieved (all 2666+ books enriched successfully)
 
-- [ ] **Documentation**:
-  - Ensure CHANGELOG.md has complete v3.3.2 entry
-  - Update README.md with any new features/fixes
-  - Review TODO.md and mark completed items
+**Lessons Learned**: See [post-mortems/v3.3.2-2025-11-11.md](post-mortems/v3.3.2-2025-11-11.md)
 
-- [ ] **Git Workflow** (Ground Rules):
-  - Run `git fetch` before committing (Rule #3)
-  - Get approval before commit (Rule #2)
-  - Create commit with proper message format
-  - Tag release: `git tag v3.3.2`
-  - Get approval before push (Rule #2)
-  - Push with tags: `git push origin main --tags`
-
-- [ ] **Post-Release Review** (Ground Rules):
-  - Conduct brief post-mortem with user
-  - Review: What mistakes were made? Lessons learned? What worked well?
-  - Update ground rules if patterns emerge
-  - Document lessons in release notes
-
-**Note**: This release follows the "Build Solid Foundation" approach - spent days investigating 3/2666 failures (0.15%) because library management requires 100% data coverage (see CONTRIBUTING.md "Ship Fast vs. Build Solid" framework)
+**Note**: This release followed the "Build Solid Foundation" approach - spent 6 days investigating 3/2666 failures (0.15%) because library management requires 100% data coverage (see CONTRIBUTING.md "Ship Fast vs. Build Solid" framework)
 
 ## Fetcher Improvements - Phase 3 (UI Error Handling)
 
