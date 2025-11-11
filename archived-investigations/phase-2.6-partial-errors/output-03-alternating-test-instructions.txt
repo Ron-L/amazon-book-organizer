@@ -1,0 +1,183 @@
+INSTRUCTIONS FOR ALTERNATING REQUEST TEST
+==========================================
+
+This test alternates between a known-good Kindle book and Queen's Ransom
+to determine if variety (switching between books) triggers the failure.
+
+PURPOSE:
+--------
+Determine if "Customer Id or Marketplace Id is invalid" error requires
+alternating between DIFFERENT books (not just high request count).
+
+TEST PATTERN:
+-------------
+Request 1: Kindle book (B003J5UJD6)
+Request 2: Queen's Ransom (0684862670)
+Request 3: Kindle book (B003J5UJD6)
+Request 4: Queen's Ransom (0684862670)
+...and so on for up to 2500 total requests (1250 pairs)
+
+STEPS:
+------
+
+1. Open Amazon in browser and navigate to:
+   https://www.amazon.com/yourbooks
+
+2. Open browser DevTools console (F12)
+
+3. Paste the ENTIRE contents of:
+   diag-03-alternating-test.js
+
+4. Press Enter
+
+5. Test starts automatically after 3-second countdown
+
+6. Walk away! Test runs unattended until Queen fails (or completes all 2500)
+
+WHAT TO LOOK FOR:
+-----------------
+
+Progress updates appear every 50 pairs (100 requests):
+📊 Progress: Pair 50/1250 (4%) | Requests: 100/2500
+   Elapsed: 2m | Remaining: ~48m
+   Kindle: 50✅ 0❌ | Queen: 50✅ 0❌
+
+POSSIBLE OUTCOMES:
+------------------
+
+**Scenario A: Queen fails (most likely)**
+
+Console output:
+========================================
+🎯 QUEEN'S RANSOM FAILED!
+========================================
+
+   Request #: 2019
+   Pair #: 1010
+   Elapsed time: 102 minutes
+   Error: Customer Id or Marketplace Id is invalid.
+
+💡 ANALYSIS:
+   → Queen's Ransom failed after 1010 alternating pairs (2019 total requests)
+   → Alternating with different book DOES trigger the failure
+   → Problem requires variety of different books in sequence
+
+🎯 CONCLUSION:
+   ✅ Queen's Ransom FAILED at request #2019 (pair #1010)
+   ✅ Kindle book NEVER FAILED (1009/1009 succeeded)
+
+💡 KEY INSIGHTS:
+   → Alternating between 2 different books DOES trigger Queen failure
+   → Queen fails after ~1010 pairs (variety matters!)
+   → Problem is NOT simply "request count" - it's about DIFFERENT books
+
+📌 COMPARISON:
+   → Test 1 (Queen only): 2500 requests, 0 failures
+   → Test 2 (Alternating): 2019 requests, Queen failed
+   → Difference: Book variety triggers the failure!
+
+**What this means:**
+✅ Problem is caused by VARIETY of different books
+✅ Fetching the SAME book repeatedly never fails
+✅ Fetching DIFFERENT books in sequence causes failures
+✅ Solution: Implement "cooling off" period in fetcher when switching books
+
+**Next steps:**
+- Implement periodic pause in fetcher Phase 2 (every N books)
+- OR implement book-switching detection with delays
+- Re-test full library fetch with throttling enabled
+
+---
+
+**Scenario B: Both books fail**
+
+Console output:
+⚠️  CONCLUSION:
+   BOTH books failed during alternating test
+   → Kindle failed at request #1500
+   → Queen failed at request #2019
+
+💡 This suggests:
+   → General API degradation after many requests with variety
+   → Not specific to Queen's Ransom
+
+**What this means:**
+⚠️  Problem is GENERAL API degradation with variety
+⚠️  Not specific to Queen's Ransom or hardcover books
+⚠️  Amazon API degrades after many different book requests
+
+**Next steps:**
+- Implement periodic "cooling off" in fetcher (every ~1000 requests)
+- Test different cooling strategies (pause duration, frequency)
+
+---
+
+**Scenario C: Neither book fails (all 2500 succeed)**
+
+Console output:
+💡 CONCLUSION:
+   ❌ Neither book failed (2500 requests)
+
+📌 COMPARISON:
+   → Test 1 (Queen only): 2500 requests, 0 failures
+   → Test 2 (Alternating): 2500 requests, 0 failures
+
+💡 This suggests:
+   → Need MORE VARIETY (more than 2 different books)
+   → Next test: Option 1 (full library with all different books)
+
+**What this means:**
+⚠️  Problem requires MORE than 2 different books
+⚠️  Need to test with full library variety (2000+ different books)
+⚠️  Alternating between just 2 books is not enough
+
+**Next steps:**
+- Create Option 1: Full library test (all 2322 different books)
+- This is the most comprehensive test but takes ~3 hours
+
+INSPECTING RESULTS:
+-------------------
+
+After test completes, you can inspect detailed results:
+
+window.alternatingTestResults
+
+Example:
+{
+    kindleSuccesses: 1009,
+    kindleFailures: 0,
+    queenSuccesses: 1009,
+    queenFailures: 1,
+    firstQueenFailureAt: 2020,
+    totalRequests: 2020,
+    kindleDescriptions: [345, 345, 345, ...],
+    queenDescriptions: [2477, 2477, 2477, ...]
+}
+
+INTERPRETING RESULTS:
+---------------------
+
+If firstQueenFailureAt is NOT null:
+→ Book variety DOES trigger the failure
+→ Queen fails after alternating ~N times with another book
+→ Solution: Implement request throttling or cooling periods
+
+If BOTH books fail:
+→ General API degradation with variety
+→ Not specific to Queen's Ransom
+
+If NEITHER fails:
+→ Need more variety (>2 books)
+→ Run Option 1 (full library test)
+
+KEY INSIGHT FROM TEST 1:
+------------------------
+Test 1 (diag-02) proved Queen can be fetched 2500 times WITHOUT failure
+when fetched repeatedly by itself. This test determines if ALTERNATING
+between books is what triggers the failure.
+
+If Queen fails in THIS test but not Test 1:
+→ PROVES book variety/switching is the root cause
+→ NOT about total request count
+→ NOT about token staleness
+→ IS about fetching DIFFERENT books sequentially

@@ -1,0 +1,203 @@
+INSTRUCTIONS FOR TIME-BASED CATS FAILURE TEST
+==============================================
+
+This test determines if TIME (144-minute session duration) is the root cause
+of the "Customer Id or Marketplace Id is invalid" error.
+
+PURPOSE:
+--------
+Test if Cats book fails after a 144-minute session, regardless of which
+specific books are fetched beforehand.
+
+HYPOTHESIS:
+-----------
+Amazon API sessions degrade after ~144 minutes, causing failures for ANY book
+fetched after that duration. The original failures occurred simply because
+those books happened to be at positions that were reached after 144 minutes.
+
+TEST APPROACH:
+--------------
+1. Fetch library books 1, 2, 3, 4... with SLOW delays (4.5 seconds each)
+2. Continue until 144 minutes have elapsed
+3. Try Cats book (B0085HN8N6) for the FIRST time
+4. If Cats fails → TIME is the root cause ✅
+5. If Cats succeeds → Need to investigate other factors (book sequence, variety, etc.)
+
+STEPS:
+------
+
+1. Open Amazon in browser and navigate to:
+   https://www.amazon.com/yourbooks
+
+2. Open browser DevTools console (F12)
+
+3. Paste the ENTIRE contents of:
+   diag-05-time-based-cats-test.js
+
+4. Press Enter (script loads but doesn't start yet)
+
+5. Start the test by typing:
+   testTimeBasedCatsFailure();
+
+6. Press Enter
+
+7. A FILE PICKER will open - select your amazon-library.json file
+   (Dialog may be hidden behind other windows - check taskbar!)
+
+8. Walk away! Test runs for ~2.5 hours (144 minutes + margin)
+
+WHAT TO LOOK FOR:
+-----------------
+
+Initial setup:
+[1/3] Loading library file...
+   ✅ File selected: amazon-library.json (41.23 MB)
+   ✅ Library loaded: 2322 books
+
+[2/3] Getting CSRF token...
+   ✅ Token obtained: hNh4ZgqPa5...
+
+[3/3] Starting time-based test...
+⏱️  Target duration: 144 minutes
+⏱️  Delay per book: 4.5 seconds
+📚 Estimated books before target: ~1920
+
+Progress updates every 50 books:
+📊 Progress: Book 50 | 4/144min (3%)
+   Remaining: ~140m | Successes: 50 | Failures: 0
+
+📊 Progress: Book 1000 | 75/144min (52%)
+   Remaining: ~69m | Successes: 1000 | Failures: 0
+
+After 144 minutes:
+⏰ TARGET DURATION REACHED!
+   Elapsed: 144 minutes
+   Books fetched: 1920
+
+========================================
+🐱 CRITICAL TEST: FETCHING CATS BOOK
+========================================
+
+   ASIN: B0085HN8N6
+   Title: 99 Reasons to Hate Cats
+   Elapsed time: 144 minutes
+
+   This is the moment of truth...
+
+POSSIBLE OUTCOMES:
+------------------
+
+**Outcome A: Cats FAILS (Confirms TIME hypothesis)**
+
+   ❌ CATS BOOK FAILED!
+   Error: Customer Id or Marketplace Id is invalid.
+
+========================================
+CONCLUSION: TIME IS THE ROOT CAUSE! ✅
+========================================
+
+💡 CRITICAL FINDING:
+   → Cats book failed after 144-minute session
+   → TIME (session duration) CONFIRMED as root cause!
+   → Amazon API degrades after ~144 minutes
+   → Error is NOT about book variety or sequence
+
+📌 PROOF:
+   → Test 1 (Queen 2500x, 19 min): Success
+   → Test 2 (2-book alternating, 19 min): Success
+   → Test 3 (Full library, 37 min): Success
+   → Test 4 (Slow fetch, 144 min): Cats FAILED ✅
+
+📋 RECOMMENDED SOLUTION:
+   1. Implement session refresh in fetcher every 120 minutes
+   2. Option A: Reload page and get fresh token
+   3. Option B: Pause for 5 minutes to let session reset
+   4. Display message: "Session refresh (120 min elapsed)..."
+
+✅ MYSTERY SOLVED!
+   The error occurs because Amazon sessions degrade after ~144 minutes,
+   regardless of which books are fetched. Books that appear late in the
+   sequence (like Cats at position 2019) fail simply because they are
+   fetched after the session has been active for too long.
+
+**What this means:**
+🎯 TIME is the definitive root cause
+🎯 Solution is simple: Refresh session every 2 hours
+🎯 No need for binary search or further investigation
+🎯 All books will succeed with periodic session refresh
+
+**Next steps:**
+1. Implement session refresh in library-fetcher.js
+2. Add timer tracking to Phase 2
+3. Every 120 minutes: Pause, display message, get fresh token
+4. Re-test full library - should achieve 100% success
+
+---
+
+**Outcome B: Cats SUCCEEDS (TIME alone is NOT the cause)**
+
+   ✅ CATS BOOK SUCCEEDED!
+   Description length: 456 chars
+
+========================================
+CONCLUSION: TIME ALONE IS NOT THE CAUSE
+========================================
+
+💡 ANALYSIS:
+   → Cats book succeeded after 144-minute session
+   → TIME (session duration) is NOT the root cause
+   → Original failure must require additional factors:
+      - Specific sequence of books before Cats?
+      - Specific book variety/characteristics?
+      - Amazon server-side state that varies?
+
+📌 COMPARISON:
+   → Original fetch: Cats failed at 144 min with 2019 different books
+   → This test: Cats succeeded at 144 min with ~1920 different books
+   → Difference: Not just time - something about book sequence?
+
+🔬 NEXT STEPS:
+   1. Try binary search to find minimum books needed before Cats
+   2. Test with exact same book sequence as original fetch
+   3. Check if failure is non-deterministic (server-side randomness)
+
+**What this means:**
+⚠️  Problem is more complex than session duration
+⚠️  Need to investigate book sequence/variety factors
+⚠️  May require binary search approach
+⚠️  Failure might be non-deterministic (Amazon server state varies)
+
+**Next steps:**
+1. Binary search: Find minimum # of books before Cats to trigger failure
+2. Test with exact book sequence 1-2019 from original fetch
+3. Consider that failure may be intermittent/non-deterministic
+
+RUNTIME:
+--------
+- Target: 144 minutes (2.4 hours)
+- Actual: ~150 minutes (2.5 hours) with margin
+- Books fetched during warmup: ~1920
+- Progress updates: Every 50 books (~4 minutes)
+
+TECHNICAL DETAILS:
+------------------
+- Delay per book: 4.5 seconds
+- This stretches the session to match original 144-minute duration
+- Cats book is fetched ONLY ONCE at the end
+- No alternating - clean isolation of TIME variable
+- Same enrichBook() function as actual fetcher
+
+KEY DIFFERENCE FROM TEST 3:
+---------------------------
+Test 3 (diag-04): Fetched ALL 2344 books in 37 minutes → No failures
+Test 4 (diag-05): Fetches ~1920 books in 144 minutes → Cats at end
+
+The ONLY difference: Session duration (37 min vs 144 min)
+This isolates TIME as the variable being tested.
+
+NOTES:
+------
+- Don't close browser during test (will interrupt)
+- Don't let computer sleep (test takes 2.5 hours)
+- Keep DevTools console open to see progress
+- Results saved to: window.timeBasedTestResults

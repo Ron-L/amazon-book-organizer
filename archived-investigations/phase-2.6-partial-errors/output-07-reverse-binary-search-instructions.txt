@@ -1,0 +1,323 @@
+INSTRUCTIONS FOR REVERSE BINARY SEARCH TEST (Test 8)
+======================================================
+
+This test finds the MINIMUM number of books needed before Cats to trigger failure.
+
+PURPOSE:
+--------
+Instead of traditional binary search (slow, requires many iterations), use
+exponential growth BACKWARD from Cats position to quickly find threshold.
+
+HYPOTHESIS:
+-----------
+Based on Test 7 results, the failure threshold is around ~2000 books.
+This test will confirm the exact range.
+
+TEST APPROACH:
+--------------
+1. Find Cats book by ASIN (B0085HN8N6) - NOT hardcoded position
+2. Start with 1 book before Cats
+3. Double the range each iteration (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048...)
+4. Continue until Cats FAILS
+5. Report threshold range (last success to first failure)
+
+EXPONENTIAL GROWTH EXAMPLE:
+---------------------------
+Iteration 1: Books [N-1, N] → 2 books total → Cats SUCCEEDS
+Iteration 2: Books [N-2, N] → 3 books total → Cats SUCCEEDS
+Iteration 3: Books [N-4, N] → 5 books total → Cats SUCCEEDS
+Iteration 4: Books [N-8, N] → 9 books total → Cats SUCCEEDS
+Iteration 5: Books [N-16, N] → 17 books total → Cats SUCCEEDS
+...
+Iteration 11: Books [N-1024, N] → 1025 books total → Cats SUCCEEDS (~51 min)
+Iteration 12: Books [N-2048, N] → 2049 books total → Cats FAILS (~102 min)
+
+Result: Threshold is between 1024 and 2048 books
+
+WHY THIS IS FASTER:
+-------------------
+Traditional binary search would require:
+- Test 1: Middle point (~1172 books) - if fails, test 586, then 293, etc.
+- Requires ~11-15 iterations to narrow down exact range
+- Each iteration takes proportional time to books tested
+- Total time: ~18+ hours
+
+Reverse binary search:
+- Tests small ranges first (fast)
+- Only 12 iterations to reach 2048 books
+- Total time: ~3.4 hours (mostly in final iterations)
+- ~5x faster!
+
+STEPS:
+------
+
+1. Open Amazon in browser and navigate to:
+   https://www.amazon.com/yourbooks
+
+2. Open browser DevTools console (F12)
+
+3. Paste the ENTIRE contents of:
+   diag-07-reverse-binary-search.js
+
+4. Press Enter (script loads AND auto-starts)
+
+5. A FILE PICKER will open - select your amazon-library.json file
+   (Dialog may be hidden behind other windows - check taskbar!)
+
+6. Walk away! Test runs for ~3-4 hours
+
+WHAT TO LOOK FOR:
+-----------------
+
+Initial setup:
+[1/3] Loading library file...
+   ✅ File selected: amazon-library.json (41.23 MB)
+   ✅ Library loaded: 2344 books
+
+   🎯 Cats book found:
+      Position: 2038
+      ASIN: B0085HN8N6
+      Title: 99 Reasons to Hate Cats: Cartoons for Ca...
+
+[2/3] Getting CSRF token...
+   ✅ Token obtained: hNh4ZgqPa5...
+
+[3/3] Starting reverse binary search...
+
+Iteration outputs:
+========================================
+ITERATION 1: Testing range [2037, 2038]
+========================================
+   Books before Cats: 1
+   Total books in range: 2
+   Estimated time: ~1 minutes
+
+   [1/2] The Wise Man's Fear (The Kingkiller Chron...
+      ✅ 1856 chars, 5 reviews
+   ---
+   🎯 TESTING CATS BOOK (position 2038):
+      ASIN: B0085HN8N6
+      Title: 99 Reasons to Hate Cats: Cartoons for Ca...
+      ✅ SUCCESS: 456 chars, 5 reviews
+
+---
+📊 ITERATION 1 RESULTS:
+   Duration: 1 minutes
+   Successes: 2
+   Failures: 0
+   Cats result: ✅ SUCCEEDED
+
+   → Cats SUCCEEDED after 1 books
+   → Doubling range to 2 books for next iteration
+
+[Continues with iterations 2, 3, 4... doubling each time]
+
+EXPECTED OUTCOME:
+-----------------
+
+Around iteration 11 or 12, Cats will FAIL:
+
+========================================
+ITERATION 12: Testing range [0, 2038]
+========================================
+   Books before Cats: 2038
+   Total books in range: 2039
+   Estimated time: ~102 minutes
+
+[... processes ~2039 books over ~102 minutes ...]
+
+   ---
+   🎯 TESTING CATS BOOK (position 2038):
+      ASIN: B0085HN8N6
+      Title: 99 Reasons to Hate Cats: Cartoons for Ca...
+      ❌ FAILED: Customer Id or Marketplace Id is invalid.
+
+---
+📊 ITERATION 12 RESULTS:
+   Duration: 102 minutes
+   Successes: 2036
+   Failures: 3
+   Cats result: ❌ FAILED
+
+========================================
+✅ THRESHOLD FOUND!
+========================================
+
+💡 CRITICAL FINDING:
+   → Cats FAILED after 2038 books
+   → Cats SUCCEEDED in previous iteration after 1019 books
+   → Failure threshold is between 1019 and 2038 books
+
+========================================
+📊 REVERSE BINARY SEARCH COMPLETE
+========================================
+
+⏱️  TIMING:
+   Total duration: 205 minutes
+   Total books processed: 4088
+   Total iterations: 12
+
+✅ THRESHOLD FOUND:
+   Min: 1019 books
+   Max: 2038 books
+
+📌 CONCLUSION:
+   Amazon API starts failing after processing ~1019-2038 different books
+
+💡 RECOMMENDATION:
+   Implement cooldown in library-fetcher.js after 917 books
+   - Pause 60 seconds to let API state reset
+   - Get fresh CSRF token
+   - Continue fetch after cooldown
+
+📊 ITERATION SUMMARY:
+   Iteration 1: 1 books → ✅ SUCCEEDED (1m)
+   Iteration 2: 2 books → ✅ SUCCEEDED (1m)
+   Iteration 3: 4 books → ✅ SUCCEEDED (1m)
+   Iteration 4: 8 books → ✅ SUCCEEDED (2m)
+   Iteration 5: 16 books → ✅ SUCCEEDED (3m)
+   Iteration 6: 32 books → ✅ SUCCEEDED (6m)
+   Iteration 7: 64 books → ✅ SUCCEEDED (11m)
+   Iteration 8: 128 books → ✅ SUCCEEDED (21m)
+   Iteration 9: 256 books → ✅ SUCCEEDED (41m)
+   Iteration 10: 512 books → ✅ SUCCEEDED (82m)
+   Iteration 11: 1024 books → ✅ SUCCEEDED (164m)
+   Iteration 12: 2048 books → ❌ FAILED (328m)
+
+========================================
+
+📦 Results saved to: window.reverseBinarySearchResults
+
+RUNTIME ESTIMATE:
+-----------------
+Based on 3-second delays + API overhead:
+
+Iteration 1 (2 books): ~1 min
+Iteration 2 (3 books): ~1 min
+Iteration 3 (5 books): ~1 min
+Iteration 4 (9 books): ~2 min
+Iteration 5 (17 books): ~3 min
+Iteration 6 (33 books): ~6 min
+Iteration 7 (65 books): ~11 min
+Iteration 8 (129 books): ~21 min
+Iteration 9 (257 books): ~41 min
+Iteration 10 (513 books): ~82 min
+Iteration 11 (1025 books): ~164 min (2.7 hours)
+Iteration 12 (2049 books): ~328 min (5.5 hours)
+
+TOTAL: ~11 hours if threshold is at 2048 books
+(But actual threshold may be lower, reducing total time)
+
+ALTERNATIVE OUTCOME - NO THRESHOLD FOUND:
+------------------------------------------
+
+If Cats SUCCEEDS in all iterations (even with full library):
+
+========================================
+⚠️ THRESHOLD NOT FOUND
+========================================
+
+💡 FINDING:
+   → Cats SUCCEEDED even with ALL 2038 books before it
+   → Failure does NOT occur in this library configuration
+   → This contradicts previous test results
+
+📌 POSSIBLE EXPLANATIONS:
+   1. Amazon API state changed (less restrictive now)
+   2. Different library file used (not the failing one)
+   3. Token/session is fresher than during original fetch
+   4. Time of day affects API rate limiting
+
+**What this means:**
+🎯 The failure is NON-DETERMINISTIC
+🎯 Amazon API state varies over time
+🎯 Cannot rely on consistent threshold
+🎯 Need adaptive cooldown strategy
+
+TECHNICAL DETAILS:
+------------------
+- Finds Cats by ASIN (B0085HN8N6), not hardcoded position
+- Same enrichQuery GraphQL as fetcher Pass 2
+- Same 3-second delays between requests
+- Same enrichBook() extraction logic
+- Exponential growth: X starts at 1, doubles each iteration
+- Stops when X >= catsIndex (all books tested)
+
+KEY ADVANTAGE:
+--------------
+Reverse binary search tests SMALL ranges first (fast), then progressively
+LARGER ranges. Traditional binary search always tests LARGE ranges, making
+every iteration expensive.
+
+Example comparison for finding threshold at 2000:
+
+Traditional Binary Search:
+- Test 1: 1172 books (~1.5 hours)
+- Test 2: 586 books (~45 min) or 1758 books (~2.2 hours)
+- Test 3: 293 books (~22 min) or 879 books (~1.1 hours) or ...
+- Total: ~12-18 hours
+
+Reverse Binary Search:
+- Tests 1-11: Small ranges (fast, ~2 hours cumulative)
+- Test 12: 2048 books (~3.4 hours)
+- Total: ~5.4 hours
+
+5x-10x faster!
+
+NOTES:
+------
+- Don't close browser during test (will interrupt)
+- Don't let computer sleep (test takes 3-4 hours)
+- Keep DevTools console open to see progress
+- Results saved to: window.reverseBinarySearchResults
+- Script auto-invokes (no need to call function separately)
+- If test is interrupted, must restart from beginning
+
+DEBUGGING:
+----------
+After test completes (or fails), inspect:
+
+window.reverseBinarySearchResults
+
+Example structure:
+{
+    iterations: [
+        {
+            iteration: 1,
+            booksBeforeCats: 1,
+            totalBooks: 2,
+            successes: 2,
+            failures: 0,
+            catsFailed: false,
+            durationMin: 1,
+            failureDetails: []
+        },
+        {
+            iteration: 12,
+            booksBeforeCats: 2038,
+            totalBooks: 2039,
+            successes: 2036,
+            failures: 3,
+            catsFailed: true,
+            durationMin: 102,
+            failureDetails: [
+                {
+                    position: 2038,
+                    asin: "B0085HN8N6",
+                    title: "99 Reasons to Hate Cats...",
+                    error: "Customer Id or Marketplace Id is invalid."
+                }
+            ]
+        }
+    ],
+    thresholdFound: true,
+    thresholdRange: { min: 1019, max: 2038 },
+    totalBooksProcessed: 4088
+}
+
+NEXT STEPS AFTER TEST:
+-----------------------
+1. If threshold found: Implement cooldown in library-fetcher.js
+2. If threshold NOT found: Investigate non-deterministic API behavior
+3. Update NOTES.md with Test 8 results
+4. Consider implementing adaptive cooldown based on failure detection

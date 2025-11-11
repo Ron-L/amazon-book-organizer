@@ -96,6 +96,7 @@ This guide provides a comprehensive overview of the project's documentation stru
 - Development workflow
 - Skills setup
 - Quick reference to Ground Rules
+- Ship Fast vs. Build Solid decision framework
 
 **When to Update:** When adding new documentation files or changing development processes
 
@@ -222,6 +223,64 @@ When user identifies foundational issues:
 4. Wait for explicit decision
 
 Examples: Fix rules BEFORE implementing features, clarify docs BEFORE adding new docs, improve patterns BEFORE fixing specific bugs
+
+#### Ship Fast vs. Build Solid: Decision Framework
+
+When evaluating bugs or feature requests, use this decision tree to determine the appropriate approach:
+
+**KEY QUESTION: "Does this affect data correctness or completeness?"**
+
+**Ship Fast When:**
+- UI polish issues (colors, spacing, minor UX tweaks)
+- Nice-to-have features (additional sorting options, filter variations)
+- Performance optimizations (unless critical to usability)
+- Edge cases affecting <0.01% with NO data loss or corruption
+- Cosmetic improvements that don't affect core functionality
+
+**Build Solid Foundation When:**
+- ✅ **Data integrity issues** (loss, corruption, incorrect processing)
+- ✅ **Core functionality bugs** (search, filtering, display, organization)
+- ✅ **API contract changes** (endpoint deprecation, schema changes)
+- ✅ **State management bugs** (persistence, ID stability, synchronization)
+- ✅ **Error handling gaps** (silent failures, missing validation)
+
+**Context Considerations:**
+
+This project requires the "Build Solid" approach because:
+1. **Library management** - Users trust us with their book collection metadata
+2. **Long-term use** - Not a throwaway prototype, built for ongoing use
+3. **Data permanence** - Books represent purchased content, reading history
+4. **Cross-session reliability** - Must work consistently over months/years
+5. **Foundation compounds** - Solid patterns prevent future issues
+
+**Comparison to Other Contexts:**
+- Social media prototype: 3/2000 missing posts? Ship it.
+- E-commerce recommendations: 3 products don't load? Ship it.
+- Financial transactions: 3 failed transfers? NEVER ship.
+- **Personal library manager: 3 missing books?** → Closer to financial than social media.
+
+**Time Investment Criteria:**
+
+A few days investigating to achieve:
+- 100% data coverage instead of 99.85%
+- Understanding of API behavior patterns
+- Robust error handling for future edge cases
+- Comprehensive logging for rapid future diagnosis
+
+...is **proportional and justified** for a library management system.
+
+**Red Herrings and Learning:**
+
+If an investigation takes unexpected turns but yields:
+- Fixed bugs (even if different than expected)
+- Documented API behavior
+- Improved error handling
+- Transferable knowledge for future issues
+
+...then it was **NOT wasted time** - it was education and foundation building.
+
+**Application:**
+Before starting work on any bug or feature, explicitly evaluate it against this framework and document the decision reasoning.
 
 #### Project Context Assessment
 Before starting any new project or major feature, assess:

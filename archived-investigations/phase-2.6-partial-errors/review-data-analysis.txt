@@ -1,0 +1,233 @@
+================================================================================
+REVIEW DATA ANALYSIS - DETAILED RESULTS
+================================================================================
+
+Analysis Date: 2025-11-11T01:37:59.587Z
+Library: c:\Users\Ron\OneDrive\Documents\Projects\AmazonBookOrganizer\amazon-library.json
+Total Books: 2344
+
+SUMMARY:
+  Good: 2309 (98.5%)
+  Size Mismatch: 31 (1.3%)
+  No Reviews: 4 (0.2%)
+
+================================================================================
+ALL SIZE-MISMATCH BOOKS (sorted by reviewCount)
+================================================================================
+
+1. Lethal Code (A Lana Elkins Thriller)
+   Position: 1785
+   ASIN: B00J9P2EMO
+   reviewCount: 1,674
+   topReviews: 0
+   rating: 4
+
+2. 99 Reasons to Hate Cats: Cartoons for Cat Lovers
+   Position: 2038
+   ASIN: B0085HN8N6
+   reviewCount: 621
+   topReviews: 0
+   rating: 4.1
+
+3. Queen's Ransom: A Mystery at Queen Elizabeth I's Court Featuring Ursula Blanchard
+   Position: 2343
+   ASIN: 0684862670
+   reviewCount: 83
+   topReviews: 0
+   rating: 4.4
+
+4. To Ruin A Queen : An Ursula Blanchard Mystery at Queen Elizabeth I's Court
+   Position: 2344
+   ASIN: 0684862689
+   reviewCount: 81
+   topReviews: 0
+   rating: 4.4
+
+5. By Tooth and Claw (Exiled Series Book 2)
+   Position: 1650
+   ASIN: B00URTZQHG
+   reviewCount: 63
+   topReviews: 0
+   rating: 4.1
+
+6. Automated Insulin Delivery: How artificial pancreas “closed loop” systems can aid you in living with diabetes
+   Position: 852
+   ASIN: B07R6VJJTH
+   reviewCount: 38
+   topReviews: 0
+   rating: 4.7
+
+7. Living Cheaply in the U.K.
+   Position: 2145
+   ASIN: B0047GMI4Y
+   reviewCount: 23
+   topReviews: 0
+   rating: 3.4
+
+8. The Monster Island Trilogy: Three Zombie Novels
+   Position: 278
+   ASIN: B076C95BSS
+   reviewCount: 14
+   topReviews: 0
+   rating: 4
+
+9. Robert A. Heinlein: A Reader's Companion: The Complete & Authoritative Guide to the Works of Science Fiction's Grand Master — UPDATED
+   Position: 75
+   ASIN: B094H8V77G
+   reviewCount: 13
+   topReviews: 0
+   rating: 4.5
+
+10. How things work: The universal encyclopedia of machines
+   Position: 814
+   ASIN: 0586080953
+   reviewCount: 8
+   topReviews: 0
+   rating: 3.9
+
+11. Superman: Birthright #1
+   Position: 1834
+   ASIN: B00D31WCBS
+   reviewCount: 7
+   topReviews: 0
+   rating: 4.7
+
+12. The Science Fiction Collection #3
+   Position: 896
+   ASIN: B07H52FDLQ
+   reviewCount: 6
+   topReviews: 0
+   rating: 3.8
+
+13. Music that You Need to Know Before You Die: 1980s
+   Position: 1163
+   ASIN: B079H367WR
+   reviewCount: 6
+   topReviews: 0
+   rating: 4.2
+
+14. Big Book of Wordle for Kids. Themed Puzzles and Fun Facts: Based on the NYT Wordle Game, the Daily Word Challenge
+   Position: 469
+   ASIN: B0BGN66GLP
+   reviewCount: 5
+   topReviews: 0
+   rating: 5
+
+15. Music that You Need to Know Before You Die: 1990s
+   Position: 1128
+   ASIN: B079KTPD4C
+   reviewCount: 5
+   topReviews: 0
+   rating: 3
+
+16. Music that You Need to Know Before You Die: 2000s
+   Position: 1161
+   ASIN: B079QJPYX1
+   reviewCount: 5
+   topReviews: 0
+   rating: 3.2
+
+17. Superman: Birthright #4
+   Position: 1825
+   ASIN: B00D31WCU4
+   reviewCount: 4
+   topReviews: 0
+   rating: 5
+
+18. Superman: Birthright #5
+   Position: 1826
+   ASIN: B00D31WDAS
+   reviewCount: 4
+   topReviews: 0
+   rating: 4.6
+
+19. Music that You Need to Know Before You Die: 2010s
+   Position: 1129
+   ASIN: B079SBH7ZK
+   reviewCount: 3
+   topReviews: 0
+   rating: 3.4
+
+20. Superman: Birthright #2
+   Position: 1823
+   ASIN: B00D31WCCM
+   reviewCount: 3
+   topReviews: 0
+   rating: 5
+
+21. Superman: Birthright #3
+   Position: 1824
+   ASIN: B00D31WCMM
+   reviewCount: 3
+   topReviews: 0
+   rating: 5
+
+22. Superman: Birthright #6
+   Position: 1827
+   ASIN: B00D31WDJE
+   reviewCount: 3
+   topReviews: 0
+   rating: 5
+
+23. Superman: Birthright #7
+   Position: 1828
+   ASIN: B00D31WDK8
+   reviewCount: 3
+   topReviews: 0
+   rating: 5
+
+24. Superman: Birthright #10
+   Position: 1831
+   ASIN: B00D31WEQG
+   reviewCount: 3
+   topReviews: 0
+   rating: 5
+
+25. Superman: Birthright #11
+   Position: 1832
+   ASIN: B00D31WEUC
+   reviewCount: 3
+   topReviews: 0
+   rating: 5
+
+26. Superman: Birthright #12
+   Position: 1833
+   ASIN: B00D31WFRY
+   reviewCount: 3
+   topReviews: 0
+   rating: 4.7
+
+27. The Star-Sent Knaves
+   Position: 459
+   ASIN: B07941GCPF
+   reviewCount: 2
+   topReviews: 0
+   rating: 4.4
+
+28. Montgomery (Then and Now)
+   Position: 1976
+   ASIN: 0738587982
+   reviewCount: 2
+   topReviews: 0
+   rating: 4.4
+
+29. King Cotton to Space Capital: The Huntsville-Madison County Story
+   Position: 901
+   ASIN: 1939300169
+   reviewCount: 1
+   topReviews: 0
+   rating: 5
+
+30. The Navy Wife
+   Position: 946
+   ASIN: B0007FF8KA
+   reviewCount: 1
+   topReviews: 0
+   rating: 3
+
+31. Engines of Life: Tales of Evolution
+   Position: 1916
+   ASIN: B00DTT8MZE
+   reviewCount: 1
+   topReviews: 0
+   rating: 4

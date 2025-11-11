@@ -1,0 +1,2472 @@
+========================================
+VM385564:476 🔬 QUEENS REVERSE BINARY SEARCH (Test 12)
+VM385564:477 ========================================
+VM385564:478
+VM385564:479 This test finds the POISON for Queens using reverse binary search.
+VM385564:480
+VM385564:481 ✅ FEATURES:
+VM385564:482    - Sparse console output (no buffer overflow)
+VM385564:483    - Progress updates every 50 books
+VM385564:484    - All failures logged immediately
+VM385564:485    - Single file at end (no dialogs during test)
+VM385564:486    - Backup: window.queensReverseBinarySearchResults
+VM385564:487
+VM385564:488 READY TO RUN!
+VM385564:489    Script loaded successfully.
+VM385564:490    Starting test automatically...
+VM385564:491
+VM385564:492 METHOD:
+VM385564:493 - Start with 1 book before Queen
+VM385564:494 - Double the range each iteration (1, 2, 4, 8, 16...)
+VM385564:495 - Continue until Queen FAILS
+VM385564:496 - Find which book is Queens' poison
+VM385564:497
+VM385564:498 EXPECTED RUNTIME: ~7 hours
+VM385564:499
+VM385564:500 ========================================
+VM385564:501
+VM385564:16 ========================================
+VM385564:17 QUEENS REVERSE BINARY SEARCH (Test 12)
+VM385564:18 Script: diag-12-queens-reverse-sparse-output.js
+VM385564:19 ========================================
+VM385564:20
+VM385564:21 GOAL:
+VM385564:22    Find the POISON for Queens (what causes them to fail)
+VM385564:23
+VM385564:24 METHOD:
+VM385564:25    Start from END, work backwards with exponential growth:
+VM385564:26    - Iteration 1: Fetch books [N-1, N] (1 book before Queen, then Queen)
+VM385564:27    - Iteration 2: Fetch books [N-2, N] (2 books before Queen, then Queen)
+VM385564:28    - Iteration 3: Fetch books [N-4, N] (4 books before Queen, then Queen)
+VM385564:29    - Continue doubling until Queen FAILS
+VM385564:30
+VM385564:31 OUTPUT:
+VM385564:32    ✅ Sparse console output (prevents buffer overflow)
+VM385564:33    ✅ Progress updates every 50 books
+VM385564:34    ✅ All failures logged immediately
+VM385564:35    ✅ Single file download at end: test-12-final-results.json
+VM385564:36    ✅ Backup saved to: window.queensReverseBinarySearchResults
+VM385564:37
+VM385564:38 HYPOTHESIS:
+VM385564:39    Queens have different poison than Cats (Apoc only poisons Cats)
+VM385564:40    Both Queens likely fail from same poison (they're consecutive)
+VM385564:41
+VM385564:55 [1/3] Loading library file...
+VM385564:56
+VM385564:57    📂 A file picker dialog will open...
+VM385564:58    → Select your amazon-library.json file
+VM385564:59    (Dialog may be hidden behind other windows - check taskbar!)
+VM385564:60
+Promise {<pending>}
+VM385564:77    ✅ File selected: amazon-library.json (38.29 MB)
+VM385564:78    📖 Reading file...
+VM385564:96    ✅ Library loaded: 2344 books
+VM385564:97
+VM385564:109    👑 QUEEN 1 (Target Victim):
+VM385564:110       Position: 2321
+VM385564:111       ASIN: 0425197484
+VM385564:112       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:113
+VM385564:116 [2/3] Getting CSRF token...
+VM385564:126    ✅ Token obtained: hGlrud6bAm...
+VM385564:127
+VM385564:130 [3/3] Starting reverse binary search...
+VM385564:131
+VM385564:227 ========================================
+VM385564:228 ITERATION 1: Testing range [2320, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 1
+VM385564:231    Total books in range: 2
+VM385564:232    Estimated time: ~1 minutes
+VM385564:233
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 1 RESULTS:
+VM385564:301    Duration: 0 minutes
+VM385564:302    Successes: 2
+VM385564:303    Failures: 0
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 1 books
+VM385564:373    → Doubling range to 2 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 2: Testing range [2319, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 2
+VM385564:231    Total books in range: 3
+VM385564:232    Estimated time: ~1 minutes
+VM385564:233
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 2 RESULTS:
+VM385564:301    Duration: 0 minutes
+VM385564:302    Successes: 3
+VM385564:303    Failures: 0
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 2 books
+VM385564:373    → Doubling range to 4 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 3: Testing range [2317, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 4
+VM385564:231    Total books in range: 5
+VM385564:232    Estimated time: ~1 minutes
+VM385564:233
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 3 RESULTS:
+VM385564:301    Duration: 0 minutes
+VM385564:302    Successes: 5
+VM385564:303    Failures: 0
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 4 books
+VM385564:373    → Doubling range to 8 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 4: Testing range [2313, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 8
+VM385564:231    Total books in range: 9
+VM385564:232    Estimated time: ~1 minutes
+VM385564:233
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 4 RESULTS:
+VM385564:301    Duration: 0 minutes
+VM385564:302    Successes: 9
+VM385564:303    Failures: 0
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 8 books
+VM385564:373    → Doubling range to 16 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 5: Testing range [2305, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 16
+VM385564:231    Total books in range: 17
+VM385564:232    Estimated time: ~2 minutes
+VM385564:233
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 5 RESULTS:
+VM385564:301    Duration: 1 minutes
+VM385564:302    Successes: 17
+VM385564:303    Failures: 0
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 16 books
+VM385564:373    → Doubling range to 32 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 6: Testing range [2289, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 32
+VM385564:231    Total books in range: 33
+VM385564:232    Estimated time: ~3 minutes
+VM385564:233
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 6 RESULTS:
+VM385564:301    Duration: 2 minutes
+VM385564:302    Successes: 33
+VM385564:303    Failures: 0
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 32 books
+VM385564:373    → Doubling range to 64 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 7: Testing range [2257, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 64
+VM385564:231    Total books in range: 65
+VM385564:232    Estimated time: ~5 minutes
+VM385564:233
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [50/65] Progress: 77% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 7 RESULTS:
+VM385564:301    Duration: 3 minutes
+VM385564:302    Successes: 65
+VM385564:303    Failures: 0
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 64 books
+VM385564:373    → Doubling range to 128 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 8: Testing range [2193, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 128
+VM385564:231    Total books in range: 129
+VM385564:232    Estimated time: ~10 minutes
+VM385564:233
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [50/129] Progress: 39% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [100/129] Progress: 78% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 8 RESULTS:
+VM385564:301    Duration: 7 minutes
+VM385564:302    Successes: 129
+VM385564:303    Failures: 0
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 128 books
+VM385564:373    → Doubling range to 256 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 9: Testing range [2065, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 256
+VM385564:231    Total books in range: 257
+VM385564:232    Estimated time: ~20 minutes
+VM385564:233
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [50/257] Progress: 19% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [100/257] Progress: 39% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [150/257] Progress: 58% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [200/257] Progress: 78% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [250/257] Progress: 97% complete...
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 9 RESULTS:
+VM385564:301    Duration: 14 minutes
+VM385564:302    Successes: 257
+VM385564:303    Failures: 0
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 256 books
+VM385564:373    → Doubling range to 512 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 10: Testing range [1809, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 512
+VM385564:231    Total books in range: 513
+VM385564:232    Estimated time: ~39 minutes
+VM385564:233
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [50/513] Progress: 10% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [100/513] Progress: 19% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [150/513] Progress: 29% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [200/513] Progress: 39% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:277    ❌ FAILURE at position 2037: 99 Reasons to Hate Cats: Cartoons for Cat Lovers...
+VM385564:278       ASIN: B0085HN8N6
+VM385564:279       Error: Customer Id or Marketplace Id is invalid.
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [250/513] Progress: 49% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [300/513] Progress: 58% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [350/513] Progress: 68% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [400/513] Progress: 78% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200
+Promise.then
+run3 @ content.tsx-7V8vsKnr.js:234239
+start @ content.tsx-7V8vsKnr.js:234276
+fetch @ content.tsx-7V8vsKnr.js:234638
+#executeFetch @ content.tsx-7V8vsKnr.js:235723
+(anonymous) @ content.tsx-7V8vsKnr.js:235760
+setInterval
+#updateRefetchInterval @ content.tsx-7V8vsKnr.js:235758
+#updateTimers @ content.tsx-7V8vsKnr.js:235766
+onQueryUpdate @ content.tsx-7V8vsKnr.js:235968
+(anonymous) @ content.tsx-7V8vsKnr.js:234710
+(anonymous) @ content.tsx-7V8vsKnr.js:234709
+batch @ content.tsx-7V8vsKnr.js:234322
+#dispatch @ content.tsx-7V8vsKnr.js:234708
+setData @ content.tsx-7V8vsKnr.js:234427
+onSuccess @ content.tsx-7V8vsKnr.js:234610
+resolve2 @ content.tsx-7V8vsKnr.js:234200Understand this warning
+VM385564:250    [450/513] Progress: 88% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [500/513] Progress: 97% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 10 RESULTS:
+VM385564:301    Duration: 30 minutes
+VM385564:302    Successes: 512
+VM385564:303    Failures: 1
+VM385564:305    Failed positions: 2037
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 512 books
+VM385564:373    → Doubling range to 1024 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 11: Testing range [1297, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 1024
+VM385564:231    Total books in range: 1025
+VM385564:232    Estimated time: ~77 minutes
+VM385564:233
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [50/1025] Progress: 5% complete...
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [100/1025] Progress: 10% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [150/1025] Progress: 15% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [200/1025] Progress: 20% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [250/1025] Progress: 24% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [300/1025] Progress: 29% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [350/1025] Progress: 34% complete...
+VM385564:277    ❌ FAILURE at position 1649: By Tooth and Claw (Exiled Series Book 2)...
+VM385564:278       ASIN: B00URTZQHG
+VM385564:279       Error: Customer Id or Marketplace Id is invalid.
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [400/1025] Progress: 39% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [450/1025] Progress: 44% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:277    ❌ FAILURE at position 1784: Lethal Code (A Lana Elkins Thriller)...
+VM385564:278       ASIN: B00J9P2EMO
+VM385564:279       Error: Customer Id or Marketplace Id is invalid.
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [500/1025] Progress: 49% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [550/1025] Progress: 54% complete...
+4yourbooks?ccs_id=06e…ilter%22%3A%5B%7…:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was receivedUnderstand this error
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [600/1025] Progress: 59% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [650/1025] Progress: 63% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [700/1025] Progress: 68% complete...
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:277    ❌ FAILURE at position 2037: 99 Reasons to Hate Cats: Cartoons for Cat Lovers...
+VM385564:278       ASIN: B0085HN8N6
+VM385564:279       Error: Customer Id or Marketplace Id is invalid.
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [750/1025] Progress: 73% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [800/1025] Progress: 78% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [850/1025] Progress: 83% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [900/1025] Progress: 88% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [950/1025] Progress: 93% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1000/1025] Progress: 98% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 11 RESULTS:
+VM385564:301    Duration: 63 minutes
+VM385564:302    Successes: 1022
+VM385564:303    Failures: 3
+VM385564:305    Failed positions: 1649, 1784, 2037
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 1024 books
+VM385564:373    → Doubling range to 2048 books for next iteration
+VM385564:374
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 12: Testing range [273, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 2048
+VM385564:231    Total books in range: 2049
+VM385564:232    Estimated time: ~154 minutes
+VM385564:233
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [50/2049] Progress: 2% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [100/2049] Progress: 5% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [150/2049] Progress: 7% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [200/2049] Progress: 10% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [250/2049] Progress: 12% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [300/2049] Progress: 15% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [350/2049] Progress: 17% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [400/2049] Progress: 20% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [450/2049] Progress: 22% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [500/2049] Progress: 24% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [550/2049] Progress: 27% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [600/2049] Progress: 29% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [650/2049] Progress: 32% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [700/2049] Progress: 34% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [750/2049] Progress: 37% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [800/2049] Progress: 39% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [850/2049] Progress: 41% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [900/2049] Progress: 44% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [950/2049] Progress: 46% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1000/2049] Progress: 49% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1050/2049] Progress: 51% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1100/2049] Progress: 54% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1150/2049] Progress: 56% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1200/2049] Progress: 59% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1250/2049] Progress: 61% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1300/2049] Progress: 63% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1350/2049] Progress: 66% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:277    ❌ FAILURE at position 1649: By Tooth and Claw (Exiled Series Book 2)...
+VM385564:278       ASIN: B00URTZQHG
+VM385564:279       Error: Customer Id or Marketplace Id is invalid.
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1400/2049] Progress: 68% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1450/2049] Progress: 71% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1500/2049] Progress: 73% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:277    ❌ FAILURE at position 1784: Lethal Code (A Lana Elkins Thriller)...
+VM385564:278       ASIN: B00J9P2EMO
+VM385564:279       Error: Customer Id or Marketplace Id is invalid.
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1550/2049] Progress: 76% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1600/2049] Progress: 78% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1650/2049] Progress: 81% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1700/2049] Progress: 83% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1750/2049] Progress: 85% complete...
+VM385564:277    ❌ FAILURE at position 2037: 99 Reasons to Hate Cats: Cartoons for Cat Lovers...
+VM385564:278       ASIN: B0085HN8N6
+VM385564:279       Error: Customer Id or Marketplace Id is invalid.
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1800/2049] Progress: 88% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1850/2049] Progress: 90% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1900/2049] Progress: 93% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1950/2049] Progress: 95% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [2000/2049] Progress: 98% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 12 RESULTS:
+VM385564:301    Duration: 121 minutes
+VM385564:302    Successes: 2046
+VM385564:303    Failures: 3
+VM385564:305    Failed positions: 1649, 1784, 2037
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 2048 books
+VM385564:373    → Doubling range to 4096 books for next iteration
+VM385564:374
+VM385564:401    → Next iteration will test FULL library (2321 books before Queen)
+VM385564:406
+VM385564:227 ========================================
+VM385564:228 ITERATION 13: Testing range [0, 2321]
+VM385564:229 ========================================
+VM385564:230    Books before Queen: 2321
+VM385564:231    Total books in range: 2322
+VM385564:232    Estimated time: ~175 minutes
+VM385564:233
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [50/2322] Progress: 2% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [100/2322] Progress: 4% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [150/2322] Progress: 6% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [200/2322] Progress: 9% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [250/2322] Progress: 11% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [300/2322] Progress: 13% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [350/2322] Progress: 15% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [400/2322] Progress: 17% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [450/2322] Progress: 19% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [500/2322] Progress: 22% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [550/2322] Progress: 24% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [600/2322] Progress: 26% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [650/2322] Progress: 28% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [700/2322] Progress: 30% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [750/2322] Progress: 32% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [800/2322] Progress: 34% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [850/2322] Progress: 37% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [900/2322] Progress: 39% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [950/2322] Progress: 41% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1000/2322] Progress: 43% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1050/2322] Progress: 45% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1100/2322] Progress: 47% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1150/2322] Progress: 50% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1200/2322] Progress: 52% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1250/2322] Progress: 54% complete...
+VM385564:277    ❌ FAILURE at position 1251: Property of a Lady Faire (SECRET HISTORIES Book 8)...
+VM385564:278       ASIN: B00G3L6L3U
+VM385564:279       Error: {errorPayload:{code:"504.1",internalInfo:{backend:{category:"Website",issueLink:"https://t.corp.amazon.com/create/options?cc_list=amazon-api-dev&tags=aapi-contact-data-quality%2CAmazonAPI_DP_Ticket&category=Website&type=Detail+Page&item=DP+PInfo+Monitoring",item:"DP PInfo Monitoring",owner:"DP Product Info",requestId:"UNKNOWN",time:"2025-11-09T01:47:03.432Z",type:"Detail Page"},frontend:{host:"aapi-prd-na-c6g-1b-8xl-01-ae4526f3.us-east-1.amazon.com",requestId:"WLRCZIOFMMV5G4O7ERMQ",time:"2025-11-09T01:47:03.432Z"},message:"Backend Future timed out after 2000 ms while calling description@/marketplaces/-/products/-/description on SubResourceProviderBackendDATAPATH"},status:504,details:{message:"Sorry, We are experiencing issues right now.",url:"https://api.amazon.com/shop"}}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1300/2322] Progress: 56% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1350/2322] Progress: 58% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1400/2322] Progress: 60% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1450/2322] Progress: 62% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1500/2322] Progress: 65% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1550/2322] Progress: 67% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1600/2322] Progress: 69% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1650/2322] Progress: 71% complete...
+VM385564:277    ❌ FAILURE at position 1649: By Tooth and Claw (Exiled Series Book 2)...
+VM385564:278       ASIN: B00URTZQHG
+VM385564:279       Error: Customer Id or Marketplace Id is invalid.
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1700/2322] Progress: 73% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1750/2322] Progress: 75% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:277    ❌ FAILURE at position 1784: Lethal Code (A Lana Elkins Thriller)...
+VM385564:278       ASIN: B00J9P2EMO
+VM385564:279       Error: Customer Id or Marketplace Id is invalid.
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1800/2322] Progress: 78% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1850/2322] Progress: 80% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [1900/2322] Progress: 82% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254Understand this warning
+VM385564:250    [1950/2322] Progress: 84% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [2000/2322] Progress: 86% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:277    ❌ FAILURE at position 2037: 99 Reasons to Hate Cats: Cartoons for Cat Lovers...
+VM385564:278       ASIN: B0085HN8N6
+VM385564:279       Error: Customer Id or Marketplace Id is invalid.
+VM385564:250    [2050/2322] Progress: 88% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [2100/2322] Progress: 90% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [AuthContext] Fetching auth state {}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [2150/2322] Progress: 93% complete...
+paywall-configuration-manager-K4boFMPo.js:8702 Failed to fetch local session clip state {error: {…}, sessionId: '9c8bc0bd-3398-5a1c-b681-67f9f1f83310'}
+warn @ paywall-configuration-manager-K4boFMPo.js:8702
+fetchLocalSessionClipState @ content.tsx-7V8vsKnr.js:237254
+await in fetchLocalSessionClipState
+queryFn @ content.tsx-7V8vsKnr.js:238065
+fetchFn @ content.tsx-7V8vsKnr.js:234561
+run3 @ content.tsx-7V8vsKnr.js:234235
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255
+Promise.catch
+run3 @ content.tsx-7V8vsKnr.js:234239
+(anonymous) @ content.tsx-7V8vsKnr.js:234259
+Promise.then
+(anonymous) @ content.tsx-7V8vsKnr.js:234255Understand this warning
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [2200/2322] Progress: 95% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [2250/2322] Progress: 97% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:250    [2300/2322] Progress: 99% complete...
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+paywall-configuration-manager-K4boFMPo.js:8690 [PaywallConfigurationProvider] State Changed {paywallState: {…}}
+VM385564:255    ---
+VM385564:256    👑 TESTING QUEEN (position 2321):
+VM385564:257       ASIN: 0425197484
+VM385564:258       Title: Undead and Unemployed (Queen Betsy, Book 2)
+VM385564:266       ✅ SUCCESS: 0 chars, 14 reviews
+VM385564:298
+VM385564:299 ---
+VM385564:300 📊 ITERATION 13 RESULTS:
+VM385564:301    Duration: 148 minutes
+VM385564:302    Successes: 2318
+VM385564:303    Failures: 4
+VM385564:305    Failed positions: 1251, 1649, 1784, 2037
+VM385564:307    Queen result: ✅ SUCCEEDED
+VM385564:308
+VM385564:372    → Queen SUCCEEDED after 2321 books
+VM385564:373    → Doubling range to 4642 books for next iteration
+VM385564:374
+VM385564:383 ========================================
+VM385564:384 ⚠️ POISON NOT FOUND
+VM385564:385 ========================================
+VM385564:386
+VM385564:387 💡 FINDING:
+VM385564:388    → Queen SUCCEEDED even with ALL 2321 books before it
+VM385564:389    → Poison does NOT occur in this test configuration
+VM385564:390
+VM385564:391 📌 POSSIBLE EXPLANATIONS:
+VM385564:392    1. Fresh page/session prevents poison accumulation
+VM385564:393    2. Time between tests allows Amazon API to reset
+VM385564:394    3. Full fetch has additional factors not replicated here
+VM385564:395    4. Queens' poison requires specific cumulative state
+VM385564:396
+VM385564:412 ========================================
+VM385564:413 📊 REVERSE BINARY SEARCH COMPLETE
+VM385564:414 ========================================
+VM385564:415
+VM385564:416 ⏱️  TIMING:
+VM385564:417    Total duration: 389 minutes
+VM385564:418    Total books processed: 6429
+VM385564:419    Total iterations: 13
+VM385564:420
+VM385564:442 ⚠️ POISON NOT FOUND
+VM385564:443    See details above for possible explanations
+VM385564:444
+VM385564:447 📊 ITERATION SUMMARY:
+VM385564:450    Iteration 1: 1 books → ✅ SUCCEEDED (0m)
+VM385564:450    Iteration 2: 2 books → ✅ SUCCEEDED (0m)
+VM385564:450    Iteration 3: 4 books → ✅ SUCCEEDED (0m)
+VM385564:450    Iteration 4: 8 books → ✅ SUCCEEDED (0m)
+VM385564:450    Iteration 5: 16 books → ✅ SUCCEEDED (1m)
+VM385564:450    Iteration 6: 32 books → ✅ SUCCEEDED (2m)
+VM385564:450    Iteration 7: 64 books → ✅ SUCCEEDED (3m)
+VM385564:450    Iteration 8: 128 books → ✅ SUCCEEDED (7m)
+VM385564:450    Iteration 9: 256 books → ✅ SUCCEEDED (14m)
+VM385564:450    Iteration 10: 512 books → ✅ SUCCEEDED (30m) (1 failures)
+VM385564:450    Iteration 11: 1024 books → ✅ SUCCEEDED (63m) (3 failures)
+VM385564:450    Iteration 12: 2048 books → ✅ SUCCEEDED (121m) (3 failures)
+VM385564:450    Iteration 13: 2321 books → ✅ SUCCEEDED (148m) (4 failures)
+VM385564:452
+VM385564:454 ========================================
+VM385564:461 📦 Results saved to: window.queensReverseBinarySearchResults
+VM385564:462
+VM385564:465 💾 Downloading final results file...
+VM385564:467 ✅ Downloaded: test-12-final-results.json
+VM385564:468
+VM385564:469 🎉 Test complete! Check your Downloads folder for results.

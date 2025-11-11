@@ -1,0 +1,229 @@
+INSTRUCTIONS FOR SHUFFLE SEQUENCE TEST (Test 7)
+===============================================
+
+This test determines if book SEQUENCE matters or just cumulative properties.
+
+PURPOSE:
+--------
+Test whether the failure requires a specific SEQUENCE of books leading up to
+Cats, or if it's just about cumulative count/variety/time (any order).
+
+HYPOTHESIS:
+-----------
+The failure is both position-dependent AND book-specific. But is it also
+SEQUENCE-dependent? Does the ORDER of books before Cats matter?
+
+TEST APPROACH:
+--------------
+1. Load the full library (2323 books)
+2. SHUFFLE books 0-2018 (randomize order before Cats)
+3. KEEP books 2019+ in original order (Cats, 2 Queens, etc.)
+4. Fetch in shuffled order with same timing (3s delays)
+5. Check if Cats still fails at position 2019
+
+KEY INSIGHT:
+------------
+- Same books (0-2018) will be fetched
+- Same count (2019 books before Cats)
+- Same timing (~3 second delays)
+- DIFFERENT sequence (shuffled order)
+
+If Cats SUCCEEDS → Failure requires specific book sequence
+If Cats FAILS → Failure is about cumulative properties (count/variety/time)
+
+STEPS:
+------
+
+1. Open Amazon in browser and navigate to:
+   https://www.amazon.com/yourbooks
+
+2. Open browser DevTools console (F12)
+
+3. Paste the ENTIRE contents of:
+   diag-06-shuffle-test.js
+
+4. Press Enter (script loads but doesn't start yet)
+
+5. Start the test by typing:
+   testShuffleSequence();
+
+6. Press Enter
+
+7. A FILE PICKER will open - select your amazon-library.json file
+   (Dialog may be hidden behind other windows - check taskbar!)
+
+8. Walk away! Test runs for ~3 hours (same as full fetch)
+
+WHAT TO LOOK FOR:
+-----------------
+
+Initial setup:
+[1/3] Loading library file...
+   ✅ File selected: amazon-library.json (41.23 MB)
+   ✅ Library loaded: 2323 books
+   📚 Books to shuffle: 2019 (positions 0-2018)
+   📌 Books to keep in order: 304 (positions 2019+)
+   🔀 Shuffling first 2019 books...
+   ✅ Shuffle complete!
+
+[2/3] Getting CSRF token...
+   ✅ Token obtained: hNh4ZgqPa5...
+
+[3/3] Starting shuffled fetch test...
+   📖 Total books: 2323
+   ⏱️  Estimated time: ~193 minutes (3.2 hours)
+   🎯 Watching for Cats book at position 2019
+
+Progress updates every 50 books:
+📊 Progress: Book 50/2323 | 3/193min elapsed
+   Remaining: ~190m | Successes: 50 | Failures: 0
+
+At position 2019 (Cats book):
+========================================
+🎯 CRITICAL POSITION: CATS BOOK (2019)
+========================================
+   ASIN: B0085HN8N6
+   Title: 99 Reasons to Hate Cats: Cartoons for Ca...
+   Elapsed: 144 minutes
+   Testing if Cats fails after shuffled sequence...
+
+POSSIBLE OUTCOMES:
+------------------
+
+**Outcome A: Cats SUCCEEDS (Sequence matters)**
+
+   ✅ 456 chars, 5 reviews
+
+========================================
+✅ CATS BOOK SUCCEEDED!
+========================================
+
+💡 CRITICAL FINDING:
+   → Cats succeeded after shuffled sequence
+   → SEQUENCE MATTERS!
+   → Failure requires specific book order before Cats
+
+📌 CONCLUSION:
+   The error is NOT just about:
+   - Total book count (same 2019 books)
+   - Time elapsed (similar duration)
+   - Variety (same book diversity)
+
+   The error IS about:
+   - Specific SEQUENCE of books
+   - Amazon API state affected by book order
+   - Specific combinations triggering the error
+
+========================================
+
+**What this means:**
+🎯 The failure is SEQUENCE-DEPENDENT!
+🎯 Specific book order before Cats triggers the error
+🎯 Shuffling prevents the failure condition
+🎯 Amazon API has complex state machine affected by book sequence
+🎯 Cannot fix with simple cooldown - need deeper investigation
+
+**Next steps:**
+1. Use binary search to find MINIMUM sequence that triggers failure
+2. Identify which specific books in sequence cause the problem
+3. Look for patterns in failing sequences (genre, size, metadata, etc.)
+4. Consider if certain book combinations corrupt API state
+
+---
+
+**Outcome B: Cats FAILS (Sequence does NOT matter)**
+
+   ❌ FAILED: Customer Id or Marketplace Id is invalid.
+
+========================================
+❌ CATS BOOK FAILED!
+========================================
+
+💡 CRITICAL FINDING:
+   → Cats failed even after shuffled sequence
+   → SEQUENCE DOES NOT MATTER!
+   → Failure is about cumulative properties:
+      - Total books processed (~2019)
+      - Time elapsed (~144 min)
+      - Variety of different books
+
+📌 CONCLUSION:
+   Amazon API degrades after processing:
+   - ~2019 different book ASINs (any order)
+   - Over ~144 minutes duration
+   - High variety of books
+
+   Recommendation:
+   - Implement API cooldown after 1800 books
+   - Pause 60 seconds to let API state reset
+   - Continue fetch after cooldown
+
+========================================
+
+**What this means:**
+🎯 The failure is CUMULATIVE, not sequence-dependent
+🎯 Any 2019 books (any order) will trigger the failure
+🎯 Can fix with cooldown period every ~1800 books
+🎯 Simple solution: Pause 60s, get fresh token, continue
+
+**Next steps:**
+1. Implement cooldown in library-fetcher.js after 1800 books
+2. Test full fetch with cooldown enabled
+3. Should achieve 100% success rate
+
+RUNTIME:
+--------
+- Expected: ~193 minutes (3.2 hours) for full test
+- Same duration as normal fetch (2323 books × 3s + API overhead)
+- Progress updates every 50 books (~3 minutes)
+
+TECHNICAL DETAILS:
+------------------
+- Fisher-Yates shuffle algorithm for true randomization
+- Books 0-2018 shuffled, books 2019+ unchanged
+- Same enrichQuery GraphQL as fetcher Pass 2
+- Same 3-second delays between requests
+- Same enrichBook() extraction logic
+
+KEY DIFFERENCE FROM NORMAL FETCH:
+----------------------------------
+Normal fetch: Books 0-2018 in chronological order (by acquisition date)
+Shuffle test: Books 0-2018 in RANDOM order (shuffled)
+
+The ONLY variable that changes: sequence/order of books before Cats
+Everything else identical: count, timing, variety, books included
+
+This isolates SEQUENCE as the variable being tested.
+
+NOTES:
+------
+- Don't close browser during test (will interrupt)
+- Don't let computer sleep (test takes 3+ hours)
+- Keep DevTools console open to see progress
+- Results saved to: window.shuffleTestResults
+- Cats book will show special notice when reached
+- Test may reveal other failures beyond Cats
+
+DEBUGGING:
+----------
+After test completes (or fails), inspect:
+
+window.shuffleTestResults
+
+Example structure:
+{
+    successes: 2318,
+    failures: 5,
+    catsResult: "SUCCESS" or "FAILURE",
+    catsPosition: 2019,
+    firstFailureAt: 2019,
+    failureDetails: [
+        {
+            position: 2019,
+            asin: "B0085HN8N6",
+            title: "99 Reasons to Hate Cats...",
+            error: "Customer Id or Marketplace Id is invalid.",
+            elapsedMin: 144
+        }
+    ]
+}

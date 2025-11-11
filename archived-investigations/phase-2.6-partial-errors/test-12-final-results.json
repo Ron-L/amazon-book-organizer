@@ -1,0 +1,242 @@
+{
+  "testName": "Queens Reverse Binary Search (Test 12)",
+  "testDate": "2025-11-08T20:22:28.366Z",
+  "queen": {
+    "position": 2321,
+    "asin": "0425197484",
+    "title": "Undead and Unemployed (Queen Betsy, Book 2)"
+  },
+  "iterations": [
+    {
+      "iteration": 1,
+      "booksBeforeQueen": 1,
+      "totalBooks": 2,
+      "rangeStart": 2320,
+      "rangeEnd": 2321,
+      "successes": 2,
+      "failures": 0,
+      "queenFailed": false,
+      "durationMin": 0,
+      "failureDetails": []
+    },
+    {
+      "iteration": 2,
+      "booksBeforeQueen": 2,
+      "totalBooks": 3,
+      "rangeStart": 2319,
+      "rangeEnd": 2321,
+      "successes": 3,
+      "failures": 0,
+      "queenFailed": false,
+      "durationMin": 0,
+      "failureDetails": []
+    },
+    {
+      "iteration": 3,
+      "booksBeforeQueen": 4,
+      "totalBooks": 5,
+      "rangeStart": 2317,
+      "rangeEnd": 2321,
+      "successes": 5,
+      "failures": 0,
+      "queenFailed": false,
+      "durationMin": 0,
+      "failureDetails": []
+    },
+    {
+      "iteration": 4,
+      "booksBeforeQueen": 8,
+      "totalBooks": 9,
+      "rangeStart": 2313,
+      "rangeEnd": 2321,
+      "successes": 9,
+      "failures": 0,
+      "queenFailed": false,
+      "durationMin": 0,
+      "failureDetails": []
+    },
+    {
+      "iteration": 5,
+      "booksBeforeQueen": 16,
+      "totalBooks": 17,
+      "rangeStart": 2305,
+      "rangeEnd": 2321,
+      "successes": 17,
+      "failures": 0,
+      "queenFailed": false,
+      "durationMin": 1,
+      "failureDetails": []
+    },
+    {
+      "iteration": 6,
+      "booksBeforeQueen": 32,
+      "totalBooks": 33,
+      "rangeStart": 2289,
+      "rangeEnd": 2321,
+      "successes": 33,
+      "failures": 0,
+      "queenFailed": false,
+      "durationMin": 2,
+      "failureDetails": []
+    },
+    {
+      "iteration": 7,
+      "booksBeforeQueen": 64,
+      "totalBooks": 65,
+      "rangeStart": 2257,
+      "rangeEnd": 2321,
+      "successes": 65,
+      "failures": 0,
+      "queenFailed": false,
+      "durationMin": 3,
+      "failureDetails": []
+    },
+    {
+      "iteration": 8,
+      "booksBeforeQueen": 128,
+      "totalBooks": 129,
+      "rangeStart": 2193,
+      "rangeEnd": 2321,
+      "successes": 129,
+      "failures": 0,
+      "queenFailed": false,
+      "durationMin": 7,
+      "failureDetails": []
+    },
+    {
+      "iteration": 9,
+      "booksBeforeQueen": 256,
+      "totalBooks": 257,
+      "rangeStart": 2065,
+      "rangeEnd": 2321,
+      "successes": 257,
+      "failures": 0,
+      "queenFailed": false,
+      "durationMin": 14,
+      "failureDetails": []
+    },
+    {
+      "iteration": 10,
+      "booksBeforeQueen": 512,
+      "totalBooks": 513,
+      "rangeStart": 1809,
+      "rangeEnd": 2321,
+      "successes": 512,
+      "failures": 1,
+      "queenFailed": false,
+      "durationMin": 30,
+      "failureDetails": [
+        {
+          "position": 2037,
+          "asin": "B0085HN8N6",
+          "title": "99 Reasons to Hate Cats: Cartoons for Cat Lovers",
+          "error": "Customer Id or Marketplace Id is invalid."
+        }
+      ]
+    },
+    {
+      "iteration": 11,
+      "booksBeforeQueen": 1024,
+      "totalBooks": 1025,
+      "rangeStart": 1297,
+      "rangeEnd": 2321,
+      "successes": 1022,
+      "failures": 3,
+      "queenFailed": false,
+      "durationMin": 63,
+      "failureDetails": [
+        {
+          "position": 1649,
+          "asin": "B00URTZQHG",
+          "title": "By Tooth and Claw (Exiled Series Book 2)",
+          "error": "Customer Id or Marketplace Id is invalid."
+        },
+        {
+          "position": 1784,
+          "asin": "B00J9P2EMO",
+          "title": "Lethal Code (A Lana Elkins Thriller)",
+          "error": "Customer Id or Marketplace Id is invalid."
+        },
+        {
+          "position": 2037,
+          "asin": "B0085HN8N6",
+          "title": "99 Reasons to Hate Cats: Cartoons for Cat Lovers",
+          "error": "Customer Id or Marketplace Id is invalid."
+        }
+      ]
+    },
+    {
+      "iteration": 12,
+      "booksBeforeQueen": 2048,
+      "totalBooks": 2049,
+      "rangeStart": 273,
+      "rangeEnd": 2321,
+      "successes": 2046,
+      "failures": 3,
+      "queenFailed": false,
+      "durationMin": 121,
+      "failureDetails": [
+        {
+          "position": 1649,
+          "asin": "B00URTZQHG",
+          "title": "By Tooth and Claw (Exiled Series Book 2)",
+          "error": "Customer Id or Marketplace Id is invalid."
+        },
+        {
+          "position": 1784,
+          "asin": "B00J9P2EMO",
+          "title": "Lethal Code (A Lana Elkins Thriller)",
+          "error": "Customer Id or Marketplace Id is invalid."
+        },
+        {
+          "position": 2037,
+          "asin": "B0085HN8N6",
+          "title": "99 Reasons to Hate Cats: Cartoons for Cat Lovers",
+          "error": "Customer Id or Marketplace Id is invalid."
+        }
+      ]
+    },
+    {
+      "iteration": 13,
+      "booksBeforeQueen": 2321,
+      "totalBooks": 2322,
+      "rangeStart": 0,
+      "rangeEnd": 2321,
+      "successes": 2318,
+      "failures": 4,
+      "queenFailed": false,
+      "durationMin": 148,
+      "failureDetails": [
+        {
+          "position": 1251,
+          "asin": "B00G3L6L3U",
+          "title": "Property of a Lady Faire (SECRET HISTORIES Book 8)",
+          "error": "{errorPayload:{code:\"504.1\",internalInfo:{backend:{category:\"Website\",issueLink:\"https://t.corp.amazon.com/create/options?cc_list=amazon-api-dev&tags=aapi-contact-data-quality%2CAmazonAPI_DP_Ticket&category=Website&type=Detail+Page&item=DP+PInfo+Monitoring\",item:\"DP PInfo Monitoring\",owner:\"DP Product Info\",requestId:\"UNKNOWN\",time:\"2025-11-09T01:47:03.432Z\",type:\"Detail Page\"},frontend:{host:\"aapi-prd-na-c6g-1b-8xl-01-ae4526f3.us-east-1.amazon.com\",requestId:\"WLRCZIOFMMV5G4O7ERMQ\",time:\"2025-11-09T01:47:03.432Z\"},message:\"Backend Future timed out after 2000 ms while calling description@/marketplaces/-/products/-/description on SubResourceProviderBackendDATAPATH\"},status:504,details:{message:\"Sorry, We are experiencing issues right now.\",url:\"https://api.amazon.com/shop\"}}}"
+        },
+        {
+          "position": 1649,
+          "asin": "B00URTZQHG",
+          "title": "By Tooth and Claw (Exiled Series Book 2)",
+          "error": "Customer Id or Marketplace Id is invalid."
+        },
+        {
+          "position": 1784,
+          "asin": "B00J9P2EMO",
+          "title": "Lethal Code (A Lana Elkins Thriller)",
+          "error": "Customer Id or Marketplace Id is invalid."
+        },
+        {
+          "position": 2037,
+          "asin": "B0085HN8N6",
+          "title": "99 Reasons to Hate Cats: Cartoons for Cat Lovers",
+          "error": "Customer Id or Marketplace Id is invalid."
+        }
+      ]
+    }
+  ],
+  "thresholdFound": false,
+  "thresholdRange": null,
+  "totalBooksProcessed": 6429,
+  "status": "completed",
+  "totalDurationMin": 389
+}

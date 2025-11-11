@@ -1,0 +1,206 @@
+INSTRUCTIONS FOR FULL LIBRARY ALTERNATING TEST
+==============================================
+
+This is the DEFINITIVE test to prove book variety is the root cause.
+
+PURPOSE:
+--------
+Test if Queen's Ransom fails after fetching many DIFFERENT library books,
+confirming that book diversity (not just request count) triggers the error.
+
+TEST PATTERN:
+-------------
+Request 1: Library Book #1
+Request 2: Queen's Ransom (0684862670)
+Request 3: Library Book #2
+Request 4: Queen's Ransom (0684862670)
+Request 5: Library Book #3
+Request 6: Queen's Ransom (0684862670)
+...and so on for all 2322 library books
+
+Total: Up to 4644 requests (2322 library + 2322 Queen)
+
+EXPECTED RESULT:
+----------------
+Queen's Ransom should FAIL around request ~4000-4500 (after ~2000 different library books)
+
+This would prove:
+✅ Test 1: Queen alone 2500x → No failures (single book is fine)
+✅ Test 2: Alternating 2 books 2500x → No failures (low variety is fine)
+✅ Test 3: Alternating 2000+ books → Queen FAILS! (high variety triggers it)
+
+STEPS:
+------
+
+1. Open Amazon in browser and navigate to:
+   https://www.amazon.com/yourbooks
+
+2. Open browser DevTools console (F12)
+
+3. Paste the ENTIRE contents of:
+   diag-04-full-library-alternating.js
+
+4. Press Enter (script loads but doesn't start yet)
+
+5. Start the test by typing:
+   testFullLibraryAlternating();
+
+6. Press Enter
+
+7. A FILE PICKER will open - select your amazon-library.json file
+   (Dialog may be hidden behind other windows - check taskbar!)
+
+8. Walk away! Test runs unattended for up to ~6 hours (or until Queen fails)
+
+WHAT TO LOOK FOR:
+-----------------
+
+First, you'll see the file picker and loading:
+[1/3] Loading library file...
+   📂 A file picker dialog will open...
+   ✅ File selected: amazon-library.json (41.23 MB)
+   📖 Reading file...
+   ✅ Library loaded: 2322 books
+
+Then progress updates appear every 50 books (100 requests):
+📊 Progress: Book 50/2322 (2%) | Requests: 100/4644
+   Elapsed: 5m | Remaining: ~250m
+   Library: 50✅ 0❌ | Queen: 50✅ 0❌
+
+EXPECTED OUTCOME (Most Likely):
+-------------------------------
+
+Around book #2000-2200, you should see:
+
+========================================
+🎯 QUEEN'S RANSOM FAILED! (TARGET FOUND)
+========================================
+
+   Request #: 4038
+   After library book #: 2019/2322
+   Last book ASIN: B003J5UJD6
+   Last book title: Some Book Title
+   Elapsed time: 191 minutes
+   Error: Customer Id or Marketplace Id is invalid.
+
+💡 CRITICAL FINDING:
+   → Queen's Ransom failed after 2019 DIFFERENT library books
+   → Total requests before failure: 4038
+   → Book variety CONFIRMED as root cause!
+
+📌 COMPARISON:
+   → Test 1 (Queen only 2500x): 0 failures
+   → Test 2 (Alternating 2 books 2500x): 0 failures
+   → Test 3 (2019 different books): Queen FAILED!
+
+✅ ROOT CAUSE IDENTIFIED: Book diversity threshold ~2019 books
+
+**What this means:**
+🎯 DEFINITIVE PROOF that book variety is the root cause!
+🎯 Amazon's API degrades after processing ~2000 different book ASINs
+🎯 Solution: Implement "cooling off" period in fetcher after ~1800 books
+
+**Next steps:**
+1. Implement throttling in library-fetcher.js:
+   - After every 1800 books, pause for 60 seconds
+   - Display message: "Cooling off API (60s)..."
+   - Resume fetching
+2. Re-test full library with throttling enabled
+3. Should achieve 100% success rate
+
+ALTERNATIVE OUTCOME (Unlikely):
+-------------------------------
+
+If test completes all 2322 books without Queen failing:
+
+💡 CONCLUSION:
+   ❌ Completed 2322 different books
+   → Queen never failed!
+
+   This suggests original failure was:
+   - Random network issue
+   - Server-side state that has been reset
+   - Time/date-dependent API behavior
+
+   Recommendation: Monitor future full fetches for pattern
+
+INSPECTING RESULTS:
+-------------------
+
+After test completes (or fails), inspect detailed results:
+
+window.fullLibraryTestResults
+
+Example after Queen fails:
+{
+    librarySuccesses: 2019,
+    libraryFailures: 0,
+    queenSuccesses: 2018,
+    queenFailures: 1,
+    firstQueenFailureAt: 4038,
+    totalRequests: 4038,
+    queenFailureDetails: [
+        {
+            afterBook: 2019,
+            afterAsin: "B003J5UJD6",
+            afterTitle: "Some Book",
+            error: "Customer Id or Marketplace Id is invalid.",
+            requestNum: 4038,
+            elapsedMin: 191
+        }
+    ]
+}
+
+COMPARING ALL THREE TESTS:
+---------------------------
+
+Test 1 (diag-02-queen-repetition-test.js):
+   Pattern: Queen, Queen, Queen... (2500 times)
+   Result: 2500/2500 succeeded
+   Proves: Single book request count is NOT the issue
+
+Test 2 (diag-03-alternating-test.js):
+   Pattern: Kindle, Queen, Kindle, Queen... (1250 pairs = 2500 requests)
+   Result: 2500/2500 succeeded
+   Proves: Low variety (2 books) is NOT the issue
+
+Test 3 (diag-04-full-library-alternating.js): ← YOU ARE HERE
+   Pattern: Book1, Queen, Book2, Queen, Book3, Queen... (up to 2322 different books)
+   Expected: Queen fails after ~2000 different books
+   Will prove: High variety (2000+ different books) IS the issue
+
+WHY THIS TEST IS DEFINITIVE:
+-----------------------------
+
+If Queen fails in Test 3 but not Tests 1 or 2, we have PROOF:
+✅ Not about token staleness (proven in earlier token test)
+✅ Not about total request count (Test 1 had 2500 requests)
+✅ Not about alternating pattern (Test 2 alternated 2500 times)
+✅ IS about book variety/diversity (only variable that changed)
+
+SOLUTION ONCE CONFIRMED:
+-------------------------
+
+Implement in library-fetcher.js Phase 2:
+
+```javascript
+// After enriching every 1800 books
+if (successfulEnrichments % 1800 === 0 && successfulEnrichments > 0) {
+    console.log('🛑 Cooling off API (60 seconds)...');
+    await new Promise(resolve => setTimeout(resolve, 60000));
+    console.log('✅ Resuming fetch...');
+}
+```
+
+This allows Amazon's API state to reset before hitting the diversity threshold.
+
+RUNTIME:
+--------
+- Worst case: ~285 minutes (4.75 hours) for all 4644 requests
+- Best case: ~190 minutes (3.2 hours) if Queen fails around request 4000
+- Progress updates every 5 minutes so you can check in
+
+NOTE:
+-----
+The test STOPS IMMEDIATELY when Queen fails for the first time.
+No need to wait for all 4644 requests - we just need to find the threshold!

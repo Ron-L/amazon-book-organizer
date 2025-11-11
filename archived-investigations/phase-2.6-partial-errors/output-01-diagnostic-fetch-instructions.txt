@@ -1,0 +1,132 @@
+INSTRUCTIONS FOR TOKEN PASSING TEST
+====================================
+
+This test will:
+1. Run the FULL library fetch (takes ~3 hours)
+2. Diagnostic will run AFTER fetch completes (~30 seconds)
+3. Diagnostic will REUSE fetcher's 2.5-hour-old token (instead of fresh token)
+4. If failures occur, diagnostic will RETRY with fresh token
+5. You can paste both scripts and walk away - everything runs unattended
+6. No file dialogs will block - everything runs automatically
+
+PURPOSE: Test if token staleness causes "Customer Id or Marketplace Id is invalid" errors
+- Diagnostic uses fetcher's STALE token (2.5 hours old)
+- If books fail → retry with FRESH token from page
+- If retry succeeds → PROVES token staleness is the root cause
+- If retry fails → token staleness is NOT the issue
+
+STEPS:
+------
+
+1. Open Amazon in browser and navigate to:
+   https://www.amazon.com/yourbooks
+
+2. Open browser DevTools console (F12)
+
+3. Paste the ENTIRE contents of these two files IN ORDER:
+   a) library-fetcher.js
+   b) diag-01-isbn-enrichment.js
+
+4. Press Enter
+
+5. Walk away! The fetch will start immediately (~3 hours), then the diagnostic
+   will run automatically when it completes (~30 seconds).
+
+WHAT TO LOOK FOR:
+-----------------
+
+After the 3-hour fetch completes, look at the console output for:
+
+1. **DIAGNOSTIC WITH STALE TOKEN:**
+   - Message: "Using fetcher's token (2.5 hours old): hFGMxb43tp..."
+   - Test 5 books with the STALE token
+   - Expected: 3 books (Cats, Queen's Ransom, To Ruin A Queen) will FAIL
+   - Error message: "Customer Id or Marketplace Id is invalid."
+
+2. **RETRY WITH FRESH TOKEN:**
+   - Message: "🔬 RETRY TEST: Fresh Token"
+   - Message: "Found 3 failures with stale token. Now retrying with FRESH token from page..."
+   - Retry the 3 failed books with fresh token
+
+3. **SMOKING GUN RESULT:**
+   If all 3 books SUCCEED with fresh token:
+   - Message: "✅ SMOKING GUN: All failures succeeded with fresh token!"
+   - Message: "→ Proves token staleness is the root cause"
+   - Message: "→ Solution: Refresh CSRF token periodically during fetch"
+
+   This is the DEFINITIVE PROOF we need!
+
+4. **ALTERNATIVE RESULTS:**
+   - Partial success: Token staleness is ONE factor but not the only one
+   - No change: Token staleness is NOT the issue (something else is different)
+
+EXPECTED TEST RESULTS:
+----------------------
+
+**Most Likely Outcome:**
+✅ Stale token test: 3 failures (Cats + 2 Queens) with "Customer Id or Marketplace Id is invalid"
+✅ Fresh token retry: All 3 succeed with descriptions
+✅ Conclusion: Token staleness is the root cause → implement token refresh every N books
+
+**Books Being Tested:**
+1. Cats book (B0085HN8N6) - Kindle Edition - FAILS with stale token
+2. Queen's Ransom (0684862670) - Hardcover ISBN - FAILS with stale token
+3. To Ruin A Queen (0684862689) - Hardcover ISBN - FAILS with stale token
+4. Control ISBN (0684838419) - Succeeds with both tokens
+5. Control ASIN #1 (B003J5UJD6) - Succeeds with both tokens
+6. Control ASIN #2 (B0FWCYMY93) - Succeeds with both tokens
+
+AFTER THE TEST:
+---------------
+
+When it's done, paste:
+1. The stale token test results (which books failed)
+2. The fresh token retry results (did they succeed?)
+3. The final analysis/conclusion message
+
+IMPORTANT - REVERTING CHANGES BEFORE NORMAL USE:
+-------------------------------------------------
+
+⚠️  This version has TEMPORARY modifications for testing!
+
+BEFORE NEXT NORMAL USE, you must uncomment these lines:
+
+1. Line ~1447 in library-fetcher.js:
+   // fetchAmazonLibrary();
+   Change to:
+   fetchAmazonLibrary();
+
+2. Lines ~325-336 (file picker):
+   Uncomment the file input creation code
+
+3. Lines ~1270-1279 (library save):
+   Uncomment the file download code
+
+4. Lines ~1307-1317 (manifest save at end):
+   Uncomment the manifest download code
+
+5. Lines ~1008-1018 (manifest save when no new books):
+   Uncomment the manifest download code
+
+6. REVERT TOKEN PASSING TEST CHANGES:
+   - Remove "window.fetcherCsrfToken = csrfToken;" from library-fetcher.js (line ~393)
+   - Restore diagnostic to read fresh token instead of fetcher token
+
+OR: Just use the normal version of library-fetcher.js and diag-01-isbn-enrichment.js for future runs!
+
+Otherwise the fetcher won't work correctly for normal use!
+
+WHAT THIS TEST PROVES:
+-----------------------
+
+If fresh token retry succeeds, we know:
+1. The 3 books have valid descriptions on Amazon ✅
+2. ISBNs work fine (not an ISBN vs ASIN issue) ✅
+3. Physical books (hardcover) CAN be enriched ✅
+4. The error is caused by STALE CSRF token (2.5 hours old) ✅
+5. Solution: Refresh token every 30-60 minutes during fetch ✅
+
+Next steps after confirming:
+- Implement token refresh in library-fetcher.js Phase 2
+- Refresh token every ~200 books (every 30 minutes)
+- Re-fetch library to get 100% description coverage

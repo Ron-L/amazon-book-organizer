@@ -1,0 +1,129 @@
+INSTRUCTIONS FOR QUEEN REPETITION TEST
+=======================================
+
+This test requests Queen's Ransom (ISBN 0684862670) exactly 2500 times
+to determine if the book fails when requested repeatedly by itself.
+
+PURPOSE:
+--------
+Determine if "Customer Id or Marketplace Id is invalid" error is caused by:
+- Request count threshold for THIS SPECIFIC BOOK (if it fails)
+- OR requires context of many DIFFERENT books (if it never fails)
+
+STEPS:
+------
+
+1. Open Amazon in browser and navigate to:
+   https://www.amazon.com/yourbooks
+
+2. Open browser DevTools console (F12)
+
+3. Paste the ENTIRE contents of:
+   diag-02-queen-repetition-test.js
+
+4. Press Enter
+
+5. Test starts automatically after 3-second countdown
+
+6. Walk away! Test runs unattended for ~2.3 hours
+
+WHAT TO LOOK FOR:
+-----------------
+
+Progress updates appear every 100 requests:
+📊 Progress: 100/2500 (4%)
+   Elapsed: 2m | Remaining: ~48m
+   Success: 100 | Failures: 0
+
+POSSIBLE OUTCOMES:
+------------------
+
+**Scenario A: Failure occurs (most likely at ~2000 requests)**
+
+Console output:
+========================================
+🎯 FIRST FAILURE DETECTED!
+========================================
+
+   Request #: 2019
+   Elapsed time: 102 minutes
+   Error: Customer Id or Marketplace Id is invalid.
+
+💡 ANALYSIS:
+   → Queen's Ransom failed after 2019 requests
+   → This proves request count threshold exists
+   → Fetcher should implement throttling after ~1817 books
+
+**What this means:**
+✅ Problem is REQUEST COUNT threshold for this specific book
+✅ Solution: Implement request throttling in fetcher
+✅ No need to run Options 2 or 1 (we found the cause!)
+
+**Next steps:**
+- Implement periodic API "cooling off" in fetcher Phase 2
+- Add delay after every N books to avoid hitting threshold
+- Re-test full library fetch with throttling enabled
+
+---
+
+**Scenario B: No failure (all 2500 succeed)**
+
+Console output:
+========================================
+TEST COMPLETE
+========================================
+
+📊 Final Statistics:
+   Total requests: 2500
+   Successes: 2500
+   Failures: 0
+   Total time: 137 minutes
+
+💡 CONCLUSION:
+   ❌ Queen's Ransom NEVER FAILED (2500/2500 succeeded)
+   → Problem is NOT simple request count for single book
+   → Next test: Option 2 (alternating Kindle + Queen)
+   → Hypothesis: Problem requires variety of different books
+
+**What this means:**
+⚠️  Problem is MORE COMPLEX than single book request count
+⚠️  Requires context of fetching many DIFFERENT books sequentially
+⚠️  Need to run Option 2 next (alternating test)
+
+**Next steps:**
+- Run Option 2: Kindle + Queen alternating test (2500 requests)
+- If that also succeeds → Run Option 1 (full library variety)
+
+INSPECTING RESULTS:
+-------------------
+
+After test completes, you can inspect detailed results:
+
+window.queenTestResults
+
+Example:
+{
+    successes: 2019,
+    failures: 1,
+    firstFailureAt: 2020,
+    totalRequests: 2020,
+    descriptions: [2477, 2477, 2477, ...]  // length of each description
+}
+
+INTERPRETING RESULTS:
+---------------------
+
+If firstFailureAt is NOT null:
+→ Found the threshold! Implement throttling at 90% of this value.
+
+If firstFailureAt is null:
+→ Need to test with book variety (Option 2 or Option 1)
+
+NOTES:
+------
+
+- Test automatically stops on FIRST failure (no need to wait for all 2500)
+- Progress saved to window.queenTestResults throughout test
+- Same enrichBook() function as actual fetcher (exact copy)
+- Same 350ms delay between requests as fetcher
+- Fresh CSRF token read from page at start

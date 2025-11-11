@@ -1,0 +1,42 @@
+{
+  "metadata": {
+    "scriptVersion": "v1",
+    "fetchDate": "2025-11-03T23:44:48.996Z",
+    "totalAttempted": 11,
+    "totalRecovered": 7,
+    "stopped": false,
+    "stoppedAt": null,
+    "stoppedReason": null,
+    "sourceType": "AI_SUMMARIES"
+  },
+  "descriptions": [
+    {
+      "asin": "0702300950",
+      "description": "Autistic girl Tally navigates new social challenges on a school trip, questioning whether to conform or stand up for herself and others."
+    },
+    {
+      "asin": "B01IW2PEV2",
+      "description": "Through a freak accident, a modern chemist is transported to planet Anyar, where he must help a pre-industrial society resist conquest by the militant Narthani empire."
+    },
+    {
+      "asin": "1441343059",
+      "description": "A beautiful journal with gold foil embellishments, embossing, and gray lines for writing. Perfect for personal reflection, sketching, or jotting down favorite quotes or poems."
+    },
+    {
+      "asin": "1441343075",
+      "description": "A mesmerizing journal inviting you to immerse yourself in an enchanting undersea world, capturing your thoughts amidst vibrant marine life."
+    },
+    {
+      "asin": "088743147X",
+      "description": "A comprehensive first grade workbook with 300+ engaging activities covering math, reading, phonics, and problem-solving skills for ages 6-7."
+    },
+    {
+      "asin": "1607065967",
+      "description": "A harrowing tale of Rick Grimes' group surviving the zombie apocalypse, facing devastating losses and finding fleeting refuge, forcing them to truly embrace life."
+    },
+    {
+      "asin": "B000EUKR1S",
+      "description": "As vampire queen, Betsy faces workplace drama at her nightclub after killing the previous boss. Her life gets complicated when she learns she has a half-sister who's the devil's daughter."
+    }
+  ]
+}

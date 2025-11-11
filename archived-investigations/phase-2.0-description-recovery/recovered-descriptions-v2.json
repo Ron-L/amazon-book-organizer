@@ -1,0 +1,22 @@
+{
+  "metadata": {
+    "scriptVersion": "v2",
+    "fetchDate": "2025-11-04T00:55:48.179Z",
+    "totalAttempted": 4,
+    "totalRecovered": 2,
+    "stopped": false,
+    "stoppedAt": null,
+    "stoppedReason": null,
+    "sourceType": "RECURSIVE_FRAGMENTS"
+  },
+  "descriptions": [
+    {
+      "asin": "B07CF2QQPP",
+      "description": "20 Classic Sci-Fi Novels and Short Stories!!! 'nuff said!"
+    },
+    {
+      "asin": "B00KMJN9AM",
+      "description": "The Shield is a riveting story of conflicting emotions and ideologies in the tradition of Harry Turtledove and S. M. Stirlings’s Island in the Sea of Time. Twenty-first century Israel finds itself transferred to 1941 days before Nazi Germany plans to attack the Soviet Union. Opportunities abound for changing history and the population – including terrorists, tourists, diplomats, and pacifists – has divergent goals. Everything is debated and every action has unpredictable consequences. The Shield follows an extended family as they adapt to their changed world. The businessman sees opportunities, his son in the army faces new enemies, and the cousin visiting from America is confused and angry. The Israeli government, a fractious coalition with diverse goals, struggles to protection the population in a world they only think they understand. Fun reading for fans of alternate history and time-travel fiction – highly recommended!"
+    }
+  ]
+}

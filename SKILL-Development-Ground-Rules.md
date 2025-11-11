@@ -758,6 +758,44 @@ if (response.errors && !response.data?.getProducts?.[0]) {
 - Investigate raw response BEFORE trying alternative endpoints
 - Pattern: "Understand THEN fix" not "Try random changes"
 
+### Systematic Sampling for Data Gaps
+
+**Pattern:** When large percentage of data is missing, verify if it's extraction vs. availability issue.
+
+**When to Apply:**
+- >10% of expected data is missing or empty
+- Error messages are ambiguous or absent
+- Data source is known to be reliable (e.g., Amazon library)
+
+**Investigation Protocol:**
+1. **Random Sample**: Select 10-20 items from missing data set
+2. **Manual Extraction**: Test each item individually/manually
+3. **Analysis**:
+   - If sample succeeds → Extraction logic incomplete
+   - If sample fails → Investigate API/data availability
+4. **Pattern Discovery**: Examine successful extractions for common patterns
+5. **Implementation**: Add missing extraction patterns to production code
+
+**Real Example from Phase 2.0:**
+- Problem: 1,528/2,343 books (65%) missing descriptions
+- Random Sample: 20 books tested individually
+- Result: 100% of sample had descriptions available
+- Conclusion: Extraction logic incomplete, not API failure
+- Discovery: 3 new extraction patterns (paragraph wrappers, nested semanticContent, AI summaries)
+- Impact: Recovered 1,526/1,528 (99.91%)
+
+**Red Flags for Extraction Issues:**
+- High percentage missing (>10%)
+- Known reliable source
+- No API errors reported
+- Random sampling succeeds
+
+**Avoid:**
+- Assuming missing data = API unavailable
+- Giving up at first sign of bulk failures
+- Not testing individual items manually
+- Implementing fixes without understanding patterns
+
 ### General Feedback
 - When proposing a change that adds code, consider whether the same goal can be achieved by REMOVING code instead
 - Always prefer simplification over adding complexity
