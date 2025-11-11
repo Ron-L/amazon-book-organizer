@@ -1,6 +1,6 @@
-        // Amazon Book Organizer JS v3.3.0.a
+        // Amazon Book Organizer JS v3.3.2
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.3.0.a";
+        const APP_VERSION = "v3.3.2";
         document.title = `Amazon Book Organizer ${APP_VERSION}`;
         const STORAGE_KEY = "amazon-book-organizer-state";
         const CACHE_KEY = "amazon-book-enriched-cache";
@@ -28,25 +28,67 @@
         };
         
         const saveBooksToIndexedDB = async (books) => {
-            const db = await openDB();
-            const transaction = db.transaction([BOOKS_STORE], 'readwrite');
-            const store = transaction.objectStore(BOOKS_STORE);
-            
-            // Clear existing books
-            await store.clear();
-            
-            // Add all books
-            for (const book of books) {
-                await store.add(book);
+            try {
+                console.log(`🔄 Saving ${books.length} books to IndexedDB...`);
+
+                // Deduplicate by ASIN (keep last occurrence)
+                const seenAsins = new Set();
+                const duplicates = [];
+                const uniqueBooks = [];
+
+                for (let i = books.length - 1; i >= 0; i--) {
+                    const book = books[i];
+                    if (seenAsins.has(book.asin)) {
+                        duplicates.push(book.asin);
+                    } else {
+                        seenAsins.add(book.asin);
+                        uniqueBooks.unshift(book);
+                    }
+                }
+
+                if (duplicates.length > 0) {
+                    console.warn(`⚠️  Found ${duplicates.length} duplicate ASINs, keeping unique books only`);
+                    console.warn(`   Sample duplicates:`, duplicates.slice(0, 5));
+                }
+
+                const db = await openDB();
+
+                // First transaction: Clear existing books
+                await new Promise((resolve, reject) => {
+                    const clearTxn = db.transaction([BOOKS_STORE], 'readwrite');
+                    const clearStore = clearTxn.objectStore(BOOKS_STORE);
+                    clearStore.clear();
+                    clearTxn.oncomplete = () => {
+                        console.log('✅ Cleared existing IndexedDB books');
+                        resolve();
+                    };
+                    clearTxn.onerror = () => reject(clearTxn.error || new Error('Failed to clear IndexedDB'));
+                });
+
+                // Second transaction: Add all unique books
+                return new Promise((resolve, reject) => {
+                    const addTxn = db.transaction([BOOKS_STORE], 'readwrite');
+                    const addStore = addTxn.objectStore(BOOKS_STORE);
+
+                    // Add all unique books
+                    for (const book of uniqueBooks) {
+                        addStore.add(book);
+                    }
+
+                    addTxn.oncomplete = () => {
+                        console.log('✅ Saved', uniqueBooks.length, 'unique books to IndexedDB');
+                        resolve();
+                    };
+                    addTxn.onerror = () => {
+                        const error = addTxn.error || new Error('IndexedDB transaction failed with no error details');
+                        console.error('❌ IndexedDB save failed:', error);
+                        reject(error);
+                    };
+                });
+            } catch (error) {
+                console.error('❌ IndexedDB save exception:', error);
+                throw error || new Error('IndexedDB save failed');
             }
-            
-            return new Promise((resolve, reject) => {
-                transaction.oncomplete = () => {
-                    console.log('✅ Saved', books.length, 'books to IndexedDB');
-                    resolve();
-                };
-                transaction.onerror = () => reject(transaction.error);
-            });
         };
         
         const loadBooksFromIndexedDB = async () => {
@@ -358,26 +400,32 @@
                             let timeoutId;
                             let callbackFired = false;
 
-                            // Setup timeout (5 seconds)
+                            // Setup timeout (60 seconds for large libraries)
                             timeoutId = setTimeout(() => {
                                 if (!callbackFired) {
-                                    console.error('⚠️ Status check timed out after 5 seconds');
+                                    console.error('⚠️ Status check timed out after 60 seconds');
                                     setSyncStatus('unknown');
                                     alert('Library loaded but status check timed out. Please refresh the page.');
                                 }
-                            }, 5000);
+                            }, 60000);
 
                             // Load data with callback
-                            await loadEnrichedData(text, () => {
+                            await loadEnrichedData(text, (bookCount) => {
                                 callbackFired = true;
                                 clearTimeout(timeoutId);
                                 // Check manifest now that books are loaded
-                                checkManifest(parsedData.length, syncTime);
+                                checkManifest(bookCount, syncTime);
                             });
 
                         } catch (error) {
                             console.error('Failed to sync:', error);
-                            alert('Failed to load library file');
+                            if (error && error.message) {
+                                console.error('Error details:', error.message, error.stack);
+                                alert(`Failed to load library file: ${error.message}`);
+                            } else {
+                                console.error('Error details: Unknown error (null or no message)');
+                                alert('Failed to load library file: Unknown error');
+                            }
                         }
                     }
                 };
@@ -540,17 +588,15 @@
                 }
             };
 
-            const resetOrganization = () => {
-                if (!confirm('Reset all organization? This will move all books to a single column but keep your loaded data. Continue?')) {
-                    return;
-                }
-                
-                setColumns([{ id: 'unorganized', name: columns[0]?.name || 'Unorganized', books: books.map(b => b.id) }]);
-                console.log('✅ Reset organization');
-            };
-
-            const clearEverything = async () => {
-                if (!confirm('Clear ALL data including loaded books? You will need to re-sync your library. Continue?')) {
+            const clearLibrary = async () => {
+                if (!confirm('This will completely reset the app to its initial unused state.\n\n' +
+                             'This will:\n' +
+                             '• Unload the current library from the app\n' +
+                             '• Remove all custom columns\n' +
+                             '• Clear all book organization\n' +
+                             '• Reset to empty "Unorganized" column\n\n' +
+                             'You will need to load a library file to continue.\n\n' +
+                             'Continue?')) {
                     return;
                 }
 
@@ -563,12 +609,12 @@
                     setDataSource('none');
                     setBlankImageBooks(new Set());
                     setLastSyncTime(null);
-                    setManifestData(null); // Clear manifest data so next load fetches fresh
+                    setManifestData(null);
                     setSyncStatus('none');
-                    console.log('✅ Cleared everything');
+                    console.log('✅ Cleared library - app reset to initial state');
                 } catch (error) {
-                    console.error('Failed to clear data:', error);
-                    alert('Failed to clear all data');
+                    console.error('Failed to clear library:', error);
+                    alert('Failed to clear library data');
                 }
             };
 
@@ -604,7 +650,7 @@
                     
                     if (asin && asin.length === 10) {
                         parsedBooks.push({
-                            id: `book-${parsedBooks.length}`,
+                            id: asin,  // Use ASIN as stable ID instead of sequential number
                             asin: asin,
                             title: parts[6] || 'Unknown',
                             author: parts[13] || 'Unknown',
@@ -751,7 +797,7 @@
                     return '';
                 };
                 
-                const processedBooks = data.map((item, i) => {
+                const processedBooks = data.map((item) => {
                     const isNewFormat = !item.amazonData;
 
                     // Get collections data for this book (if available)
@@ -759,7 +805,7 @@
 
                     if (isNewFormat) {
                         return {
-                            id: `book-${i}`,
+                            id: item.asin,  // Use ASIN as stable ID instead of sequential number
                             asin: item.asin,
                             title: item.title || 'Unknown',
                             author: item.authors || 'Unknown',
@@ -793,7 +839,7 @@
                         }
                         
                         return {
-                            id: `book-${i}`,
+                            id: asin,  // Use ASIN as stable ID instead of sequential number
                             asin: asin,
                             title: amazonData?.title?.displayString || item.title || 'Unknown',
                             author: amazonData?.byLine?.contributors?.[0]?.contributor?.author?.profile?.displayName || item.author || 'Unknown',
@@ -814,6 +860,36 @@
                         };
                     }
                 });
+
+                // Sort books by acquisition date (newest first) to maintain original order
+                try {
+                    processedBooks.sort((a, b) => {
+                        // Handle missing dates - put them at the end
+                        if (!a.acquired && !b.acquired) return 0;
+                        if (!a.acquired) return 1;
+                        if (!b.acquired) return -1;
+
+                        // Parse dates safely
+                        const dateA = new Date(a.acquired);
+                        const dateB = new Date(b.acquired);
+
+                        // Handle invalid dates
+                        const isValidA = !isNaN(dateA.getTime());
+                        const isValidB = !isNaN(dateB.getTime());
+
+                        if (!isValidA && !isValidB) return 0;
+                        if (!isValidA) return 1;
+                        if (!isValidB) return -1;
+
+                        // Compare dates (descending - newest first)
+                        return dateB - dateA;
+                    });
+                    console.log('✅ Books sorted by acquisition date (newest first)');
+                } catch (error) {
+                    console.error('❌ Sort failed:', error);
+                    console.error('Error details:', error.message, error.stack);
+                    // Continue without sorting if sort fails
+                }
 
                 // Log collections merge results
                 if (collections) {
@@ -856,7 +932,7 @@
                             setDataSource('enriched');
                             setLastSyncTime(Date.now());
                             setSyncStatus('fresh');
-                            if (onComplete) setTimeout(onComplete, 0);
+                            if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
                             return;
                         }
                     }
@@ -869,7 +945,7 @@
                 setDataSource('enriched');
                 setLastSyncTime(Date.now());
                 setSyncStatus('fresh');
-                if (onComplete) setTimeout(onComplete, 0);
+                if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
             };
 
             const addColumn = () => {
@@ -1362,14 +1438,9 @@
                                     📥 Restore
                                     <input type="file" accept=".json" onChange={importRestore} className="hidden" />
                                 </label>
-                                <button onClick={resetOrganization}
-                                        className="px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium"
-                                        disabled={books.length === 0}>
-                                    🔄 Reset Organization
-                                </button>
-                                <button onClick={clearEverything}
+                                <button onClick={clearLibrary}
                                         className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium">
-                                    🗑️ Clear Everything
+                                    🗑️ Clear Library
                                 </button>
                                 <button 
                                     onClick={() => setSettingsOpen(!settingsOpen)}
@@ -1495,9 +1566,11 @@
                                         <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
                                             <p><strong>To get started:</strong></p>
                                             <ol className="list-decimal ml-4 mt-2 space-y-1">
-                                                <li>Run the fetcher console script on amazon.com/yourbooks</li>
-                                                <li>Click "Load Library" below to upload the JSON file</li>
+                                                <li>If you haven't already, run the fetcher console script on amazon.com/yourbooks (see README) to generate the library JSON file. Move the file from Downloads to your project folder.</li>
+                                                <li>Click "Load Library" below to upload the file.</li>
                                             </ol>
+                                            {/* TODO: Once GitHub Pages deployment is implemented, update this instruction to explain
+                                                the bookmarklet approach instead of manual console script + file management. */}
                                         </div>
                                         <button 
                                             onClick={syncNow}
@@ -1621,8 +1694,7 @@
                                             <li><strong>Auto-saves:</strong> Everything persists automatically in your browser</li>
                                             <li><strong>Backup:</strong> Download complete backup for safekeeping</li>
                                             <li><strong>Restore:</strong> Restore from a backup file</li>
-                                            <li><strong>Reset Organization:</strong> Move all books to one column</li>
-                                            <li><strong>Clear Everything:</strong> Delete all data (requires re-sync)</li>
+                                            <li><strong>Clear Library:</strong> Complete app reset to initial state</li>
                                         </ul>
                                     </div>
                                 </div>

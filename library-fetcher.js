@@ -1,4 +1,4 @@
-// Amazon Library Fetcher v3.1.3.b (Combined Pass 1+2 + Manifest)
+// Amazon Library Fetcher v3.3.2 (Combined Pass 1+2 + Manifest + Deduplication + Partial Error Handling + Stats)
 // Fetches library books and enriches them with descriptions & reviews
 // Also generates a manifest file for the organizer to track updates
 // Schema Version: 3.0.0 (Compatible with: Organizer v3.3.0+ when released)
@@ -17,22 +17,22 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v3.1.3.b';
+    const FETCHER_VERSION = 'v3.3.2';
     const SCHEMA_VERSION = '3.0.0';
-    
+
     console.log('========================================');
     console.log(`Amazon Library Fetcher ${FETCHER_VERSION}`);
     console.log(`📄 Page: ${PAGE_TITLE}`);
     console.log('Combined Pass 1 (titles) + Pass 2 (enrichment) + Manifest');
     console.log('========================================\n');
-    
+
     // Verify we're on the right page
     if (!window.location.href.includes('amazon.com/yourbooks')) {
         console.error('❌ ERROR: Wrong page!');
         console.error('   Please run this on: https://www.amazon.com/yourbooks');
         return;
     }
-    
+
     const PAGE_SIZE = 30;
     const FETCH_DELAY_MS = 2000; // 2 seconds between library pages
     const ENRICH_DELAY_MS = 3000; // 3 seconds between enrichment requests
@@ -40,46 +40,172 @@ async function fetchAmazonLibrary() {
     const MANIFEST_FILENAME = 'amazon-manifest.json';
     const startTime = Date.now();
 
+    // Retry configuration for API errors
+    const MAX_RETRIES = 3;
+    const RETRY_DELAYS_MS = [5000, 10000, 20000]; // Exponential backoff: 5s, 10s, 20s
+
+    // CSRF token (initialized later, but declared here for scope access in fetchWithRetry)
+    let csrfToken = null;
+
+    // Book-only bindings (filter out non-book items)
+    const BOOK_BINDINGS = [
+        'Kindle Edition',
+        'Paperback',
+        'Hardcover',
+        'Mass Market Paperback',
+        'Board book',
+        'Unknown Binding',
+        'Audible Audiobook',
+        'Kindle Edition with Audio/Video'
+    ];
+
+    // Global tracking for statistics
+    const stats = {
+        timing: {
+            phase0Start: 0,
+            phase0End: 0,
+            pass1Start: 0,
+            pass1End: 0,
+            pass2Start: 0,
+            pass2End: 0,
+            mergeStart: 0,
+            mergeEnd: 0,
+            manifestStart: 0,
+            manifestEnd: 0
+        },
+        apiCalls: {
+            total: 0,
+            firstTry: 0,
+            retry1: 0,
+            retry2: 0,
+            retry3: 0,
+            failed: 0
+        },
+        nonBooksFiltered: [],
+        booksWithoutAuthors: [],
+        aiSummariesUsed: [],
+        apiErrorBooks: [],
+        partialErrorBooks: [],  // Track books with partial errors (got data anyway)
+        duplicatesFound: []  // Track duplicate ASINs
+    };
+
+    // Helper function to format time (used in multiple places)
+    const formatTime = (ms) => {
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+        else if (minutes > 0) return `${minutes}m ${seconds}s`;
+        else return `${seconds}s`;
+    };
+
     // ============================================================================
     // Shared Extraction Functions
     // These ensure Phase 0, Pass 1, and Pass 2 all extract data identically
     // ============================================================================
 
-    const extractDescription = (product) => {
-        let description = '';
-        const descSection = product.description?.sections?.[0];
-        const descContent = descSection?.content;
+    // RECURSIVE fragment extractor - handles arbitrarily deep nesting
+    const extractTextFromFragments = (fragments) => {
+        if (!fragments || !Array.isArray(fragments)) return '';
 
-        if (descContent) {
-            // Try different possible structures
-            if (typeof descContent === 'string') {
-                // Direct string
-                description = descContent;
-            } else if (descContent.text) {
-                // Object with text property
-                description = descContent.text;
-            } else if (descContent.fragments) {
-                // Rich content with fragments
-                const textParts = [];
-                descContent.fragments.forEach(frag => {
-                    if (frag.text) {
-                        textParts.push(frag.text);
-                    } else if (frag.semanticContent?.content?.text) {
-                        textParts.push(frag.semanticContent.content.text);
-                    } else if (frag.semanticContent?.content?.fragments) {
-                        frag.semanticContent.content.fragments.forEach(subfrag => {
-                            if (subfrag.text) textParts.push(subfrag.text);
-                            if (subfrag.semanticContent?.content?.text) {
-                                textParts.push(subfrag.semanticContent.content.text);
-                            }
-                        });
-                    }
-                });
-                description = textParts.join(' ').trim();
+        const textParts = [];
+
+        for (const frag of fragments) {
+            // Direct text
+            if (frag.text) {
+                textParts.push(frag.text);
+            }
+
+            // Text in paragraph
+            if (frag.paragraph?.text) {
+                textParts.push(frag.paragraph.text);
+            }
+
+            // Fragments in paragraph (RECURSIVE)
+            if (frag.paragraph?.fragments) {
+                textParts.push(extractTextFromFragments(frag.paragraph.fragments));
+            }
+
+            // Text in semanticContent
+            if (frag.semanticContent?.content?.text) {
+                textParts.push(frag.semanticContent.content.text);
+            }
+
+            // Nested fragments in semanticContent (RECURSIVE!)
+            if (frag.semanticContent?.content?.fragments) {
+                textParts.push(extractTextFromFragments(frag.semanticContent.content.fragments));
+            }
+
+            // Paragraph in semanticContent
+            if (frag.semanticContent?.content?.paragraph?.text) {
+                textParts.push(frag.semanticContent.content.paragraph.text);
+            }
+
+            // Fragments in paragraph in semanticContent (RECURSIVE)
+            if (frag.semanticContent?.content?.paragraph?.fragments) {
+                textParts.push(extractTextFromFragments(frag.semanticContent.content.paragraph.fragments));
             }
         }
 
-        return description;
+        return textParts.join('');
+    };
+
+    const extractDescription = (product) => {
+        const descSection = product.description?.sections?.[0];
+        const descContent = descSection?.content;
+
+        if (!descContent) return '';
+
+        // Simple string
+        if (typeof descContent === 'string') {
+            return descContent;
+        }
+
+        // Direct text
+        if (descContent.text) {
+            return descContent.text;
+        }
+
+        // Paragraph with text
+        if (descContent.paragraph?.text) {
+            return descContent.paragraph.text;
+        }
+
+        // Paragraph with fragments
+        if (descContent.paragraph?.fragments) {
+            return extractTextFromFragments(descContent.paragraph.fragments).trim();
+        }
+
+        // Direct fragments (most common case)
+        if (descContent.fragments) {
+            return extractTextFromFragments(descContent.fragments).trim();
+        }
+
+        // semanticContent with nested fragments
+        if (descContent.semanticContent?.content?.fragments) {
+            return extractTextFromFragments(descContent.semanticContent.content.fragments).trim();
+        }
+
+        // semanticContent with text
+        if (descContent.semanticContent?.content?.text) {
+            return descContent.semanticContent.content.text;
+        }
+
+        return '';
+    };
+
+    const extractAISummary = (product) => {
+        const recommendations = product.auxiliaryStoreRecommendations?.recommendations || [];
+
+        for (const rec of recommendations) {
+            if (rec.recommendationType === 'AI_SUMMARIES' && rec.sharedContent?.length > 0) {
+                return rec.sharedContent[0].contentAbstract?.textAbstract || '';
+            }
+        }
+
+        return '';
     };
 
     const extractAuthors = (product) => {
@@ -110,52 +236,173 @@ async function fetchAmazonLibrary() {
     };
 
     // ============================================================================
+    // Retry Helper Function
+    // ============================================================================
+
+    /**
+     * Fetch with exponential backoff retry logic
+     * @param {Function} fetchFn - Async function that performs the fetch
+     * @param {string} bookTitle - Book title for logging
+     * @param {number} maxRetries - Maximum retry attempts
+     * @returns {Promise<Object>} - Response data or throws error
+     */
+    const fetchWithRetry = async (fetchFn, context, maxRetries = MAX_RETRIES) => {
+        let lastError = null;
+        stats.apiCalls.total++;
+
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                const result = await fetchFn();
+
+                // Check for HTTP errors
+                if (result.httpError) {
+                    throw new Error(`HTTP ${result.httpStatus}`);
+                }
+
+                // Check for API errors
+                if (result.apiError) {
+                    // ⚠️ DIAGNOSTIC: Include actual error message in exception
+                    const errorMsg = result.errorMessage || 'API error';
+                    throw new Error(errorMsg);
+                }
+
+                // Check for missing data
+                if (result.noData) {
+                    throw new Error('No data returned');
+                }
+
+                // Success! Track which attempt succeeded
+                if (attempt === 0) {
+                    stats.apiCalls.firstTry++;
+                } else if (attempt === 1) {
+                    stats.apiCalls.retry1++;
+                } else if (attempt === 2) {
+                    stats.apiCalls.retry2++;
+                } else if (attempt === 3) {
+                    stats.apiCalls.retry3++;
+                }
+
+                return result;
+
+            } catch (error) {
+                lastError = error;
+
+                // If this was the last attempt, try ONE MORE TIME with fresh token
+                if (attempt === maxRetries) {
+                    console.log(`   🔄 All retries failed. Trying with FRESH token...`);
+
+                    try {
+                        // Get fresh CSRF token from page
+                        const freshCsrfMeta = document.querySelector('meta[name="anti-csrftoken-a2z"]');
+                        if (freshCsrfMeta) {
+                            const freshToken = freshCsrfMeta.getAttribute('content');
+                            const oldToken = csrfToken;
+
+                            // Compare tokens
+                            if (freshToken === oldToken) {
+                                console.log(`   🔍 Token comparison: IDENTICAL (token has not changed)`);
+                                console.log(`      Old: ${oldToken.substring(0, 20)}...`);
+                                console.log(`      New: ${freshToken.substring(0, 20)}...`);
+                            } else {
+                                console.log(`   🔍 Token comparison: DIFFERENT (token has been refreshed)`);
+                                console.log(`      Old: ${oldToken.substring(0, 20)}...`);
+                                console.log(`      New: ${freshToken.substring(0, 20)}...`);
+                            }
+
+                            // Update global token for subsequent requests
+                            csrfToken = freshToken;
+
+                            // Retry with fresh token
+                            const freshResult = await fetchFn();
+
+                            // Check for errors with fresh token
+                            if (freshResult.httpError) {
+                                console.log(`   ❌ Fresh token failed with HTTP ${freshResult.httpStatus}`);
+                                csrfToken = oldToken; // Restore old token
+                                break;
+                            }
+
+                            if (freshResult.apiError) {
+                                console.log(`   ❌ Fresh token failed with API error: ${freshResult.errorMessage}`);
+                                csrfToken = oldToken; // Restore old token
+                                break;
+                            }
+
+                            if (freshResult.noData) {
+                                console.log(`   ❌ Fresh token returned no data`);
+                                csrfToken = oldToken; // Restore old token
+                                break;
+                            }
+
+                            // SUCCESS WITH FRESH TOKEN!
+                            console.log(`   ✅ SUCCESS with fresh token! Continuing with refreshed token.`);
+                            stats.apiCalls.retry3++; // Count as successful retry
+                            return freshResult;
+                        } else {
+                            console.log(`   ⚠️  Could not find fresh token on page`);
+                        }
+                    } catch (freshError) {
+                        console.log(`   ❌ Fresh token attempt failed: ${freshError.message}`);
+                    }
+
+                    break; // Give up after fresh token attempt
+                }
+
+                // Otherwise, wait and retry
+                const delay = RETRY_DELAYS_MS[attempt];
+                console.log(`   ⏳ Retry ${attempt + 1}/${maxRetries} after ${delay/1000}s...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+
+        // All retries exhausted - track failure
+        stats.apiCalls.failed++;
+        throw lastError;
+    };
+
+    // ============================================================================
 
     try {
         // Step 1: Load existing data (if any)
         console.log('[1/6] Checking for existing library data...');
-        console.log('   If you have amazon-library.json, select it.');
-        console.log('   If this is your first run, click Cancel.\n');
-        
+        console.log('');
+        console.log('   📂 A file picker dialog will open...');
+        console.log('');
+        console.log('   • If you have amazon-library.json: SELECT IT');
+        console.log('   • If this is your first run: CLICK CANCEL');
+        console.log('');
+        console.log('   (Dialog may be hidden behind other windows - check taskbar!)\n');
+
         let existingBooks = [];
         let mostRecentDate = null;
-        
+
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.accept = '.json';
-        
+
         const file = await new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve(null), 30000); // 30 sec timeout
             fileInput.onchange = (e) => {
-                clearTimeout(timeout);
                 resolve(e.target.files[0]);
             };
+            fileInput.oncancel = () => resolve(null);
             fileInput.click();
         });
-        
+
         if (file) {
             const fileText = await file.text();
             const parsedData = JSON.parse(fileText);
 
-            // TODO: REMOVE BEFORE RELEASE v3.1.3 - Temporary backward compatibility for one-time schema migration
-            // Handle both old schema v2.0 (array) and new schema v3.0.0+ (object with metadata)
-            // This code allows loading existing v2.0 data and converting to v3.0.0 format
-            // After first fetch with new schema, this compatibility code is no longer needed
-            if (Array.isArray(parsedData)) {
-                // Old schema v2.0 - array format
-                existingBooks = parsedData;
-                console.log('   📋 Loaded schema v2.0 (array format) - will convert to v3.0.0');
-            } else if (parsedData.metadata && parsedData.books) {
-                // New schema v3.0.0+ - object with metadata
+            // Only support schema v3.0.0+ (object with metadata)
+            if (parsedData.metadata && parsedData.books) {
                 existingBooks = parsedData.books;
-                console.log(`   📋 Loaded schema ${parsedData.metadata.schemaVersion} (object format)`);
+                console.log(`   📋 Loaded schema ${parsedData.metadata.schemaVersion} (${existingBooks.length} books)`);
             } else {
-                console.error('   ❌ Unknown JSON format - cannot parse');
-                console.error('   Expected: array OR {metadata, books}');
+                console.error('   ❌ Unsupported JSON format');
+                console.error('   Expected: {metadata, books} (schema v3.0.0+)');
                 console.error('   Received:', Object.keys(parsedData));
+                console.error('   Please use library-fetcher.js v3.3.0+ to generate a fresh library file');
                 return;
             }
-            // END TODO: REMOVE BEFORE RELEASE v3.1.3
 
             // Find most recent acquisition date
             for (const book of existingBooks) {
@@ -180,16 +427,17 @@ async function fetchAmazonLibrary() {
         // Step 2: Find CSRF token
         console.log('[2/6] Getting CSRF token...');
         const csrfMeta = document.querySelector('meta[name="anti-csrftoken-a2z"]');
-        
+
         if (!csrfMeta) {
             throw new Error('❌ CSRF token not found. Make sure you are logged in.');
         }
-        
-        const csrfToken = csrfMeta.getAttribute('content');
+
+        csrfToken = csrfMeta.getAttribute('content'); // Assign to existing variable (declared at top)
         console.log(`✅ Found CSRF token: ${csrfToken.substring(0, 10)}...\n`);
 
         // Phase 0: Validate API endpoints before fetching
         console.log('[Phase 0] Validating Amazon API endpoints...');
+        stats.timing.phase0Start = Date.now();
         console.log('   Testing library query...');
 
         // Test library query with minimal request (1 book)
@@ -221,37 +469,43 @@ async function fetchAmazonLibrary() {
         }`;
 
         try {
-            const testLibraryResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
-                method: 'POST',
-                headers: {
-                    'accept': 'application/json, text/plain, */*',
-                    'content-type': 'application/json',
-                    'anti-csrftoken-a2z': csrfToken,
-                    'x-client-id': 'your-books'
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    query: testLibraryQuery,
-                    operationName: 'ccGetCustomerLibraryBooks'
-                })
-            });
+            const result = await fetchWithRetry(async () => {
+                const testLibraryResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
+                    method: 'POST',
+                    headers: {
+                        'accept': 'application/json, text/plain, */*',
+                        'content-type': 'application/json',
+                        'anti-csrftoken-a2z': csrfToken,
+                        'x-client-id': 'your-books'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        query: testLibraryQuery,
+                        operationName: 'ccGetCustomerLibraryBooks'
+                    })
+                });
 
-            if (!testLibraryResponse.ok) {
-                throw new Error(`Library API returned HTTP ${testLibraryResponse.status}`);
-            }
+                if (!testLibraryResponse.ok) {
+                    return { httpError: true, httpStatus: testLibraryResponse.status };
+                }
 
-            const testLibraryData = await testLibraryResponse.json();
+                const testLibraryData = await testLibraryResponse.json();
 
-            if (testLibraryData.errors) {
-                throw new Error(`Library API returned errors: ${JSON.stringify(testLibraryData.errors)}`);
-            }
+                if (testLibraryData.errors) {
+                    return { apiError: true, errors: testLibraryData.errors };
+                }
 
-            const testLibrary = testLibraryData?.data?.getCustomerLibrary?.books;
+                const testLibrary = testLibraryData?.data?.getCustomerLibrary?.books;
 
-            if (!testLibrary || !testLibrary.edges) {
-                throw new Error('Library API returned unexpected structure');
-            }
+                if (!testLibrary || !testLibrary.edges) {
+                    return { noData: true };
+                }
 
+                // Success
+                return { library: testLibrary };
+            }, 'Phase 0 library test');
+
+            const testLibrary = result.library;
             console.log(`   ✅ Library API working (found ${testLibrary.totalCount?.number || 0} books)`);
 
         } catch (error) {
@@ -356,6 +610,18 @@ async function fetchAmazonLibrary() {
                         content
                     }
                 }
+                auxiliaryStoreRecommendations(
+                    recommendationTypes: ["AI_SUMMARIES"]
+                ) {
+                    recommendations {
+                        recommendationType
+                        sharedContent {
+                            contentAbstract {
+                                textAbstract
+                            }
+                        }
+                    }
+                }
                 customerReviewsTop {
                     reviews {
                         contentAbstract {
@@ -378,37 +644,43 @@ async function fetchAmazonLibrary() {
         }`;
 
         try {
-            const testEnrichResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
-                method: 'POST',
-                headers: {
-                    'accept': 'application/json, text/plain, */*',
-                    'content-type': 'application/json',
-                    'anti-csrftoken-a2z': csrfToken,
-                    'x-client-id': 'your-books'
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    query: testEnrichQuery,
-                    operationName: 'enrichBook'
-                })
-            });
+            const enrichResult = await fetchWithRetry(async () => {
+                const testEnrichResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
+                    method: 'POST',
+                    headers: {
+                        'accept': 'application/json, text/plain, */*',
+                        'content-type': 'application/json',
+                        'anti-csrftoken-a2z': csrfToken,
+                        'x-client-id': 'your-books'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        query: testEnrichQuery,
+                        operationName: 'enrichBook'
+                    })
+                });
 
-            if (!testEnrichResponse.ok) {
-                throw new Error(`Enrichment API returned HTTP ${testEnrichResponse.status}`);
-            }
+                if (!testEnrichResponse.ok) {
+                    return { httpError: true, httpStatus: testEnrichResponse.status };
+                }
 
-            const testEnrichData = await testEnrichResponse.json();
+                const testEnrichData = await testEnrichResponse.json();
 
-            if (testEnrichData.errors) {
-                throw new Error(`Enrichment API returned errors: ${JSON.stringify(testEnrichData.errors)}`);
-            }
+                if (testEnrichData.errors) {
+                    return { apiError: true, errors: testEnrichData.errors };
+                }
 
-            const testProduct = testEnrichData?.data?.getProducts?.[0];
+                const testProduct = testEnrichData?.data?.getProducts?.[0];
 
-            if (!testProduct) {
-                throw new Error('Enrichment API returned unexpected structure');
-            }
+                if (!testProduct) {
+                    return { noData: true };
+                }
 
+                // Success
+                return { product: testProduct };
+            }, `Phase 0 enrichment test (${testAsin})`);
+
+            const testProduct = enrichResult.product;
             console.log(`   ✅ Enrichment API working (tested ASIN: ${testAsin})`);
 
             // Now validate that we can actually extract ALL the data
@@ -496,6 +768,7 @@ async function fetchAmazonLibrary() {
             extractionResults.forEach(result => console.log(`      ${result}`));
 
             console.log('');
+            stats.timing.phase0End = Date.now();
             console.log('✅ Phase 0 complete: All API endpoints and extraction logic validated\n');
 
         } catch (error) {
@@ -519,10 +792,12 @@ async function fetchAmazonLibrary() {
         }
 
         // Step 3: Fetch new books (Pass 1)
+        stats.timing.pass1Start = Date.now();
         console.log('[3/6] Fetching new books from library...');
         console.log('   Will stop when we reach existing books\n');
-        
+
         const newBooks = [];
+        const seenASINs = new Map();  // Track ASINs to detect duplicates
         let cursor = "";
         let pageNum = 0;
         let hasMore = true;
@@ -618,39 +893,43 @@ async function fetchAmazonLibrary() {
             }`;
             
             try {
-                const response = await fetch('https://www.amazon.com/kindle-reader-api', {
-                    method: 'POST',
-                    headers: {
-                        'accept': 'application/json, text/plain, */*',
-                        'content-type': 'application/json',
-                        'anti-csrftoken-a2z': csrfToken,
-                        'x-client-id': 'your-books'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ 
-                        query: query,
-                        operationName: 'ccGetCustomerLibraryBooks' 
-                    })
-                });
-                
-                if (!response.ok) {
-                    console.log(`   ⚠️  HTTP ${response.status} - Stopping`);
-                    break;
-                }
-                
-                const data = await response.json();
-                
-                if (data.errors) {
-                    console.error('   ❌ GraphQL errors:', data.errors);
-                    break;
-                }
-                
-                const library = data?.data?.getCustomerLibrary?.books;
-                
-                if (!library || !library.edges) {
-                    console.log('   ⚠️  No data returned - Stopping');
-                    break;
-                }
+                const result = await fetchWithRetry(async () => {
+                    const response = await fetch('https://www.amazon.com/kindle-reader-api', {
+                        method: 'POST',
+                        headers: {
+                            'accept': 'application/json, text/plain, */*',
+                            'content-type': 'application/json',
+                            'anti-csrftoken-a2z': csrfToken,
+                            'x-client-id': 'your-books'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            query: query,
+                            operationName: 'ccGetCustomerLibraryBooks'
+                        })
+                    });
+
+                    if (!response.ok) {
+                        return { httpError: true, httpStatus: response.status };
+                    }
+
+                    const data = await response.json();
+
+                    if (data.errors) {
+                        return { apiError: true, errors: data.errors };
+                    }
+
+                    const library = data?.data?.getCustomerLibrary?.books;
+
+                    if (!library || !library.edges) {
+                        return { noData: true };
+                    }
+
+                    // Success
+                    return { library };
+                }, `Pass 1 page ${pageNum}`);
+
+                const library = result.library;
                 
                 const books = library.edges;
                 
@@ -679,16 +958,44 @@ async function fetchAmazonLibrary() {
                     const title = product.title?.displayString || 'Unknown Title';
                     const authors = extractAuthors(product);
                     const coverUrl = extractCoverUrl(product);
-                    
+
                     const rating = product.customerReviewsSummary?.rating?.value || null;
                     const reviewCount = product.customerReviewsSummary?.count?.displayString || null;
-                    
+
                     const seriesData = product.bookSeries?.singleBookView?.series;
                     const series = seriesData?.title || null;
                     const seriesPosition = seriesData?.position || null;
-                    
+
                     const binding = product.bindingInformation?.binding?.displayString || null;
-                    
+
+                    // Filter out non-book items (DVDs, CDs, Maps, Shoes, etc.)
+                    if (binding && !BOOK_BINDINGS.includes(binding)) {
+                        stats.nonBooksFiltered.push({ title, asin: product.asin, binding });
+                        console.log(`   ⏭️  Skipping non-book: ${title} (${binding})`);
+                        continue;
+                    }
+
+                    // Track books without authors
+                    if (!authors || authors === 'Unknown Author') {
+                        stats.booksWithoutAuthors.push({ title, asin: product.asin });
+                    }
+
+                    // Check for duplicate ASIN
+                    if (seenASINs.has(product.asin)) {
+                        const firstIndex = seenASINs.get(product.asin);
+                        stats.duplicatesFound.push({
+                            asin: product.asin,
+                            title,
+                            binding,
+                            firstIndex,
+                            secondIndex: newBooks.length
+                        });
+                        console.log(`   🔁 Duplicate ASIN detected: ${product.asin} - "${title}" (skipping)`);
+                        continue;  // Skip this duplicate
+                    }
+
+                    // Add book and track ASIN
+                    seenASINs.set(product.asin, newBooks.length);
                     newBooks.push({
                         asin: product.asin,
                         title,
@@ -729,7 +1036,7 @@ async function fetchAmazonLibrary() {
         if (newBooks.length === 0) {
             console.log('✅ No new books to fetch!');
             console.log('   Your library is up to date.\n');
-            
+
             // Still create a manifest showing current state
             const manifest = {
                 schemaVersion: SCHEMA_VERSION,
@@ -739,7 +1046,7 @@ async function fetchAmazonLibrary() {
                 newBooksAdded: 0,
                 enrichmentComplete: true
             };
-            
+
             const manifestBlob = new Blob([JSON.stringify(manifest, null, 2)], { type: 'application/json' });
             const manifestUrl = URL.createObjectURL(manifestBlob);
             const manifestLink = document.createElement('a');
@@ -749,107 +1056,223 @@ async function fetchAmazonLibrary() {
             manifestLink.click();
             document.body.removeChild(manifestLink);
             URL.revokeObjectURL(manifestUrl);
-            
-            console.log('📄 Updated manifest file downloaded');
+
+            console.log(`✅ Saved manifest file: ${MANIFEST_FILENAME}\n`);
+
+            // Calculate phase durations
+            stats.timing.pass1End = Date.now();
+            const phase0Duration = stats.timing.phase0End - stats.timing.phase0Start;
+            const pass1Duration = stats.timing.pass1End - stats.timing.pass1Start;
+            const totalDuration = Date.now() - startTime;
+
+            console.log('========================================');
+            console.log('✅ VALIDATION COMPLETE!');
+            console.log('========================================\n');
+
+            console.log('⏱️  TIMING');
+            console.log(`   Phase 0 (Validation):        ${formatTime(phase0Duration)}`);
+            console.log(`   Pass 1 (Check for new):       ${formatTime(pass1Duration)}`);
+            console.log(`   ${'─'.repeat(37)}`);
+            console.log(`   Total time:                   ${formatTime(totalDuration)}\n`);
+
+            console.log('🔄 API RELIABILITY');
+            console.log(`   Total API calls:              ${stats.apiCalls.total}`);
+            const firstTryPct = ((stats.apiCalls.firstTry / stats.apiCalls.total) * 100).toFixed(1);
+            console.log(`   Succeeded first try:          ${stats.apiCalls.firstTry} (${firstTryPct}%)`);
+            if (stats.apiCalls.retry1 > 0) {
+                const retry1Pct = ((stats.apiCalls.retry1 / stats.apiCalls.total) * 100).toFixed(1);
+                console.log(`   Needed 1 retry:               ${stats.apiCalls.retry1} (${retry1Pct}%)`);
+            }
+            if (stats.apiCalls.retry2 > 0) {
+                const retry2Pct = ((stats.apiCalls.retry2 / stats.apiCalls.total) * 100).toFixed(1);
+                console.log(`   Needed 2 retries:             ${stats.apiCalls.retry2} (${retry2Pct}%)`);
+            }
+            if (stats.apiCalls.retry3 > 0) {
+                const retry3Pct = ((stats.apiCalls.retry3 / stats.apiCalls.total) * 100).toFixed(1);
+                console.log(`   Needed 3 retries:             ${stats.apiCalls.retry3} (${retry3Pct}%)`);
+            }
+            if (stats.apiCalls.failed > 0) {
+                const failedPct = ((stats.apiCalls.failed / stats.apiCalls.total) * 100).toFixed(1);
+                console.log(`   Failed after 3 retries:       ${stats.apiCalls.failed} (${failedPct}%)`);
+            }
+            console.log('');
+
+            if (stats.nonBooksFiltered.length > 0) {
+                console.log('📊 ITEMS FILTERED');
+                console.log(`   Non-books filtered:           ${stats.nonBooksFiltered.length}`);
+                stats.nonBooksFiltered.slice(0, 3).forEach(item => {
+                    console.log(`      • ${item.title.substring(0, 50)} (${item.binding})`);
+                });
+                if (stats.nonBooksFiltered.length > 3) {
+                    console.log(`      • ... and ${stats.nonBooksFiltered.length - 3} more`);
+                }
+                console.log('');
+            }
+
+            console.log('💾 LIBRARY STATUS');
+            console.log(`   ✅ Total books in library:    ${existingBooks.length}`);
+            console.log(`   ✅ Manifest updated\n`);
+
             console.log('========================================');
             return;
         }
         
+        stats.timing.pass1End = Date.now();
         console.log(`\n✅ Pass 1 complete: Found ${newBooks.length} new books\n`);
         
         // Step 4: Enrich new books (Pass 2)
+        stats.timing.pass2Start = Date.now();
         console.log('[4/6] Enriching new books with descriptions & reviews...');
+
         const estimatedTime = Math.ceil((newBooks.length * ENRICH_DELAY_MS) / 1000 / 60);
         console.log(`   Estimated time: ~${estimatedTime} minutes\n`);
 
         let enrichedCount = 0;
         let errorCount = 0;
         const booksWithoutDescriptions = []; // Track books where description extraction failed
-        
+
         for (let i = 0; i < newBooks.length; i++) {
             const book = newBooks[i];
             const percent = Math.round((i / newBooks.length) * 100);
             const progressBar = '█'.repeat(Math.floor(percent / 2)) + '░'.repeat(50 - Math.floor(percent / 2));
-            
+
             console.log(`[${i + 1}/${newBooks.length}] [${progressBar}] ${percent}% - ${book.title.substring(0, 40)}...`);
-            
+
             try {
-                const query = `query enrichBook {
-                    getProducts(input: [{asin: "${book.asin}"}]) {
-                        asin
-                        description {
-                            sections(filter: {types: PRODUCT_DESCRIPTION}) {
-                                content
-                            }
-                        }
-                        customerReviewsSummary {
-                            count {
-                                displayString
-                            }
-                            rating {
-                                value
-                            }
-                        }
-                        customerReviewsTop {
-                            reviews {
-                                contentAbstract {
-                                    textAbstract
+                // Wrap fetch logic in retry function
+                const result = await fetchWithRetry(async () => {
+                    const query = `query enrichBook {
+                        getProducts(input: [{asin: "${book.asin}"}]) {
+                            asin
+                            description {
+                                sections(filter: {types: PRODUCT_DESCRIPTION}) {
+                                    content
                                 }
-                                contributor {
-                                    publicProfile {
-                                        publicProfile {
-                                            publicName {
-                                                displayString
-                                            }
+                            }
+                            auxiliaryStoreRecommendations(
+                                recommendationTypes: ["AI_SUMMARIES"]
+                            ) {
+                                recommendations {
+                                    recommendationType
+                                    sharedContent {
+                                        contentAbstract {
+                                            textAbstract
                                         }
                                     }
                                 }
-                                title
-                                stars
+                            }
+                            customerReviewsSummary {
+                                count {
+                                    displayString
+                                }
+                                rating {
+                                    value
+                                }
+                            }
+                            customerReviewsTop {
+                                reviews {
+                                    contentAbstract {
+                                        textAbstract
+                                    }
+                                    contributor {
+                                        publicProfile {
+                                            publicProfile {
+                                                publicName {
+                                                    displayString
+                                                }
+                                            }
+                                        }
+                                    }
+                                    title
+                                    stars
+                                }
                             }
                         }
+                    }`;
+
+                    const response = await fetch('https://www.amazon.com/kindle-reader-api', {
+                        method: 'POST',
+                        headers: {
+                            'accept': 'application/json, text/plain, */*',
+                            'content-type': 'application/json',
+                            'anti-csrftoken-a2z': csrfToken,
+                            'x-client-id': 'your-books'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            query: query,
+                            operationName: 'enrichBook'
+                        })
+                    });
+
+                    // Return structured result for retry logic
+                    if (!response.ok) {
+                        return { httpError: true, httpStatus: response.status };
                     }
-                }`;
-                
-                const response = await fetch('https://www.amazon.com/kindle-reader-api', {
-                    method: 'POST',
-                    headers: {
-                        'accept': 'application/json, text/plain, */*',
-                        'content-type': 'application/json',
-                        'anti-csrftoken-a2z': csrfToken,
-                        'x-client-id': 'your-books'
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify({ 
-                        query: query,
-                        operationName: 'enrichBook' 
-                    })
-                });
-                
-                if (!response.ok) {
-                    console.log(`   ⚠️  HTTP ${response.status} - Skipping`);
-                    errorCount++;
-                    continue;
-                }
-                
-                const data = await response.json();
-                
-                if (data.errors) {
-                    console.log(`   ⚠️  API error - Skipping`);
-                    errorCount++;
-                    continue;
-                }
-                
-                const product = data?.data?.getProducts?.[0];
-                
-                if (!product) {
-                    console.log(`   ⚠️  No data - Skipping`);
-                    errorCount++;
-                    continue;
-                }
-                
+
+                    const data = await response.json();
+
+                    // Check for GraphQL errors - but don't fail immediately
+                    if (data.errors) {
+                        const errorMsg = data.errors[0]?.message || 'Unknown GraphQL error';
+                        const product = data?.data?.getProducts?.[0];
+
+                        if (product) {
+                            // PARTIAL ERROR: We got errors BUT also got data
+                            // Log warning but continue with extraction
+                            console.log(`   ⚠️  Partial error: ${errorMsg}`);
+                            console.log(`   📦 But got product data - continuing...`);
+                            console.log(`   🔍 Error path: ${data.errors[0]?.path?.join(' → ') || 'N/A'}`);
+
+                            // Log raw error details for debugging future issues
+                            console.log(`   📄 Raw error details:`, JSON.stringify(data.errors, null, 2));
+
+                            // Track this partial error for statistics
+                            stats.partialErrorBooks.push({
+                                position: i + 1,
+                                title: book.title,
+                                asin: book.asin,
+                                errorMessage: errorMsg,
+                                errorPath: data.errors[0]?.path?.join(' → ') || 'N/A'
+                            });
+
+                            // Continue to extract from product data
+                            return { product, partialError: true };
+                        } else {
+                            // TOTAL FAILURE: Errors and NO data
+                            console.log(`   ❌ Total failure: ${errorMsg}`);
+                            console.log(`   📄 Raw response dump:`, JSON.stringify(data, null, 2));
+                            return { apiError: true, errorMessage: errorMsg };
+                        }
+                    }
+
+                    const product = data?.data?.getProducts?.[0];
+
+                    if (!product) {
+                        console.log(`   ⚠️  No product data in response`);
+                        console.log(`   📄 Raw response dump:`, JSON.stringify(data, null, 2));
+                        return { noData: true };
+                    }
+
+                    // Success - return product
+                    return { product };
+                }, book.title);
+
+                // Extract product from successful result
+                const product = result.product;
+
                 // Extract data - using shared functions
-                const description = extractDescription(product);
+                let description = extractDescription(product);
+
+                // Fallback to AI summary if no traditional description
+                if (!description) {
+                    description = extractAISummary(product);
+                    if (description) {
+                        stats.aiSummariesUsed.push({ title: book.title, asin: book.asin });
+                        console.log(`   📝 Using AI summary (${description.length} chars)`);
+                    }
+                }
+
                 const topReviews = extractReviews(product);
 
                 // Track books without descriptions
@@ -865,30 +1288,32 @@ async function fetchAmazonLibrary() {
                         console.log(`   ⚠️  No description extracted. Structure: ${JSON.stringify(descSection).substring(0, 200)}...`);
                     }
                 }
-                
+
                 // Update book
                 newBooks[i].description = description;
                 newBooks[i].topReviews = topReviews;
-                
+
                 // Update rating if fresher
                 if (product.customerReviewsSummary?.rating?.value) {
                     newBooks[i].rating = product.customerReviewsSummary.rating.value;
                     newBooks[i].reviewCount = product.customerReviewsSummary.count?.displayString || null;
                 }
-                
+
                 enrichedCount++;
                 console.log(`   ✅ ${description.length} chars, ${topReviews.length} reviews`);
-                
+
             } catch (error) {
-                console.log(`   ❌ ${error.message}`);
+                stats.apiErrorBooks.push({ title: book.title, asin: book.asin });
+                console.log(`   ❌ Failed after ${MAX_RETRIES} retries: ${error.message}`);
                 errorCount++;
             }
-            
+
             if (i < newBooks.length - 1) {
                 await new Promise(resolve => setTimeout(resolve, ENRICH_DELAY_MS));
             }
         }
         
+        stats.timing.pass2End = Date.now();
         console.log(`\n✅ Pass 2 complete: Enriched ${enrichedCount}/${newBooks.length} books`);
         if (errorCount > 0) {
             console.log(`   ⚠️  ${errorCount} errors (books will have basic info only)\n`);
@@ -896,6 +1321,7 @@ async function fetchAmazonLibrary() {
         console.log('');
         
         // Step 5: Merge and save library
+        stats.timing.mergeStart = Date.now();
         console.log('[5/6] Merging with existing data and saving library...');
 
         // Prepend new books (most recent first)
@@ -915,6 +1341,7 @@ async function fetchAmazonLibrary() {
         };
 
         const jsonData = JSON.stringify(outputData, null, 2);
+
         const blob = new Blob([jsonData], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -924,8 +1351,8 @@ async function fetchAmazonLibrary() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
-        console.log(`✅ Library saved: ${LIBRARY_FILENAME}`);
+
+        console.log(`✅ Saved library file: ${LIBRARY_FILENAME}`);
         
         // Step 6: Create and save manifest
         console.log('[6/6] Creating manifest file...');
@@ -953,49 +1380,146 @@ async function fetchAmazonLibrary() {
         manifestLink.click();
         document.body.removeChild(manifestLink);
         URL.revokeObjectURL(manifestUrl);
-        
-        console.log(`✅ Manifest saved: ${MANIFEST_FILENAME}`);
-        
-        const elapsedSeconds = Math.round((Date.now() - startTime) / 1000);
-        const elapsedMinutes = Math.floor(elapsedSeconds / 60);
-        const remainingSeconds = elapsedSeconds % 60;
-        
-        console.log('\n========================================');
-        console.log('✅ SUCCESS!');
-        console.log('========================================');
-        console.log(`📚 Total library: ${finalBooks.length} books`);
-        console.log(`   New books: ${newBooks.length}`);
-        console.log(`   Existing: ${existingBooks.length}`);
-        console.log(`💾 Files:`);
-        console.log(`   - ${LIBRARY_FILENAME}`);
-        console.log(`   - ${MANIFEST_FILENAME}`);
-        console.log(`⏱️  Time: ${elapsedMinutes}m ${remainingSeconds}s`);
 
-        // Show books without descriptions summary
-        if (booksWithoutDescriptions.length > 0) {
-            console.log('\n⚠️  BOOKS WITHOUT DESCRIPTIONS');
-            console.log('========================================');
-            console.log(`Found ${booksWithoutDescriptions.length} book(s) with missing descriptions:`);
-            console.log('');
-            booksWithoutDescriptions.forEach((book, index) => {
-                console.log(`${index + 1}. ${book.title}`);
-                console.log(`   Author: ${book.authors}`);
-                console.log(`   ASIN: ${book.asin}`);
-                console.log('');
+        console.log(`✅ Saved manifest file: ${MANIFEST_FILENAME}`);
+
+        // Calculate phase durations
+        const phase0Duration = stats.timing.phase0End - stats.timing.phase0Start;
+        const pass1Duration = stats.timing.pass1End - stats.timing.pass1Start;
+        const pass2Duration = stats.timing.pass2End - stats.timing.pass2Start;
+        const mergeDuration = stats.timing.mergeEnd - stats.timing.mergeStart;
+        const manifestDuration = stats.timing.manifestEnd - stats.timing.manifestStart;
+        const totalDuration = Date.now() - startTime;
+
+        console.log('\n========================================');
+        console.log('✅ LIBRARY FETCH COMPLETE!');
+        console.log('========================================\n');
+
+        console.log('⏱️  TIMING');
+        console.log(`   Phase 0 (Validation):        ${formatTime(phase0Duration)}`);
+        console.log(`   Pass 1 (Fetch titles):        ${formatTime(pass1Duration)}`);
+        console.log(`   Pass 2 (Enrich):              ${formatTime(pass2Duration)}`);
+        console.log(`   Pass 3 (Merge & save):        ${formatTime(mergeDuration)}`);
+        console.log(`   Pass 4 (Manifest):            ${formatTime(manifestDuration)}`);
+        console.log(`   ${'─'.repeat(37)}`);
+        console.log(`   Total time:                   ${formatTime(totalDuration)}\n`);
+
+        const totalFetched = newBooks.length + stats.nonBooksFiltered.length;
+        console.log('📊 FETCH RESULTS');
+        console.log(`   Total books fetched:          ${totalFetched}`);
+        if (stats.nonBooksFiltered.length > 0) {
+            console.log(`   Non-books filtered:           ${stats.nonBooksFiltered.length}`);
+            stats.nonBooksFiltered.slice(0, 3).forEach(item => {
+                console.log(`      • ${item.title.substring(0, 50)} (${item.binding})`);
             });
-            console.log('These books are tracked in the library JSON metadata.');
-            console.log('The organizer will display appropriate warnings for them.');
-            console.log('========================================');
-        } else {
-            console.log('\n✅ All books have descriptions!');
+            if (stats.nonBooksFiltered.length > 3) {
+                console.log(`      • ... and ${stats.nonBooksFiltered.length - 3} more`);
+            }
         }
-        console.log('\n👉 Next steps:');
+        console.log(`   Books kept:                   ${newBooks.length}\n`);
+
+        console.log('🔄 API RELIABILITY');
+        console.log(`   Total API calls:              ${stats.apiCalls.total}`);
+        const firstTryPct = ((stats.apiCalls.firstTry / stats.apiCalls.total) * 100).toFixed(1);
+        console.log(`   Succeeded first try:          ${stats.apiCalls.firstTry} (${firstTryPct}%)`);
+        if (stats.apiCalls.retry1 > 0) {
+            const retry1Pct = ((stats.apiCalls.retry1 / stats.apiCalls.total) * 100).toFixed(1);
+            console.log(`   Needed 1 retry:               ${stats.apiCalls.retry1} (${retry1Pct}%)`);
+        }
+        if (stats.apiCalls.retry2 > 0) {
+            const retry2Pct = ((stats.apiCalls.retry2 / stats.apiCalls.total) * 100).toFixed(1);
+            console.log(`   Needed 2 retries:             ${stats.apiCalls.retry2} (${retry2Pct}%)`);
+        }
+        if (stats.apiCalls.retry3 > 0) {
+            const retry3Pct = ((stats.apiCalls.retry3 / stats.apiCalls.total) * 100).toFixed(1);
+            console.log(`   Needed 3 retries:             ${stats.apiCalls.retry3} (${retry3Pct}%)`);
+        }
+        if (stats.apiCalls.failed > 0) {
+            const failedPct = ((stats.apiCalls.failed / stats.apiCalls.total) * 100).toFixed(1);
+            console.log(`   Failed after 3 retries:       ${stats.apiCalls.failed} (${failedPct}%)`);
+        }
+        console.log('');
+
+        const successRate = ((enrichedCount / newBooks.length) * 100).toFixed(2);
+        console.log('📝 ENRICHMENT RESULTS');
+        console.log(`   Successfully enriched:        ${enrichedCount}/${newBooks.length} (${successRate}%)`);
+        if (stats.apiErrorBooks.length > 0) {
+            console.log(`   Failed after retries:         ${stats.apiErrorBooks.length}`);
+            stats.apiErrorBooks.slice(0, 3).forEach(item => {
+                console.log(`      • ${item.title.substring(0, 50)}`);
+            });
+            if (stats.apiErrorBooks.length > 3) {
+                console.log(`      • ... and ${stats.apiErrorBooks.length - 3} more`);
+            }
+        }
+        console.log('');
+
+        if (stats.duplicatesFound.length > 0) {
+            console.log('🔁 DUPLICATES REMOVED');
+            console.log(`   Duplicate ASINs found:        ${stats.duplicatesFound.length}`);
+            stats.duplicatesFound.slice(0, 3).forEach(item => {
+                console.log(`      • ${item.title.substring(0, 50)} (ASIN: ${item.asin})`);
+            });
+            if (stats.duplicatesFound.length > 3) {
+                console.log(`      • ... and ${stats.duplicatesFound.length - 3} more`);
+            }
+            console.log('');
+        }
+
+        if (stats.partialErrorBooks.length > 0) {
+            console.log('⚠️  PARTIAL ERRORS (Got data anyway)');
+            console.log(`   Books with partial errors:    ${stats.partialErrorBooks.length}`);
+            stats.partialErrorBooks.forEach(item => {
+                console.log(`      • [${item.position}] ${item.title.substring(0, 50)}`);
+                console.log(`        ASIN: ${item.asin}`);
+                console.log(`        Error: ${item.errorMessage}`);
+                console.log(`        Path: ${item.errorPath}`);
+            });
+            console.log('');
+        }
+
+        console.log('⚠️  DATA QUALITY NOTES');
+        console.log(`   Books without descriptions:   ${booksWithoutDescriptions.length}`);
+        booksWithoutDescriptions.slice(0, 3).forEach(item => {
+            console.log(`      • ${item.title} (ASIN: ${item.asin})`);
+        });
+        if (booksWithoutDescriptions.length > 3) {
+            console.log(`      • ... and ${booksWithoutDescriptions.length - 3} more`);
+        }
+        console.log('');
+
+        if (stats.booksWithoutAuthors.length > 0) {
+            console.log(`   Books without authors:        ${stats.booksWithoutAuthors.length}`);
+            stats.booksWithoutAuthors.slice(0, 3).forEach(item => {
+                console.log(`      • ${item.title.substring(0, 50)} (ASIN: ${item.asin})`);
+            });
+            if (stats.booksWithoutAuthors.length > 3) {
+                console.log(`      • ... and ${stats.booksWithoutAuthors.length - 3} more`);
+            }
+            console.log('');
+        }
+
+        if (stats.aiSummariesUsed.length > 0) {
+            console.log(`   AI summaries used:            ${stats.aiSummariesUsed.length}`);
+            stats.aiSummariesUsed.slice(0, 3).forEach(item => {
+                console.log(`      • ${item.title.substring(0, 50)} (ASIN: ${item.asin})`);
+            });
+            if (stats.aiSummariesUsed.length > 3) {
+                console.log(`      • ... and ${stats.aiSummariesUsed.length - 3} more`);
+            }
+            console.log('');
+        }
+
+        console.log('💾 FILES SAVED');
+        console.log(`   ✅ ${LIBRARY_FILENAME} (${finalBooks.length} books)`);
+        console.log(`   ✅ ${MANIFEST_FILENAME}`);
+        console.log('========================================\n');
+        console.log('👉 Next steps:');
         console.log('   1. Find both files in your browser\'s save location');
-        console.log('      (Check your Downloads folder or last save location)');
         console.log('   2. Place them in same folder as organizer HTML');
         console.log('   3. Organizer will auto-detect manifest and show status');
-        console.log('   4. Click status indicator to sync if needed');
-        console.log('\n💡 Next time you run this script:');
+        console.log('   4. Click status indicator to sync if needed\n');
+        console.log('💡 Next time you run this script:');
         console.log('   - Select amazon-library.json when prompted');
         console.log('   - Only NEW books will be fetched & enriched');
         console.log('   - Both files will be updated automatically');
