@@ -185,6 +185,29 @@ This visible checking ensures rules are actively applied, not just available in 
 - No version increment or tagging required
 - Still requires approval before commit/push (Rule #2)
 
+#### Commit Strategy: Refinement vs Exploration
+
+**When to squash commits:**
+- Refining a single approach (bug fixes, polish, incremental improvements)
+- Commit messages like "Fix bug in X", "Improve Y performance"
+- Final version is what matters, not the iteration path
+
+**When to keep separate commits:**
+- Exploring multiple distinct approaches (Option A, B, C)
+- Each option represents a different design decision
+- Commit messages like "Try Option 1: Approach X", "Implement Option 2: Approach Y"
+- Design evolution history is valuable for future understanding
+- Easy rollback to specific options if needed
+
+**Rule of thumb:**
+- Ask: "Is this a different *approach* or a *refinement*?"
+- Different approach → Keep separate commits
+- Refinement → Can squash
+
+**Checkpoints:**
+- Always create checkpoint tags before major design pivots
+- Format: `checkpoint-pre-<feature-name>` or `checkpoint-option-<N>`
+
 #### Commit Messages
 Format: `Type: Brief description`
 

@@ -361,8 +361,9 @@ Next project version: v3.1.3 ✓
    ```
    IMMEDIATELY after reading this summary, BEFORE your first response:
    1. Read SKILL-Development-Ground-Rules.md in full
-   2. Read CONTRIBUTING.md for decision frameworks
-   3. These files contain critical behavioral requirements including:
+   2. Read SKILL-Amazon-Book-Organizer.md in full
+   3. Read CONTRIBUTING.md for decision frameworks
+   4. These files contain critical behavioral requirements including:
       - Recursive rule display (MUST appear at start of EVERY response)
       - Version management protocol
       - Approval workflow requirements
