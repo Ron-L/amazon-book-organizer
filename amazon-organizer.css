@@ -61,10 +61,20 @@ body { margin: 0; padding: 0; overflow: hidden; }
 }
 .book-clickable {
     cursor: pointer;
+    transition: transform 0.2s, outline 0.15s;
 }
 .book-clickable:hover {
     transform: scale(1.05);
-    transition: transform 0.2s;
+}
+.book-clickable.selected {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    transform: scale(1.02);
+}
+.book-clickable.selected:hover {
+    outline-color: #1d4ed8;
+    transform: scale(1.05);
 }
 .status-indicator {
     cursor: pointer;

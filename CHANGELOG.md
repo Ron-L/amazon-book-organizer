@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.4.0] - 2025-11-12
+
+### Added
+- **Multi-Select with Ctrl/Shift** - Standard file-manager style multi-select (amazon-organizer.js v3.4.0)
+  - **Single-click**: Select book (replaces selection, shows blue outline + checkmark)
+  - **Ctrl+Click**: Toggle selection (add/remove from multi-select)
+  - **Shift+Click**: Range selection from last clicked book (within same column)
+  - **Double-click**: Open book detail modal
+  - **Visual feedback**: Blue outline, checkmark badge, selection count indicator
+  - **Bulk drag-and-drop**: Drag any selected book to move all selected books together
+  - **Stacked drag ghost**: Visual indication showing multiple books being dragged with count badge
+  - **Right-click context menu**: Quick bulk move to other columns
+  - **ESC key**: Clear selection
+  - **Click empty space**: Clear selection
+  - **Selection count indicator**: Fixed bottom-right showing "{N} books selected" with Clear button
+  - **INTERACTION CHANGE**: Modal now opens on double-click instead of single-click for standard UX
+  - **CSS**: Added `.book-clickable.selected` styles (amazon-organizer.css)
+
+### Technical Notes
+- Modified `handleMouseDown` to skip drag initiation when modifier keys pressed
+- Fixed `selectBookRange` to correctly compare book IDs (was comparing objects)
+- Range selection scoped to same column only (per design requirements)
+- Selection state persists during filtering/searching
+- Created checkpoint tag `checkpoint-pre-double-click` before implementing Option 3
+
 ## [3.3.2] - 2025-11-11
 
 **Full post-mortem analysis:** [post-mortems/v3.3.2-2025-11-11.md](post-mortems/v3.3.2-2025-11-11.md)
