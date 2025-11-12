@@ -14,15 +14,27 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Current Work in Progress
 
-### Phase 2.6 Partial Error Investigation - VALIDATION COMPLETE ✅
+### GitHub Pages Distribution - IN PROGRESS 🔄
+- **Started**: 2025-11-12
+- **Status**: POC phase - testing bookmarklet concept
+- **Goal**: Deploy Amazon Book Organizer to GitHub Pages with bookmarklet for easy user access
+- **Approach**:
+  1. POC: Test bookmarklet loading from GitHub Pages (localhost first, then server)
+  2. Documentation: Update README.md for end users
+  3. Bookmarklet: Create minified bookmarklet code
+  4. Testing: Verify complete workflow (bookmarklet → fetch → organize)
+- **Context**: GitHub Pages already enabled at https://ron-l.github.io/amazon-book-organizer/
+- **Specification**: See future/SPEC-Distribution-GitHub-Pages.md for complete guide
+- **Next Step**: Create bookmarklet-poc.js v1.0.0.a for initial testing
+
+### Phase 2.6 Partial Error Investigation - RELEASED ✅
 - **Started**: 2025-11-05
-- **Completed Investigation**: 2025-11-09
+- **Completed**: 2025-11-11 (v3.3.2)
 - **Solution Implemented**: v3.3.2.b (partial error handling + statistics)
 - **Validation**: Overnight fetch SUCCESSFUL - descriptions recovered for all 5 partial-error books
-- **Context**: 5 books had partial errors during overnight fetch (customerReviewsTop failed, descriptions succeeded)
 - **Root Cause**: GraphQL partial errors - Amazon returns valid description data + errors for customerReviewsTop field
 - **Fix**: Check for data despite errors, only fail if no data returned
-- **Next Step**: Ready for Clear Everything dialog implementation (v3.3.2.a) then release v3.3.2
+- **Status**: Complete and released as v3.3.2
 
 ### Review Data Analysis & GraphQL API Investigation - IN PROGRESS 🔄
 - **Started**: 2025-11-10
@@ -606,6 +618,24 @@ if (data.errors) {
   - Tracks detailed list of books missing descriptions
 - **Testing**: Successfully tested with user's library (5 new books, 2 without descriptions)
 - **Status**: Complete and committed, ready for release
+
+### Multi-Select with Ctrl/Shift Clicking - RELEASED ✅
+- **Started**: 2025-11-12
+- **Released**: 2025-11-12 (v3.4.0)
+- **Status**: ✅ COMPLETE - All features working as expected
+- **Features Implemented**:
+  - Single-click: Select book (replaces selection)
+  - Ctrl+Click: Toggle selection (add/remove from multi-select)
+  - Shift+Click: Range selection (within same column)
+  - Double-click: Open book detail modal
+  - Bulk drag-and-drop: Move all selected books together
+  - Right-click context menu: Quick bulk move to other columns
+  - Visual feedback: Blue outline, checkmark badge, selection count indicator
+  - ESC key and click empty space: Clear selection
+- **Key Technical Fixes**:
+  - Modified handleMouseDown to skip drag initiation when modifier keys pressed
+  - Fixed selectBookRange to correctly compare book IDs (was comparing objects)
+- **User Tested**: All features confirmed working
 
 ### Collections & Read Status Integration - DATA MERGED ✅, UI PENDING
 - **Started**: 2025-10-19

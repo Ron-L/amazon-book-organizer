@@ -19,6 +19,8 @@
 
 ## #1: Multi-Select with Ctrl/Shift Clicking
 
+**✅ COMPLETED**: 2025-11-12 (v3.4.0)
+
 **Priority**: #1 (User Priority)
 **Target Version**: v3.4.0
 **Complexity**: 🟡 Medium
@@ -128,11 +130,15 @@ const handleBookClick = (bookId, event) => {
 - ✅ Visual feedback clearly indicates selected books
 - ✅ Drag-and-drop works with multiple selected books
 - ✅ Selection clears appropriately (ESC, empty click)
-- ✅ Keyboard navigation accessible (tab + space to select)
+- ✅ Right-click context menu for bulk operations
+
+**All criteria met and user-tested successfully.**
 
 ---
 
 ## #2: GitHub Pages Distribution
+
+**🔄 IN PROGRESS**: Started 2025-11-12 (POC phase)
 
 **Priority**: #2 (User Priority)
 **Target Version**: Not versioned (deployment change)
@@ -604,11 +610,11 @@ Display text below book cover:
 
 | Priority | Feature | Version | Complexity | Time | Impact | Status |
 |----------|---------|---------|------------|------|--------|--------|
-| #1 | Multi-Select | v3.4.0 | 🟡 Medium | 4-6h | HIGH | Planned |
-| #2 | GitHub Pages | N/A | 🟡 Medium | 3-6h | HIGH | Planned |
+| #1 | Multi-Select | v3.4.0 | 🟡 Medium | 4-6h | HIGH | ✅ Complete |
+| #2 | GitHub Pages | N/A | 🟡 Medium | 3-6h | HIGH | 🔄 In Progress |
 | #3 | Collections Bug | v3.3.3 | 🟢 Low | 30m-1h | Medium | Planned |
-| #4 | Collections UI | v3.4.0 | 🟡 Medium | 4-8h | HIGH | Planned |
-| #5 | Retry Logic | v3.4.0 | 🔴 High | 8-12h | Medium | Planned |
+| #4 | Collections UI | v3.4.1 | 🟡 Medium | 4-8h | HIGH | Planned |
+| #5 | Retry Logic | v3.4.1 | 🔴 High | 8-12h | Medium | Planned |
 | #6 | UX Quick Wins | Various | 🟢 Low | 1-3h ea | Low-Med | Backlog |
 
 ---
@@ -618,8 +624,10 @@ Display text below book cover:
 ### v3.3.3 (Patch Release)
 - Collections Filter Bug Fix
 
-### v3.4.0 (Minor Release)
+### v3.4.0 (Minor Release) - ✅ RELEASED 2025-11-12
 - Multi-Select with Ctrl/Shift Clicking
+
+### v3.4.1 (Minor Release) - PLANNED
 - Collections Integration - UI Features
 - Phase 3 Retry Logic (optional - consider deferring)
 

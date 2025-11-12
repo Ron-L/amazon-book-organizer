@@ -6,12 +6,11 @@
 
 ## Current Priorities (User-Defined)
 
-1. 🎯 **Multi-Select with Ctrl/Shift Clicking** (v3.4.0) - 4-6 hours
-2. 🌐 **GitHub Pages Distribution** - 3-6 hours
-3. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
-4. 📚 **Collections Integration - UI Features** (v3.4.0) - 4-8 hours
-5. 🔄 **Phase 3 Retry Logic** (v3.4.0) - 8-12 hours (optional)
-6. ✨ **UX Quick Wins** (various) - 1-3 hours each
+1. 🌐 **GitHub Pages Distribution** - 3-6 hours (IN PROGRESS)
+2. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
+3. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
+4. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
+5. ✨ **UX Quick Wins** (various) - 1-3 hours each
 
 **Detailed specifications**: See [PLAN-Feature-Roadmap.md](PLAN-Feature-Roadmap.md)
 
@@ -47,6 +46,7 @@
 - [x] Version management enhancements - Query string cache busting, footer display, version comments
 - [x] Git pre-commit hook - Automatic SKILL zip rebuilding on commit
 - [x] Collections fetcher - Built collections-fetcher.js to extract collection membership and read status (v1.0.0)
+- [x] Multi-select with Ctrl/Shift clicking - Standard file-manager style multi-select (v3.4.0, released 2025-11-12)
 
 ## Stable ASIN-Based IDs - IN PROGRESS
 
