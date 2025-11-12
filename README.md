@@ -130,7 +130,7 @@ build-skill-organizer.bat
 
 ## Version
 
-**Project Version: v3.3.2**
+**Project Version: v3.4.0**
 
 This is the project-level version used for git tags. Individual code files may have their own internal versions (e.g., `APP_VERSION` in amazon-organizer.js, version comments in CSS/JS files).
 
