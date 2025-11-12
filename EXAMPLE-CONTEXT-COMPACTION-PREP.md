@@ -87,17 +87,17 @@ Exception: Only skip if user explicitly requests it be turned off
 
 **3\. Post-Compaction Checklist**
 
-\- \[ \] Read SKILL-Development-Ground-Rules.md
+- [ ] Read SKILL-Development-Ground-Rules.md
 
-\- \[ \] Read CONTRIBUTING.md
+- [ ] Read CONTRIBUTING.md
 
-\- \[ \] Display recursive rule reminder in first response
+- [ ] Display recursive rule reminder in first response
 
-\- \[ \] Apply Rule #1 (Version Management) before any code changes
+- [ ] Apply Rule #1 (Version Management) before any code changes
 
-\- \[ \] Apply Rule #2 (Approval Workflow) before any operations
+- [ ] Apply Rule #2 (Approval Workflow) before any operations
 
-\- \[ \] Use feature branches (not main) for development work
+- [ ] Use feature branches (not main) for development work
 
 **🎯 CURRENT PROJECT STATUS (FOR NEXT SESSION)**
 
