@@ -1,6 +1,6 @@
-        // Amazon Book Organizer JS v3.3.2
+        // Amazon Book Organizer JS v3.4.0.a
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.3.2";
+        const APP_VERSION = "v3.4.0.a";
         document.title = `Amazon Book Organizer ${APP_VERSION}`;
         const STORAGE_KEY = "amazon-book-organizer-state";
         const CACHE_KEY = "amazon-book-enriched-cache";
@@ -147,6 +147,9 @@
             const [statusModalOpen, setStatusModalOpen] = useState(false);
             const [collectionsData, setCollectionsData] = useState(null); // Map of ASIN -> {readStatus, collections[]}
             const [collectionFilter, setCollectionFilter] = useState(''); // Filter by collection name or special values
+            const [selectedBooks, setSelectedBooks] = useState(new Set()); // Multi-select state
+            const [lastClickedBook, setLastClickedBook] = useState(null); // For shift+click range selection
+            const [contextMenu, setContextMenu] = useState(null); // {x, y, bookId, columnId}
             const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
             const [, forceUpdate] = useState({});
 
@@ -372,6 +375,28 @@
             useEffect(() => {
                 window.books = books;
             }, [books]);
+
+            // ESC key to clear selection
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Escape') {
+                        clearSelection();
+                        setContextMenu(null);
+                    }
+                };
+
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, []);
+
+            // Close context menu on click
+            useEffect(() => {
+                const handleClick = () => setContextMenu(null);
+                if (contextMenu) {
+                    window.addEventListener('click', handleClick);
+                    return () => window.removeEventListener('click', handleClick);
+                }
+            }, [contextMenu]);
 
             const saveSettings = (newSettings) => {
                 setSettings(newSettings);
@@ -1071,6 +1096,41 @@
                 setModalColumnId(null);
             };
 
+            // Multi-select helper functions
+            const toggleBookSelection = (bookId) => {
+                setSelectedBooks(prev => {
+                    const newSet = new Set(prev);
+                    if (newSet.has(bookId)) {
+                        newSet.delete(bookId);
+                    } else {
+                        newSet.add(bookId);
+                    }
+                    return newSet;
+                });
+            };
+
+            const selectBookRange = (startBookId, endBookId, columnId) => {
+                // Only select within the same column
+                const column = columns.find(col => col.id === columnId);
+                if (!column) return;
+
+                const visibleBooks = column.books;
+                const startIdx = visibleBooks.findIndex(b => b.id === startBookId);
+                const endIdx = visibleBooks.findIndex(b => b.id === endBookId);
+
+                if (startIdx === -1 || endIdx === -1) return;
+
+                const [min, max] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)];
+                const rangeIds = visibleBooks.slice(min, max + 1).map(b => b.id);
+
+                setSelectedBooks(new Set(rangeIds));
+            };
+
+            const clearSelection = () => {
+                setSelectedBooks(new Set());
+                setLastClickedBook(null);
+            };
+
             const navigateBook = (direction) => {
                 if (!modalBook || !modalColumnId) return;
                 
@@ -1139,7 +1199,18 @@
             };
 
             const handleMouseDown = (e, book, columnId) => {
+                // Don't start drag if using modifier keys for selection
+                if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                    return;
+                }
+
                 e.preventDefault();
+
+                // If clicking a book that's not in the selection, clear selection first
+                if (selectedBooks.size > 0 && !selectedBooks.has(book.id)) {
+                    clearSelection();
+                }
+
                 setDragStartPos({ x: e.clientX, y: e.clientY });
                 setDragCurrentPos({ x: e.clientX, y: e.clientY });
                 setDraggedBook(book);
@@ -1274,56 +1345,74 @@
 
                 const sourceColumn = columns.find(c => c.id === draggedFromColumn);
                 const targetColumn = columns.find(c => c.id === dropTarget.columnId);
-                
+
                 if (!sourceColumn || !targetColumn) {
                     console.error('Invalid source or target column');
                     setDraggedBook(null);
                     setDraggedFromColumn(null);
                     setIsDragging(false);
                     setDropTarget(null);
+                    clearSelection();
                     return;
                 }
 
+                // Determine which books to move
+                const booksToMove = selectedBooks.size > 0 && selectedBooks.has(draggedBook.id)
+                    ? Array.from(selectedBooks) // Move all selected books
+                    : [draggedBook.id]; // Move just the dragged book
+
                 if (draggedFromColumn === dropTarget.columnId) {
+                    // Same column: reorder
                     setColumns(columns.map(col => {
                         if (col.id === draggedFromColumn) {
                             const newBooks = [...col.books];
-                            const currentIndex = newBooks.indexOf(draggedBook.id);
-                            
-                            if (currentIndex === -1) return col;
-                            
-                            newBooks.splice(currentIndex, 1);
-                            
+
+                            // Remove all books to move
+                            const booksToMoveFiltered = booksToMove.filter(id => newBooks.includes(id));
+                            booksToMoveFiltered.forEach(id => {
+                                const idx = newBooks.indexOf(id);
+                                if (idx !== -1) newBooks.splice(idx, 1);
+                            });
+
+                            // Calculate adjusted insert index
                             let adjustedIndex = dropTarget.index;
-                            if (currentIndex < dropTarget.index) {
-                                adjustedIndex--;
-                            }
-                            
-                            newBooks.splice(adjustedIndex, 0, draggedBook.id);
-                            
+                            booksToMoveFiltered.forEach(id => {
+                                const originalIndex = col.books.indexOf(id);
+                                if (originalIndex !== -1 && originalIndex < dropTarget.index) {
+                                    adjustedIndex--;
+                                }
+                            });
+
+                            // Insert all books at the target position
+                            newBooks.splice(adjustedIndex, 0, ...booksToMoveFiltered);
+
                             return { ...col, books: newBooks };
                         }
                         return col;
                     }));
                 } else {
+                    // Cross-column: move books
                     setColumns(columns.map(col => {
                         if (col.id === draggedFromColumn) {
-                            return { ...col, books: col.books.filter(id => id !== draggedBook.id) };
+                            // Remove books from source column
+                            return { ...col, books: col.books.filter(id => !booksToMove.includes(id)) };
                         }
                         if (col.id === dropTarget.columnId) {
+                            // Add books to target column
                             const newBooks = [...col.books];
                             const insertIndex = Math.min(dropTarget.index, newBooks.length);
-                            newBooks.splice(insertIndex, 0, draggedBook.id);
+                            newBooks.splice(insertIndex, 0, ...booksToMove);
                             return { ...col, books: newBooks };
                         }
                         return col;
                     }));
                 }
-                
+
                 setDraggedBook(null);
                 setDraggedFromColumn(null);
                 setIsDragging(false);
                 setDropTarget(null);
+                clearSelection();
             };
 
             const getAllCollectionNames = () => {
@@ -1986,8 +2075,18 @@
                         </div>
                     )}
 
-                    <div className="flex-1 overflow-x-auto overflow-y-hidden">
-                        <div className="flex h-full p-4 gap-4 columns-container" style={{ minWidth: 'fit-content' }}>
+                    <div className="flex-1 overflow-x-auto overflow-y-hidden" onClick={(e) => {
+                        // Clear selection if clicking on empty space (not on books or columns)
+                        if (e.target === e.currentTarget || e.target.classList.contains('columns-container')) {
+                            clearSelection();
+                        }
+                    }}>
+                        <div className="flex h-full p-4 gap-4 columns-container" style={{ minWidth: 'fit-content' }} onClick={(e) => {
+                            // Clear selection if clicking between columns
+                            if (e.target === e.currentTarget) {
+                                clearSelection();
+                            }
+                        }}>
                             {columns.map((column, colIndex) => (
                                 <div key={column.id} 
                                      data-column-id={column.id}
@@ -2071,12 +2170,40 @@
                                                         {isDragging && dropTarget?.columnId === column.id && dropTarget?.index === actualIndex && draggedBook?.id !== book.id && (
                                                             <div className="drop-indicator" style={{ top: '-6px' }} />
                                                         )}
-                                                        <div className={`book-clickable ${draggedBook?.id === book.id && isDragging ? 'dragging' : ''}`}
+                                                        <div className={`book-clickable ${selectedBooks.has(book.id) ? 'selected' : ''} ${draggedBook?.id === book.id && isDragging ? 'dragging' : ''}`}
                                                              onMouseDown={(e) => handleMouseDown(e, book, column.id)}
                                                              onClick={(e) => {
-                                                                 if (!isDragging) {
+                                                                 e.stopPropagation();
+
+                                                                 if (isDragging) return;
+
+                                                                 if (e.ctrlKey || e.metaKey) {
+                                                                     // Ctrl+Click: Toggle selection
+                                                                     toggleBookSelection(book.id);
+                                                                     setLastClickedBook({ id: book.id, columnId: column.id });
+                                                                 } else if (e.shiftKey && lastClickedBook && lastClickedBook.columnId === column.id) {
+                                                                     // Shift+Click: Range selection (only within same column)
+                                                                     selectBookRange(lastClickedBook.id, book.id, column.id);
+                                                                 } else {
+                                                                     // Normal click: Clear selection and open modal
+                                                                     clearSelection();
                                                                      openBookModal(book, column.id);
                                                                  }
+                                                             }}
+                                                             onContextMenu={(e) => {
+                                                                 e.preventDefault();
+                                                                 // Right-click: If book not in selection, select it first
+                                                                 if (!selectedBooks.has(book.id)) {
+                                                                     clearSelection();
+                                                                     toggleBookSelection(book.id);
+                                                                 }
+                                                                 // Show context menu
+                                                                 setContextMenu({
+                                                                     x: e.clientX,
+                                                                     y: e.clientY,
+                                                                     bookId: book.id,
+                                                                     columnId: column.id
+                                                                 });
                                                              }}
                                                              title={book.collections && book.collections.length > 0
                                                                 ? `Collections:\n${book.collections.map(c => c.name).join('\n')}`
@@ -2111,6 +2238,13 @@
                                                                         READ
                                                                     </div>
                                                                 )}
+                                                                {selectedBooks.has(book.id) && (
+                                                                    <div className="absolute top-1 left-1 bg-blue-600 rounded-full w-6 h-6 flex items-center justify-center z-10">
+                                                                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                                                        </svg>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             <div className="mt-2 text-xs">
                                                                 <div className="font-medium text-gray-800 leading-tight line-clamp-2" title={book.title}>
@@ -2137,31 +2271,99 @@
                         </div>
                     </div>
 
+                    {selectedBooks.size > 0 && (
+                        <div className="fixed bottom-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50">
+                            <span className="font-medium">{selectedBooks.size} book{selectedBooks.size !== 1 ? 's' : ''} selected</span>
+                            <button
+                                onClick={clearSelection}
+                                className="hover:bg-blue-700 px-3 py-1 rounded bg-blue-500 transition-colors">
+                                Clear
+                            </button>
+                        </div>
+                    )}
+
+                    {contextMenu && (
+                        <div className="fixed bg-white border border-gray-300 rounded-lg shadow-xl z-[60] py-1 min-w-[180px]"
+                             style={{
+                                 left: `${contextMenu.x}px`,
+                                 top: `${contextMenu.y}px`
+                             }}
+                             onClick={(e) => e.stopPropagation()}>
+                            <div className="px-2 py-1 text-xs font-semibold text-gray-500 border-b border-gray-200">
+                                {selectedBooks.size} book{selectedBooks.size !== 1 ? 's' : ''} selected
+                            </div>
+                            {columns.filter(col => col.id !== contextMenu.columnId).map(col => (
+                                <button
+                                    key={col.id}
+                                    className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
+                                    onClick={() => {
+                                        // Move selected books to this column
+                                        const booksToMove = Array.from(selectedBooks);
+                                        setColumns(columns.map(column => {
+                                            if (column.id === contextMenu.columnId) {
+                                                // Remove from source column
+                                                return { ...column, books: column.books.filter(id => !booksToMove.includes(id)) };
+                                            }
+                                            if (column.id === col.id) {
+                                                // Add to target column at the end
+                                                return { ...column, books: [...column.books, ...booksToMove] };
+                                            }
+                                            return column;
+                                        }));
+                                        clearSelection();
+                                        setContextMenu(null);
+                                    }}>
+                                    📁 Move to "{col.name}"
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     <div className="fixed bottom-2 right-2 text-xs text-gray-400">
                         v{APP_VERSION}
                     </div>
 
                     {isDragging && draggedBook && (
-                        <div className="drag-ghost" 
-                             style={{ 
-                                 left: dragCurrentPos.x - 50, 
+                        <div className="drag-ghost"
+                             style={{
+                                 left: dragCurrentPos.x - 50,
                                  top: dragCurrentPos.y - 75,
                                  width: '100px'
                              }}>
-                            {blankImageBooks.has(draggedBook.id) ? (
-                                <div className="w-full aspect-[2/3] rounded shadow-2xl border-2 border-blue-500" 
-                                     style={{ backgroundColor: '#d4c5a9' }}>
-                                    <div className="flex items-center justify-center h-full px-1">
-                                        <div className="text-xs font-serif font-bold text-gray-800 text-center leading-tight">
-                                            {draggedBook.title.length > 20 ? draggedBook.title.substring(0, 20) + '...' : draggedBook.title}
+                            {/* Show stacked effect if dragging multiple books */}
+                            {selectedBooks.size > 1 && selectedBooks.has(draggedBook.id) && (
+                                <>
+                                    <div className="absolute" style={{ left: '8px', top: '8px', opacity: 0.4 }}>
+                                        <div className="w-full aspect-[2/3] rounded shadow-2xl border-2 border-blue-500 bg-blue-100" style={{ width: '100px' }}></div>
+                                    </div>
+                                    <div className="absolute" style={{ left: '4px', top: '4px', opacity: 0.6 }}>
+                                        <div className="w-full aspect-[2/3] rounded shadow-2xl border-2 border-blue-500 bg-blue-200" style={{ width: '100px' }}></div>
+                                    </div>
+                                </>
+                            )}
+                            {/* Main dragged book */}
+                            <div className="relative">
+                                {blankImageBooks.has(draggedBook.id) ? (
+                                    <div className="w-full aspect-[2/3] rounded shadow-2xl border-2 border-blue-500"
+                                         style={{ backgroundColor: '#d4c5a9' }}>
+                                        <div className="flex items-center justify-center h-full px-1">
+                                            <div className="text-xs font-serif font-bold text-gray-800 text-center leading-tight">
+                                                {draggedBook.title.length > 20 ? draggedBook.title.substring(0, 20) + '...' : draggedBook.title}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <img src={draggedBook.coverUrl} 
-                                     alt={draggedBook.title}
-                                     className="w-full rounded shadow-2xl border-2 border-blue-500" />
-                            )}
+                                ) : (
+                                    <img src={draggedBook.coverUrl}
+                                         alt={draggedBook.title}
+                                         className="w-full rounded shadow-2xl border-2 border-blue-500" />
+                                )}
+                                {/* Count badge for multiple books */}
+                                {selectedBooks.size > 1 && selectedBooks.has(draggedBook.id) && (
+                                    <div className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold border-2 border-white">
+                                        {selectedBooks.size}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
