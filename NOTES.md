@@ -25,7 +25,15 @@ This file tracks tabled discussion items, work in progress context, and open que
   4. Testing: Verify complete workflow (bookmarklet → fetch → organize)
 - **Context**: GitHub Pages already enabled at https://ron-l.github.io/amazon-book-organizer/
 - **Specification**: See future/SPEC-Distribution-GitHub-Pages.md for complete guide
-- **Next Step**: Create bookmarklet-poc.js v1.0.0.a for initial testing
+- **Current**: Creating bookmarklet-poc.js v1.0.0.b with correct CSRF token detection
+- **Lesson Learned - Don't Reinvent the Wheel in Test/Diagnostic Code** (2025-11-12):
+  - **Issue**: POC v1.0.0.a invented new CSRF token detection method (`input[name="anti-csrftoken-a2z"]`) instead of using proven production method
+  - **Actual method**: `querySelector('meta[name="anti-csrftoken-a2z"]')` with `.getAttribute('content')` (library-fetcher.js lines 429-436)
+  - **Why this matters**:
+    1. Proven production methods are already tested and known to work
+    2. Avoids introducing confounding variables (new method vs. actual issue)
+    3. Test code should be a subset of production workflow when building up to it
+  - **Action**: Always check production code for existing working methods before creating test/diagnostic code
 
 ### Phase 2.6 Partial Error Investigation - RELEASED ✅
 - **Started**: 2025-11-05
