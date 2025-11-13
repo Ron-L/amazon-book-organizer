@@ -6,11 +6,12 @@
 
 ## Current Priorities (User-Defined)
 
-1. 🌐 **GitHub Pages Distribution** - 3-6 hours (IN PROGRESS)
-2. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
-3. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
-4. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
-5. ✨ **UX Quick Wins** (various) - 1-3 hours each
+1. 🌐 **GitHub Pages Distribution** - 3-6 hours (IN PROGRESS - Testing phase)
+2. 📄 **README Refactor** - 1-2 hours (PLANNED - After distribution complete)
+3. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
+4. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
+5. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
+6. ✨ **UX Quick Wins** (various) - 1-3 hours each
 
 **Detailed specifications**: See [PLAN-Feature-Roadmap.md](PLAN-Feature-Roadmap.md)
 
@@ -412,6 +413,35 @@
     - Option #4: Smart filtering - if search matches column name exactly, prioritize that column
 - [ ] Add title & author text under book covers (~5-8K tokens)
 - [ ] Multi-select with Ctrl/Shift clicking (~15-25K tokens)
+
+## README Refactor Plan (Priority #2)
+
+**Goal**: Split README into user-facing and developer-facing content
+
+**Rationale**: Now serving app via GitHub Pages, need clear separation of audiences
+
+**Plan**:
+1. **README.md** → User-facing product page
+   - What: Project description, features overview
+   - How: Quick Start with bookmarklet installer link
+   - Why: Privacy note, technology stack (brief)
+   - Delete obsolete "Getting Started" (local server setup)
+   - Keep: Project Version, License
+   - Remove: Documentation Guide, Skills Setup, all developer content
+
+2. **CONTRIBUTING.md** → Expand with developer content
+   - Move "Documentation Guide" from README
+   - Move "Claude Skills Setup" from README
+   - Move "Getting Started" local development setup
+   - Already has: Git workflow, commit patterns, decision frameworks
+
+3. **Benefits**:
+   - Clear audience separation
+   - Professional product page for end users
+   - Complete developer guide in standard location (CONTRIBUTING.md)
+   - Less confusing for casual users discovering via GitHub Pages
+
+**Status**: Documented, awaiting completion of bookmarklet testing
 
 ## Features - Optional/Maybe
 
