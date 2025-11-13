@@ -16,17 +16,22 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ### GitHub Pages Distribution - IN PROGRESS 🔄
 - **Started**: 2025-11-12
-- **Status**: POC phase complete, install page created
+- **Branch**: `feature-bookmarklet-distribution`
+- **Status**: Core implementation complete, ready for testing
 - **Goal**: Deploy Amazon Book Organizer to GitHub Pages with bookmarklet for easy user access
-- **Approach**:
-  1. ✅ POC: Test bookmarklet loading from GitHub Pages (localhost ✅, server ✅)
-  2. ✅ Install page: Created install.html with drag-and-drop bookmarklet
-  3. TODO: Create smart bookmarklet that detects page and loads appropriate script
-  4. TODO: Documentation: Update README.md for end users
-  5. TODO: Testing: Verify complete workflow (bookmarklet → fetch → organize)
-- **Context**: GitHub Pages already enabled at https://ron-l.github.io/amazon-book-organizer/
-- **Specification**: See future/SPEC-Distribution-GitHub-Pages.md for complete guide
-- **Current Status**: POC v1.0.0.b working from GitHub Pages, install.html created
+- **Completed**:
+  1. ✅ POC: bookmarklet-poc.js v1.0.0.b (archived)
+  2. ✅ Smart bookmarklet: bookmarklet-loader.js v1.1.0 (intro dialog + page detection + navigation)
+  3. ✅ Install page: install-bookmarklet.html (drag-and-drop with instructions)
+  4. ✅ Progress UI: library-fetcher.js (Option C - minimal overlay with phase updates)
+  5. ✅ README: Added Quick Start section with installer link
+  6. TODO: Add progress UI to collections-fetcher.js
+  7. TODO: Test library-fetcher with bookmarklet
+  8. TODO: Test collections-fetcher with bookmarklet
+  9. TODO: Fix any issues found in testing
+  10. TODO: Merge to main and deploy
+- **Context**: GitHub Pages enabled at https://ron-l.github.io/amazon-book-organizer/
+- **Specification**: See future/SPEC-Distribution-GitHub-Pages.md
 - **Pending Name Change (User Sleeping On Decision)**:
   - **Current**: Amazon Book Organizer
   - **Proposed**: My Library Organizer
