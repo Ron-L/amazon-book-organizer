@@ -16,16 +16,24 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ### GitHub Pages Distribution - IN PROGRESS 🔄
 - **Started**: 2025-11-12
-- **Status**: POC phase - testing bookmarklet concept
+- **Status**: POC phase complete, install page created
 - **Goal**: Deploy Amazon Book Organizer to GitHub Pages with bookmarklet for easy user access
 - **Approach**:
-  1. POC: Test bookmarklet loading from GitHub Pages (localhost first, then server)
-  2. Documentation: Update README.md for end users
-  3. Bookmarklet: Create minified bookmarklet code
-  4. Testing: Verify complete workflow (bookmarklet → fetch → organize)
+  1. ✅ POC: Test bookmarklet loading from GitHub Pages (localhost ✅, server ✅)
+  2. ✅ Install page: Created install.html with drag-and-drop bookmarklet
+  3. TODO: Create smart bookmarklet that detects page and loads appropriate script
+  4. TODO: Documentation: Update README.md for end users
+  5. TODO: Testing: Verify complete workflow (bookmarklet → fetch → organize)
 - **Context**: GitHub Pages already enabled at https://ron-l.github.io/amazon-book-organizer/
 - **Specification**: See future/SPEC-Distribution-GitHub-Pages.md for complete guide
-- **Current**: Creating bookmarklet-poc.js v1.0.0.b with correct CSRF token detection
+- **Current Status**: POC v1.0.0.b working from GitHub Pages, install.html created
+- **Pending Name Change (User Sleeping On Decision)**:
+  - **Current**: Amazon Book Organizer
+  - **Proposed**: My Library Organizer
+  - **Tagline**: "Organize your Amazon book collection"
+  - **Rationale**: Avoids trademark issues (Amazon, Kindle), future-proof for other platforms, clearly third-party
+  - **Impact**: Minimal - just find/replace in files, GitHub repo rename (redirects work automatically)
+  - **Timing**: Before public launch
 - **Lesson Learned - Don't Reinvent the Wheel in Test/Diagnostic Code** (2025-11-12):
   - **Issue**: POC v1.0.0.a invented new CSRF token detection method (`input[name="anti-csrftoken-a2z"]`) instead of using proven production method
   - **Actual method**: `querySelector('meta[name="anti-csrftoken-a2z"]')` with `.getAttribute('content')` (library-fetcher.js lines 429-436)
