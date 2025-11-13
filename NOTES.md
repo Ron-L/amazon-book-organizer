@@ -14,19 +14,26 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Current Work in Progress
 
-### GitHub Pages Distribution - IN PROGRESS 🔄
+### GitHub Pages Distribution - RELEASED ✅
 - **Started**: 2025-11-12
-- **Status**: POC phase complete, install page created
+- **Released**: 2025-11-13
+- **Branch**: `feature-bookmarklet-distribution`
+- **Status**: Complete - deployed to GitHub Pages
 - **Goal**: Deploy Amazon Book Organizer to GitHub Pages with bookmarklet for easy user access
-- **Approach**:
-  1. ✅ POC: Test bookmarklet loading from GitHub Pages (localhost ✅, server ✅)
-  2. ✅ Install page: Created install.html with drag-and-drop bookmarklet
-  3. TODO: Create smart bookmarklet that detects page and loads appropriate script
-  4. TODO: Documentation: Update README.md for end users
-  5. TODO: Testing: Verify complete workflow (bookmarklet → fetch → organize)
-- **Context**: GitHub Pages already enabled at https://ron-l.github.io/amazon-book-organizer/
-- **Specification**: See future/SPEC-Distribution-GitHub-Pages.md for complete guide
-- **Current Status**: POC v1.0.0.b working from GitHub Pages, install.html created
+- **Completed**:
+  1. ✅ POC: bookmarklet-poc.js v1.0.0.b (archived)
+  2. ✅ Smart bookmarklet: bookmarklet-loader.js v1.0.0 (intro dialog + page detection + navigation)
+  3. ✅ Install page: install-bookmarklet.html v1.0.0 (drag-and-drop with instructions)
+  4. ✅ Progress UI: library-fetcher.js (Option C - minimal overlay with phase updates)
+  5. ✅ Progress UI: collections-fetcher.js (same pattern as library-fetcher)
+  6. ✅ README: Added Quick Start section with installer link
+  7. ✅ 5 UX Fixes: URLs corrected, navigation alerts added, time warnings added, button colors fixed
+  8. ✅ Version displays: Added to installer and bookmarklet loader
+  9. ✅ Tested on GitHub Pages server
+  10. ✅ Fixed versioning bugs (bookmarklet v1.1.0 → v1.0.0)
+  11. ✅ Documentation updated (CHANGELOG, TODO, NOTES)
+- **Context**: GitHub Pages enabled at https://ron-l.github.io/amazon-book-organizer/
+- **Specification**: See future/SPEC-Distribution-GitHub-Pages.md
 - **Pending Name Change (User Sleeping On Decision)**:
   - **Current**: Amazon Book Organizer
   - **Proposed**: My Library Organizer

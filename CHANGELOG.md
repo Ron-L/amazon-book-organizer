@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Distribution Tools
+
+#### [bookmarklet-loader.js v1.0.0] - 2025-11-13
+- Smart bookmarklet loader with intro dialog and page detection
+- Detects current Amazon page (library, collections, or other)
+- Offers appropriate actions based on page type
+- Navigation to library or collections pages with reminder alerts
+- Loads library-fetcher.js or collections-fetcher.js on demand
+- Version display in dialog footer
+
+#### [install-bookmarklet.html v1.0.0] - 2025-11-13
+- Drag-and-drop bookmarklet installer page
+- Installation instructions for Chrome/Edge/Firefox
+- Links to Amazon library and collections pages
+- Privacy note explaining browser-only processing
+- Version display at bottom
+
 ## [3.4.0] - 2025-11-12
 
 ### Added

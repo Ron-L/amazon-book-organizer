@@ -102,6 +102,128 @@ async function fetchAmazonLibrary() {
     };
 
     // ============================================================================
+    // Progress Overlay UI (Option C - Minimal)
+    // ============================================================================
+    const progressUI = (() => {
+        let overlay = null;
+        let phaseElement = null;
+        let detailElement = null;
+
+        function create() {
+            overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+                padding: 20px;
+                z-index: 10000;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                min-width: 300px;
+                max-width: 400px;
+            `;
+
+            overlay.innerHTML = `
+                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
+                    📚 Library Fetcher ${FETCHER_VERSION}
+                </div>
+                <div id="progressPhase" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
+                    Starting...
+                </div>
+                <div id="progressDetail" style="font-size: 13px; color: #666; margin-bottom: 15px;">
+                    Initializing
+                </div>
+                <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
+                    ⏱️ Large libraries take time: ~1 hour per 1000 books<br>
+                    💡 Open Console (F12) for detailed progress<br>
+                    🔄 Refresh page to cancel
+                </div>
+            `;
+
+            phaseElement = overlay.querySelector('#progressPhase');
+            detailElement = overlay.querySelector('#progressDetail');
+            document.body.appendChild(overlay);
+        }
+
+        function updatePhase(phase, detail = '') {
+            if (!overlay) create();
+            if (phaseElement) phaseElement.textContent = phase;
+            if (detailElement) detailElement.textContent = detail;
+        }
+
+        function remove() {
+            if (overlay && overlay.parentElement) {
+                overlay.style.transition = 'opacity 0.3s';
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 300);
+            }
+        }
+
+        function showComplete(message) {
+            if (!overlay) return;
+            overlay.innerHTML = `
+                <div style="font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">
+                    ✅ Complete!
+                </div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                    ${message}
+                </div>
+                <button style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    width: 100%;
+                " onclick="this.parentElement.remove()">
+                    Close
+                </button>
+            `;
+            // Auto-dismiss after 30 seconds
+            setTimeout(remove, 30000);
+        }
+
+        function showError(message) {
+            if (!overlay) create();
+            overlay.innerHTML = `
+                <div style="font-size: 18px; font-weight: bold; color: #c62828; margin-bottom: 10px;">
+                    ❌ Error
+                </div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                    ${message}
+                </div>
+                <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
+                    Check console for details
+                </div>
+                <button style="
+                    background: #f44336;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    width: 100%;
+                    margin-top: 10px;
+                " onclick="this.parentElement.remove()">
+                    Close
+                </button>
+            `;
+        }
+
+        return { create, updatePhase, remove, showComplete, showError };
+    })();
+
+    // Initialize progress UI
+    progressUI.create();
+
+    // ============================================================================
     // Shared Extraction Functions
     // These ensure Phase 0, Pass 1, and Pass 2 all extract data identically
     // ============================================================================
@@ -365,6 +487,7 @@ async function fetchAmazonLibrary() {
     try {
         // Step 1: Load existing data (if any)
         console.log('[1/6] Checking for existing library data...');
+        progressUI.updatePhase('Checking Library Data', 'Select existing library file or cancel to fetch all books');
         console.log('');
         console.log('   📂 A file picker dialog will open...');
         console.log('');
@@ -423,9 +546,10 @@ async function fetchAmazonLibrary() {
             console.log('📂 No existing file - will fetch ALL books');
         }
         console.log('');
-        
+
         // Step 2: Find CSRF token
         console.log('[2/6] Getting CSRF token...');
+        progressUI.updatePhase('Getting CSRF Token', 'Authenticating with Amazon API');
         const csrfMeta = document.querySelector('meta[name="anti-csrftoken-a2z"]');
 
         if (!csrfMeta) {
@@ -437,6 +561,7 @@ async function fetchAmazonLibrary() {
 
         // Phase 0: Validate API endpoints before fetching
         console.log('[Phase 0] Validating Amazon API endpoints...');
+        progressUI.updatePhase('Validating APIs', 'Testing Amazon endpoints and extraction logic');
         stats.timing.phase0Start = Date.now();
         console.log('   Testing library query...');
 
@@ -794,6 +919,7 @@ async function fetchAmazonLibrary() {
         // Step 3: Fetch new books (Pass 1)
         stats.timing.pass1Start = Date.now();
         console.log('[3/6] Fetching new books from library...');
+        progressUI.updatePhase('Fetching Titles', 'Retrieving books from your library');
         console.log('   Will stop when we reach existing books\n');
 
         const newBooks = [];
@@ -1119,10 +1245,11 @@ async function fetchAmazonLibrary() {
         
         stats.timing.pass1End = Date.now();
         console.log(`\n✅ Pass 1 complete: Found ${newBooks.length} new books\n`);
-        
+
         // Step 4: Enrich new books (Pass 2)
         stats.timing.pass2Start = Date.now();
         console.log('[4/6] Enriching new books with descriptions & reviews...');
+        progressUI.updatePhase('Enriching Data', `Fetching descriptions & reviews for ${newBooks.length} books`);
 
         const estimatedTime = Math.ceil((newBooks.length * ENRICH_DELAY_MS) / 1000 / 60);
         console.log(`   Estimated time: ~${estimatedTime} minutes\n`);
@@ -1323,6 +1450,7 @@ async function fetchAmazonLibrary() {
         // Step 5: Merge and save library
         stats.timing.mergeStart = Date.now();
         console.log('[5/6] Merging with existing data and saving library...');
+        progressUI.updatePhase('Saving Library', 'Merging and downloading library file');
 
         // Prepend new books (most recent first)
         const finalBooks = [...newBooks, ...existingBooks];
@@ -1353,10 +1481,11 @@ async function fetchAmazonLibrary() {
         URL.revokeObjectURL(url);
 
         console.log(`✅ Saved library file: ${LIBRARY_FILENAME}`);
-        
+
         // Step 6: Create and save manifest
         console.log('[6/6] Creating manifest file...');
-        
+        progressUI.updatePhase('Creating Manifest', 'Generating metadata file');
+
         const manifest = {
             schemaVersion: SCHEMA_VERSION,
             fetcherVersion: FETCHER_VERSION,
@@ -1525,13 +1654,19 @@ async function fetchAmazonLibrary() {
         console.log('   - Both files will be updated automatically');
         console.log('   - Organizer will detect the update via manifest');
         console.log('========================================\n');
-        
+
+        // Show completion UI
+        progressUI.showComplete(`Downloaded ${finalBooks.length} books to ${LIBRARY_FILENAME}`);
+
     } catch (error) {
         console.error('\n========================================');
         console.error('❌ FATAL ERROR');
         console.error('========================================');
         console.error(error);
         console.error('========================================\n');
+
+        // Show error UI
+        progressUI.showError(error.message || 'An unknown error occurred');
     }
 }
 

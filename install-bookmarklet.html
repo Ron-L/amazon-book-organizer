@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Install Amazon Book Organizer</title>
+    <script>const INSTALLER_VERSION = 'v1.0.0';</script>
     <style>
         * {
             margin: 0;
@@ -150,8 +151,8 @@
                 <li><strong>Drag the button above</strong> to your bookmarks bar</li>
                 <li><strong>Navigate to your Amazon library</strong>:
                     <ul style="margin-left: 20px; margin-top: 5px;">
-                        <li>For your library: <a href="https://www.amazon.com/hz/mycd/myx" target="_blank">amazon.com/hz/mycd/myx</a> or <a href="https://www.amazon.com/yourbooks" target="_blank">amazon.com/yourbooks</a></li>
-                        <li>For collections: <a href="https://read.amazon.com/kindle-library" target="_blank">read.amazon.com/kindle-library</a></li>
+                        <li>For your library: <a href="https://www.amazon.com/yourbooks" target="_blank">amazon.com/yourbooks</a></li>
+                        <li>For collections: <a href="https://www.amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/" target="_blank">amazon.com/hz/mycd/digital-console</a></li>
                     </ul>
                 </li>
                 <li><strong>Click the bookmarklet</strong> in your bookmarks bar to launch the organizer</li>
@@ -159,12 +160,20 @@
         </div>
 
         <div class="note">
-            <strong>Note:</strong> This bookmarklet loads a script from GitHub Pages that fetches your library data directly from Amazon's API. All processing happens in your browser - your data never leaves your computer.
+            <strong>Note:</strong> This bookmarklet loads a script from GitHub Pages that fetches your library data directly from Amazon's API. All processing happens in your browser - your data never leaves your computer. To uninstall, simply right-click the bookmarklet in your bookmarks bar and select "Delete" or "Remove".
         </div>
 
         <a href="https://github.com/Ron-L/amazon-book-organizer" class="github-link" target="_blank">
             View on GitHub →
         </a>
+
+        <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
+            <span id="installerVersion"></span>
+        </div>
     </div>
+
+    <script>
+        document.getElementById('installerVersion').textContent = INSTALLER_VERSION;
+    </script>
 </body>
 </html>

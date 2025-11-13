@@ -19,6 +19,12 @@ A web-based tool for organizing and managing your Amazon book library with advan
 
 ---
 
+## Quick Start
+
+Install the bookmarklet by clicking [here](https://ron-l.github.io/amazon-book-organizer/install-bookmarklet.html).
+
+The bookmarklet lets you fetch your Amazon library data directly from Amazon's website with one click. All processing happens in your browser - your data never leaves your computer.
+
 ## Features
 
 - Import and organize your Amazon book library

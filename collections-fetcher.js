@@ -29,10 +29,133 @@ async function fetchAmazonCollections() {
     const FETCH_DELAY_MS = 2000; // 2 seconds between requests
     const FILENAME = 'amazon-collections.json';
 
+    // ============================================================================
+    // Progress Overlay UI (Option C - Minimal)
+    // ============================================================================
+    const progressUI = (() => {
+        let overlay = null;
+        let phaseElement = null;
+        let detailElement = null;
+
+        function create() {
+            overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: white;
+                border-radius: 12px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+                padding: 20px;
+                z-index: 10000;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                min-width: 300px;
+                max-width: 400px;
+            `;
+
+            overlay.innerHTML = `
+                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
+                    📚 Collections Fetcher ${FETCHER_VERSION}
+                </div>
+                <div id="progressPhase" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
+                    Starting...
+                </div>
+                <div id="progressDetail" style="font-size: 13px; color: #666; margin-bottom: 15px;">
+                    Initializing
+                </div>
+                <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
+                    ⏱️ Large libraries take time: ~1 hour per 1000 books<br>
+                    💡 Open Console (F12) for detailed progress<br>
+                    🔄 Refresh page to cancel
+                </div>
+            `;
+
+            phaseElement = overlay.querySelector('#progressPhase');
+            detailElement = overlay.querySelector('#progressDetail');
+            document.body.appendChild(overlay);
+        }
+
+        function updatePhase(phase, detail = '') {
+            if (!overlay) create();
+            if (phaseElement) phaseElement.textContent = phase;
+            if (detailElement) detailElement.textContent = detail;
+        }
+
+        function remove() {
+            if (overlay && overlay.parentElement) {
+                overlay.style.transition = 'opacity 0.3s';
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 300);
+            }
+        }
+
+        function showComplete(message) {
+            if (!overlay) return;
+            overlay.innerHTML = `
+                <div style="font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">
+                    ✅ Complete!
+                </div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                    ${message}
+                </div>
+                <button style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    width: 100%;
+                " onclick="this.parentElement.remove()">
+                    Close
+                </button>
+            `;
+            // Auto-dismiss after 30 seconds
+            setTimeout(remove, 30000);
+        }
+
+        function showError(message) {
+            if (!overlay) create();
+            overlay.innerHTML = `
+                <div style="font-size: 18px; font-weight: bold; color: #c62828; margin-bottom: 10px;">
+                    ❌ Error
+                </div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                    ${message}
+                </div>
+                <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
+                    Check console for details
+                </div>
+                <button style="
+                    background: #f44336;
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    width: 100%;
+                    margin-top: 10px;
+                " onclick="this.parentElement.remove()">
+                    Close
+                </button>
+            `;
+        }
+
+        return { create, updatePhase, remove, showComplete, showError };
+    })();
+
+    // Initialize progress UI
+    progressUI.create();
+
     // ==========================================
     // Phase 0: Pre-flight Validation
     // ==========================================
     console.log('[Phase 0] Pre-flight validation...\n');
+    progressUI.updatePhase('Validating APIs', 'Testing Amazon endpoints');
 
     // 0.1: Verify we're on the right page
     console.log('  [0.1] Checking page URL...');
@@ -265,6 +388,7 @@ async function fetchAmazonCollections() {
     // Phase 1: Fetch All Books
     // ==========================================
     console.log('[Phase 1] Fetching all books with collections and read status...\n');
+    progressUI.updatePhase('Fetching Collections', 'Retrieving books and collection memberships');
 
     const activityInput = {
         contentType: 'Ebook',
@@ -412,6 +536,7 @@ async function fetchAmazonCollections() {
     // Phase 2: Process and Format Data
     // ==========================================
     console.log('[Phase 2] Processing book data...\n');
+    progressUI.updatePhase('Processing Data', `Organizing ${allBooks.length} books and read status`);
 
     let booksWithCollections = 0;
     const processedBooks = allBooks.map(book => {
@@ -449,6 +574,7 @@ async function fetchAmazonCollections() {
     // Phase 3: Generate JSON and Download
     // ==========================================
     console.log('[Phase 3] Generating JSON file...\n');
+    progressUI.updatePhase('Saving Collections', 'Generating and downloading JSON file');
 
     const outputData = {
         schemaVersion: SCHEMA_VERSION,
@@ -487,7 +613,19 @@ async function fetchAmazonCollections() {
     console.log('2. Upload both amazon-library.json AND amazon-collections.json to the organizer');
     console.log('3. The organizer will merge the data and enable collection filtering\n');
 
+    // Show completion in progress UI
+    progressUI.showComplete(`Downloaded ${allBooks.length} books to ${FILENAME}`);
+
 }
 
-// Auto-run on first paste
-fetchAmazonCollections();
+// Auto-run on first paste with error handling
+(async () => {
+    try {
+        await fetchAmazonCollections();
+    } catch (error) {
+        console.error('❌ Fatal error:', error);
+        if (typeof progressUI !== 'undefined' && progressUI.showError) {
+            progressUI.showError(error.message || 'An unknown error occurred');
+        }
+    }
+})();
