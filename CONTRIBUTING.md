@@ -2,22 +2,66 @@
 
 This guide provides a comprehensive overview of the project's documentation structure and development workflow.
 
+---
+
+## Getting Started with Local Development
+
+### Running the Application Locally
+
+Due to browser security restrictions (CORS policy), you need to run a local web server to use the application:
+
+1. **Start a local HTTP server** in the project directory:
+   ```bash
+   python -m http.server 8000
+   ```
+   Or with Python 2:
+   ```bash
+   python -m SimpleHTTPServer 8000
+   ```
+
+2. **Open your browser** and navigate to:
+   ```
+   http://localhost:8000/amazon-organizer.html
+   ```
+
+3. **Load your library**: Click the status indicator at the top to load your Amazon library JSON file
+
+4. **Start organizing**: Drag books into custom columns to organize your collection!
+
+### Why a local server?
+
+Browsers block JavaScript from loading local files (like your library JSON) when opening HTML files directly (`file://` protocol). Running a local HTTP server (`http://localhost`) allows the application to access these files securely.
+
+### Files
+
+- `amazon-organizer.html` - Main application HTML shell (v3.4.0)
+- `amazon-organizer.js` - Application JavaScript (v3.4.0)
+- `amazon-organizer.css` - Application styles (v3.2.0)
+- `library-fetcher.js` - Library data fetching utility (v3.3.2)
+- `collections-fetcher.js` - Collections data fetching utility (v1.0.0)
+- `bookmarklet-loader.js` - Smart bookmarklet loader (v1.0.0)
+- `install-bookmarklet.html` - Bookmarklet installer page (v1.0.0)
+- `amazon-book-organizer.code-workspace` - VS Code workspace configuration
+
+---
+
 ## Documentation Overview
 
 ### For All Contributors
 
 #### README.md
-**Purpose:** User-facing project overview and getting started guide
-**Audience:** End users and new contributors
+**Purpose:** User-facing project overview and quick start guide
+**Audience:** End users discovering the project via GitHub Pages or GitHub
 **Key Sections:**
-- Features overview
-- Technology stack
-- Getting started instructions (local server setup)
-- Files listing with version numbers
-- Claude Skills setup for development
+- Quick Start with bookmarklet installer link
+- Features overview (library management, organization, privacy)
+- Technology stack (brief)
+- App access methods (GitHub Pages, local development)
 - Project version (source of truth for git tags)
 
-**When to Update:** When adding user-facing features, changing setup process, or incrementing project version
+**When to Update:** When adding user-facing features or incrementing project version
+
+**Note:** Development setup has been moved to CONTRIBUTING.md (this file)
 
 #### CHANGELOG.md
 **Purpose:** Detailed version history with technical notes

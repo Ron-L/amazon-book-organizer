@@ -1,149 +1,90 @@
 # Amazon Book Organizer
 
-A web-based tool for organizing and managing your Amazon book library with advanced filtering, sorting, and organization features.
+A web-based tool for organizing and managing your Amazon book library with drag-and-drop organization, advanced filtering, and custom collections.
 
----
-
-## Documentation Guide
-
-**For Users:**
-- **README.md** (this file) - Project overview and getting started
-- **CHANGELOG.md** - Version history and release notes
-
-**For Contributors:**
-- **CONTRIBUTING.md** - Detailed documentation overview and development workflow
-- **TODO.md** - Current tasks and planned features
-- **SKILL-Development-Ground-Rules.md** - Workflow rules and development standards
-- **SKILL-Amazon-Book-Organizer.md** - Project architecture and patterns
-- **NOTES.md** - Session context and work-in-progress tracking
+**[Get Started →](https://ron-l.github.io/amazon-book-organizer/install-bookmarklet.html)**
 
 ---
 
 ## Quick Start
 
-Install the bookmarklet by clicking [here](https://ron-l.github.io/amazon-book-organizer/install-bookmarklet.html).
+1. **Install the bookmarklet**: Visit [install-bookmarklet.html](https://ron-l.github.io/amazon-book-organizer/install-bookmarklet.html)
+2. **Drag it to your bookmarks bar**
+3. **Go to Amazon**: Navigate to your [Amazon library page](https://www.amazon.com/yourbooks)
+4. **Click the bookmarklet**: Fetch your library data with one click
+5. **Organize your books**: Load the downloaded JSON file into the organizer
 
-The bookmarklet lets you fetch your Amazon library data directly from Amazon's website with one click. All processing happens in your browser - your data never leaves your computer.
+All processing happens in your browser - **your data never leaves your computer**.
+
+---
 
 ## Features
 
-- Import and organize your Amazon book library
-- Advanced filtering by author, series, and reading status
-- Sort books by various criteria
-- Export organized data
-- Client-side processing with IndexedDB storage
+### Library Management
+- **Import your entire Amazon library** with titles, authors, covers, descriptions, and ratings
+- **Advanced filtering** by author, series, genre, and reading status
+- **Smart search** across titles and authors
+- **Sort books** by various criteria (title, author, purchase date, etc.)
 
-## Technology Stack
+### Organization
+- **Drag-and-drop interface** for organizing books into custom collections
+- **Multi-select** with Ctrl/Shift for bulk operations
+- **Custom columns** for creating your own organization system
+- **Reading status tracking** from your Amazon collections
 
-- React (via CDN)
-- Tailwind CSS
-- IndexedDB for local storage
-- Vanilla JavaScript
+### Data & Privacy
+- **Client-side processing** - all data stays in your browser
+- **IndexedDB storage** for persistent local storage
+- **Export your organization** to JSON for backup
+- **No server uploads** - complete privacy
 
-## Getting Started
+---
 
-### Running the Application
+## Technology
 
-Due to browser security restrictions (CORS policy), you need to run a local web server to use the application:
+- **React** (via CDN) for UI components
+- **Tailwind CSS** for styling
+- **IndexedDB** for local storage
+- **Vanilla JavaScript** for data fetching
 
-1. **Start a local HTTP server** in the project directory:
-   ```bash
-   python -m http.server 8000
-   ```
-   Or with Python 2:
-   ```bash
-   python -m SimpleHTTPServer 8000
-   ```
+---
 
-2. **Open your browser** and navigate to:
-   ```
-   http://localhost:8000/amazon-organizer.html
-   ```
+## App Access
 
-3. **Load your library**: Click the status indicator at the top to load your Amazon library JSON file
+### Via GitHub Pages (Recommended)
+Visit the [installer page](https://ron-l.github.io/amazon-book-organizer/install-bookmarklet.html) to set up the bookmarklet.
 
-4. **Start organizing**: Drag books into custom columns to organize your collection!
+### Local Development
+For development or offline use, see [CONTRIBUTING.md](CONTRIBUTING.md) for local server setup instructions.
 
-### Why a local server?
+---
 
-Browsers block JavaScript from loading local files (like your library JSON) when opening HTML files directly (`file://` protocol). Running a local HTTP server (`http://localhost`) allows the application to access these files securely.
+## Documentation
 
-## Files
+- **[CHANGELOG.md](CHANGELOG.md)** - Version history and release notes
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development guide for contributors
+- **[TODO.md](TODO.md)** - Planned features and known issues
 
-- `amazon-organizer.html` - Main application HTML shell (v3.2.0)
-- `amazon-organizer.js` - Application JavaScript (v3.3.2)
-- `amazon-organizer.css` - Application styles (v3.2.0)
-- `library-fetcher.js` - Library data fetching utility (v3.3.2)
-- `collections-fetcher.js` - Collections data fetching utility (v1.0.0)
-- `amazon-book-organizer.code-workspace` - VS Code workspace configuration
-
-## Development with Claude
-
-This project uses **Claude Skills** to maintain development workflow consistency across sessions. If you're working with Claude on this project:
-
-### Required Skills
-
-Two skill files must be uploaded to Claude and enabled for this project:
-
-1. **software-development-ground-rules** (`SKILL-Development-Ground-Rules.zip`)
-   - Core development workflow rules
-   - Version management, approval workflow, git patterns
-   - **Enable globally** for all development projects
-
-2. **amazon-book-organizer-project** (`SKILL-Amazon-Book-Organizer.zip`)
-   - Project-specific context and architecture patterns
-   - Common pitfalls and solutions
-   - **Enable per project** when working on Amazon Book Organizer
-
-### How to Enable Skills
-
-1. Upload both `.zip` files to Claude's Skills interface (Settings → Skills)
-2. In each conversation, enable the relevant skills:
-   - Always enable: `software-development-ground-rules`
-   - Enable for this project: `amazon-book-organizer-project`
-
-**Important**: Skills must be manually enabled for each new conversation. Forgetting to enable them will result in inconsistent development patterns.
-
-### Updating Skills
-
-When the source files (`SKILL-*.md`) are modified, the zip files are automatically regenerated by a git pre-commit hook:
-
-1. **Make changes** to SKILL-*.md files as needed
-2. **Commit normally** - the git hook automatically rebuilds the .zip files
-   - You'll see: "🔨 Pre-commit hook: Rebuilding SKILL zip files..."
-   - No manual action required
-3. **Upload to Claude Skills interface**:
-   - Drag and drop the new `.zip` file onto the Skills page
-   - If the skill name already exists, it will prompt to replace it
-   - No need to manually delete the old skill first
-
-**Manual build scripts** (if git hook fails):
-```bash
-build-skill-ground-rules.bat
-build-skill-organizer.bat
-```
-
-**Note**: The git pre-commit hook (`.git/hooks/pre-commit`) is repository-local and not tracked by git. If you clone to a new location, you'll need to recreate it or use the manual build scripts
-
-### Key Documents
-
-- `CHANGELOG.md` - Contains Technical Notes documenting approaches that failed (prevents revisiting blind alleys)
-- `TODO.md` - Current tasks and pending improvements
-- `NOTES.md` - Session continuity file for tabled items and work-in-progress context
-- `SKILL-Development-Ground-Rules.md` - Source for the ground rules skill
-- `SKILL-Amazon-Book-Organizer.md` - Source for the project skill
-- `build-skill-*.bat` - Scripts to regenerate Skills zip files
+---
 
 ## Version
 
 **Project Version: v3.4.0**
 
-This is the project-level version used for git tags. Individual code files may have their own internal versions (e.g., `APP_VERSION` in amazon-organizer.js, version comments in CSS/JS files).
+Individual components may have their own versions (see files for details).
+
+---
 
 ## License
 
 MIT License - see LICENSE file for details
 
+---
+
 ## Author
 
 Ron-L
+
+---
+
+**Questions or issues?** Check the [documentation](CONTRIBUTING.md) or open an issue on GitHub.
