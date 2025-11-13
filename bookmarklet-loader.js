@@ -8,10 +8,9 @@
     const baseUrl = 'https://ron-l.github.io/amazon-book-organizer/';
 
     // Detect current page type
-    const onLibraryPage = currentUrl.includes('amazon.com/hz/mycd/myx') ||
-                          currentUrl.includes('amazon.com/yourbooks') ||
+    const onLibraryPage = currentUrl.includes('amazon.com/yourbooks') ||
                           currentUrl.includes('amazon.com/kindle/library');
-    const onCollectionsPage = currentUrl.includes('read.amazon.com/kindle-library');
+    const onCollectionsPage = currentUrl.includes('amazon.com/hz/mycd/digital-console');
 
     // Create intro dialog
     const dialog = document.createElement('div');
@@ -79,10 +78,10 @@
                 </ul>
             </div>
             <button id="runLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
-                📖 Run Library Fetcher
+                📖 Fetch Your Book List
             </button>
             <button id="goCollections" style="${secondaryButtonStyle} width: 100%;">
-                📚 Go to Collections Page Instead
+                📚 Go to Collections Page to Fetch Collections
             </button>
         `;
     } else if (onCollectionsPage) {
@@ -101,10 +100,10 @@
                 </ul>
             </div>
             <button id="runCollections" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
-                📚 Run Collections Fetcher
+                📚 Fetch Your Book Collections
             </button>
             <button id="goLibrary" style="${secondaryButtonStyle} width: 100%;">
-                📖 Go to Library Page Instead
+                📖 Go to Library Page to Fetch Book List
             </button>
         `;
     } else {
@@ -118,10 +117,10 @@
                 Choose which data to fetch:
             </div>
             <button id="goLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
-                📖 Go to Library Page
+                📖 Go to Library Page to Fetch Book List
             </button>
             <button id="goCollections" style="${primaryButtonStyle} width: 100%; margin-bottom: 15px;">
-                📚 Go to Collections Page
+                📚 Go to Collections Page to Fetch Collections
             </button>
             <button id="cancel" style="${secondaryButtonStyle} width: 100%;">
                 Cancel
@@ -159,7 +158,7 @@
     if (goLibraryBtn) {
         goLibraryBtn.onclick = () => {
             dialog.remove();
-            window.location.href = 'https://www.amazon.com/hz/mycd/myx';
+            window.location.href = 'https://www.amazon.com/yourbooks';
         };
     }
 
@@ -167,7 +166,7 @@
     if (goCollectionsBtn) {
         goCollectionsBtn.onclick = () => {
             dialog.remove();
-            window.location.href = 'https://read.amazon.com/kindle-library';
+            window.location.href = 'https://www.amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/';
         };
     }
 
