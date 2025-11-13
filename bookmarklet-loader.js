@@ -1,10 +1,10 @@
-// Amazon Book Organizer Bookmarklet Loader v1.1.0
+// Amazon Book Organizer Bookmarklet Loader v1.0.0
 // Smart bookmarklet with intro dialog and navigation
 
 (function() {
     'use strict';
 
-    const LOADER_VERSION = 'v1.1.0';
+    const LOADER_VERSION = 'v1.0.0';
 
     const currentUrl = window.location.href;
     const baseUrl = 'https://ron-l.github.io/amazon-book-organizer/';
