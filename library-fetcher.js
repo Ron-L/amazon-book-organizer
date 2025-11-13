@@ -136,6 +136,7 @@ async function fetchAmazonLibrary() {
                     Initializing
                 </div>
                 <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
+                    ⏱️ Large libraries take time: ~1 hour per 1000 books<br>
                     💡 Open Console (F12) for detailed progress<br>
                     🔄 Refresh page to cancel
                 </div>

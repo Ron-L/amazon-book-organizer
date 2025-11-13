@@ -4,6 +4,8 @@
 (function() {
     'use strict';
 
+    const LOADER_VERSION = 'v1.1.0';
+
     const currentUrl = window.location.href;
     const baseUrl = 'https://ron-l.github.io/amazon-book-organizer/';
 
@@ -99,10 +101,10 @@
                     <li>Download as JSON file to merge with library</li>
                 </ul>
             </div>
-            <button id="goLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
+            <button id="goLibrary" style="${secondaryButtonStyle} width: 100%; margin-bottom: 10px;">
                 📖 Go to Library Page to Fetch Book List
             </button>
-            <button id="runCollections" style="${secondaryButtonStyle} width: 100%;">
+            <button id="runCollections" style="${primaryButtonStyle} width: 100%;">
                 📚 Fetch Your Book Collections
             </button>
         `;
@@ -158,7 +160,13 @@
     if (goLibraryBtn) {
         goLibraryBtn.onclick = () => {
             dialog.remove();
-            window.location.href = 'https://www.amazon.com/yourbooks';
+            // Show reminder before navigation
+            setTimeout(() => {
+                alert('📚 Navigating to your library page...\n\nOnce the page loads, click the bookmarklet in your toolbar to fetch your books.');
+            }, 100);
+            setTimeout(() => {
+                window.location.href = 'https://www.amazon.com/yourbooks';
+            }, 200);
         };
     }
 
@@ -166,7 +174,13 @@
     if (goCollectionsBtn) {
         goCollectionsBtn.onclick = () => {
             dialog.remove();
-            window.location.href = 'https://www.amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/';
+            // Show reminder before navigation
+            setTimeout(() => {
+                alert('📚 Navigating to collections page...\n\nOnce the page loads, click the bookmarklet in your toolbar to fetch your collections.');
+            }, 100);
+            setTimeout(() => {
+                window.location.href = 'https://www.amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/';
+            }, 200);
         };
     }
 
@@ -174,6 +188,12 @@
     if (cancelBtn) {
         cancelBtn.onclick = () => dialog.remove();
     }
+
+    // Add version footer to dialog
+    const versionFooter = document.createElement('div');
+    versionFooter.style.cssText = 'text-align: center; margin-top: 20px; color: #999; font-size: 11px;';
+    versionFooter.textContent = LOADER_VERSION;
+    dialog.appendChild(versionFooter);
 
     // Hover effects
     dialog.querySelectorAll('button').forEach(btn => {

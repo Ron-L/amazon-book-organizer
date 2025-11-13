@@ -189,6 +189,32 @@ Before removing version letter (finalizing release):
 - Tag the release: `git tag v3.1.0` (use actual version number, not this example)
 - Push with tags: `git push origin main --tags`
 
+### Testing Workflow (Local and Server-Based)
+
+**Applies to:** All code changes, whether testing locally or on GitHub Pages server
+
+**Unified Workflow:**
+
+1. **Version BEFORE code changes** (Ground Rule #1)
+2. **Make code changes**
+3. **Commit immediately** (capture iteration history for potential squashing before merge)
+4. **Push** (enables server testing and maintains consistent workflow)
+5. **Test:**
+   - **Server testing**: Test on https://ron-l.github.io/amazon-book-organizer/
+   - **Local testing**: Test locally (console paste, local server, etc.)
+6. **If bugs found**, increment version letter and repeat from step 2
+7. **When stable**, merge to main (squash commits if desired)
+
+**Key Insight:** The workflow is identical - the only difference is where you test (step 5).
+
+**Files testable locally or on server:**
+- amazon-organizer.html, amazon-organizer.js (local server or GitHub Pages)
+- library-fetcher.js, collections-fetcher.js (console paste or via bookmarklet)
+
+**Files requiring server testing:**
+- bookmarklet-loader.js (loaded via bookmarklet, cannot run locally)
+- install-bookmarklet.html (references GitHub Pages URLs)
+
 ### Documentation-Only Changes
 - Documentation files (README, CHANGELOG, TODO, NOTES, SKILL-*.md, .gitignore) can be modified directly on main branch
 - No feature branch required
