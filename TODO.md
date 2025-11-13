@@ -1,9 +1,5 @@
 # TODO
 
-**See [PLAN-Feature-Roadmap.md](PLAN-Feature-Roadmap.md) for detailed implementation plans and prioritization.**
-
----
-
 ## Current Priorities (User-Defined)
 
 1. 📄 **README Refactor** - 1-2 hours (PLANNED - Next priority)
@@ -11,8 +7,6 @@
 3. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
 4. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
 5. ✨ **UX Quick Wins** (various) - 1-3 hours each
-
-**Detailed specifications**: See [PLAN-Feature-Roadmap.md](PLAN-Feature-Roadmap.md)
 
 ---
 
