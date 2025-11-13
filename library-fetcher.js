@@ -486,7 +486,7 @@ async function fetchAmazonLibrary() {
     try {
         // Step 1: Load existing data (if any)
         console.log('[1/6] Checking for existing library data...');
-        progressUI.updatePhase('[1/6] Checking Library Data', 'Select existing library file or cancel to fetch all books');
+        progressUI.updatePhase('Checking Library Data', 'Select existing library file or cancel to fetch all books');
         console.log('');
         console.log('   📂 A file picker dialog will open...');
         console.log('');
@@ -548,7 +548,7 @@ async function fetchAmazonLibrary() {
 
         // Step 2: Find CSRF token
         console.log('[2/6] Getting CSRF token...');
-        progressUI.updatePhase('[2/6] Getting CSRF Token', 'Authenticating with Amazon API');
+        progressUI.updatePhase('Getting CSRF Token', 'Authenticating with Amazon API');
         const csrfMeta = document.querySelector('meta[name="anti-csrftoken-a2z"]');
 
         if (!csrfMeta) {
@@ -560,7 +560,7 @@ async function fetchAmazonLibrary() {
 
         // Phase 0: Validate API endpoints before fetching
         console.log('[Phase 0] Validating Amazon API endpoints...');
-        progressUI.updatePhase('[Phase 0] Validating APIs', 'Testing Amazon endpoints and extraction logic');
+        progressUI.updatePhase('Validating APIs', 'Testing Amazon endpoints and extraction logic');
         stats.timing.phase0Start = Date.now();
         console.log('   Testing library query...');
 
@@ -918,7 +918,7 @@ async function fetchAmazonLibrary() {
         // Step 3: Fetch new books (Pass 1)
         stats.timing.pass1Start = Date.now();
         console.log('[3/6] Fetching new books from library...');
-        progressUI.updatePhase('[3/6] Fetching Titles', 'Retrieving books from your library');
+        progressUI.updatePhase('Fetching Titles', 'Retrieving books from your library');
         console.log('   Will stop when we reach existing books\n');
 
         const newBooks = [];
@@ -1248,7 +1248,7 @@ async function fetchAmazonLibrary() {
         // Step 4: Enrich new books (Pass 2)
         stats.timing.pass2Start = Date.now();
         console.log('[4/6] Enriching new books with descriptions & reviews...');
-        progressUI.updatePhase('[4/6] Enriching Data', `Fetching descriptions & reviews for ${newBooks.length} books`);
+        progressUI.updatePhase('Enriching Data', `Fetching descriptions & reviews for ${newBooks.length} books`);
 
         const estimatedTime = Math.ceil((newBooks.length * ENRICH_DELAY_MS) / 1000 / 60);
         console.log(`   Estimated time: ~${estimatedTime} minutes\n`);
@@ -1449,7 +1449,7 @@ async function fetchAmazonLibrary() {
         // Step 5: Merge and save library
         stats.timing.mergeStart = Date.now();
         console.log('[5/6] Merging with existing data and saving library...');
-        progressUI.updatePhase('[5/6] Saving Library', 'Merging and downloading library file');
+        progressUI.updatePhase('Saving Library', 'Merging and downloading library file');
 
         // Prepend new books (most recent first)
         const finalBooks = [...newBooks, ...existingBooks];
@@ -1483,7 +1483,7 @@ async function fetchAmazonLibrary() {
 
         // Step 6: Create and save manifest
         console.log('[6/6] Creating manifest file...');
-        progressUI.updatePhase('[6/6] Creating Manifest', 'Generating metadata file');
+        progressUI.updatePhase('Creating Manifest', 'Generating metadata file');
 
         const manifest = {
             schemaVersion: SCHEMA_VERSION,

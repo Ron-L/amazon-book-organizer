@@ -99,11 +99,11 @@
                     <li>Download as JSON file to merge with library</li>
                 </ul>
             </div>
-            <button id="runCollections" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
-                📚 Fetch Your Book Collections
-            </button>
-            <button id="goLibrary" style="${secondaryButtonStyle} width: 100%;">
+            <button id="goLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
                 📖 Go to Library Page to Fetch Book List
+            </button>
+            <button id="runCollections" style="${secondaryButtonStyle} width: 100%;">
+                📚 Fetch Your Book Collections
             </button>
         `;
     } else {
