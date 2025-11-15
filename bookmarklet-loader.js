@@ -1,19 +1,34 @@
-// ReaderWrangler Bookmarklet Loader v1.0.2.b
+// ReaderWrangler Bookmarklet Loader v1.0.2.c
 // Smart bookmarklet with intro dialog and navigation
 
 (function() {
     'use strict';
 
-    const LOADER_VERSION = 'v1.0.2.b';
+    const LOADER_VERSION = 'v1.0.2.c';
 
     const currentUrl = window.location.href;
 
-    // Detect localhost for development testing
+    // Environment detection
+    // Production = readerwrangler.com (users get optimal caching)
+    // Dev = localhost OR github.io (developers get fresh code)
     const isLocalhost = window.location.hostname === 'localhost' ||
                        window.location.hostname === '127.0.0.1';
+    const IS_PRODUCTION = window.location.hostname === 'readerwrangler.com';
+    const IS_DEV = !IS_PRODUCTION;
+
     const baseUrl = isLocalhost
         ? 'http://localhost:8000/'
-        : 'https://ron-l.github.io/readerwrangler/';
+        : IS_PRODUCTION
+            ? 'https://readerwrangler.com/'
+            : 'https://ron-l.github.io/readerwrangler/';
+
+    // Debug logging
+    console.log(`📚 ReaderWrangler Loader ${LOADER_VERSION}`);
+    console.log(`   Hostname: ${window.location.hostname}`);
+    console.log(`   isLocalhost: ${isLocalhost}`);
+    console.log(`   IS_PRODUCTION: ${IS_PRODUCTION}`);
+    console.log(`   IS_DEV: ${IS_DEV}`);
+    console.log(`   baseUrl: ${baseUrl}`);
 
     // Detect current page type
     const onLibraryPage = currentUrl.includes('amazon.com/yourbooks') ||
@@ -141,11 +156,8 @@
             <button id="goLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
                 📖 Go to Library Page to Fetch Book List
             </button>
-            <button id="goCollections" style="${primaryButtonStyle} width: 100%; margin-bottom: 15px;">
+            <button id="goCollections" style="${primaryButtonStyle} width: 100%;">
                 📚 Go to Collections Page to Fetch Collections
-            </button>
-            <button id="cancel" style="${secondaryButtonStyle} width: 100%;">
-                Cancel
             </button>
         `;
     }
@@ -158,7 +170,14 @@
         dialog.remove();
         console.log(`📚 ReaderWrangler: Loading ${description}...`);
         const script = document.createElement('script');
-        script.src = baseUrl + scriptName;
+
+        // Cache-busting in dev environments for fresh code
+        const cacheBuster = IS_DEV ? '?v=' + Date.now() : '';
+        script.src = baseUrl + scriptName + cacheBuster;
+
+        console.log(`   Loading from: ${script.src}`);
+        console.log(`   Cache-busting enabled: ${IS_DEV}`);
+
         script.onerror = function() {
             alert(`❌ Failed to load ${description}. Please check your internet connection.`);
         };
@@ -204,10 +223,6 @@
         };
     }
 
-    const cancelBtn = dialog.querySelector('#cancel');
-    if (cancelBtn) {
-        cancelBtn.onclick = () => dialog.remove();
-    }
 
     // Add version footer to dialog
     const versionFooter = document.createElement('div');
