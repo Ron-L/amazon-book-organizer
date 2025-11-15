@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.0] - 2025-11-14
+
+### Changed
+- **Project Renamed to ReaderWrangler** - Rebranded from "Amazon Book Organizer" to "ReaderWrangler" to better reflect multi-platform vision and avoid trademark issues
+  - Updated product name throughout UI, documentation, and code
+  - **File Renames**:
+    - `amazon-organizer.html` → `readerwrangler.html` (main app)
+    - `amazon-organizer.js` → `readerwrangler.js` (generic organizer UI)
+    - `amazon-organizer.css` → `readerwrangler.css` (generic styles)
+    - `library-fetcher.js` → `amazon-library-fetcher.js` (Amazon-specific fetcher)
+    - `collections-fetcher.js` → `amazon-collections-fetcher.js` (Amazon-specific fetcher)
+    - `amazon-book-organizer.code-workspace` → `readerwrangler.code-workspace`
+    - `SKILL-Amazon-Book-Organizer.md` → `SKILL-ReaderWrangler.md`
+  - Updated all GitHub Pages URLs: `amazon-book-organizer` → `readerwrangler`
+  - Generalized product descriptions: "Amazon library" → "ebook library"
+  - Updated backup filename: `amazon-book-backup-*.json` → `readerwrangler-backup-*.json`
+  - Updated React component name: `AmazonBookOrganizer` → `ReaderWrangler`
+  - Kept Amazon-specific references where appropriate (data files, CDN URLs, Amazon trademark notices)
+  - Updated versions:
+    - Main app files: v3.5.0 (readerwrangler.html, readerwrangler.js, readerwrangler.css)
+    - Distribution tools: v1.0.1 (bookmarklet-loader.js, install-bookmarklet.html)
+    - Amazon fetchers: No version change (amazon-library-fetcher.js v3.3.2, amazon-collections-fetcher.js v1.0.0)
+
+### Added
+- **Store field** - Added `store: "Amazon"` field to all book records to prepare for future multi-platform support (Barnes & Noble, etc.)
+  - Data structure enhancement for future integration of multiple ebook stores
+  - Currently hardcoded to "Amazon" in all existing book processing
+
+### Technical Notes
+- Storage keys renamed to avoid conflicts: `amazon-book-organizer-state` → `readerwrangler-state`, `AmazonBookDB` → `ReaderWranglerDB`
+- Historical references in CHANGELOG, NOTES, and TODO kept as-is per ground rules
+- README already updated in previous session with generalized product messaging
+
 ### Distribution Tools
 
 #### [bookmarklet-loader.js v1.0.0] - 2025-11-13

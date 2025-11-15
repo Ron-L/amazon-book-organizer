@@ -1,11 +1,11 @@
-        // Amazon Book Organizer JS v3.4.0
+        // ReaderWrangler JS v3.5.0.a
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.4.0";
-        document.title = `Amazon Book Organizer ${APP_VERSION}`;
-        const STORAGE_KEY = "amazon-book-organizer-state";
-        const CACHE_KEY = "amazon-book-enriched-cache";
-        const SETTINGS_KEY = "amazon-book-organizer-settings";
-        const DB_NAME = "AmazonBookDB";
+        const APP_VERSION = "v3.5.0.a";
+        document.title = `ReaderWrangler ${APP_VERSION}`;
+        const STORAGE_KEY = "readerwrangler-state";
+        const CACHE_KEY = "readerwrangler-enriched-cache";
+        const SETTINGS_KEY = "readerwrangler-settings";
+        const DB_NAME = "ReaderWranglerDB";
         const DB_VERSION = 1;
         const BOOKS_STORE = "books";
         const MANIFEST_CHECK_INTERVAL = 60000; // 60 seconds
@@ -114,7 +114,7 @@
             console.log('✅ Cleared IndexedDB');
         };
         
-        function AmazonBookOrganizer() {
+        function ReaderWrangler() {
             const [books, setBooks] = useState([]);
             const [columns, setColumns] = useState([{ id: 'unorganized', name: 'Unorganized', books: [] }]);
             const [searchTerm, setSearchTerm] = useState('');
@@ -573,7 +573,7 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `amazon-book-backup-${new Date().toISOString().split('T')[0]}.json`;
+                    a.download = `readerwrangler-backup-${new Date().toISOString().split('T')[0]}.json`;
                     a.click();
                     URL.revokeObjectURL(url);
                     console.log('✅ Backup created');
@@ -845,6 +845,7 @@
                             binding: item.binding || 'Kindle eBook',
                             coverUrl: item.coverUrl,
                             hasEnrichedData: true,
+                            store: "Amazon",
                             // Collections data
                             readStatus: bookCollections.readStatus,
                             collections: bookCollections.collections
@@ -879,6 +880,7 @@
                             binding: amazonData?.bindingInformation?.binding?.displayString || 'Kindle eBook',
                             coverUrl: coverUrl,
                             hasEnrichedData: true,
+                            store: "Amazon",
                             // Collections data
                             readStatus: bookCollections.readStatus,
                             collections: bookCollections.collections
@@ -1507,7 +1509,7 @@
                             <div className="flex items-center gap-3">
                                 <div>
                                     <h1 className="text-2xl font-bold text-gray-900">
-                                        Amazon Book Organizer
+                                        ReaderWrangler
                                         {books.length > 0 && <span className="text-lg text-gray-500 ml-2">({books.length} books)</span>}
                                     </h1>
                                     <p className="text-sm text-gray-600 mt-1">
@@ -1620,7 +1622,7 @@
                                         </div>
                                         <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
                                             <p><strong>To add new books:</strong></p>
-                                            <p className="mt-1">Run the fetcher console script on amazon.com/yourbooks, then click the Stale indicator to load the updated library.</p>
+                                            <p className="mt-1">Click the bookmarklet on your online library page to fetch updated data, then click the Stale indicator to reload.</p>
                                         </div>
                                     </div>
                                 )}
@@ -1655,11 +1657,10 @@
                                         <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
                                             <p><strong>To get started:</strong></p>
                                             <ol className="list-decimal ml-4 mt-2 space-y-1">
-                                                <li>If you haven't already, run the fetcher console script on amazon.com/yourbooks (see README) to generate the library JSON file. Move the file from Downloads to your project folder.</li>
-                                                <li>Click "Load Library" below to upload the file.</li>
+                                                <li>Install the bookmarklet (see README for installer link)</li>
+                                                <li>Go to your online library page and click the bookmarklet to fetch your books</li>
+                                                <li>Click "Load Library" below to upload the downloaded JSON file</li>
                                             </ol>
-                                            {/* TODO: Once GitHub Pages deployment is implemented, update this instruction to explain
-                                                the bookmarklet approach instead of manual console script + file management. */}
                                         </div>
                                         <button 
                                             onClick={syncNow}
@@ -1744,8 +1745,9 @@
                                     <div>
                                         <h3 className="font-semibold text-gray-900 mb-1">📚 Getting Your Books</h3>
                                         <ul className="list-disc list-inside space-y-1 ml-2">
-                                            <li><strong>Run Fetcher:</strong> Go to amazon.com/yourbooks and run the Console Fetcher script</li>
-                                            <li><strong>Auto-saves:</strong> Fetcher creates amazon-library.json in your Downloads</li>
+                                            <li><strong>Install Bookmarklet:</strong> Visit the installer page (see README) and drag the bookmarklet to your toolbar</li>
+                                            <li><strong>Run Fetcher:</strong> Go to your online library page and click the bookmarklet</li>
+                                            <li><strong>Auto-saves:</strong> Fetcher creates library JSON in your Downloads</li>
                                             <li><strong>First Load:</strong> Click status indicator to load library</li>
                                             <li><strong>Updates:</strong> Run fetcher again, then sync when you see Stale indicator</li>
                                         </ul>
@@ -2376,4 +2378,4 @@
             );
         }
 
-        ReactDOM.render(<AmazonBookOrganizer />, document.getElementById('root'));
+        ReactDOM.render(<ReaderWrangler />, document.getElementById('root'));

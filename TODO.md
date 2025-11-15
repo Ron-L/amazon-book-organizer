@@ -2,7 +2,9 @@
 
 ## Current Priorities (User-Defined)
 
-1. 📄 **README Refactor** - 1-2 hours (PLANNED - Next priority)
+1. 🏷️ **Project Rename to ReaderWrangler** - 2-3 hours (IN PROGRESS)
+   - **Release 1**: Rename repository + update all files
+   - **Release 2**: Enhanced Getting Started UX (Help menu + empty state)
 2. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
 3. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
 4. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
@@ -341,7 +343,7 @@
   - Helps users understand performance and estimate future fetches
 
 - [ ] **Distribution: GitHub Pages + Bookmarklets**
-  - **Goal**: Make Amazon Book Organizer easy for others to use
+  - **Goal**: Make ReaderWrangler easy for others to use
   - **Documentation**: See [DISTRIBUTION.md](DISTRIBUTION.md) for complete guide
   - **Summary**:
     - Host organizer app on GitHub Pages (free, HTTPS, auto-deploy)
@@ -400,7 +402,7 @@
 
 - [ ] **Tooltips for control buttons** - Add helpful tooltips for Backup, Restore, Reset, Clear Everything buttons explaining what each does
 - [ ] **First-run Welcome dialog** - Show welcome dialog on first run (or after Clear Everything) that:
-  - Explains what Amazon Book Organizer is and why it exists
+  - Explains what ReaderWrangler is and why it exists
   - Points to the help icon ("?") for detailed usage instructions
   - Dismisses permanently (or until next clear)
   - Should run only once per fresh start
@@ -412,7 +414,213 @@
 - [ ] Add title & author text under book covers (~5-8K tokens)
 - [ ] Multi-select with Ctrl/Shift clicking (~15-25K tokens)
 
-## README Refactor Plan (Priority #2)
+## Project Rename Plan (Priority #1) - IN PROGRESS
+
+**New Name**: ReaderWrangler™
+
+**Strategy**: Two separate releases for safety
+
+### Release 1: Repository Rename + File Updates (v3.5.0)
+
+**Branch**: `feature-rename-to-readerwrangler`
+
+**Rename Ground Rules**:
+
+**KEEP Amazon/Kindle references when:**
+- Legal/trademark notices (required)
+- Platform-specific features ("Current Support: Amazon Kindle™ Library")
+- Historical CHANGELOG entries (history never changes)
+- Specific technical instructions ("Navigate to Amazon library page")
+- Amazon-specific file functionality (library-fetcher.js fetches from Amazon API)
+
+**CHANGE Amazon references when:**
+- Generic product descriptions ("Amazon library" → "ebook library")
+- Generic feature descriptions ("organize your Amazon books" → "organize your ebooks")
+- Non-specific UI text (app title, headers)
+- File names and URLs that are product-branded
+
+**File Changes Required**:
+- [ ] Rename `amazon-organizer.html` → `readerwrangler.html`
+- [ ] Update `amazon-organizer.js` - product name, browser title, generic descriptions
+- [ ] Update `amazon-organizer.css` - any Amazon-specific references
+- [ ] Keep `library-fetcher.js` name (Amazon-specific, will have `barnes-noble-fetcher.js` later)
+- [ ] Keep `collections-fetcher.js` name (same reasoning)
+- [ ] Update `bookmarklet-loader.js` - GitHub Pages URLs, product name
+- [ ] Update `install-bookmarklet.html` - GitHub Pages URLs, product name
+- [ ] Update README.md - Already done (generalized to ebook library)
+- [ ] Update CONTRIBUTING.md - Title, project references, file names
+- [ ] Rename `SKILL-Amazon-Book-Organizer.md` → `SKILL-ReaderWrangler.md`
+- [ ] Update SKILL-ReaderWrangler.md - Internal project references
+- [ ] Rename `amazon-book-organizer.code-workspace` → `readerwrangler.code-workspace`
+- [ ] Update TODO.md - Project name references (not historical changelog items)
+- [ ] Update NOTES.md - Current project name (not historical entries)
+- [ ] CHANGELOG.md - Add new v3.5.0 entry, DO NOT change historical entries
+
+**GitHub URLs to Update**:
+- All instances of `https://ron-l.github.io/amazon-book-organizer/` → `https://ron-l.github.io/readerwrangler/`
+- Internal links in README, CONTRIBUTING, etc.
+
+**Workflow**:
+1. Create feature branch
+2. Update all files with renamed references
+3. Test locally with http server
+4. Commit changes
+5. Merge to main
+6. **User renames GitHub repository** (amazon-book-organizer → readerwrangler)
+7. Update local git remote URL
+8. Test GitHub Pages with new URL
+9. Tag v3.5.0
+10. Push with tags
+
+**Testing**:
+- [ ] Bookmarklet loads from new GitHub Pages URL
+- [ ] App works at new URL
+- [ ] All internal links resolve correctly
+- [ ] GitHub auto-redirects old URLs
+
+### Release 2: Enhanced Getting Started UX (v3.5.1)
+
+**Branch**: `feature-getting-started-ux`
+
+**Changes**:
+1. **Help Menu Links** (5 min)
+   - Add "Getting Started Guide" → README.md#quick-start
+   - Add "About ReaderWrangler" → README.md
+
+2. **Enhanced Empty Library State** (30 min)
+   - Detect: No library in IndexedDB on load
+   - Show: Helpful banner in library status area
+   - Content: "No library loaded yet. [Install Bookmarklet & Get Started →] [Load Existing JSON]"
+   - Link to README#quick-start for new users
+   - Existing file picker for returning users
+
+**Workflow**:
+1. Create feature branch (after Release 1 complete)
+2. Add Help menu links
+3. Enhance empty library state
+4. Test with empty and populated libraries
+5. Commit, merge, tag v3.5.1
+6. Done
+
+---
+
+## Multi-Store Architecture Plan
+
+**Goal**: Support multiple ebook stores (Amazon, Barnes & Noble, Kobo, etc.) while maintaining clean separation between platform-specific and generic code.
+
+### File Naming Convention: Store-First
+
+**Fetcher Scripts** (platform-specific):
+- `amazon-library-fetcher.js` - Fetches Amazon library data
+- `amazon-collections-fetcher.js` - Fetches Amazon collections/read status
+- `bn-library-fetcher.js` - Future: Barnes & Noble library fetcher
+- `kobo-library-fetcher.js` - Future: Kobo library fetcher
+
+**Data Files** (store-specific):
+- `amazon-library.json` - Amazon library data (books with `store: "Amazon"` field)
+- `amazon-collections.json` - Amazon collections/read status data
+- `amazon-manifest.json` - Amazon library metadata (total books, last updated)
+- `bn-library.json` - Future: B&N library data (books with `store: "BarnesNoble"` field)
+- `bn-manifest.json` - Future: B&N library metadata
+
+**Organizer App** (store-agnostic):
+- `readerwrangler.html` - Main app shell
+- `readerwrangler.js` - Generic organizer logic (works with any store)
+- `readerwrangler.css` - Generic styles
+- App merges all loaded library files using `store` field to identify source
+
+### Bookmarklet Smart Detection
+
+**Current Implementation** (Amazon-only):
+```javascript
+const onLibraryPage = currentUrl.includes('amazon.com/yourbooks') ||
+                      currentUrl.includes('amazon.com/kindle/library');
+const onCollectionsPage = currentUrl.includes('amazon.com/hz/mycd/digital-console');
+```
+
+**Future Multi-Store Implementation**:
+- Detect current store from URL (amazon.com, barnesandnoble.com, etc.)
+- **On store library page**: Offer to fetch library OR navigate to collections page
+- **On store collections page**: Offer to fetch collections OR navigate to library page
+- **On non-store page**: Present menu of all supported stores to navigate to
+- Each store loads its platform-specific fetcher script
+
+**Bookmarklet Dialog Behavior**:
+1. **On amazon.com/yourbooks**:
+   - Primary: "📖 Fetch Your Amazon Books" → loads `amazon-library-fetcher.js`
+   - Secondary: "📚 Go to Amazon Collections Page" → navigates to collections
+
+2. **On amazon.com/hz/mycd/digital-console**:
+   - Primary: "📚 Fetch Your Amazon Collections" → loads `amazon-collections-fetcher.js`
+   - Secondary: "📖 Go to Amazon Library Page" → navigates to library
+
+3. **On barnesandnoble.com/nook/library** (future):
+   - Primary: "📖 Fetch Your B&N Books" → loads `bn-library-fetcher.js`
+   - Secondary: "📚 Go to B&N Collections Page" (if applicable)
+
+4. **On random page**:
+   - "Choose your ebook store:"
+   - Button: "📖 Amazon Kindle" → navigates to amazon.com/yourbooks
+   - Button: "📖 Barnes & Noble" → navigates to bn.com/nook/library
+   - Button: "📖 Kobo" → navigates to kobo.com/library
+
+### Data Structure
+
+**Book Object** (all stores):
+```javascript
+{
+    id: "B00ABCD123",           // Store-specific ID
+    asin: "B00ABCD123",         // Amazon-specific (present for Amazon books only)
+    title: "Book Title",
+    author: "Author Name",
+    store: "Amazon",            // NEW FIELD - identifies source store
+    coverUrl: "...",            // Store-specific CDN URL
+    // ... other fields
+}
+```
+
+**App Loading Behavior**:
+1. User clicks "Load Library" → file picker opens
+2. User can select multiple JSON files: `amazon-library.json`, `bn-library.json`, etc.
+3. App loads all files, merges into single library using `store` field
+4. Books can be filtered/searched by store if needed
+5. Each book retains its store identity for proper cover URLs, links, etc.
+
+### Migration Path
+
+**Phase 1: Amazon Rename** (v3.5.0) - Current Release
+- Add `store: "Amazon"` field to all Amazon books ✅
+- Use store-specific filenames (`amazon-library.json`, `amazon-collections.json`) ✅
+- Keep bookmarklet Amazon-only (no multi-store detection yet)
+
+**Phase 2: Multi-Store Foundation** (future v3.6.0)
+- Update bookmarklet with multi-store URL detection
+- Add store selection menu for non-store pages
+- Update organizer to handle multiple loaded libraries
+
+**Phase 3: Additional Stores** (future v3.7.0+)
+- Implement `bn-library-fetcher.js` for Barnes & Noble
+- Add B&N URL patterns to bookmarklet
+- Test with multi-store library (Amazon + B&N books in same organizer)
+
+**Phase 4: Store-Specific Features** (future)
+- Add store icons/badges in UI
+- Filter by store
+- Store-specific help text
+- Handle store-specific data fields (collections might differ)
+
+### Benefits of This Architecture
+
+1. **Clean Separation**: Generic organizer code never knows about specific stores
+2. **Easy Testing**: Can develop B&N fetcher without touching organizer
+3. **Scalable**: Adding new stores = new fetcher script + URL patterns
+4. **User Flexibility**: Users can fetch/organize from multiple stores
+5. **No Conflicts**: Store-specific filenames prevent overwrites
+6. **Future-Proof**: `store` field enables per-store filtering/features later
+
+---
+
+## README Refactor Plan - ✅ COMPLETED
 
 **Goal**: Split README into user-facing and developer-facing content
 

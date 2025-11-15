@@ -1,13 +1,13 @@
-// Amazon Book Organizer Bookmarklet Loader v1.0.0
+// ReaderWrangler Bookmarklet Loader v1.0.1.a
 // Smart bookmarklet with intro dialog and navigation
 
 (function() {
     'use strict';
 
-    const LOADER_VERSION = 'v1.0.0';
+    const LOADER_VERSION = 'v1.0.1.a';
 
     const currentUrl = window.location.href;
-    const baseUrl = 'https://ron-l.github.io/amazon-book-organizer/';
+    const baseUrl = 'https://ron-l.github.io/readerwrangler/';
 
     // Detect current page type
     const onLibraryPage = currentUrl.includes('amazon.com/yourbooks') ||
@@ -57,10 +57,10 @@
     let dialogContent = `
         <div style="font-size: 48px; margin-bottom: 15px;">📚</div>
         <div style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 15px;">
-            Amazon Book Organizer
+            ReaderWrangler
         </div>
         <div style="font-size: 14px; color: #666; margin-bottom: 20px; line-height: 1.6;">
-            Fetch and organize your Amazon book library with a drag-and-drop interface.
+            Fetch and organize your ebook library with a drag-and-drop interface.
         </div>
     `;
 
@@ -136,7 +136,7 @@
     // Helper function to load script
     function loadScript(scriptName, description) {
         dialog.remove();
-        console.log(`📚 Amazon Book Organizer: Loading ${description}...`);
+        console.log(`📚 ReaderWrangler: Loading ${description}...`);
         const script = document.createElement('script');
         script.src = baseUrl + scriptName;
         script.onerror = function() {
@@ -148,12 +148,12 @@
     // Event handlers
     const runLibraryBtn = dialog.querySelector('#runLibrary');
     if (runLibraryBtn) {
-        runLibraryBtn.onclick = () => loadScript('library-fetcher.js', 'library fetcher');
+        runLibraryBtn.onclick = () => loadScript('amazon-library-fetcher.js', 'library fetcher');
     }
 
     const runCollectionsBtn = dialog.querySelector('#runCollections');
     if (runCollectionsBtn) {
-        runCollectionsBtn.onclick = () => loadScript('collections-fetcher.js', 'collections fetcher');
+        runCollectionsBtn.onclick = () => loadScript('amazon-collections-fetcher.js', 'collections fetcher');
     }
 
     const goLibraryBtn = dialog.querySelector('#goLibrary');

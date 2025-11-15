@@ -1,4 +1,4 @@
-# Contributing to Amazon Book Organizer
+# Contributing to ReaderWrangler
 
 This guide provides a comprehensive overview of the project's documentation structure and development workflow.
 
@@ -21,10 +21,10 @@ Due to browser security restrictions (CORS policy), you need to run a local web 
 
 2. **Open your browser** and navigate to:
    ```
-   http://localhost:8000/amazon-organizer.html
+   http://localhost:8000/readerwrangler.html
    ```
 
-3. **Load your library**: Click the status indicator at the top to load your Amazon library JSON file
+3. **Load your library**: Click the status indicator at the top to load your ebook library JSON file
 
 4. **Start organizing**: Drag books into custom columns to organize your collection!
 
@@ -34,14 +34,14 @@ Browsers block JavaScript from loading local files (like your library JSON) when
 
 ### Files
 
-- `amazon-organizer.html` - Main application HTML shell (v3.4.0)
-- `amazon-organizer.js` - Application JavaScript (v3.4.0)
-- `amazon-organizer.css` - Application styles (v3.2.0)
-- `library-fetcher.js` - Library data fetching utility (v3.3.2)
-- `collections-fetcher.js` - Collections data fetching utility (v1.0.0)
-- `bookmarklet-loader.js` - Smart bookmarklet loader (v1.0.0)
-- `install-bookmarklet.html` - Bookmarklet installer page (v1.0.0)
-- `amazon-book-organizer.code-workspace` - VS Code workspace configuration
+- `readerwrangler.html` - Main application HTML shell (v3.5.0.a)
+- `readerwrangler.js` - Application JavaScript (v3.5.0.a)
+- `readerwrangler.css` - Application styles (v3.5.0.a)
+- `amazon-library-fetcher.js` - Amazon library data fetching utility (v3.3.2)
+- `amazon-collections-fetcher.js` - Amazon collections data fetching utility (v1.0.0)
+- `bookmarklet-loader.js` - Smart bookmarklet loader (v1.0.1.a)
+- `install-bookmarklet.html` - Bookmarklet installer page (v1.0.1.a)
+- `readerwrangler.code-workspace` - VS Code workspace configuration
 
 ---
 
@@ -102,7 +102,7 @@ Browsers block JavaScript from loading local files (like your library JSON) when
 
 **Special Note:** This is the single source of truth for development rules. Must start with YAML frontmatter for Claude Skills format.
 
-#### SKILL-Amazon-Book-Organizer.md
+#### SKILL-ReaderWrangler.md
 **Purpose:** Project-specific context, architecture patterns, and common pitfalls
 **Audience:** Claude agents working on this project
 **Key Sections:**
@@ -153,7 +153,7 @@ This project uses Claude Skills to maintain workflow consistency across sessions
 **Required Skills:**
 1. `software-development-ground-rules` (from SKILL-Development-Ground-Rules.zip)
    - Enable globally for all development projects
-2. `amazon-book-organizer-project` (from SKILL-Amazon-Book-Organizer.zip)
+2. `readerwrangler-project` (from SKILL-ReaderWrangler.zip)
    - Enable per project when working on this codebase
 
 **How to Enable:**
@@ -367,7 +367,7 @@ Before starting any new project or major feature, assess:
 ## Architecture Notes
 
 ### Version Management Pattern
-- Single source: `APP_VERSION` constant in amazon-organizer.js
+- Single source: `APP_VERSION` constant in readerwrangler.js
 - Browser title updates dynamically from constant
 - Query string cache busting: `?v=3.2.0`
 - Footer version display
@@ -385,7 +385,7 @@ Before starting any new project or major feature, assess:
 - See CHANGELOG Technical Notes for failed approaches
 
 ### Common Pitfalls
-See SKILL-Amazon-Book-Organizer.md and CHANGELOG Technical Notes for:
+See SKILL-ReaderWrangler.md and CHANGELOG Technical Notes for:
 - Icon display lag solutions
 - Manifest caching workarounds
 - Ground rule violation patterns
@@ -394,7 +394,7 @@ See SKILL-Amazon-Book-Organizer.md and CHANGELOG Technical Notes for:
 
 For detailed rules and protocols, see SKILL-Development-Ground-Rules.md (the single source of truth).
 
-For project-specific patterns and pitfalls, see SKILL-Amazon-Book-Organizer.md.
+For project-specific patterns and pitfalls, see SKILL-ReaderWrangler.md.
 
 For current work status, see NOTES.md.
 

@@ -1,18 +1,18 @@
 ---
-name: amazon-book-organizer-project
-description: Project-specific context including architecture patterns, common pitfalls, file locations, and pending tasks for the Amazon Book Organizer single-page React application
+name: readerwrangler-project
+description: Project-specific context including architecture patterns, common pitfalls, file locations, and pending tasks for ReaderWrangler - a single-page React application for organizing ebook collections
 ---
 
-# Amazon Book Organizer Project
+# ReaderWrangler Project
 
 ## Project Context
 
-**What it is:** Single-page React application for organizing Amazon Kindle book collections using drag-and-drop columns (like Trello). Users can load their Amazon book library from a JSON export and organize books into custom categories.
+**What it is:** Single-page React application for organizing ebook collections using drag-and-drop columns (like Trello). Users can load their ebook library from a JSON export (currently supports Amazon Kindle) and organize books into custom categories.
 
-**Current Version:** v3.1.0.b (in development)
+**Current Version:** v3.5.0.a (in development)
 
 **Files:**
-- `amazon-organizer.html` - Main SPA (React + Tailwind CSS + IndexedDB)
+- `readerwrangler.html` - Main SPA (React + Tailwind CSS + IndexedDB)
 - `CHANGELOG.md` - Detailed version history with Technical Notes
 - `TODO.md` - Pending tasks and improvements
 - `images/` - Status icons (busy.png, empty.png, fresh.png, stale.png, question-mark.png)
@@ -29,8 +29,8 @@ description: Project-specific context including architecture patterns, common pi
 ## Key Architecture Patterns
 
 ### 1. Version Management
-- Version defined in ONE place: `APP_VERSION` constant (line ~106)
-- Browser title set dynamically: `document.title = \`Amazon Book Organizer ${APP_VERSION}\``
+- Version defined in ONE place: `APP_VERSION` constant (line ~3)
+- Browser title set dynamically: `document.title = \`ReaderWrangler ${APP_VERSION}\``
 - No need to update title tag manually
 
 ### 2. Data Flow
@@ -69,10 +69,10 @@ description: Project-specific context including architecture patterns, common pi
 
 ## File Locations
 
-- Version constant: `amazon-organizer.html` line ~106
-- Status icon rendering: `amazon-organizer.html` line ~1258-1302
-- Manifest fetch with cache-busting: `amazon-organizer.html` line ~254
-- Clear everything function: `amazon-organizer.html` line ~683
+- Version constant: `amazon-organizer.js` line ~3
+- Status icon rendering: `amazon-organizer.js` line ~1258-1302
+- Manifest fetch with cache-busting: `amazon-organizer.js` line ~254
+- Clear everything function: `amazon-organizer.js` line ~683
 
 ## Pending Tasks (from TODO.md)
 
