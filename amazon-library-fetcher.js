@@ -1680,10 +1680,10 @@ async function fetchAmazonLibrary() {
         console.log(`   ✅ ${MANIFEST_FILENAME}`);
         console.log('========================================\n');
         console.log('👉 Next steps:');
-        console.log('   1. Find both files in your browser\'s save location');
-        console.log('   2. Place them in same folder as organizer HTML');
-        console.log('   3. Organizer will auto-detect manifest and show status');
-        console.log('   4. Click status indicator to sync if needed\n');
+        console.log('   1. Find both files in your browser\'s save location (usually Downloads folder)');
+        console.log('   2. Keep them somewhere you can find them later (Desktop, Documents, etc.)');
+        console.log('   3. Open ReaderWrangler and load your library file to start organizing!');
+        console.log('   4. Organizer will auto-detect manifest and show library status\n');
         console.log('💡 Next time you run this script:');
         console.log('   - Select amazon-library.json when prompted');
         console.log('   - Only NEW books will be fetched & enriched');

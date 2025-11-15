@@ -164,6 +164,53 @@
             margin-bottom: 15px;
         }
 
+        .how-it-works {
+            background: #f8f9fa;
+            padding: 40px;
+            border-radius: 12px;
+            margin: 40px 0;
+        }
+
+        .how-it-works h3 {
+            color: #333;
+            font-size: 1.8em;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .workflow-steps {
+            display: grid;
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .workflow-step {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .workflow-step h4 {
+            color: #667eea;
+            font-size: 1.3em;
+            margin-bottom: 12px;
+        }
+
+        .workflow-step p {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .workflow-step .note {
+            background: #e3f2fd;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            font-size: 0.95em;
+            color: #1565c0;
+        }
+
         .quick-start {
             background: #fff3cd;
             border-left: 4px solid #ffc107;
@@ -297,6 +344,30 @@
         <div class="privacy-highlight">
             <h3>Your books, your order. Finally.</h3>
             <p>Rediscover forgotten treasures, prioritize your reading stack, and organize the chaos into a system that actually works for you. ReaderWrangler runs entirely in your browser—your library data stays private and local. Never lose track of what to read next. Take command of your reading life.</p>
+        </div>
+
+        <div class="how-it-works">
+            <h3>How It Works</h3>
+            <div class="workflow-steps">
+                <div class="workflow-step">
+                    <h4>1. Fetch Your Library</h4>
+                    <p>Your online bookstore already has your complete library—we just need to get it. Install our simple bookmarklet that securely fetches your book list directly from your store and saves it to a file on your computer. One click, and your entire library is downloaded with covers, descriptions, ratings, and reviews.</p>
+                    <p style="margin-top: 12px; font-weight: 500;">📥 Saved to your Downloads folder (or browser's default location)</p>
+                </div>
+
+                <div class="workflow-step">
+                    <h4>2. Organize Your Collection</h4>
+                    <p>Launch ReaderWrangler and click the status line that says "No Library" to load your downloaded library file. Instantly see all your books in a visual grid. Now the fun begins—drag books into custom columns ("Next to Read," "Favorites," "Series to Binge"), rearrange them however you like, and finally take control of your reading chaos.</p>
+                </div>
+
+                <div class="workflow-step">
+                    <h4>3. Keep It Fresh</h4>
+                    <p>Bought new books? Just click the bookmarklet again and select your existing library file when prompted. ReaderWrangler will quickly fetch only the new additions—no need to re-fetch your entire collection. Your custom organization stays intact while your library stays current.</p>
+                    <div class="note">
+                        <strong>💡 Smart Recovery:</strong> Sometimes Amazon's servers get busy and miss a few book details during the initial fetch. No worries! Every time you refresh your library, ReaderWrangler automatically re-attempts to fetch any missing descriptions or reviews. Your library gets more complete with each update.
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="quick-start">

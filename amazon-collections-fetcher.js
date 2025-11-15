@@ -645,9 +645,10 @@ async function fetchAmazonCollections() {
     console.log('✅ COLLECTIONS FETCH COMPLETE!');
     console.log('========================================');
     console.log('Next steps:');
-    console.log('1. Locate the downloaded file in your browser\'s download location');
-    console.log('2. Upload both amazon-library.json AND amazon-collections.json to the organizer');
-    console.log('3. The organizer will merge the data and enable collection filtering\n');
+    console.log('1. Find the file in your browser\'s save location (usually Downloads folder)');
+    console.log('2. Keep it with your library file (Desktop, Documents, etc.)');
+    console.log('3. Load both amazon-library.json AND amazon-collections.json into ReaderWrangler');
+    console.log('4. The organizer will merge the data and enable collection filtering\n');
 
     // Show completion in progress UI
     progressUI.showComplete(`Downloaded ${allBooks.length} books to ${FILENAME}`);
