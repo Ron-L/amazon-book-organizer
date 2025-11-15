@@ -17,12 +17,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Will auto-serve when users browse to readerwrangler.com
 
 ### Changed
-- **Collections Fetcher Progress Message** (amazon-collections-fetcher.js v1.0.2.a)
+- **Collections Fetcher Progress Message** (amazon-collections-fetcher.js v1.0.2.b)
   - Updated time estimate based on real-world data
   - Old: "~1 hour per 1000 books"
   - New: "~1½ minutes per 1000 books"
   - Based on actual fetch: 2287 books in 3:54 (102 seconds per 1000)
   - User-tested and confirmed accurate
+
+### Improved
+- **Dialog UX Improvements** - Added X buttons and localhost testing support
+  - **Bookmarklet Loader** (v1.0.2.a)
+    - Added X button to upper-right corner of intro dialog
+    - Added localhost detection for development testing
+    - Automatically loads from http://localhost:8000/ when testing locally
+    - Falls back to GitHub Pages (production) when on Amazon
+  - **Collections Fetcher** (v1.0.2.b)
+    - Added X button to all dialog states (progress, complete, error)
+    - Removed "🔄 Refresh page to cancel" from dialogs (kept in console output)
+    - Consistent close affordance across all states
+  - **Library Fetcher** (v3.3.3.a)
+    - Added X button to all dialog states (progress, complete, error)
+    - Removed "🔄 Refresh page to cancel" from dialogs (kept in console output)
+    - Consistent close affordance across all states
 
 ## [3.5.0] - 2025-11-14
 

@@ -16,8 +16,10 @@
 
 ### Landing Page & UX Tweaks (feature-ux-landing-page-tweaks)
 - [x] Created index.html landing page for custom domain (readerwrangler.com)
-- [ ] Updated amazon-collections-fetcher.js progress message (1½ minutes per 1000 books)
-- [ ] Additional UX/UI tweaks based on landing page (TBD)
+- [x] Updated amazon-collections-fetcher.js progress message (1½ minutes per 1000 books)
+- [x] Added X buttons to all dialogs (bookmarklet, library fetcher, collections fetcher)
+- [x] Added localhost detection to bookmarklet for local testing
+- [x] Removed "Refresh page to cancel" from dialogs (kept in console)
 
 ## Completed
 - [x] Initialize git repository

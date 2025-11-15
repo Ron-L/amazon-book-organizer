@@ -22,10 +22,13 @@ This file tracks tabled discussion items, work in progress context, and open que
 - **Completed**:
   1. ✅ Created index.html landing page with README content
   2. ✅ Updated amazon-collections-fetcher.js progress message (1 hour → 1½ minutes per 1000 books)
+  3. ✅ Added X buttons to all dialogs (bookmarklet v1.0.2.a, collections v1.0.2.b, library v3.3.3.a)
+  4. ✅ Added localhost detection to bookmarklet for local testing
+  5. ✅ Removed "Refresh page to cancel" from dialogs (kept in console output)
 - **Next Steps**:
-  1. ✅ Version amazon-collections-fetcher.js (v1.0.2.a - corrected from missed v1.0.1 finalization)
-  2. Commit changes to feature branch
-  3. Additional UX tweaks as needed
+  1. Commit changes to feature branch
+  2. Test locally with localhost detection
+  3. Merge to main and deploy
 
 ### GitHub Pages Distribution - RELEASED ✅
 - **Started**: 2025-11-12

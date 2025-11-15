@@ -1,13 +1,19 @@
-// ReaderWrangler Bookmarklet Loader v1.0.1
+// ReaderWrangler Bookmarklet Loader v1.0.2.a
 // Smart bookmarklet with intro dialog and navigation
 
 (function() {
     'use strict';
 
-    const LOADER_VERSION = 'v1.0.1';
+    const LOADER_VERSION = 'v1.0.2.a';
 
     const currentUrl = window.location.href;
-    const baseUrl = 'https://ron-l.github.io/readerwrangler/';
+
+    // Detect localhost for development testing
+    const isLocalhost = window.location.hostname === 'localhost' ||
+                       window.location.hostname === '127.0.0.1';
+    const baseUrl = isLocalhost
+        ? 'http://localhost:8000/'
+        : 'https://ron-l.github.io/readerwrangler/';
 
     // Detect current page type
     const onLibraryPage = currentUrl.includes('amazon.com/yourbooks') ||
@@ -25,11 +31,33 @@
         border-radius: 12px;
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         padding: 30px;
+        padding-top: 40px;
         z-index: 10000;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         max-width: 550px;
         text-align: center;
     `;
+
+    // Add X button to close dialog
+    const closeButton = document.createElement('button');
+    closeButton.textContent = '✕';
+    closeButton.style.cssText = `
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #999;
+        cursor: pointer;
+        padding: 5px 10px;
+        line-height: 1;
+        transition: color 0.2s;
+    `;
+    closeButton.onmouseover = () => closeButton.style.color = '#333';
+    closeButton.onmouseout = () => closeButton.style.color = '#999';
+    closeButton.onclick = () => dialog.remove();
+    dialog.appendChild(closeButton);
 
     const buttonStyle = `
         border: none;

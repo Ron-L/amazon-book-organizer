@@ -1,4 +1,4 @@
-// Amazon Collections Fetcher v1.0.2.a
+// Amazon Collections Fetcher v1.0.2.b
 // Fetches collection membership and read status for all books in your library
 //
 // Instructions:
@@ -13,7 +13,7 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v1.0.2.a';
+    const FETCHER_VERSION = 'v1.0.2.b';
     const SCHEMA_VERSION = '1.0';
     const PAGE_TITLE = document.title;
 
@@ -47,6 +47,7 @@ async function fetchAmazonCollections() {
                 border-radius: 12px;
                 box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
                 padding: 20px;
+                padding-top: 35px;
                 z-index: 10000;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                 min-width: 300px;
@@ -54,6 +55,18 @@ async function fetchAmazonCollections() {
             `;
 
             overlay.innerHTML = `
+                <button style="
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    background: none;
+                    border: none;
+                    font-size: 20px;
+                    color: #999;
+                    cursor: pointer;
+                    padding: 4px 8px;
+                    line-height: 1;
+                " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'" onclick="this.parentElement.remove()">✕</button>
                 <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
                     📚 Collections Fetcher ${FETCHER_VERSION}
                 </div>
@@ -65,8 +78,7 @@ async function fetchAmazonCollections() {
                 </div>
                 <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
                     ⏱️ Large libraries take time: ~1½ minutes per 1000 books<br>
-                    💡 Open Console (F12) for detailed progress<br>
-                    🔄 Refresh page to cancel
+                    💡 Open Console (F12) for detailed progress
                 </div>
             `;
 
@@ -92,6 +104,18 @@ async function fetchAmazonCollections() {
         function showComplete(message) {
             if (!overlay) return;
             overlay.innerHTML = `
+                <button style="
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    background: none;
+                    border: none;
+                    font-size: 20px;
+                    color: #999;
+                    cursor: pointer;
+                    padding: 4px 8px;
+                    line-height: 1;
+                " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'" onclick="this.parentElement.remove()">✕</button>
                 <div style="font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">
                     ✅ Complete!
                 </div>
@@ -119,6 +143,18 @@ async function fetchAmazonCollections() {
         function showError(message) {
             if (!overlay) create();
             overlay.innerHTML = `
+                <button style="
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    background: none;
+                    border: none;
+                    font-size: 20px;
+                    color: #999;
+                    cursor: pointer;
+                    padding: 4px 8px;
+                    line-height: 1;
+                " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'" onclick="this.parentElement.remove()">✕</button>
                 <div style="font-size: 18px; font-weight: bold; color: #c62828; margin-bottom: 10px;">
                     ❌ Error
                 </div>
