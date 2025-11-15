@@ -1,10 +1,10 @@
-// ReaderWrangler Bookmarklet Loader v1.0.2.a
+// ReaderWrangler Bookmarklet Loader v1.0.2.b
 // Smart bookmarklet with intro dialog and navigation
 
 (function() {
     'use strict';
 
-    const LOADER_VERSION = 'v1.0.2.a';
+    const LOADER_VERSION = 'v1.0.2.b';
 
     const currentUrl = window.location.href;
 
@@ -38,27 +38,6 @@
         text-align: center;
     `;
 
-    // Add X button to close dialog
-    const closeButton = document.createElement('button');
-    closeButton.textContent = '✕';
-    closeButton.style.cssText = `
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background: none;
-        border: none;
-        font-size: 24px;
-        color: #999;
-        cursor: pointer;
-        padding: 5px 10px;
-        line-height: 1;
-        transition: color 0.2s;
-    `;
-    closeButton.onmouseover = () => closeButton.style.color = '#333';
-    closeButton.onmouseout = () => closeButton.style.color = '#999';
-    closeButton.onclick = () => dialog.remove();
-    dialog.appendChild(closeButton);
-
     const buttonStyle = `
         border: none;
         padding: 12px 24px;
@@ -83,6 +62,19 @@
 
     // Build dialog content based on current page
     let dialogContent = `
+        <button style="
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: #999;
+            cursor: pointer;
+            padding: 5px 10px;
+            line-height: 1;
+            transition: color 0.2s;
+        " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'" onclick="this.parentElement.remove()">✕</button>
         <div style="font-size: 48px; margin-bottom: 15px;">📚</div>
         <div style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 15px;">
             ReaderWrangler
