@@ -32,7 +32,7 @@ This file tracks tabled discussion items, work in progress context, and open que
   9. ✅ Tested on GitHub Pages server
   10. ✅ Fixed versioning bugs (bookmarklet v1.1.0 → v1.0.0)
   11. ✅ Documentation updated (CHANGELOG, TODO, NOTES)
-- **Context**: GitHub Pages enabled at https://ron-l.github.io/amazon-book-organizer/
+- **Context**: GitHub Pages enabled at https://ron-l.github.io/readerwrangler/
 - **Specification**: See future/SPEC-Distribution-GitHub-Pages.md
 - **Pending Name Change (User Sleeping On Decision)**:
   - **Current**: Amazon Book Organizer

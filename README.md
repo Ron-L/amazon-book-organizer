@@ -13,11 +13,11 @@ ReaderWrangler™ helps you organize and rediscover your ebook library. With hun
 
 ## Quick Start
 
-1. **Install the bookmarklet**: Visit [install-bookmarklet.html](https://ron-l.github.io/amazon-book-organizer/install-bookmarklet.html)
+1. **Install the bookmarklet**: Visit [install-bookmarklet.html](https://ron-l.github.io/readerwrangler/install-bookmarklet.html)
 2. **Drag it to your bookmarks bar**
 3. **Go to your online library**: Navigate to your library webpage (e.g. [Amazon library page](https://www.amazon.com/yourbooks))
 4. **Click the bookmarklet**: Fetch your library data with one click
-5. **Open the [ReaderWrangler app](https://ron-l.github.io/amazon-book-organizer/readerwrangler.html)**
+5. **Open the [ReaderWrangler app](https://ron-l.github.io/readerwrangler/readerwrangler.html)**
 6. **Organize your books**: Load the downloaded JSON file into the organizer
 
 All processing happens in your browser - **your data never leaves your computer.**

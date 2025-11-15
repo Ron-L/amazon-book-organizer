@@ -200,7 +200,7 @@ Before removing version letter (finalizing release):
 3. **Commit immediately** (capture iteration history for potential squashing before merge)
 4. **Push** (enables server testing and maintains consistent workflow)
 5. **Test:**
-   - **Server testing**: Test on https://ron-l.github.io/amazon-book-organizer/
+   - **Server testing**: Test on https://ron-l.github.io/readerwrangler/
    - **Local testing**: Test locally (console paste, local server, etc.)
 6. **If bugs found**, increment version letter and repeat from step 2
 7. **When stable**, merge to main (squash commits if desired)
