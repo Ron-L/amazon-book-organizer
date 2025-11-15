@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Landing Page (index.html)** - Professional landing page for custom domain (readerwrangler.com)
+  - Hero section with tagline "Wrangle your reader chaos - Your books, your order"
+  - Problem/solution narrative from README
+  - Feature highlights (Library Management, Organization, Privacy)
+  - Two CTAs: "Get Started" → install-bookmarklet.html, "Launch App" → readerwrangler.html
+  - SEO meta tags and responsive design
+  - Will auto-serve when users browse to readerwrangler.com
+
+### Changed
+- **Collections Fetcher Progress Message** (amazon-collections-fetcher.js v1.0.2.a)
+  - Updated time estimate based on real-world data
+  - Old: "~1 hour per 1000 books"
+  - New: "~1½ minutes per 1000 books"
+  - Based on actual fetch: 2287 books in 3:54 (102 seconds per 1000)
+  - User-tested and confirmed accurate
+
 ## [3.5.0] - 2025-11-14
 
 ### Changed

@@ -12,6 +12,13 @@
 
 ---
 
+## In Progress
+
+### Landing Page & UX Tweaks (feature-ux-landing-page-tweaks)
+- [x] Created index.html landing page for custom domain (readerwrangler.com)
+- [ ] Updated amazon-collections-fetcher.js progress message (1½ minutes per 1000 books)
+- [ ] Additional UX/UI tweaks based on landing page (TBD)
+
 ## Completed
 - [x] Initialize git repository
 - [x] Setup GitHub remote

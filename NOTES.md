@@ -14,6 +14,19 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Current Work in Progress
 
+### Landing Page & UX Tweaks - IN PROGRESS 🔄
+- **Started**: 2025-11-15
+- **Branch**: `feature-ux-landing-page-tweaks`
+- **Status**: Initial changes made, need to version and commit
+- **Goal**: Add professional landing page for custom domain and miscellaneous UX improvements
+- **Completed**:
+  1. ✅ Created index.html landing page with README content
+  2. ✅ Updated amazon-collections-fetcher.js progress message (1 hour → 1½ minutes per 1000 books)
+- **Next Steps**:
+  1. ✅ Version amazon-collections-fetcher.js (v1.0.2.a - corrected from missed v1.0.1 finalization)
+  2. Commit changes to feature branch
+  3. Additional UX tweaks as needed
+
 ### GitHub Pages Distribution - RELEASED ✅
 - **Started**: 2025-11-12
 - **Released**: 2025-11-13

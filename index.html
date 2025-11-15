@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ReaderWrangler - Organize and rediscover your ebook library. Create custom groups, drag and drop books, and never lose track of what to read next.">
+    <meta name="keywords" content="ebook organizer, kindle library, book management, reading list, amazon books">
+    <title>ReaderWrangler - Wrangle your reader chaos</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .hero .tagline {
+            font-size: 1.5em;
+            margin-bottom: 40px;
+            opacity: 0.95;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 18px 40px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 1.2em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-3px);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 20px;
+        }
+
+        .section {
+            margin-bottom: 60px;
+        }
+
+        .section h2 {
+            font-size: 2.2em;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .section p {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        .problem-solution {
+            background: #f8f9fa;
+            padding: 60px 20px;
+        }
+
+        .problem-solution h3 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        .feature {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature h3 {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .feature ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature li {
+            padding: 8px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+
+        .feature li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .privacy-highlight {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .privacy-highlight h3 {
+            font-size: 1.8em;
+            margin-bottom: 15px;
+        }
+
+        .quick-start {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 30px;
+            border-radius: 8px;
+            margin: 40px 0;
+        }
+
+        .quick-start h3 {
+            color: #856404;
+            margin-bottom: 20px;
+        }
+
+        .quick-start ol {
+            margin-left: 20px;
+        }
+
+        .quick-start li {
+            margin-bottom: 10px;
+            color: #444;
+        }
+
+        footer {
+            background: #333;
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .notice {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2em;
+            }
+
+            .hero .tagline {
+                font-size: 1.2em;
+            }
+
+            .section h2 {
+                font-size: 1.8em;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <h1>📚 ReaderWrangler™</h1>
+        <p class="tagline">Wrangle your reader chaos - Your books, your order</p>
+        <div class="cta-buttons">
+            <a href="install-bookmarklet.html" class="btn btn-primary">Get Started</a>
+            <a href="readerwrangler.html" class="btn btn-secondary">Launch App</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="section">
+            <h2>Rediscover Your Library</h2>
+            <p>ReaderWrangler helps you organize and rediscover your ebook library. With hundreds or thousands of books in your collection, great reads get buried and forgotten. ReaderWrangler lets you create custom groups like "Next to Read" or "Time Travel Books," drag and drop books into organized columns, and double-click any cover to see full details, ratings, and reviews—so you never lose track of what to read next.</p>
+        </div>
+    </div>
+
+    <div class="problem-solution">
+        <div class="container">
+            <h3>Unbury your next great read.</h3>
+            <p>If you're like most book lovers, your ebook library has grown to hundreds—even thousands—of books. You buy new titles faster than you can read them, and buried in that digital pile are gems you've completely forgotten about. That book you were excited to read last year? Lost in the shuffle. The entire series you meant to binge? Scattered and out of order.</p>
+
+            <h3 style="margin-top: 30px;">Amazon shows you all your books, but won't let you organize them.</h3>
+            <p>Amazon's "Your Books" page displays beautiful thumbnails with ratings and reviews, but there's a critical problem: you can't reorder them or group them in meaningful ways. With a massive library, it's impossible to keep track of what you own, what you've read, and what's next on your list.</p>
+
+            <h3 style="margin-top: 30px;">ReaderWrangler gives you the control Amazon doesn't.</h3>
+            <p>ReaderWrangler is a free web app that transforms your Amazon library into an organized, personalized reading dashboard. Using a simple bookmarklet, you download your complete Amazon library along with cover images, ratings, reviews, and descriptions.</p>
+
+            <p>Then the magic happens: <strong>you</strong> create custom columns like "Next to Read," "Favorites," "Time Travel Books," or "Beach Reads"—whatever makes sense for you. Drag and drop books between columns, reorder them within groups, and use multi-select to move entire series at once. Search by author or title to quickly find and organize specific books.</p>
+
+            <p>Double-click any book cover to see its full details—larger cover image, title, author, Amazon rating, description, and top reviews—then navigate through your filtered results without leaving the detail view.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="features">
+            <div class="feature">
+                <h3>Library Management</h3>
+                <ul>
+                    <li>Import your entire ebook library with titles, authors, covers, descriptions, and ratings</li>
+                    <li>Advanced filtering by author, series, genre, and reading status</li>
+                    <li>Smart search across titles and authors</li>
+                    <li>Sort books by various criteria (title, author, purchase date, etc.)</li>
+                </ul>
+            </div>
+
+            <div class="feature">
+                <h3>Organization</h3>
+                <ul>
+                    <li>Drag-and-drop interface for organizing books into custom collections</li>
+                    <li>Multi-select with Ctrl/Shift for bulk operations</li>
+                    <li>Custom columns for creating your own organization system</li>
+                    <li>Reading status tracking from your reader (e.g. Kindle)</li>
+                </ul>
+            </div>
+
+            <div class="feature">
+                <h3>Data & Privacy</h3>
+                <ul>
+                    <li>Client-side processing - all data stays in your browser</li>
+                    <li>IndexedDB storage for persistent local storage</li>
+                    <li>Export your organization to JSON for backup</li>
+                    <li>No server uploads - complete privacy</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="privacy-highlight">
+            <h3>Your books, your order. Finally.</h3>
+            <p>Rediscover forgotten treasures, prioritize your reading stack, and organize the chaos into a system that actually works for you. ReaderWrangler runs entirely in your browser—your library data stays private and local. Never lose track of what to read next. Take command of your reading life.</p>
+        </div>
+
+        <div class="quick-start">
+            <h3>Quick Start</h3>
+            <ol>
+                <li><strong>Install the bookmarklet:</strong> Visit <a href="install-bookmarklet.html">install-bookmarklet.html</a></li>
+                <li><strong>Drag it to your bookmarks bar</strong></li>
+                <li><strong>Go to your online library:</strong> Navigate to your library webpage (e.g. <a href="https://www.amazon.com/yourbooks" target="_blank">Amazon library page</a>)</li>
+                <li><strong>Click the bookmarklet:</strong> Fetch your library data with one click</li>
+                <li><strong>Open the ReaderWrangler app:</strong> <a href="readerwrangler.html">Launch the organizer</a></li>
+                <li><strong>Organize your books:</strong> Load the downloaded JSON file into the organizer</li>
+            </ol>
+            <p style="margin-top: 20px;"><strong>All processing happens in your browser - your data never leaves your computer.</strong></p>
+        </div>
+
+        <div class="section">
+            <h2>Current Support</h2>
+            <p>Amazon Kindle™ Library</p>
+        </div>
+    </div>
+
+    <footer>
+        <p><a href="https://github.com/Ron-L/readerwrangler" target="_blank">View on GitHub</a> | <a href="CHANGELOG.md">Changelog</a> | <a href="CONTRIBUTING.md">Contributing</a></p>
+        <div class="notice">
+            <p>Amazon, Kindle, and Amazon Kindle are trademarks of Amazon.com, Inc.</p>
+            <p>ReaderWrangler™ is not affiliated with, endorsed by, or sponsored by Amazon.</p>
+        </div>
+    </footer>
+</body>
+</html>

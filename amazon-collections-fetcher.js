@@ -1,4 +1,4 @@
-// Amazon Collections Fetcher v1.0.1.a
+// Amazon Collections Fetcher v1.0.2.a
 // Fetches collection membership and read status for all books in your library
 //
 // Instructions:
@@ -13,7 +13,7 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v1.0.1.a';
+    const FETCHER_VERSION = 'v1.0.2.a';
     const SCHEMA_VERSION = '1.0';
     const PAGE_TITLE = document.title;
 
@@ -64,7 +64,7 @@ async function fetchAmazonCollections() {
                     Initializing
                 </div>
                 <div style="font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 10px;">
-                    ⏱️ Large libraries take time: ~1 hour per 1000 books<br>
+                    ⏱️ Large libraries take time: ~1½ minutes per 1000 books<br>
                     💡 Open Console (F12) for detailed progress<br>
                     🔄 Refresh page to cancel
                 </div>
