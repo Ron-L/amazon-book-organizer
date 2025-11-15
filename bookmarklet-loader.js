@@ -1,10 +1,10 @@
-// ReaderWrangler Bookmarklet Loader v1.0.1.a
+// ReaderWrangler Bookmarklet Loader v1.0.1
 // Smart bookmarklet with intro dialog and navigation
 
 (function() {
     'use strict';
 
-    const LOADER_VERSION = 'v1.0.1.a';
+    const LOADER_VERSION = 'v1.0.1';
 
     const currentUrl = window.location.href;
     const baseUrl = 'https://ron-l.github.io/readerwrangler/';

@@ -34,13 +34,13 @@ Browsers block JavaScript from loading local files (like your library JSON) when
 
 ### Files
 
-- `readerwrangler.html` - Main application HTML shell (v3.5.0.a)
-- `readerwrangler.js` - Application JavaScript (v3.5.0.a)
-- `readerwrangler.css` - Application styles (v3.5.0.a)
+- `readerwrangler.html` - Main application HTML shell (v3.5.0)
+- `readerwrangler.js` - Application JavaScript (v3.5.0)
+- `readerwrangler.css` - Application styles (v3.5.0)
 - `amazon-library-fetcher.js` - Amazon library data fetching utility (v3.3.2)
 - `amazon-collections-fetcher.js` - Amazon collections data fetching utility (v1.0.0)
-- `bookmarklet-loader.js` - Smart bookmarklet loader (v1.0.1.a)
-- `install-bookmarklet.html` - Bookmarklet installer page (v1.0.1.a)
+- `bookmarklet-loader.js` - Smart bookmarklet loader (v1.0.1)
+- `install-bookmarklet.html` - Bookmarklet installer page (v1.0.1)
 - `readerwrangler.code-workspace` - VS Code workspace configuration
 
 ---
