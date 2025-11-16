@@ -14,21 +14,27 @@ This file tracks tabled discussion items, work in progress context, and open que
 
 ## Current Work in Progress
 
-### Landing Page & UX Tweaks - IN PROGRESS 🔄
+### Landing Page & UX Tweaks - RELEASED ✅
 - **Started**: 2025-11-15
+- **Released**: 2025-11-16
 - **Branch**: `feature-ux-landing-page-tweaks`
-- **Status**: Initial changes made, need to version and commit
+- **Status**: Complete - tested successfully on localhost and Amazon pages
 - **Goal**: Add professional landing page for custom domain and miscellaneous UX improvements
 - **Completed**:
   1. ✅ Created index.html landing page with README content
   2. ✅ Updated amazon-collections-fetcher.js progress message (1 hour → 1½ minutes per 1000 books)
-  3. ✅ Added X buttons to all dialogs (bookmarklet v1.0.2.a, collections v1.0.2.b, library v3.3.3.a)
+  3. ✅ Added X buttons to all dialogs (bookmarklet v1.0.2.c, collections v1.0.2.b, library v3.3.3.a)
   4. ✅ Added localhost detection to bookmarklet for local testing
   5. ✅ Removed "Refresh page to cancel" from dialogs (kept in console output)
-- **Next Steps**:
-  1. Commit changes to feature branch
-  2. Test locally with localhost detection
-  3. Merge to main and deploy
+  6. ✅ Environment-aware bookmarklet installer (v1.0.2.d)
+     - Detects installer environment (localhost vs production)
+     - Localhost: Shows BOTH bookmarklets (dev + prod) side-by-side
+     - Production: Shows ONLY production bookmarklet
+     - Dev bookmarklet: ⚠️ DEV ReaderWrangler (orange, points to localhost:8000)
+     - Prod bookmarklet: 📚 ReaderWrangler (purple, points to GitHub Pages/readerwrangler.com)
+  7. ✅ Restructured CONTRIBUTING.md with logical flow
+  8. ✅ Removed version numbers from Files Overview
+- **Testing**: All scenarios tested successfully (localhost installer, dev/prod bookmarklets, Amazon pages)
 
 ### GitHub Pages Distribution - RELEASED ✅
 - **Started**: 2025-11-12

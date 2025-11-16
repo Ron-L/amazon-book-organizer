@@ -1,14 +1,110 @@
 # Contributing to ReaderWrangler
 
-This guide provides a comprehensive overview of the project's documentation structure and development workflow.
+This guide provides a comprehensive overview of the project architecture, access methods, and development workflows for both end users and developers.
 
 ---
 
-## Getting Started with Local Development
+## What is ReaderWrangler?
 
-### Running the Application Locally
+ReaderWrangler is a browser-based tool for organizing your ebook library. It consists of:
 
-Due to browser security restrictions (CORS policy), you need to run a local web server to use the application:
+1. **Landing Page** ([index.html](index.html)) - Entry point with:
+   - Quick Start instructions (4 simple steps)
+   - Link to [install-bookmarklet.html](install-bookmarklet.html) - Install the data fetcher
+   - Link to [readerwrangler.html](readerwrangler.html) - Launch the organizer (if bookmarklet already installed)
+
+2. **Bookmarklet Installer** ([install-bookmarklet.html](install-bookmarklet.html)) - Installs the data fetching bookmarklet
+
+3. **Organizer Application** ([readerwrangler.html](readerwrangler.html)) - Main drag-and-drop organization interface
+
+4. **Data Fetchers** - Bookmarklet scripts that extract library data from Amazon
+
+All processing happens in your browser - your data never leaves your computer.
+
+---
+
+## Where to Access ReaderWrangler
+
+ReaderWrangler is available at three locations:
+
+### Production (For End Users)
+
+**Start here:** Visit the landing page at one of these URLs:
+
+1. **Custom Domain:** https://readerwrangler.com (primary)
+   - Landing page: https://readerwrangler.com/index.html (or just https://readerwrangler.com/)
+   - Optimized for performance with browser caching
+   - Serves latest stable release from GitHub Pages
+
+2. **GitHub Pages:** https://ron-l.github.io/readerwrangler/
+   - Landing page: https://ron-l.github.io/readerwrangler/index.html
+   - Backup production URL
+   - Same content as readerwrangler.com
+
+The landing page provides Quick Start instructions and links to:
+- Bookmarklet installer (install-bookmarklet.html)
+- Organizer app (readerwrangler.html)
+
+### Development (For Contributors)
+
+3. **Localhost:** http://localhost:8000
+   - Landing page: http://localhost:8000/index.html
+   - Optional local development environment
+   - For testing changes before deploying to production
+   - Requires running a local HTTP server (see Development Setup below)
+
+---
+
+## For End Users: Getting Started
+
+### 1. Install the Bookmarklet
+
+Visit the bookmarklet installer:
+- **Production:** https://readerwrangler.com/install-bookmarklet.html
+- **Or:** https://ron-l.github.io/readerwrangler/install-bookmarklet.html
+
+Drag the **📚 ReaderWrangler** button to your bookmarks bar.
+
+### 2. Fetch Your Library Data
+
+1. Navigate to your Amazon library page: https://www.amazon.com/yourbooks
+2. Click the **📚 ReaderWrangler** bookmarklet in your toolbar
+3. Choose "Fetch Book List" or "Fetch Collections"
+4. Wait for the download to complete (saved to your Downloads folder)
+
+### 3. Open the Organizer
+
+Visit the ReaderWrangler app:
+- **Production:** https://readerwrangler.com/readerwrangler.html
+- **Or:** https://ron-l.github.io/readerwrangler/readerwrangler.html
+
+Click the status line at the top and load your downloaded JSON file.
+
+### 4. Organize Your Books
+
+- Create custom columns (e.g., "Next to Read", "Favorites")
+- Drag books between columns
+- Double-click covers for details
+- Your organization is saved automatically in your browser
+
+---
+
+## For Developers: Contributing to ReaderWrangler
+
+There are two development workflows available, depending on whether you want instant local testing or prefer to test via GitHub Pages.
+
+### Development Option A: Local Testing (Recommended)
+
+**Best for:** Rapid iteration, instant feedback, testing bookmarklet changes
+
+**Workflow:**
+1. Clone the repository
+2. Make your code changes
+3. Start local HTTP server
+4. Test immediately in browser
+5. When satisfied, commit and push to GitHub
+
+**Setup:**
 
 1. **Start a local HTTP server** in the project directory:
    ```bash
@@ -19,29 +115,114 @@ Due to browser security restrictions (CORS policy), you need to run a local web 
    python -m SimpleHTTPServer 8000
    ```
 
-2. **Open your browser** and navigate to:
-   ```
-   http://localhost:8000/readerwrangler.html
-   ```
+2. **Access your local instance:**
+   - Landing page: http://localhost:8000/index.html
+   - Installer: http://localhost:8000/install-bookmarklet.html
+   - Organizer: http://localhost:8000/readerwrangler.html
 
-3. **Load your library**: Click the status indicator at the top to load your ebook library JSON file
+3. **Why a local server?**
 
-4. **Start organizing**: Drag books into custom columns to organize your collection!
+   Browsers block JavaScript from loading local files (like your library JSON) when opening HTML files directly (`file://` protocol). Running a local HTTP server (`http://localhost`) allows the application to access these files securely.
 
-### Why a local server?
+### Development Option B: GitHub Pages Testing
 
-Browsers block JavaScript from loading local files (like your library JSON) when opening HTML files directly (`file://` protocol). Running a local HTTP server (`http://localhost`) allows the application to access these files securely.
+**Best for:** Testing deployment process, verifying production behavior, collaborative testing
 
-### Files
+**Workflow:**
+1. Clone the repository
+2. Create a feature branch
+3. Make your code changes
+4. Commit and push to GitHub
+5. Configure GitHub Pages to serve your branch
+6. Wait 1-5 minutes for GitHub to rebuild
+7. Test at https://ron-l.github.io/readerwrangler/
 
-- `readerwrangler.html` - Main application HTML shell (v3.5.0)
-- `readerwrangler.js` - Application JavaScript (v3.5.0)
-- `readerwrangler.css` - Application styles (v3.5.0)
-- `amazon-library-fetcher.js` - Amazon library data fetching utility (v3.3.2)
-- `amazon-collections-fetcher.js` - Amazon collections data fetching utility (v1.0.0)
-- `bookmarklet-loader.js` - Smart bookmarklet loader (v1.0.1)
-- `install-bookmarklet.html` - Bookmarklet installer page (v1.0.1)
+**Setup:**
+
+1. **Configure GitHub Pages:**
+   - Go to repository Settings → Pages
+   - Set Source to your branch (e.g., `feature-ux-landing-page-tweaks`)
+   - GitHub Pages will rebuild and serve your branch
+
+2. **Deployment delays:**
+   - First deploy: ~2-5 minutes
+   - Subsequent updates: ~1-3 minutes
+   - No local server required
+
+3. **Testing your changes:**
+   - Visit https://ron-l.github.io/readerwrangler/
+   - Cache may be stale - use hard refresh (Ctrl+Shift+R)
+   - Or use incognito/private mode for clean testing
+
+4. **When ready for production:**
+   - Merge to `main` branch
+   - Configure GitHub Pages to serve `main`
+   - Changes appear at both github.io and readerwrangler.com URLs
+
+**Note:** GitHub Pages caching is aggressive. During development, you may need to:
+- Hard refresh browser (Ctrl+Shift+R or Cmd+Shift+R)
+- Clear browser cache
+- Use incognito/private browsing mode
+- Wait a few minutes for GitHub's CDN to update
+
+### Bookmarklet Development and Testing
+
+The bookmarklet installer ([install-bookmarklet.html](install-bookmarklet.html)) is **environment-aware** and adapts to where it's running:
+
+#### For End Users (Production)
+When users visit the installer on **readerwrangler.com** or **GitHub Pages**, they see a single production bookmarklet:
+- **📚 ReaderWrangler** (purple gradient)
+- Points to production servers (readerwrangler.com or GitHub Pages)
+- Optimized for performance with browser caching
+
+#### For Developers (Localhost)
+When you run the installer on **localhost:8000**, it automatically shows **BOTH** bookmarklets side-by-side:
+
+1. **⚠️ DEV ReaderWrangler** (orange gradient)
+   - Points exclusively to `localhost:8000`
+   - Always loads fresh code (cache-busting enabled)
+   - Use this when testing local changes on Amazon pages
+
+2. **📚 ReaderWrangler** (purple gradient)
+   - Points to production servers (readerwrangler.com/GitHub Pages)
+   - Use this to compare production behavior vs your local changes
+
+**Why two bookmarklets for developers?**
+
+The bookmarklet runs *on Amazon's website*, not on our pages. When you click a bookmarklet on `amazon.com/yourbooks`, the JavaScript has no way to know if you're a developer with a local server running. It only sees Amazon's hostname.
+
+Solution: Install both bookmarklets from the localhost installer. Now you can:
+- Click **⚠️ DEV** to test your local changes
+- Click **📚 Production** to verify production behavior
+- Easily switch between them while testing on Amazon
+
+**Testing workflow:**
+1. Start local server: `python -m http.server 8000`
+2. Visit `http://localhost:8000/install-bookmarklet.html`
+3. Drag both bookmarklets to your bookmarks bar
+4. Navigate to Amazon library page
+5. Click **⚠️ DEV** bookmarklet to test local changes
+6. (Optional) Click **📚 Production** to compare behavior
+
+The installer detects its own environment using `window.location.hostname` and generates appropriate bookmarklet code dynamically.
+
+### Files Overview
+
+**User-Facing Files:**
+- `index.html` - Landing page with project introduction
+- `install-bookmarklet.html` - Bookmarklet installer page
+- `readerwrangler.html` - Main application HTML shell
+- `readerwrangler.js` - Application JavaScript
+- `readerwrangler.css` - Application styles
+
+**Data Fetchers:**
+- `bookmarklet-loader.js` - Smart bookmarklet loader with environment detection
+- `amazon-library-fetcher.js` - Amazon library data fetching utility
+- `amazon-collections-fetcher.js` - Amazon collections data fetching utility
+
+**Development:**
 - `readerwrangler.code-workspace` - VS Code workspace configuration
+- `.git/hooks/pre-commit` - Auto-rebuilds SKILL zips on commit
 
 ---
 
@@ -143,6 +324,8 @@ Browsers block JavaScript from loading local files (like your library JSON) when
 - Ship Fast vs. Build Solid decision framework
 
 **When to Update:** When adding new documentation files or changing development processes
+
+---
 
 ## Development Workflow
 
@@ -364,6 +547,8 @@ Before starting any new project or major feature, assess:
 - Real consequences (managing 2666 books)
 - Clear requirements, known direction
 
+---
+
 ## Architecture Notes
 
 ### Version Management Pattern
@@ -389,6 +574,8 @@ See SKILL-ReaderWrangler.md and CHANGELOG Technical Notes for:
 - Icon display lag solutions
 - Manifest caching workarounds
 - Ground rule violation patterns
+
+---
 
 ## Questions?
 
