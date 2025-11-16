@@ -48,6 +48,7 @@ description: Core development workflow rules including version management, appro
 - "Proceed with edits" = Make file edits ONLY, then STOP
 - "Proceed with commit" = Commit ONLY, then STOP
 - "Proceed with push" = Push ONLY, then STOP
+- "Proceed with testing" = Make edits, commit, and (if using GitHub Pages workflow) push to enable server testing, then STOP
 - "Proceed with X and Y" = Do both X and Y, then STOP
 - "Proceed" alone = Clarify what to proceed with
 - When in doubt, do ONE operation and STOP
@@ -182,38 +183,53 @@ Before removing version letter (finalizing release):
 ## Git Workflow Patterns
 
 ### Feature Development
-- Create feature branch from main: `git checkout -b feature-name`
-- Make incremental commits with letter versions (v3.1.0.a, v3.1.0.b, etc.)
-- When ready to release, squash all letter-versioned commits into one
-- Update to release version (e.g., v3.1.0), merge to main
-- Tag the release: `git tag v3.1.0` (use actual version number, not this example)
-- Push with tags: `git push origin main --tags`
+
+**Basic workflow:**
+1. Create feature branch from main: `git checkout -b feature-name`
+2. Make incremental commits with letter versions (v3.1.0.a, v3.1.0.b, etc.)
+3. Push to GitHub when using GitHub Pages testing workflow (see CONTRIBUTING.md "Development Option B")
+4. When ready to release, squash all letter-versioned commits into one
+5. Update to release version (e.g., v3.1.0), merge to main
+6. Tag the release: `git tag v3.1.0` (use actual version number, not this example)
+7. Push with tags: `git push origin main --tags`
+
+**Testing workflows:**
+See CONTRIBUTING.md for detailed testing workflows:
+- **Option A: Local Development** - Test on localhost:8000 (no push required during iterations)
+- **Option B: GitHub Pages Testing** - Push feature branch, configure repo settings to serve that branch, test on github.io
+
+**GitHub Pages deployment note:**
+When using Option B, you must manually configure GitHub repository settings to serve your feature branch, then configure back to `main` after merging. See CONTRIBUTING.md "Development Option B" for complete instructions.
 
 ### Testing Workflow (Local and Server-Based)
 
-**Applies to:** All code changes, whether testing locally or on GitHub Pages server
+**This project supports two testing workflows:**
 
-**Unified Workflow:**
+See CONTRIBUTING.md for complete setup instructions:
+- **Development Option A: Local Development** - Fastest iteration, test immediately on localhost
+- **Development Option B: GitHub Pages Testing** - Test deployment process, verify production behavior
 
+**Unified development pattern:**
 1. **Version BEFORE code changes** (Ground Rule #1)
 2. **Make code changes**
-3. **Commit immediately** (capture iteration history for potential squashing before merge)
-4. **Push** (enables server testing and maintains consistent workflow)
-5. **Test:**
-   - **Server testing**: Test on https://ron-l.github.io/readerwrangler/
-   - **Local testing**: Test locally (console paste, local server, etc.)
-6. **If bugs found**, increment version letter and repeat from step 2
-7. **When stable**, merge to main (squash commits if desired)
+3. **Commit immediately** (capture iteration history)
+4. **Test using your chosen workflow:**
+   - **Option A (Local)**: No push needed, test on localhost:8000
+   - **Option B (GitHub Pages)**: Push to origin, configure repo settings to serve feature branch, wait 1-5 min, test on github.io
+5. **If bugs found**, increment version letter and repeat from step 2
+6. **When stable**, merge to main (squash commits if desired), configure repo settings back to `main`
 
-**Key Insight:** The workflow is identical - the only difference is where you test (step 5).
+**Key differences:**
+- **Local workflow**: Faster iterations, no push needed until ready for production
+- **GitHub Pages workflow**: Tests actual deployment, requires push + repo settings change + wait time
 
-**Files testable locally or on server:**
-- amazon-organizer.html, amazon-organizer.js (local server or GitHub Pages)
-- library-fetcher.js, collections-fetcher.js (console paste or via bookmarklet)
+**Files testable with either workflow:**
+- readerwrangler.html, readerwrangler.js (main organizer app)
+- amazon-library-fetcher.js, amazon-collections-fetcher.js (can paste into browser console)
 
-**Files requiring server testing:**
-- bookmarklet-loader.js (loaded via bookmarklet, cannot run locally)
-- install-bookmarklet.html (references GitHub Pages URLs)
+**Files requiring GitHub Pages workflow:**
+- bookmarklet-loader.js (loaded via bookmarklet from remote URL)
+- install-bookmarklet.html (generates bookmarklets pointing to GitHub Pages URLs)
 
 ### Documentation-Only Changes
 - Documentation files (README, CHANGELOG, TODO, NOTES, SKILL-*.md, .gitignore) can be modified directly on main branch
