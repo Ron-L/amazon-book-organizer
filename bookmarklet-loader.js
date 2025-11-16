@@ -1,10 +1,10 @@
-// ReaderWrangler Bookmarklet Loader v1.0.2.c
+// ReaderWrangler Bookmarklet Loader v1.0.2
 // Smart bookmarklet with intro dialog and navigation
 
 (function() {
     'use strict';
 
-    const LOADER_VERSION = 'v1.0.2.c';
+    const LOADER_VERSION = 'v1.0.2';
 
     const currentUrl = window.location.href;
 
