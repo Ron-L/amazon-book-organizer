@@ -14,14 +14,24 @@
 
 ## In Progress
 
-### Landing Page & UX Tweaks (feature-ux-landing-page-tweaks)
+None - ready for next feature!
+
+## Completed
+
+### Landing Page & UX Tweaks - RELEASED (2025-11-16)
 - [x] Created index.html landing page for custom domain (readerwrangler.com)
 - [x] Updated amazon-collections-fetcher.js progress message (1½ minutes per 1000 books)
 - [x] Added X buttons to all dialogs (bookmarklet, library fetcher, collections fetcher)
 - [x] Added localhost detection to bookmarklet for local testing
 - [x] Removed "Refresh page to cancel" from dialogs (kept in console)
-
-## Completed
+- [x] Environment-aware bookmarklet installer (v1.0.2.d)
+  - Production: Shows single bookmarklet (📚 ReaderWrangler)
+  - Localhost: Shows BOTH dev and prod bookmarklets side-by-side
+  - Dev bookmarklet: ⚠️ DEV ReaderWrangler (orange, localhost only)
+  - Prod bookmarklet: 📚 ReaderWrangler (purple, GitHub/readerwrangler.com)
+  - Tested successfully on localhost and Amazon pages
+- [x] Restructured CONTRIBUTING.md with logical flow
+- [x] Removed version numbers from Files Overview (maintenance burden)
 - [x] Initialize git repository
 - [x] Setup GitHub remote
 - [x] Create project documentation

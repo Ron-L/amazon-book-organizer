@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Install ReaderWrangler</title>
-    <script>const INSTALLER_VERSION = 'v1.0.2.c';</script>
+    <script>const INSTALLER_VERSION = 'v1.0.2.d';</script>
     <style>
         * {
             margin: 0;
@@ -133,11 +133,9 @@
         <h1>📚 ReaderWrangler</h1>
         <p class="subtitle">Organize your ebook collection with ease</p>
 
-        <a href="javascript:(function(){var h=window.location.hostname;var l=h.indexOf('localhost')>-1||h.indexOf('127.0.0.1')>-1;var r=h.indexOf('readerwrangler.com')>-1;var b=l?'http://localhost:8000/':r?'https://readerwrangler.com/':'https://ron-l.github.io/readerwrangler/';var s=document.createElement('script');s.src=b+'bookmarklet-loader.js';document.body.appendChild(s);})();"
-           class="bookmarklet-button"
-           onclick="alert('Don\'t click! Drag this button to your bookmarks bar instead.'); return false;">
-            📚 ReaderWrangler
-        </a>
+        <div id="bookmarklet-container">
+            <!-- Bookmarklets will be injected here by JavaScript based on environment -->
+        </div>
 
         <div class="instructions">
             <h2>Installation Instructions</h2>
@@ -160,7 +158,8 @@
         </div>
 
         <div class="note">
-            <strong>Note:</strong> This bookmarklet loads a script from GitHub Pages that fetches your library data directly from Amazon's API. All processing happens in your browser - your data never leaves your computer. To uninstall, simply right-click the bookmarklet in your bookmarks bar and select "Delete" or "Remove".
+            <strong>Note:</strong> This bookmarklet loads a script from GitHub Pages that fetches your library data directly from Amazon's API. It <strong>only runs</strong> when you click it. All processing happens in your browser - your data never leaves your computer.<br><br>
+            To uninstall, simply right-click the bookmarklet in your bookmarks bar and select "Delete" or "Remove".
         </div>
 
         <a href="https://github.com/Ron-L/readerwrangler" class="github-link" target="_blank">
@@ -174,6 +173,60 @@
 
     <script>
         document.getElementById('installerVersion').textContent = INSTALLER_VERSION;
+
+        // Detect environment and generate appropriate bookmarklets
+        const isLocalhost = window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1';
+
+        const container = document.getElementById('bookmarklet-container');
+
+        // DEV bookmarklet (localhost only)
+        const devBookmarklet = `javascript:(function(){var s=document.createElement('script');s.src='http://localhost:8000/bookmarklet-loader.js';document.body.appendChild(s);})();`;
+
+        // PROD bookmarklet (readerwrangler.com or github.io)
+        const prodBookmarklet = `javascript:(function(){var h=window.location.hostname;var r=h.indexOf('readerwrangler.com')>-1;var b=r?'https://readerwrangler.com/':'https://ron-l.github.io/readerwrangler/';var s=document.createElement('script');s.src=b+'bookmarklet-loader.js';document.body.appendChild(s);})();`;
+
+        if (isLocalhost) {
+            // LOCALHOST: Show both bookmarklets for developers
+            container.innerHTML = `
+                <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #ffc107;">
+                    <div style="font-weight: bold; color: #856404; margin-bottom: 10px;">⚙️ Developer Mode</div>
+                    <div style="font-size: 14px; color: #666;">Install both bookmarklets to easily switch between localhost and production testing.</div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                    <div style="background: #fff3cd; padding: 20px; border-radius: 8px; text-align: center;">
+                        <div style="font-weight: bold; color: #856404; margin-bottom: 15px; font-size: 14px;">Development (Localhost)</div>
+                        <a href="${devBookmarklet}"
+                           class="bookmarklet-button"
+                           style="background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);"
+                           onclick="alert('Don\\'t click! Drag this button to your bookmarks bar instead.'); return false;">
+                            ⚠️ DEV ReaderWrangler
+                        </a>
+                        <div style="font-size: 12px; color: #666; margin-top: 10px;">Points to localhost:8000</div>
+                    </div>
+
+                    <div style="background: #e8f5e9; padding: 20px; border-radius: 8px; text-align: center;">
+                        <div style="font-weight: bold; color: #2e7d32; margin-bottom: 15px; font-size: 14px;">Production</div>
+                        <a href="${prodBookmarklet}"
+                           class="bookmarklet-button"
+                           onclick="alert('Don\\'t click! Drag this button to your bookmarks bar instead.'); return false;">
+                            📚 ReaderWrangler
+                        </a>
+                        <div style="font-size: 12px; color: #666; margin-top: 10px;">Points to GitHub Pages/Production</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            // PRODUCTION: Show only production bookmarklet
+            container.innerHTML = `
+                <a href="${prodBookmarklet}"
+                   class="bookmarklet-button"
+                   onclick="alert('Don\\'t click! Drag this button to your bookmarks bar instead.'); return false;">
+                    📚 ReaderWrangler
+                </a>
+            `;
+        }
     </script>
 </body>
 </html>
