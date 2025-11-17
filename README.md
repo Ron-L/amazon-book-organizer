@@ -2,7 +2,7 @@
 
 ## Wrangle your reader chaos - Your books, your order
 
-ReaderWrangler™ extracts your complete online Amazon Kindle library—including covers, ratings, descriptions, and reviews—with a simple one-click bookmarklet. Unlike tools that require local ebook files or manual exports, ReaderWrangler scrapes everything directly from your online Amazon Kindle library when you click the button.
+ReaderWrangler™ extracts your complete [online Kindle library from Amazon.com](https://www.amazon.com/yourbooks)—including covers, ratings, descriptions, and reviews—with a simple one-click bookmarklet. Unlike tools that require local ebook files or manual exports, ReaderWrangler scrapes everything directly from your [online Kindle library from Amazon.com](https://www.amazon.com/yourbooks) when you click the button.
 
 With hundreds or thousands of books in your collection, great reads get buried and forgotten. ReaderWrangler lets you create custom groups like "Next to Read" or "Time Travel Books," drag and drop books into organized columns, and double-click any cover to see full details, ratings, and reviews—so you never lose track of what to read next.
 
