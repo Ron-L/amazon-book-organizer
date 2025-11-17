@@ -1,10 +1,10 @@
-// ReaderWrangler Bookmarklet Loader v1.1.0.a
+// ReaderWrangler Bookmarklet Loader v1.1.0.b
 // Universal navigator and data fetcher
 
 (function() {
     'use strict';
 
-    const LOADER_VERSION = 'v1.1.0.a';
+    const LOADER_VERSION = 'v1.1.0.b';
 
     const currentUrl = window.location.href;
 
@@ -105,7 +105,7 @@
         `;
     } else {
         dialogContent += `
-            <button id="goLibrary" style="${secondaryButtonStyle} width: 100%; margin-bottom: 10px;">
+            <button id="goLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
                 📖 Go to Library Fetcher Amazon Page
             </button>
         `;
@@ -119,7 +119,7 @@
         `;
     } else {
         dialogContent += `
-            <button id="goCollections" style="${secondaryButtonStyle} width: 100%; margin-bottom: 10px;">
+            <button id="goCollections" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
                 📚 Go to Collections Fetcher Amazon Page
             </button>
         `;
@@ -127,10 +127,10 @@
 
     // Add universal navigation buttons
     dialogContent += `
-        <button id="launchApp" style="${secondaryButtonStyle} width: 100%; margin-bottom: 10px;">
+        <button id="launchApp" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
             🎯 Launch App
         </button>
-        <button id="launchIntro" style="${secondaryButtonStyle} width: 100%;">
+        <button id="launchIntro" style="${primaryButtonStyle} width: 100%;">
             ℹ️ Launch Intro for Help
         </button>
     `;
