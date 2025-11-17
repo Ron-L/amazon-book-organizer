@@ -1,10 +1,10 @@
-// ReaderWrangler Bookmarklet Loader v1.0.2
-// Smart bookmarklet with intro dialog and navigation
+// ReaderWrangler Bookmarklet Loader v1.1.0.a
+// Universal navigator and data fetcher
 
 (function() {
     'use strict';
 
-    const LOADER_VERSION = 'v1.0.2';
+    const LOADER_VERSION = 'v1.1.0.a';
 
     const currentUrl = window.location.href;
 
@@ -75,7 +75,7 @@
         border: 1px solid #ddd;
     `;
 
-    // Build dialog content based on current page
+    // Build universal navigator dialog
     let dialogContent = `
         <button style="
             position: absolute;
@@ -91,76 +91,49 @@
             transition: color 0.2s;
         " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'" onclick="this.parentElement.remove()">✕</button>
         <div style="font-size: 48px; margin-bottom: 15px;">📚</div>
-        <div style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 15px;">
+        <div style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 25px;">
             ReaderWrangler
-        </div>
-        <div style="font-size: 14px; color: #666; margin-bottom: 20px; line-height: 1.6;">
-            Fetch and organize your ebook library with a drag-and-drop interface.
         </div>
     `;
 
+    // Add context-specific fetcher buttons
     if (onLibraryPage) {
-        // On library page - offer to run library fetcher or navigate to collections
         dialogContent += `
-            <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <div style="font-weight: bold; color: #2e7d32; margin-bottom: 5px;">📖 Library Page Detected</div>
-                <div style="font-size: 13px; color: #555;">You're on your Amazon library page</div>
-            </div>
-            <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; line-height: 1.6;">
-                <strong>Library Fetcher</strong> will:
-                <ul style="margin: 10px 0 0 20px; text-align: left;">
-                    <li>Fetch all your books with titles, authors, covers</li>
-                    <li>Enrich with descriptions, ratings, reviews</li>
-                    <li>Download as JSON file to organize</li>
-                </ul>
-            </div>
             <button id="runLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
-                📖 Fetch Your Book List
-            </button>
-            <button id="goCollections" style="${secondaryButtonStyle} width: 100%;">
-                📚 Go to Collections Page to Fetch Collections
-            </button>
-        `;
-    } else if (onCollectionsPage) {
-        // On collections page - offer to run collections fetcher or navigate to library
-        dialogContent += `
-            <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <div style="font-weight: bold; color: #2e7d32; margin-bottom: 5px;">📚 Collections Page Detected</div>
-                <div style="font-size: 13px; color: #555;">You're on your Kindle collections page</div>
-            </div>
-            <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; line-height: 1.6;">
-                <strong>Collections Fetcher</strong> will:
-                <ul style="margin: 10px 0 0 20px; text-align: left;">
-                    <li>Fetch your collection memberships</li>
-                    <li>Extract read status for each book</li>
-                    <li>Download as JSON file to merge with library</li>
-                </ul>
-            </div>
-            <button id="goLibrary" style="${secondaryButtonStyle} width: 100%; margin-bottom: 10px;">
-                📖 Go to Library Page to Fetch Book List
-            </button>
-            <button id="runCollections" style="${primaryButtonStyle} width: 100%;">
-                📚 Fetch Your Book Collections
+                📖 Fetch Library Data
             </button>
         `;
     } else {
-        // On other page - offer navigation to both
         dialogContent += `
-            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <div style="font-weight: bold; color: #856404; margin-bottom: 5px;">⚠️ Wrong Page</div>
-                <div style="font-size: 13px; color: #555;">This tool works on Amazon library pages</div>
-            </div>
-            <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px;">
-                Choose which data to fetch:
-            </div>
-            <button id="goLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
-                📖 Go to Library Page to Fetch Book List
-            </button>
-            <button id="goCollections" style="${primaryButtonStyle} width: 100%;">
-                📚 Go to Collections Page to Fetch Collections
+            <button id="goLibrary" style="${secondaryButtonStyle} width: 100%; margin-bottom: 10px;">
+                📖 Go to Library Fetcher Amazon Page
             </button>
         `;
     }
+
+    if (onCollectionsPage) {
+        dialogContent += `
+            <button id="runCollections" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;">
+                📚 Fetch Collections Data
+            </button>
+        `;
+    } else {
+        dialogContent += `
+            <button id="goCollections" style="${secondaryButtonStyle} width: 100%; margin-bottom: 10px;">
+                📚 Go to Collections Fetcher Amazon Page
+            </button>
+        `;
+    }
+
+    // Add universal navigation buttons
+    dialogContent += `
+        <button id="launchApp" style="${secondaryButtonStyle} width: 100%; margin-bottom: 10px;">
+            🎯 Launch App
+        </button>
+        <button id="launchIntro" style="${secondaryButtonStyle} width: 100%;">
+            ℹ️ Launch Intro for Help
+        </button>
+    `;
 
     dialog.innerHTML = dialogContent;
     document.body.appendChild(dialog);
@@ -223,6 +196,21 @@
         };
     }
 
+    const launchAppBtn = dialog.querySelector('#launchApp');
+    if (launchAppBtn) {
+        launchAppBtn.onclick = () => {
+            dialog.remove();
+            window.location.href = baseUrl + 'readerwrangler.html';
+        };
+    }
+
+    const launchIntroBtn = dialog.querySelector('#launchIntro');
+    if (launchIntroBtn) {
+        launchIntroBtn.onclick = () => {
+            dialog.remove();
+            window.location.href = baseUrl + 'index.html';
+        };
+    }
 
     // Add version footer to dialog
     const versionFooter = document.createElement('div');
