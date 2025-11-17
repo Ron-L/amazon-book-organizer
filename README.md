@@ -19,8 +19,10 @@ With hundreds or thousands of books in your collection, great reads get buried a
 2. **Drag it to your bookmarks bar**
 3. **Click the bookmarklet and select "Go to Library Fetcher Amazon Page"**
 4. **Click the bookmarklet again and select "Fetch Library Data"**
-5. **Click the bookmarklet and select "Launch App"**
-6. **Organize your books**: Load the downloaded JSON file into the organizer
+5. **Click the bookmarklet and select "Go to Collections Fetcher Amazon Page"**
+6. **Click the bookmarklet again and select "Fetch Collections Data"**
+7. **Click the bookmarklet and select "Launch App"**
+8. **Organize your books**: Load the downloaded JSON file into the organizer
 
 All processing happens in your browser - **your data never leaves your computer.**
 
