@@ -1,11 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Landing Page v1.0.1 -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="ReaderWrangler - Organize and rediscover your ebook library. Create custom groups, drag and drop books, and never lose track of what to read next.">
-    <meta name="keywords" content="ebook organizer, kindle library, book management, reading list, amazon books">
-    <title>ReaderWrangler - Wrangle your reader chaos</title>
+    <meta name="description" content="Extract and organize your online Amazon Kindle library with one click. Bookmarklet scrapes covers, ratings, reviews, and descriptions directly from Amazon. Drag-and-drop organization in your browser.">
+    <meta name="keywords" content="amazon kindle library, kindle organizer, extract kindle books, scrape amazon library, book management, reading list, kindle collections, wrangle reader chaos, online kindle library">
+    <title>ReaderWrangler - Extract & Organize Your Amazon Kindle Library</title>
+
+    <!-- Canonical URL to avoid duplicate content issues -->
+    <link rel="canonical" href="https://readerwrangler.com/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://readerwrangler.com/">
+    <meta property="og:title" content="ReaderWrangler - Extract & Organize Your Amazon Kindle Library">
+    <meta property="og:description" content="Extract your complete online Amazon Kindle library with one click. Drag-and-drop organization. Scrapes covers, ratings, reviews, and descriptions directly from Amazon.">
+    <meta property="og:image" content="https://readerwrangler.com/og-image.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://readerwrangler.com/">
+    <meta property="twitter:title" content="ReaderWrangler - Extract & Organize Your Amazon Kindle Library">
+    <meta property="twitter:description" content="Extract your complete online Amazon Kindle library with one click. Drag-and-drop organization. Scrapes covers, ratings, reviews, and descriptions directly from Amazon.">
+    <meta property="twitter:image" content="https://readerwrangler.com/og-image.png">
+
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <style>
         * {
@@ -79,7 +98,7 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             padding: 60px 20px;
         }
@@ -286,8 +305,8 @@
 
     <div class="container">
         <div class="section">
-            <h2>Rediscover Your Library</h2>
-            <p>ReaderWrangler helps you organize and rediscover your ebook library. With hundreds or thousands of books in your collection, great reads get buried and forgotten. ReaderWrangler lets you create custom groups like "Next to Read" or "Time Travel Books," drag and drop books into organized columns, and double-click any cover to see full details, ratings, and reviews—so you never lose track of what to read next.</p>
+            <h2>Extract and Organize Your Online Amazon Kindle Library with One Click</h2>
+            <p>ReaderWrangler extracts your complete online Amazon Kindle library—including covers, ratings, descriptions, and reviews—with a simple one-click bookmarklet. Unlike tools that require local ebook files or manual exports, ReaderWrangler scrapes everything directly from your online Amazon Kindle library when you click the button. With hundreds or thousands of books in your collection, great reads get buried and forgotten. ReaderWrangler lets you create custom groups like "Next to Read" or "Time Travel Books," drag and drop books into organized columns, and double-click any cover to see full details—so you never lose track of what to read next.</p>
         </div>
 
         <div class="quick-start">
@@ -295,9 +314,9 @@
             <ol>
                 <li><strong>Install the bookmarklet:</strong> Visit <a href="install-bookmarklet.html">install-bookmarklet.html</a></li>
                 <li><strong>Drag it to your bookmarks bar</strong></li>
-                <li><strong>Go to your online library:</strong> Navigate to your library webpage (e.g. <a href="https://www.amazon.com/yourbooks" target="_blank">Amazon library page</a>)</li>
-                <li><strong>Click the bookmarklet:</strong> Fetch your library data with one click</li>
-                <li><strong>Open the ReaderWrangler app:</strong> <a href="readerwrangler.html">Launch the organizer</a></li>
+                <li><strong>Click the bookmarklet and select "Go to Library Fetcher Amazon Page"</strong></li>
+                <li><strong>Click the bookmarklet again and select "Fetch Library Data"</strong></li>
+                <li><strong>Click the bookmarklet and select "Launch App"</strong></li>
                 <li><strong>Organize your books:</strong> Load the downloaded JSON file into the organizer</li>
             </ol>
             <p style="margin-top: 20px;"><strong>All processing happens in your browser - your data never leaves your computer.</strong></p>
@@ -309,11 +328,11 @@
             <h3>Unbury your next great read.</h3>
             <p>If you're like most book lovers, your ebook library has grown to hundreds—even thousands—of books. You buy new titles faster than you can read them, and buried in that digital pile are gems you've completely forgotten about. That book you were excited to read last year? Lost in the shuffle. The entire series you meant to binge? Scattered and out of order.</p>
 
-            <h3 style="margin-top: 30px;">Amazon shows you all your books, but won't let you organize them.</h3>
+            <h3 style="margin-top: 30px;">Amazon shows you all your books online, but won't let you organize them.</h3>
             <p>Amazon's "Your Books" page displays beautiful thumbnails with ratings and reviews, but there's a critical problem: you can't reorder them or group them in meaningful ways. With a massive library, it's impossible to keep track of what you own, what you've read, and what's next on your list.</p>
 
-            <h3 style="margin-top: 30px;">ReaderWrangler gives you the control Amazon doesn't.</h3>
-            <p>ReaderWrangler is a free web app that transforms your Amazon library into an organized, personalized reading dashboard. Using a simple bookmarklet, you download your complete Amazon library along with cover images, ratings, reviews, and descriptions.</p>
+            <h3 style="margin-top: 30px;">ReaderWrangler extracts everything from your online Amazon Kindle library and gives you the control Amazon doesn't.</h3>
+            <p>ReaderWrangler is a free web app that scrapes your online Amazon Kindle library when you click and transforms it into an organized, personalized reading dashboard. Using a simple bookmarklet, you extract your complete online Amazon Kindle library along with cover images, ratings, reviews, and descriptions—all scraped directly from Amazon's online interface. No local files required. No manual exports. Just one click.</p>
 
             <p>Then the magic happens: <strong>you</strong> create custom columns like "Next to Read," "Favorites," "Time Travel Books," or "Beach Reads"—whatever makes sense for you. Drag and drop books between columns, reorder them within groups, and use multi-select to move entire series at once. Search by author or title to quickly find and organize specific books.</p>
 
@@ -323,6 +342,16 @@
 
     <div class="container">
         <div class="features">
+            <div class="feature">
+                <h3>Amazon Kindle Extraction</h3>
+                <ul>
+                    <li>One-click extraction from your online Amazon Kindle library</li>
+                    <li>Scrapes covers, ratings, reviews, and descriptions directly from Amazon</li>
+                    <li>No manual CSV exports or local ebook files required</li>
+                    <li>Works entirely in your browser when you click</li>
+                </ul>
+            </div>
+
             <div class="feature">
                 <h3>Library Management</h3>
                 <ul>
@@ -363,9 +392,9 @@
             <h3>How It Works</h3>
             <div class="workflow-steps">
                 <div class="workflow-step">
-                    <h4>1. Fetch Your Library</h4>
-                    <p>Your online bookstore already has your complete library—we just need to get it. Install our simple bookmarklet that securely fetches your book list directly from your store and saves it to a file on your computer. One click, and the fetch begins—grabbing all your books with covers, descriptions, ratings, and reviews.</p>
-                    <p style="margin-top: 12px; font-weight: 500;">⏱️ The initial download may take a while depending on your library size, but you only need to do it once</p>
+                    <h4>1. Extract Your Online Amazon Kindle Library</h4>
+                    <p>Your online Amazon Kindle library already has your complete collection—we just need to extract it. Install our simple bookmarklet, then when you click it, the extraction begins—scraping your book list directly from Amazon's website and saving it to a file on your computer. One click grabs all your books with covers, descriptions, ratings, and reviews from Amazon's servers.</p>
+                    <p style="margin-top: 12px; font-weight: 500;">⏱️ The initial extraction may take a while depending on your library size, but you only need to do it once</p>
                     <p style="margin-top: 8px; font-weight: 500;">📥 Saved to your Downloads folder (or browser's default location)</p>
                 </div>
 
@@ -376,9 +405,9 @@
 
                 <div class="workflow-step">
                     <h4>3. Keep It Fresh</h4>
-                    <p>Bought new books? Just click the bookmarklet again and select your existing library file when prompted. ReaderWrangler will quickly fetch only the new additions—no need to re-fetch your entire collection. Your custom organization stays intact while your library stays current.</p>
+                    <p>Bought new books on Amazon? Just click the bookmarklet again and select your existing library file when prompted. ReaderWrangler will quickly scrape only the new additions from Amazon—no need to re-extract your entire collection. Your custom organization stays intact while your library stays current.</p>
                     <div class="note">
-                        <strong>💡 Smart Recovery:</strong> Sometimes Amazon's servers get busy and miss a few book details during the initial fetch. No worries! Every time you refresh your library, ReaderWrangler automatically re-attempts to fetch any missing descriptions or reviews. Your library gets more complete with each update.
+                        <strong>💡 Smart Recovery:</strong> Sometimes Amazon's servers get busy and miss a few book details during the initial extraction. No worries! Every time you refresh your library by clicking the bookmarklet again, ReaderWrangler re-attempts to scrape any missing descriptions or reviews from Amazon. Your library gets more complete with each update.
                     </div>
                 </div>
             </div>
@@ -388,6 +417,38 @@
             <h2>Current Support</h2>
             <p>Amazon Kindle™ Library</p>
         </div>
+
+        <div class="section">
+            <h2>What Makes ReaderWrangler Different?</h2>
+            <p style="font-size: 18px; line-height: 1.6; margin-bottom: 30px;">ReaderWrangler is the <strong>only tool specifically designed for Amazon Kindle libraries</strong>. While other excellent ebook management tools exist, they all require local ebook files—meaning you need to download, export, or manually manage files on your computer. ReaderWrangler takes a completely different approach.</p>
+
+            <div class="features-grid">
+                <div class="feature">
+                    <h3>The Only Tool for Amazon Kindle Libraries</h3>
+                    <p>All other ebook organizers require local files. ReaderWrangler extracts and organizes your online Amazon Kindle library directly—no files to download, no exports to manage.</p>
+                </div>
+
+                <div class="feature">
+                    <h3>Zero Installation Required</h3>
+                    <p>While competitors require Docker, Python, CLI tools, or desktop applications, ReaderWrangler is just a bookmarklet and a webpage. Visit, drag, click, organize. That's it.</p>
+                </div>
+
+                <div class="feature">
+                    <h3>100% Client-Side Privacy</h3>
+                    <p>Other tools require self-hosted servers or cloud uploads. ReaderWrangler processes everything in your browser—your data never leaves your computer.</p>
+                </div>
+
+                <div class="feature">
+                    <h3>No Technical Knowledge Needed</h3>
+                    <p>No command line. No configuration files. No server setup. If you can drag a bookmark and click a button, you can use ReaderWrangler.</p>
+                </div>
+
+                <div class="feature">
+                    <h3>Complementary, Not Competitive</h3>
+                    <p>ReaderWrangler doesn't replace file-based ebook managers—it complements them. Use tools like Calibre or organize-ebooks for your local files, and use ReaderWrangler for your Amazon Kindle library.</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <footer>
@@ -395,6 +456,7 @@
         <div class="notice">
             <p>Amazon, Kindle, and Amazon Kindle are trademarks of Amazon.com, Inc.</p>
             <p>ReaderWrangler™ is not affiliated with, endorsed by, or sponsored by Amazon.</p>
+            <p>Special thanks to <a href="https://freedns.afraid.org/" target="_blank">FreeDNS</a> for providing free DNS hosting.</p>
         </div>
     </footer>
 </body>
