@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Landing Page v1.0.3 -->
+    <!-- Landing Page v1.0.4 -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Extract and organize your online Amazon Kindle library with one click. Bookmarklet scrapes covers, ratings, reviews, and descriptions directly from Amazon. Drag-and-drop organization in your browser.">
-    <meta name="keywords" content="amazon kindle library, kindle organizer, extract kindle books, scrape amazon library, book management, reading list, kindle collections, wrangle reader chaos, online kindle library">
-    <title>ReaderWrangler - Extract & Organize Your Amazon Kindle Library</title>
+    <meta name="description" content="Free tool to scrape your Amazon Kindle library and organize books visually. Easy extraction of covers, ratings, reviews with a simple bookmarklet. Drag-and-drop organization. 100% private - works in your browser.">
+    <meta name="keywords" content="scrape amazon kindle library, organize kindle books visually, amazon kindle organizer, extract kindle books, visual book organizer, kindle book manager, amazon book list extractor, kindle collection organizer, organize ebooks">
+    <title>ReaderWrangler - Scrape & Organize Your Amazon Kindle Books Visually</title>
 
     <!-- Canonical URL to avoid duplicate content issues -->
     <link rel="canonical" href="https://readerwrangler.com/">
@@ -14,18 +14,53 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://readerwrangler.com/">
-    <meta property="og:title" content="ReaderWrangler - Extract & Organize Your Amazon Kindle Library">
-    <meta property="og:description" content="Extract your complete online Amazon Kindle library with one click. Drag-and-drop organization. Scrapes covers, ratings, reviews, and descriptions directly from Amazon.">
-    <meta property="og:image" content="https://readerwrangler.com/og-image.png">
+    <meta property="og:title" content="ReaderWrangler - Scrape & Organize Your Amazon Kindle Books Visually">
+    <meta property="og:description" content="Free tool to scrape your Amazon Kindle library and organize books visually. Easy extraction of covers, ratings, reviews with a simple bookmarklet. Drag-and-drop organization. 100% private - works in your browser.">
+    <meta property="og:image" content="https://readerwrangler.com/icons/og-image.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://readerwrangler.com/">
-    <meta property="twitter:title" content="ReaderWrangler - Extract & Organize Your Amazon Kindle Library">
-    <meta property="twitter:description" content="Extract your complete online Amazon Kindle library with one click. Drag-and-drop organization. Scrapes covers, ratings, reviews, and descriptions directly from Amazon.">
-    <meta property="twitter:image" content="https://readerwrangler.com/og-image.png">
+    <meta property="twitter:title" content="ReaderWrangler - Scrape & Organize Your Amazon Kindle Books Visually">
+    <meta property="twitter:description" content="Free tool to scrape your Amazon Kindle library and organize books visually. Easy extraction of covers, ratings, reviews with a simple bookmarklet. Drag-and-drop organization. 100% private - works in your browser.">
+    <meta property="twitter:image" content="https://readerwrangler.com/icons/og-image.png">
 
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+
+    <!-- Structured Data (Schema.org) for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "ReaderWrangler",
+      "description": "Free web app to extract and organize your online Amazon Kindle library. Simple bookmarklet scrapes covers, ratings, reviews, and descriptions directly from Amazon. Drag-and-drop visual organization.",
+      "url": "https://readerwrangler.com",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Web Browser",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Easy extraction from Amazon Kindle library with bookmarklet",
+        "Scrapes book covers, ratings, reviews, and descriptions",
+        "Drag-and-drop visual organization",
+        "Custom book collections",
+        "100% client-side privacy",
+        "No installation required"
+      ],
+      "softwareVersion": "3.5.0",
+      "author": {
+        "@type": "Person",
+        "name": "Ron L"
+      },
+      "license": "https://github.com/Ron-L/readerwrangler/blob/main/LICENSE"
+    }
+    </script>
     <style>
         * {
             margin: 0;
@@ -40,21 +75,25 @@
         }
 
         .hero {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 80px 20px;
+            padding: 64px 20px;
             text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .hero h1 {
             font-size: 3em;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             font-weight: 700;
         }
 
         .hero .tagline {
             font-size: 1.5em;
-            margin-bottom: 40px;
+            margin-bottom: 32px;
             opacity: 0.95;
         }
 
@@ -100,7 +139,28 @@
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 60px 20px;
+            padding: 60px 96px 30px 96px;
+        }
+
+        .container + .container {
+            padding-top: 0;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                padding: 60px 20px 30px 20px;
+            }
+
+            .container + .container {
+                padding-top: 0;
+            }
+        }
+
+        .container > h2 {
+            font-size: 2.2em;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #667eea;
         }
 
         .section {
@@ -124,17 +184,32 @@
             padding: 60px 20px;
         }
 
-        .problem-solution h3 {
-            font-size: 1.8em;
-            margin-bottom: 15px;
-            color: #333;
+        .problem-solution h2 {
+            font-size: 2.2em;
+            margin-bottom: 20px;
+            color: #667eea;
         }
 
-        .features {
+        .problem-solution h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .features,
+        .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 40px;
             margin-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .features,
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .feature {
@@ -190,11 +265,10 @@
             margin: 40px 0;
         }
 
-        .how-it-works h3 {
-            color: #333;
-            font-size: 1.8em;
+        .how-it-works h2 {
+            color: #667eea;
+            font-size: 2.2em;
             margin-bottom: 25px;
-            text-align: center;
         }
 
         .workflow-steps {
@@ -231,25 +305,47 @@
         }
 
         .quick-start {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 30px;
+            background: #f8f9fa;
+            padding: 40px;
+            border-radius: 12px;
+            margin: 40px 0 0 0;
+        }
+
+        .quick-start-steps {
+            display: grid;
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .quick-start-step {
+            background: white;
+            padding: 25px;
             border-radius: 8px;
-            margin: 40px 0;
+            border-left: 4px solid #667eea;
         }
 
-        .quick-start h3 {
-            color: #856404;
-            margin-bottom: 20px;
+        .quick-start-step h4 {
+            color: #667eea;
+            font-size: 1.3em;
+            margin-bottom: 15px;
         }
 
-        .quick-start ol {
-            margin-left: 20px;
-        }
-
-        .quick-start li {
+        .quick-start-step p {
+            color: #555;
+            line-height: 1.6;
             margin-bottom: 10px;
-            color: #444;
+        }
+
+        .quick-start-step .note {
+            background: #e3f2fd;
+            border-left: 3px solid #1976d2;
+            padding: 15px;
+            margin-top: 15px;
+            border-radius: 4px;
+        }
+
+        .quick-start-step .note strong {
+            color: #1565c0;
         }
 
         footer {
@@ -305,52 +401,100 @@
 
     <div class="container">
         <div class="section">
-            <h2>Extract and Organize Your Online Amazon Kindle Library with One Click</h2>
-            <p>ReaderWrangler extracts your complete <a href="https://www.amazon.com/yourbooks" target="_blank">online Kindle library from Amazon.com</a>—including covers, ratings, descriptions, and reviews—with a simple one-click bookmarklet. Unlike tools that require local ebook files or manual exports, ReaderWrangler scrapes everything directly from your <a href="https://www.amazon.com/yourbooks" target="_blank">online Kindle library from Amazon.com</a> when you click the button. With hundreds or thousands of books in your collection, great reads get buried and forgotten. ReaderWrangler lets you create custom groups like "Next to Read" or "Time Travel Books," drag and drop books into organized columns, and double-click any cover to see full details—so you never lose track of what to read next.</p>
-        </div>
+            <h2>Extract and Organize Your Online Amazon Kindle Library Easily</h2>
+            <p>ReaderWrangler extracts your complete <a href="https://www.amazon.com/yourbooks">online Kindle library from Amazon.com</a>—including covers, ratings, descriptions, and reviews—with a simple bookmarklet. It then provides a canvas for you to arrange and group them in any order so you can finally organize your collection how you want it!</p>
 
-        <div class="quick-start">
-            <h3>Quick Start</h3>
-            <ol>
-                <li><strong>Install the bookmarklet:</strong> Visit <a href="install-bookmarklet.html">install-bookmarklet.html</a></li>
-                <li><strong>Drag it to your bookmarks bar</strong></li>
-                <li><strong>Click the bookmarklet and select "Go to Library Fetcher Amazon Page"</strong></li>
-                <li><strong>Click the bookmarklet again and select "Fetch Library Data"</strong></li>
-                <li><strong>Click the bookmarklet and select "Go to Collections Fetcher Amazon Page"</strong></li>
-                <li><strong>Click the bookmarklet again and select "Fetch Collections Data"</strong></li>
-                <li><strong>Click the bookmarklet and select "Launch App"</strong></li>
-                <li><strong>Organize your books:</strong> Load the downloaded JSON file into the organizer</li>
-            </ol>
-            <p style="margin-top: 20px;"><strong>All processing happens in your browser - your data never leaves your computer.</strong></p>
-        </div>
-    </div>
+            <p>With hundreds or thousands of books in your collection, great reads get buried and forgotten. ReaderWrangler lets you create custom groups like "Next to Read" or "Time Travel Books," drag and drop books into organized columns, and double-click any cover to see full details—so you never lose track of what to read next.</p>
 
-    <div class="problem-solution">
-        <div class="container">
-            <h3>Unbury your next great read.</h3>
-            <p>If you're like most book lovers, your ebook library has grown to hundreds—even thousands—of books. You buy new titles faster than you can read them, and buried in that digital pile are gems you've completely forgotten about. That book you were excited to read last year? Lost in the shuffle. The entire series you meant to binge? Scattered and out of order.</p>
+            <h2 style="margin-top: 40px;">Get Started Now!</h2>
 
-            <h3 style="margin-top: 30px;">Amazon shows you all your books online, but won't let you organize them.</h3>
-            <p>Amazon's "Your Books" page displays beautiful thumbnails with ratings and reviews, but there's a critical problem: you can't reorder them or group them in meaningful ways. With a massive library, it's impossible to keep track of what you own, what you've read, and what's next on your list.</p>
+            <div id="index-bookmarklet-container" style="text-align: center; margin: 30px 0;">
+                <!-- Bookmarklet will be injected here by JavaScript -->
+            </div>
 
-            <h3 style="margin-top: 30px;">ReaderWrangler extracts everything from your online Amazon Kindle library and gives you the control Amazon doesn't.</h3>
-            <p>ReaderWrangler is a free web app that scrapes your online Amazon Kindle library when you click and transforms it into an organized, personalized reading dashboard. Using a simple bookmarklet, you extract your complete online Amazon Kindle library along with cover images, ratings, reviews, and descriptions—all scraped directly from Amazon's online interface. No local files required. No manual exports. Just one click.</p>
+            <p style="text-align: center; margin-bottom: 10px; font-size: 1.1em; color: #667eea; font-weight: 600;">Here's how:</p>
 
-            <p>Then the magic happens: <strong>you</strong> create custom columns like "Next to Read," "Favorites," "Time Travel Books," or "Beach Reads"—whatever makes sense for you. Drag and drop books between columns, reorder them within groups, and use multi-select to move entire series at once. Search by author or title to quickly find and organize specific books.</p>
+            <p style="text-align: center; margin: 20px 0;">
+                <img src="images/bookmarklet-install.gif" alt="Drag bookmarklet to bookmarks bar" style="max-width: 50%; height: auto; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            </p>
 
-            <p>Double-click any book cover to see its full details—larger cover image, title, author, Amazon rating, description, and top reviews—then navigate through your filtered results without leaving the detail view.</p>
+            <p style="text-align: center; font-size: 0.95em; color: #777; margin: 20px 0 10px 0;">
+                Still need <a href="install-bookmarklet.html" style="color: #667eea; text-decoration: none; font-weight: 500;">help</a>?
+            </p>
+
+            <div class="quick-start">
+                <h2>Quick Start</h2>
+                <div class="quick-start-steps">
+                    <div class="quick-start-step">
+                        <h4>1. One-Time Install of Bookmarklet</h4>
+                        <p>A. <strong>Visit the <a href="install-bookmarklet.html">Get Started</a> page</strong></p>
+                        <p>B. <strong>Drag the button there to your bookmarks bar</strong></p>
+                    </div>
+
+                    <div class="quick-start-step">
+                        <h4>2. Fetch Your Data from Amazon.com (Initial Setup)</h4>
+                        <p>A. <strong>Click the bookmarklet</strong> and select "Go to Library Fetcher Amazon Page"</p>
+                        <p>B. <strong>Click the bookmarklet again</strong> and select "Fetch Library Data"</p>
+
+                        <p style="margin-top: 15px;">C. <strong>Click the bookmarklet</strong> and select "Go to Collections Fetcher Amazon Page"</p>
+                        <p>D. <strong>Click the bookmarklet again</strong> and select "Fetch Collections Data"</p>
+
+                        <div class="note">
+                            <strong>💡 Keeping Your Library Current:</strong> Do this once to get your complete library, then repeat occasionally to fetch newly purchased books. ReaderWrangler will merge the new books while preserving your organization.
+                        </div>
+                    </div>
+
+                    <div class="quick-start-step">
+                        <h4>3. Start Organizing!</h4>
+                        <p>A. <strong>Click the bookmarklet</strong> and select "Launch App"</p>
+                        <p>B. <strong>Organize your books:</strong> Load the downloaded JSON file into the organizer</p>
+
+                        <div class="note">
+                            <strong>🔒 Your Privacy Matters:</strong> All processing happens in your browser - your data never leaves your computer.
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <div class="container">
+        <h2>Why ReaderWrangler?</h2>
+
+        <div class="features-grid">
+            <div class="feature">
+                <h3>Unbury your next great read.</h3>
+                <p>If you're like most book lovers, your ebook library has grown to hundreds—even thousands—of books. You buy new titles faster than you can read them, and buried in that digital pile are gems you've completely forgotten about. That book you were excited to read last year? Lost in the shuffle. The entire series you meant to binge? Scattered and out of order.</p>
+            </div>
+
+            <div class="feature">
+                <h3>Amazon shows you all your books online, but won't let you organize them.</h3>
+                <p>Amazon's "Your Books" page displays beautiful thumbnails with ratings and reviews, but there's a critical problem: you can't reorder them or group them in meaningful ways. With a massive library, it's impossible to keep track of what you own, what you've read, and what's next on your list.</p>
+            </div>
+
+            <div class="feature">
+                <h3>ReaderWrangler extracts everything from your online Amazon Kindle library and gives you the control Amazon doesn't.</h3>
+                <p>ReaderWrangler is a free web app that scrapes your online Amazon Kindle library when you click the bookmarklet and transforms it into an organized, personalized reading dashboard. Using a simple bookmarklet, you extract your complete online Amazon Kindle library along with cover images, ratings, reviews, and descriptions—all scraped directly from Amazon's online interface. No local files required. No manual exports. Simple and straightforward.</p>
+            </div>
+
+            <div class="feature">
+                <h3>Then the magic happens.</h3>
+                <p><strong>You</strong> create custom columns like "Next to Read," "Favorites," "Time Travel Books," or "Beach Reads"—whatever makes sense for you. Drag and drop books between columns, reorder them within groups, and use multi-select to move entire series at once. Search by author or title to quickly find and organize specific books. Double-click any book cover to see its full details—larger cover image, title, author, Amazon rating, description, and top reviews—then navigate through your filtered results without leaving the detail view.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Key Features</h2>
+
         <div class="features">
             <div class="feature">
                 <h3>Amazon Kindle Extraction</h3>
                 <ul>
-                    <li>One-click extraction from your online Amazon Kindle library</li>
+                    <li>Easy extraction from your online Amazon Kindle library with bookmarklet</li>
                     <li>Scrapes covers, ratings, reviews, and descriptions directly from Amazon</li>
                     <li>No manual CSV exports or local ebook files required</li>
-                    <li>Works entirely in your browser when you click</li>
+                    <li>Works entirely in your browser when you click the bookmarklet</li>
                 </ul>
             </div>
 
@@ -386,16 +530,16 @@
         </div>
 
         <div class="privacy-highlight">
-            <h3>Your books, your order. Finally.</h3>
+            <h3>Your books, your order. Finally!</h3>
             <p>Rediscover forgotten treasures, prioritize your reading stack, and organize the chaos into a system that actually works for you. ReaderWrangler runs entirely in your browser—your library data stays private and local. Never lose track of what to read next. Take command of your reading life.</p>
         </div>
 
         <div class="how-it-works">
-            <h3>How It Works</h3>
+            <h2>How It Works</h2>
             <div class="workflow-steps">
                 <div class="workflow-step">
                     <h4>1. Extract Your Online Amazon Kindle Library</h4>
-                    <p>Your online Amazon Kindle library already has your complete collection—we just need to extract it. Install our simple bookmarklet, then when you click it, the extraction begins—scraping your book list directly from Amazon's website and saving it to a file on your computer. One click grabs all your books with covers, descriptions, ratings, and reviews from Amazon's servers.</p>
+                    <p>Your online Amazon Kindle library already has your complete collection—we just need to extract it. Install our simple bookmarklet, then when you click the bookmarklet, a navigation menu appears. Select "Go to Library Fetcher Amazon Page" to navigate to the correct Amazon page, then click the bookmarklet again and select "Fetch Library Data" to begin extraction—scraping your book list directly from Amazon's website and saving it to a file on your computer. The bookmarklet grabs all your books with covers, descriptions, ratings, and reviews from Amazon's servers.</p>
                     <p style="margin-top: 12px; font-weight: 500;">⏱️ The initial extraction may take a while depending on your library size, but you only need to do it once</p>
                     <p style="margin-top: 8px; font-weight: 500;">📥 Saved to your Downloads folder (or browser's default location)</p>
                 </div>
@@ -407,9 +551,9 @@
 
                 <div class="workflow-step">
                     <h4>3. Keep It Fresh</h4>
-                    <p>Bought new books on Amazon? Just click the bookmarklet again and select your existing library file when prompted. ReaderWrangler will quickly scrape only the new additions from Amazon—no need to re-extract your entire collection. Your custom organization stays intact while your library stays current.</p>
+                    <p>Bought new books on Amazon? Just click the bookmarklet, navigate to the library fetcher page using the menu, then select "Fetch Library Data" again and choose your existing library file when prompted. ReaderWrangler will quickly scrape only the new additions from Amazon—no need to re-extract your entire collection. Your custom organization stays intact while your library stays current.</p>
                     <div class="note">
-                        <strong>💡 Smart Recovery:</strong> Sometimes Amazon's servers get busy and miss a few book details during the initial extraction. No worries! Every time you refresh your library by clicking the bookmarklet again, ReaderWrangler re-attempts to scrape any missing descriptions or reviews from Amazon. Your library gets more complete with each update.
+                        <strong>💡 Smart Recovery:</strong> Sometimes Amazon's servers get busy and miss a few book details during the initial extraction. No worries! Every time you refresh your library by clicking the bookmarklet and fetching data again, ReaderWrangler re-attempts to scrape any missing descriptions or reviews from Amazon. Your library gets more complete with each update.
                     </div>
                 </div>
             </div>
@@ -454,12 +598,84 @@
     </div>
 
     <footer>
-        <p><a href="https://github.com/Ron-L/readerwrangler" target="_blank">View on GitHub</a> | <a href="CHANGELOG.md">Changelog</a> | <a href="CONTRIBUTING.md">Contributing</a></p>
+        <p><a href="https://github.com/Ron-L/readerwrangler" target="_blank">View on GitHub</a> | <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank">Report an Issue</a> | <a href="CHANGELOG.md">Changelog</a> | <a href="CONTRIBUTING.md">Contributing</a></p>
         <div class="notice">
             <p>Amazon, Kindle, and Amazon Kindle are trademarks of Amazon.com, Inc.</p>
             <p>ReaderWrangler™ is not affiliated with, endorsed by, or sponsored by Amazon.</p>
             <p>Special thanks to <a href="https://freedns.afraid.org/" target="_blank">FreeDNS</a> for providing free DNS hosting.</p>
         </div>
     </footer>
+
+    <script>
+        // Developer mode: Set to true to view production buttons while on localhost
+        const DEV_MODE_VIEW_OF_PROD_BUTTONS = false;
+
+        // Detect environment and generate appropriate bookmarklet
+        const isLocalhost = window.location.hostname === 'localhost' ||
+                           window.location.hostname === '127.0.0.1';
+
+        const container = document.getElementById('index-bookmarklet-container');
+
+        // DEV bookmarklet (localhost only)
+        const devBookmarklet = `javascript:(function(){var s=document.createElement('script');s.src='http://localhost:8000/bookmarklet-loader.js';document.body.appendChild(s);})();`;
+
+        // PROD bookmarklet (readerwrangler.com or github.io)
+        const prodBookmarklet = `javascript:(function(){var h=window.location.hostname;var r=h.indexOf('readerwrangler.com')>-1;var b=r?'https://readerwrangler.com/':'https://ron-l.github.io/readerwrangler/';var s=document.createElement('script');s.src=b+'bookmarklet-loader.js';document.body.appendChild(s);})();`;
+
+        const bookmarkletStyle = `
+            display: inline-block;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: all 0.2s;
+            cursor: move;
+            font-size: 1.1em;
+        `;
+
+        if (isLocalhost && !DEV_MODE_VIEW_OF_PROD_BUTTONS) {
+            // LOCALHOST: Show both bookmarklets for developers
+            container.innerHTML = `
+                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+                    <div style="font-weight: bold; color: #856404; margin-bottom: 8px; font-size: 14px;">⚙️ Developer Mode</div>
+                    <div style="font-size: 13px; color: #666;">Drag one or both bookmarklets to test localhost and/or production.</div>
+                </div>
+                <div style="display: inline-block; margin: 0 10px;">
+                    <a href="${devBookmarklet}"
+                       style="${bookmarkletStyle} background: linear-gradient(135deg, #ff6b35 0%, #f7931e 100%);"
+                       onclick="alert('Don\\'t click! Drag this button to your bookmarks bar instead.'); return false;">
+                        ⚠️ DEV ReaderWrangler
+                    </a>
+                    <div style="font-size: 11px; color: #666; margin-top: 5px;">localhost:8000</div>
+                </div>
+                <div style="display: inline-block; margin: 0 10px;">
+                    <a href="${prodBookmarklet}"
+                       style="${bookmarkletStyle}"
+                       onclick="alert('Don\\'t click! Drag this button to your bookmarks bar instead.'); return false;">
+                        📚 ReaderWrangler
+                    </a>
+                    <div style="font-size: 11px; color: #666; margin-top: 5px;">Production</div>
+                </div>
+            `;
+        } else {
+            // PRODUCTION: Show bookmarklet with instructions
+            container.innerHTML = `
+                <p style="font-size: 1.1em; color: #555; margin-bottom: 15px;">
+                    Just drag this bookmarklet
+                    <a href="${prodBookmarklet}"
+                       style="${bookmarkletStyle}"
+                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 16px rgba(102, 126, 234, 0.4)';"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)';"
+                       onclick="alert('Don\\'t click! Drag this button to your bookmarks bar instead.'); return false;">
+                        📚 ReaderWrangler
+                    </a>
+                    to your bookmarks bar, and you're ready to go!
+                </p>
+            `;
+        }
+    </script>
 </body>
 </html>

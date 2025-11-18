@@ -14,9 +14,55 @@
 
 ## In Progress
 
-None - ready for next feature!
+### Pending: Screenshot Capture
+- [ ] **Organize library into column structure** (see TODO-PENDING-REVIEW.md for configuration guide)
+  - Create 4-5 columns: "Next to Read", "Time Travel", "Thrillers", "Favorites ⭐", "Currently Reading"
+  - Demonstrates the solution: order and control (vs chaos of 2322 unsorted books)
+- [ ] **Capture AFTER screenshot** showing organized library
+  - Show ReaderWrangler header with multiple populated columns
+  - Empty or nearly-empty "Unorganized" column (shows completion)
+  - Save to images/ folder alongside existing BEFORE screenshot
+- [ ] **Optionally update documentation** with new screenshots
+  - Consider adding to README.md hero section
+  - Consider adding to index.html hero section
 
 ## Completed
+
+### Documentation Accuracy & SEO Setup - COMPLETED (2025-11-18)
+- [x] **Bookmarklet Evolution to Navigation Hub**
+  - Conceptual shift: Bookmarklet now shows navigation menu instead of auto-running scripts
+  - Multi-step workflow: Navigate → Fetch → Launch (not "one-click" as originally advertised)
+  - Installation now available from both index.html and install-bookmarklet.html
+  - Added DEV_MODE_VIEW_OF_PROD_BUTTONS toggle for localhost testing
+- [x] **"One-Click" False Advertising Fixes**
+  - Replaced "one-click extraction" with accurate "easy extraction with bookmarklet"
+  - Updated 15+ locations across index.html, install-bookmarklet.html, README.md
+  - User expectations now match reality
+- [x] **Documentation Accuracy**
+  - "How It Works" section rewritten to explicitly mention navigation menu
+  - Standardized to "when you click the bookmarklet" throughout
+  - Changed "One-Time Setup" → "Initial Setup" (more accurate)
+  - Fixed typo: "canvase for your" → "canvas for you"
+  - Removed old commented code for previous bookmarklet order
+- [x] **README.md Structure Alignment**
+  - Added missing section title: "Extract and Organize Your Online Amazon Kindle Library Easily"
+  - Reordered all sections to match index.html exactly
+  - Fixed GIF placement (moved below 2nd paragraph)
+  - Fixed Quick Start formatting (each step on separate line)
+  - Converted sections to 2x2 table format (matches index.html)
+  - Added "How It Works" section matching index.html
+  - Word-for-word verification: All matching content now identical
+  - Added FreeDNS credit in Notice section
+- [x] **SEO Infrastructure**
+  - Created sitemap.xml for Google indexing
+  - Created robots.txt for crawler guidance
+  - Added Schema.org structured data (JSON-LD) to index.html
+  - Optimized meta tags with "scrape", "visually", "extract" keywords
+  - Added OG meta tags for social media sharing
+- [x] **Launch Strategy Documentation**
+  - Created REDDIT-LAUNCH-POST.md for r/kindle launch (200k+ subscribers)
+  - Created PRODUCTHUNT-LAUNCH-CHECKLIST.md with complete launch guide
+  - Documented best posting times, expected Q&A, success metrics
 
 ### Landing Page & UX Tweaks - RELEASED (2025-11-16)
 - [x] Created index.html landing page for custom domain (readerwrangler.com)

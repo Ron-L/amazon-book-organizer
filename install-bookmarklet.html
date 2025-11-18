@@ -3,7 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Install the ReaderWrangler bookmarklet to extract and organize your online Amazon Kindle library easily. Simple drag-and-drop installation.">
     <title>Install ReaderWrangler - Extract Your Amazon Kindle Library</title>
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://readerwrangler.com/install-bookmarklet.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://readerwrangler.com/install-bookmarklet.html">
+    <meta property="og:title" content="Install ReaderWrangler - Extract Your Amazon Kindle Library">
+    <meta property="og:description" content="Install the ReaderWrangler bookmarklet to extract and organize your online Amazon Kindle library easily. Simple drag-and-drop installation.">
+    <meta property="og:image" content="https://readerwrangler.com/icons/og-image.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://readerwrangler.com/install-bookmarklet.html">
+    <meta property="twitter:title" content="Install ReaderWrangler - Extract Your Amazon Kindle Library">
+    <meta property="twitter:description" content="Install the ReaderWrangler bookmarklet to extract and organize your online Amazon Kindle library easily. Simple drag-and-drop installation.">
+    <meta property="twitter:image" content="https://readerwrangler.com/icons/og-image.png">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+
     <script>const INSTALLER_VERSION = 'v1.0.4';</script>
     <style>
         * {
@@ -137,6 +161,10 @@
             <!-- Bookmarklets will be injected here by JavaScript based on environment -->
         </div>
 
+        <div style="text-align: center; margin: 40px 0;">
+            <img src="images/bookmarklet-install.gif" alt="Drag bookmarklet to bookmarks bar" style="max-width: 60%; height: auto; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        </div>
+
         <div class="instructions">
             <h2>Installation Instructions</h2>
             <ol>
@@ -147,6 +175,10 @@
                     </ul>
                 </li>
                 <li><strong>Drag the button above</strong> to your bookmarks bar</li>
+            </ol>
+
+            <h2 style="margin-top: 30px;">How to Use</h2>
+            <ol start="3">
                 <li><strong>Click the bookmarklet</strong> in your bookmarks bar to open the navigator menu</li>
                 <li><strong>Use the menu to navigate</strong>:
                     <ul style="margin-left: 20px; margin-top: 5px;">
@@ -176,6 +208,9 @@
     <script>
         document.getElementById('installerVersion').textContent = INSTALLER_VERSION;
 
+        // Developer mode: Set to true to view production buttons while on localhost
+        const DEV_MODE_VIEW_OF_PROD_BUTTONS = false;
+
         // Detect environment and generate appropriate bookmarklets
         const isLocalhost = window.location.hostname === 'localhost' ||
                            window.location.hostname === '127.0.0.1';
@@ -188,7 +223,7 @@
         // PROD bookmarklet (readerwrangler.com or github.io)
         const prodBookmarklet = `javascript:(function(){var h=window.location.hostname;var r=h.indexOf('readerwrangler.com')>-1;var b=r?'https://readerwrangler.com/':'https://ron-l.github.io/readerwrangler/';var s=document.createElement('script');s.src=b+'bookmarklet-loader.js';document.body.appendChild(s);})();`;
 
-        if (isLocalhost) {
+        if (isLocalhost && !DEV_MODE_VIEW_OF_PROD_BUTTONS) {
             // LOCALHOST: Show both bookmarklets for developers
             container.innerHTML = `
                 <div style="background: #fff3cd; padding: 20px; border-radius: 8px; margin-bottom: 30px; border-left: 4px solid #ffc107;">

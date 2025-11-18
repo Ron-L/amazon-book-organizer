@@ -7,7 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Bookmarklet Evolution to Navigation Hub** - Transformed bookmarklet from simple script runner to multi-step navigation system
+  - **CONCEPT CHANGE**: Bookmarklet now shows navigation menu instead of auto-running scripts
+  - **USER FLOW**: Users click bookmarklet → menu appears → select action (navigate, fetch, launch app)
+  - **NAVIGATION**: Menu guides users to correct Amazon pages before fetching data
+  - **MULTI-STEP WORKFLOW**: Requires 4+ clicks (not "one-click" as originally advertised)
+  - **INSTALLATION**: Bookmarklet now installable from both index.html and install-bookmarklet.html
+  - **DEV MODE**: Added `DEV_MODE_VIEW_OF_PROD_BUTTONS` toggle for localhost testing
+    - Allows testing production URLs while running locally on http://localhost:8000/
+    - Set to `false` for production deployment
+    - Located in index.html and install-bookmarklet.html
+  - **FILES AFFECTED**: bookmarklet-loader.js, index.html, install-bookmarklet.html
+
+### Fixed
+- **"One-Click" False Advertising** - Removed inaccurate marketing claims throughout documentation
+  - **PROBLEM**: Claimed "one-click extraction" but reality is multi-step workflow via navigation menu
+  - **SOLUTION**: Replaced all "one-click" language with accurate descriptions:
+    - "one-click extraction" → "easy extraction with bookmarklet"
+    - "with one click" → "with a simple bookmarklet"
+    - "One-click bookmarklet" → "Simple bookmarklet"
+    - "Just one click" → "Simple and straightforward"
+  - **IMPACT**: 15+ locations updated across index.html (8 locations), install-bookmarklet.html (3 locations), README.md (5+ locations)
+  - **REASONING**: User expectations now match reality - no false advertising
+
+- **Documentation Accuracy** - Aligned all documentation with actual bookmarklet behavior
+  - **"How It Works" section rewritten**: Now explicitly mentions navigation menu and multi-step process
+    - Step 1: "...when you click the bookmarklet, a navigation menu appears. Select 'Go to Library Fetcher Amazon Page'..."
+    - Step 3: "...click the bookmarklet, navigate to the library fetcher page using the menu, then select 'Fetch Library Data'"
+  - **Standardized language**: All instances now use "when you click the bookmarklet" (not "when you click it")
+  - **Terminology fix**: Changed "One-Time Setup" → "Initial Setup" (more accurate since users repeat occasionally)
+  - **Typo fix**: "canvase for your" → "canvas for you" (index.html:405)
+  - **Cleanup**: Removed old commented code showing previous bookmarklet order
+
+- **README.md Structure** - Complete restructure to match index.html exactly
+  - **Added missing section title**: "Extract and Organize Your Online Amazon Kindle Library Easily"
+  - **Reordered sections**: Quick Start → Why ReaderWrangler? → Key Features → How It Works → Current Support → What Makes ReaderWrangler Different?
+  - **Fixed GIF placement**: Moved below 2nd paragraph (was covering text)
+  - **Fixed Quick Start formatting**: Each step (A, B, C, D) now on separate line
+  - **Converted sections to tables**: 2x2 grid format for feature sections (matches index.html)
+  - **Added "How It Works" section**: 3-step workflow matching index.html exactly
+  - **Word-for-word verification**: All matching content now identical between README.md and index.html
+  - **Added FreeDNS credit**: Special thanks in Notice section
+
 ### Added
+- **SEO Infrastructure** - Complete search engine optimization setup
+  - **sitemap.xml** - XML sitemap for Google indexing
+    - Lists all 4 main pages with priority and change frequency
+    - Last modified dates for freshness signals
+    - Standard sitemap protocol format
+  - **robots.txt** - Crawler guidance file
+    - Allows all bots to crawl all pages
+    - Points to sitemap.xml location
+    - Disallows temp/ and test/ directories
+  - **Schema.org Structured Data** - JSON-LD metadata in index.html
+    - SoftwareApplication schema type
+    - Feature list for rich snippets
+    - Version and URL information
+  - **Optimized Meta Tags** - Enhanced SEO keywords
+    - Added "scrape", "visually", "extract" to target search queries
+    - Goal: Rank for "tool to scrape amazon kindle books and organize visually"
+    - Updated descriptions across index.html and install-bookmarklet.html
+    - Added OG meta tags for social media sharing (uses icons/og-image.png)
+
+- **Launch Strategy Documentation** - Comprehensive launch preparation
+  - **REDDIT-LAUNCH-POST.md** - Reddit launch guide for r/kindle (200k+ subscribers)
+    - 3 post title options (problem-focused, feature-focused, question-based)
+    - Complete post body with GIF placement
+    - Expected Q&A section
+    - Best posting times (Tue-Thu, 9-11 AM or 6-8 PM EST)
+    - Follow-up strategy for r/ebooks, r/productivity, r/selfhosted
+  - **PRODUCTHUNT-LAUNCH-CHECKLIST.md** - Complete ProductHunt launch guide
+    - Pre-launch timeline (2-3 weeks preparation)
+    - Asset requirements (images, GIF, copy)
+    - Launch day timeline (start 12:01 AM PT)
+    - Maker comment template
+    - Social media post templates
+    - Success metrics (100-200 upvotes = great launch)
+
 - **Landing Page (index.html)** - Professional landing page for custom domain (readerwrangler.com)
   - Hero section with tagline "Wrangle your reader chaos - Your books, your order"
   - Problem/solution narrative from README
@@ -28,9 +105,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dialog UX Improvements** - Added X buttons and localhost testing support
   - **Bookmarklet Loader** (v1.0.2.a)
     - Added X button to upper-right corner of intro dialog
-    - Added localhost detection for development testing
-    - Automatically loads from http://localhost:8000/ when testing locally
-    - Falls back to GitHub Pages (production) when on Amazon
+    - Removed "🔄 Refresh page to cancel" from dialogs (kept in console output)
+    - Consistent close affordance across all states
   - **Collections Fetcher** (v1.0.2.b)
     - Added X button to all dialog states (progress, complete, error)
     - Removed "🔄 Refresh page to cancel" from dialogs (kept in console output)

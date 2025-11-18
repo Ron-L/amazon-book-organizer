@@ -1,0 +1,11 @@
+# robots.txt for ReaderWrangler
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://readerwrangler.com/sitemap.xml
+
+# Disallow temporary or test files (if any)
+Disallow: /temp/
+Disallow: /test/
