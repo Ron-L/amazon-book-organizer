@@ -57,6 +57,16 @@ B. **Organize your books**: Load the downloaded JSON file into the organizer
 
 ---
 
+## See the Difference
+
+From chaos to control - slide to compare Amazon's view vs. ReaderWrangler's organized columns
+
+<img src="images/before.png" alt="Before: Amazon's chaotic book list" width="49%"> <img src="images/after.png" alt="After: Organized ReaderWrangler columns" width="49%">
+
+*Note: In the live website, this is an interactive slider you can drag left/right*
+
+---
+
 ## Key Features
 
 | | |
@@ -160,6 +170,17 @@ Ron-L
 ---
 
 Questions or issues? Check the [documentation](CONTRIBUTING.md) or [open an issue on GitHub](https://github.com/Ron-L/ReaderWrangler/issues).
+
+---
+
+## See ReaderWrangler in Action
+
+Watch this 10-minute walkthrough to see all the features in action
+
+<a href="https://readerwrangler.com/images/walk-through.mp4">
+  <img src="images/walkthrough-preview.png" alt="ReaderWrangler 10-minute walkthrough" width="100%">
+  <p align="center">▶️ Click to watch full 10-minute walkthrough (opens video in new tab)</p>
+</a>
 
 ---
 

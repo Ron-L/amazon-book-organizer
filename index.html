@@ -387,7 +387,110 @@
                 grid-template-columns: 1fr;
             }
         }
+
+        /* Before/After Slider Styles */
+        .comparison-section {
+            margin: 60px 0;
+            text-align: center;
+        }
+
+        .comparison-section h2 {
+            margin-bottom: 10px;
+        }
+
+        .comparison-section p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .comparison-container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        img-comparison-slider {
+            width: 100%;
+            margin: 0 auto;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            --divider-width: 4px;
+            --divider-color: #667eea;
+            --default-handle-opacity: 1;
+        }
+
+        img-comparison-slider:focus {
+            outline: none;
+        }
+
+        /* Custom handle styling for better visibility */
+        img-comparison-slider::part(divider) {
+            background: linear-gradient(to bottom,
+                transparent,
+                var(--divider-color) 10%,
+                var(--divider-color) 90%,
+                transparent);
+        }
+
+        img-comparison-slider::part(handle) {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border: 3px solid var(--divider-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        img-comparison-slider::part(handle):hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+        }
+
+        /* Walkthrough Video Styles */
+        .walkthrough-section {
+            margin: 60px 0;
+            text-align: center;
+        }
+
+        .walkthrough-section h2 {
+            margin-bottom: 10px;
+        }
+
+        .walkthrough-section p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .video-wrapper {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .video-container {
+            width: 100%;
+            margin: 0 auto;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+
+        .video-container video {
+            width: 100%;
+            display: block;
+        }
     </style>
+
+    <!-- Image Comparison Slider -->
+    <script
+      type="module"
+      src="https://unpkg.com/img-comparison-slider@8/dist/index.js"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/img-comparison-slider@8/dist/styles.css"
+    />
 </head>
 <body>
     <div class="hero">
@@ -481,6 +584,17 @@
                 <h3>Then the magic happens.</h3>
                 <p><strong>You</strong> create custom columns like "Next to Read," "Favorites," "Time Travel Books," or "Beach Reads"—whatever makes sense for you. Drag and drop books between columns, reorder them within groups, and use multi-select to move entire series at once. Search by author or title to quickly find and organize specific books. Double-click any book cover to see its full details—larger cover image, title, author, Amazon rating, description, and top reviews—then navigate through your filtered results without leaving the detail view.</p>
             </div>
+        </div>
+    </div>
+
+    <div class="comparison-section">
+        <h2>See the Difference</h2>
+        <p>From chaos to control - slide to compare Amazon's view vs. ReaderWrangler's organized columns</p>
+        <div class="comparison-container">
+            <img-comparison-slider>
+                <img slot="first" src="images/before.png" alt="Before: Amazon's chaotic book list" />
+                <img slot="second" src="images/after.png" alt="After: Organized ReaderWrangler columns" />
+            </img-comparison-slider>
         </div>
     </div>
 
@@ -609,6 +723,19 @@
                 <li><strong>Multi-store support</strong> - Organize books from Barnes & Noble, Kobo, and other ebook stores</li>
             </ul>
             <p style="margin-top: 20px;">Have a feature request? <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank">Let us know on GitHub!</a></p>
+        </div>
+    </div>
+
+    <div class="walkthrough-section">
+        <h2>See ReaderWrangler in Action</h2>
+        <p>Watch this 10-minute walkthrough to see all the features in action</p>
+        <div class="video-wrapper">
+            <div class="video-container">
+                <video controls preload="metadata" poster="images/walkthrough-preview.png">
+                    <source src="images/walk-through.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
         </div>
     </div>
 

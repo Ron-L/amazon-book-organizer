@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.6.0] - 2025-11-19
+
+### Added
+- **Visual Assets & Marketing Content** - Enhanced landing page and documentation with interactive demonstrations
+  - **Interactive Before/After Slider**: Image comparison slider on index.html showing transformation from Amazon's chaotic list to organized columns
+    - Uses img-comparison-slider web component from unpkg CDN
+    - Custom purple divider and handle styling for improved visibility
+    - Full-bleed 1800px container for maximum visual impact
+    - Screenshot assets: before.png (808 KB), after.png (1.8 MB)
+  - **10-Minute Walkthrough Video**: Self-hosted video demonstration of all features
+    - HTML5 video player with custom poster image
+    - Compressed from 846 MB to 39 MB for web delivery (H.264/AAC)
+    - 1600px container for prominent display
+    - Preview frame extracted at 9:11 timestamp using FFmpeg
+    - Video assets: walk-through.mp4 (39 MB), walkthrough-preview.png (1.3 MB)
+  - **README.md Enhancements**: Static versions of visual content for GitHub
+    - Side-by-side before/after images (49% width each)
+    - Clickable video preview linking to MP4
+    - Placed strategically after "Why ReaderWrangler?" section
+  - **Location**: index.html comparison section and video section, README.md visual sections
+  - **Purpose**: Improved conversion and user engagement through visual storytelling
+
+### Changed
+- **TODO Documentation** - Added "Fill in missing sections in USER-GUIDE.md" task
+
 ## [3.5.4] - 2025-11-19
 
 ### Fixed

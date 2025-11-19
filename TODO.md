@@ -23,6 +23,12 @@
   - Consider adding to README.md hero section
   - Consider adding to index.html hero section
 
+### Pending: Documentation
+- [ ] **Fill in missing sections in USER-GUIDE.md**
+  - Complete any placeholder sections or TODO markers
+  - Ensure all features are documented
+  - Add screenshots/examples where helpful
+
 ## Completed
 
 ### CRITICAL: Shift-Click Range Selection Bug - COMPLETED (2025-11-19)
