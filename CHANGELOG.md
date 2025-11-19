@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.4] - 2025-11-19
+
+### Fixed
+- **DEV Bookmarklet Localhost Mode** - DEV bookmarklet now consistently uses localhost for all operations
+  - **Global Flag Pattern**: DEV bookmarklet sets `window._READERWRANGLER_DEV_MODE=true` before loading loader
+  - **Force Localhost**: Loader checks flag and forces `baseUrl = 'http://localhost:8000/'` when true
+  - **Consistent Navigation**: "Launch App" and all navigation now use localhost regardless of current domain
+  - **Developer Experience**: Enables testing production bookmarklet behavior while using local files
+  - **Console Diagnostics**: Both DEV and PROD bookmarklets log version and loading source
+  - **Locations**: [install-bookmarklet.html:222,226](install-bookmarklet.html#L222), [bookmarklet-loader.js:12](bookmarklet-loader.js#L12)
+
+### Removed
+- **Dead Code Cleanup** - Removed non-functional `about:blank` detection from bookmarklet and loader
+  - **Browser Limitation**: Browser security completely blocks JavaScript execution on `about:blank` pages
+  - **No Detection Possible**: Code never executes to show error message
+  - **Documented**: This is expected browser behavior, not a bug to fix
+  - **Other Blocked Pages**: Similarly blocked on `chrome://` URLs and other restricted pages
+
 ## [3.5.3] - 2025-11-19
 
 ### Added
