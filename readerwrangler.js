@@ -1116,7 +1116,7 @@
                 const column = columns.find(col => col.id === columnId);
                 if (!column) return;
 
-                const visibleBooks = column.books;
+                const visibleBooks = filteredBooks(column.books);
                 const startIdx = visibleBooks.findIndex(b => b === startBookId);
                 const endIdx = visibleBooks.findIndex(b => b === endBookId);
 
