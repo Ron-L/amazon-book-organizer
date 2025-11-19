@@ -2,10 +2,17 @@
 
 ## Current Priorities (User-Defined)
 
-1. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
-2. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
-3. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
-4. ✨ **UX Quick Wins** (various) - 1-3 hours each
+1. 🚨 **CRITICAL: Shift-Click Range Selection Bug** (v3.5.1) - 1-2 hours
+   - **Severity**: CRITICAL - Causes massive data corruption
+   - **Impact**: User selects 10 filtered books, actually moves 1400+ unfiltered books
+   - **Root Cause**: Shift-click calculates range on underlying array instead of filtered/visible results
+   - **User Report**: Filtered on "Ayres" (10 books), shift-clicked first→last, moved 1437 books to "Time Travel" column
+   - **Fix**: Calculate range selection indices based on `visibleBooks` array, not `allBooks` array
+   - **Branch**: `bugfix/shift-click-filtered-selection`
+2. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
+3. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
+4. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
+5. ✨ **UX Quick Wins** (various) - 1-3 hours each
 
 ---
 
