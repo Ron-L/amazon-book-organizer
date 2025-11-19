@@ -1,6 +1,6 @@
-        // ReaderWrangler JS v3.5.0
+        // ReaderWrangler JS v3.5.1
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.5.0";
+        const APP_VERSION = "v3.5.1";
         document.title = `ReaderWrangler ${APP_VERSION}`;
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
