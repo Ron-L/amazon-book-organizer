@@ -1,22 +1,25 @@
-// ReaderWrangler Bookmarklet Loader v1.1.0.b
+// ReaderWrangler Bookmarklet Loader v1.1.1.a
 // Universal navigator and data fetcher
 
 (function() {
     'use strict';
 
-    const LOADER_VERSION = 'v1.1.0.b';
+    const LOADER_VERSION = 'v1.1.1.a';
 
     const currentUrl = window.location.href;
 
+    // ISSUE #2 FIX: Check if DEV mode was explicitly requested via global flag
+    const FORCE_LOCALHOST = window._READERWRANGLER_DEV_MODE || false;
+
     // Environment detection
     // Production = readerwrangler.com (users get optimal caching)
-    // Dev = localhost OR github.io (developers get fresh code)
+    // Dev = localhost OR github.io OR FORCE_LOCALHOST flag (developers get fresh code)
     const isLocalhost = window.location.hostname === 'localhost' ||
                        window.location.hostname === '127.0.0.1';
-    const IS_PRODUCTION = window.location.hostname === 'readerwrangler.com';
+    const IS_PRODUCTION = !FORCE_LOCALHOST && window.location.hostname === 'readerwrangler.com';
     const IS_DEV = !IS_PRODUCTION;
 
-    const baseUrl = isLocalhost
+    const baseUrl = FORCE_LOCALHOST || isLocalhost
         ? 'http://localhost:8000/'
         : IS_PRODUCTION
             ? 'https://readerwrangler.com/'
@@ -25,6 +28,7 @@
     // Debug logging
     console.log(`📚 ReaderWrangler Loader ${LOADER_VERSION}`);
     console.log(`   Hostname: ${window.location.hostname}`);
+    console.log(`   FORCE_LOCALHOST: ${FORCE_LOCALHOST}`);
     console.log(`   isLocalhost: ${isLocalhost}`);
     console.log(`   IS_PRODUCTION: ${IS_PRODUCTION}`);
     console.log(`   IS_DEV: ${IS_DEV}`);

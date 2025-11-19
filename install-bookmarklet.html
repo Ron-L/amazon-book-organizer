@@ -217,11 +217,13 @@
 
         const container = document.getElementById('bookmarklet-container');
 
-        // DEV bookmarklet (localhost only)
-        const devBookmarklet = `javascript:(function(){var s=document.createElement('script');s.src='http://localhost:8000/bookmarklet-loader.js';document.body.appendChild(s);})();`;
+        // DEV bookmarklet (localhost only) - Sets FORCE_LOCALHOST flag so loader always uses localhost
+        // Adds console logging for diagnostics
+        const devBookmarklet = `javascript:(function(){console.log('📚 DEV Bookmarklet v1.1.1.a - Starting...');window._READERWRANGLER_DEV_MODE=true;var s=document.createElement('script');s.src='http://localhost:8000/bookmarklet-loader.js';console.log('📚 DEV Bookmarklet: Loading from localhost:8000');document.body.appendChild(s);})();`;
 
         // PROD bookmarklet (readerwrangler.com or github.io)
-        const prodBookmarklet = `javascript:(function(){var h=window.location.hostname;var r=h.indexOf('readerwrangler.com')>-1;var b=r?'https://readerwrangler.com/':'https://ron-l.github.io/readerwrangler/';var s=document.createElement('script');s.src=b+'bookmarklet-loader.js';document.body.appendChild(s);})();`;
+        // Adds console logging for diagnostics
+        const prodBookmarklet = `javascript:(function(){console.log('📚 PROD Bookmarklet v1.1.1.a - Starting...');var h=window.location.hostname;var r=h.indexOf('readerwrangler.com')>-1;var b=r?'https://readerwrangler.com/':'https://ron-l.github.io/readerwrangler/';var s=document.createElement('script');s.src=b+'bookmarklet-loader.js';console.log('📚 PROD Bookmarklet: Loading from '+b);document.body.appendChild(s);})();`;
 
         if (isLocalhost && !DEV_MODE_VIEW_OF_PROD_BUTTONS) {
             // LOCALHOST: Show both bookmarklets for developers
