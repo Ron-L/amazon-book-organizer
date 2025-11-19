@@ -1,6 +1,6 @@
-        // ReaderWrangler JS v3.5.1
+        // ReaderWrangler JS v3.5.2
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.5.1";
+        const APP_VERSION = "v3.5.2";
         document.title = `ReaderWrangler ${APP_VERSION}`;
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -149,6 +149,7 @@
             const [collectionFilter, setCollectionFilter] = useState(''); // Filter by collection name or special values
             const [selectedBooks, setSelectedBooks] = useState(new Set()); // Multi-select state
             const [lastClickedBook, setLastClickedBook] = useState(null); // For shift+click range selection
+            const [activeColumnId, setActiveColumnId] = useState(null); // Track which column has focus for Ctrl+A
             const [contextMenu, setContextMenu] = useState(null); // {x, y, bookId, columnId}
             const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
             const [, forceUpdate] = useState({});
@@ -376,18 +377,35 @@
                 window.books = books;
             }, [books]);
 
-            // ESC key to clear selection
+            // ESC key to clear selection, Ctrl+A to select all in active column
             useEffect(() => {
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
                         clearSelection();
                         setContextMenu(null);
                     }
+
+                    // Ctrl+A: Select all books in active column
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && activeColumnId) {
+                        e.preventDefault(); // Prevent browser's select-all
+                        const column = columns.find(col => col.id === activeColumnId);
+                        if (column) {
+                            const visibleBooks = filteredBooks(column.books);
+                            setSelectedBooks(new Set(visibleBooks.map(book => book.id)));
+                        }
+                    }
                 };
 
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, []);
+            }, [activeColumnId, columns, filteredBooks]);
+
+            // Initialize activeColumnId to first column when columns are loaded
+            useEffect(() => {
+                if (columns.length > 0 && !activeColumnId) {
+                    setActiveColumnId(columns[0].id);
+                }
+            }, [columns, activeColumnId]);
 
             // Close context menu on click
             useEffect(() => {
@@ -1117,13 +1135,14 @@
                 if (!column) return;
 
                 const visibleBooks = filteredBooks(column.books);
-                const startIdx = visibleBooks.findIndex(b => b === startBookId);
-                const endIdx = visibleBooks.findIndex(b => b === endBookId);
+                const startIdx = visibleBooks.findIndex(b => b.id === startBookId);
+                const endIdx = visibleBooks.findIndex(b => b.id === endBookId);
 
                 if (startIdx === -1 || endIdx === -1) return;
 
                 const [min, max] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)];
-                const rangeIds = visibleBooks.slice(min, max + 1);
+                const rangeBooks = visibleBooks.slice(min, max + 1);
+                const rangeIds = rangeBooks.map(book => book.id);
 
                 setSelectedBooks(new Set(rangeIds));
             };
@@ -2090,9 +2109,14 @@
                             }
                         }}>
                             {columns.map((column, colIndex) => (
-                                <div key={column.id} 
+                                <div key={column.id}
                                      data-column-id={column.id}
-                                     className={`flex-shrink-0 w-96 bg-white rounded-lg shadow-md flex flex-col relative ${isDragging && dropTarget?.columnId === column.id ? 'drop-target' : ''} ${draggedColumn === column.id && isDraggingColumn ? 'column-dragging' : ''}`}>
+                                     onClick={() => setActiveColumnId(column.id)}
+                                     className={`flex-shrink-0 w-96 bg-white rounded-lg flex flex-col relative ${isDragging && dropTarget?.columnId === column.id ? 'drop-target' : ''} ${draggedColumn === column.id && isDraggingColumn ? 'column-dragging' : ''}`}
+                                     style={activeColumnId === column.id ? {
+                                         boxShadow: 'inset 0 2px 4px rgba(64, 64, 64, 0.4), inset 0 -2px 4px rgba(64, 64, 64, 0.4), inset 2px 0 4px rgba(64, 64, 64, 0.4), inset -2px 0 4px rgba(64, 64, 64, 0.4), 0 1px 3px rgba(0, 0, 0, 0.12)',
+                                         border: '2px solid rgb(96, 96, 96)'
+                                     } : { boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)' }}>
                                     {isDraggingColumn && columnDropTarget === colIndex && draggedColumn !== column.id && (
                                         <div className="column-drop-indicator" style={{ left: '-8px' }} />
                                     )}
@@ -2179,13 +2203,24 @@
 
                                                                  if (isDragging) return;
 
+                                                                 // Always set active column when clicking a book
+                                                                 setActiveColumnId(column.id);
+
                                                                  if (e.ctrlKey || e.metaKey) {
                                                                      // Ctrl+Click: Toggle selection
                                                                      toggleBookSelection(book.id);
                                                                      setLastClickedBook({ id: book.id, columnId: column.id });
-                                                                 } else if (e.shiftKey && lastClickedBook && lastClickedBook.columnId === column.id) {
-                                                                     // Shift+Click: Range selection (only within same column)
-                                                                     selectBookRange(lastClickedBook.id, book.id, column.id);
+                                                                 } else if (e.shiftKey) {
+                                                                     // Shift+Click: Range selection
+                                                                     if (lastClickedBook && lastClickedBook.columnId === column.id) {
+                                                                         // Range from last clicked book to this book (same column)
+                                                                         selectBookRange(lastClickedBook.id, book.id, column.id);
+                                                                     } else {
+                                                                         // No anchor point or different column: treat as single click
+                                                                         clearSelection();
+                                                                         toggleBookSelection(book.id);
+                                                                         setLastClickedBook({ id: book.id, columnId: column.id });
+                                                                     }
                                                                  } else {
                                                                      // Single click: Select this book (replace selection)
                                                                      clearSelection();

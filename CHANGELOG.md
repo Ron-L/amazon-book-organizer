@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.2] - 2025-11-19
+
+### Added
+- **Ctrl+A Column-Scoped Selection** - Select all books in active column with Ctrl+A
+  - **Active Column Tracking**: Click any book or column to set it as active
+  - **Visual Indicator**: Active column displays dark gray beveled border
+  - **Smart Behavior**: Ctrl+A selects all filtered books in active column only
+  - **Auto-Initialize**: First column automatically becomes active on load
+  - **Cross-Column Safety**: Prevents accidental selection across multiple columns
+
+### Fixed
+- **Shift+Click Range Selection** - Fixed broken shift-click range selection
+  - **Root Cause**: `selectBookRange` was comparing book objects to book IDs using strict equality
+  - **Symptoms**: Shift-click appeared to do nothing (no books selected)
+  - **Fix**: Changed comparison from `b === startBookId` to `b.id === startBookId` (lines 1138-1139)
+  - **Fix**: Added `.map(book => book.id)` to extract IDs from book objects (line 1145)
+  - **Impact**: Shift-click range selection now works correctly for selecting contiguous books
+
+- **Ctrl+A Active Column Tracking** - Fixed Ctrl+A selecting from wrong column
+  - **Root Cause**: Clicking book didn't update `activeColumnId`, only clicking column container did
+  - **Symptoms**: After selecting book in Column B, Ctrl+A still selected from Column A
+  - **Fix**: Added `setActiveColumnId(column.id)` to book click handler (line 2207)
+  - **Impact**: Ctrl+A now always selects from the column containing the last clicked book
+
 ### Changed
 - **Ground Rules: Simplified Compaction Management Protocol** - Streamlined token monitoring and context compaction workflow
   - **EXPERIMENT**: Compared automatic summarizer output vs manual summary template (EXAMPLE-CONTEXT-COMPACTION-PREP.md)
