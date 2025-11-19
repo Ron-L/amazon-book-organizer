@@ -1,6 +1,6 @@
-        // ReaderWrangler JS v3.5.2
+        // ReaderWrangler JS v3.5.3.a
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.5.2";
+        const APP_VERSION = "v3.5.3.a";
         document.title = `ReaderWrangler ${APP_VERSION}`;
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -1528,7 +1528,9 @@
                             <div className="flex items-center gap-3">
                                 <div>
                                     <h1 className="text-2xl font-bold text-gray-900">
-                                        ReaderWrangler
+                                        <a href="index.html" style={{ color: 'inherit', textDecoration: 'none' }}>
+                                            ReaderWrangler
+                                        </a>
                                         {books.length > 0 && <span className="text-lg text-gray-500 ml-2">({books.length} books)</span>}
                                     </h1>
                                     <p className="text-sm text-gray-600 mt-1">
