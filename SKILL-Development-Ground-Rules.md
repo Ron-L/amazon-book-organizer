@@ -5,18 +5,64 @@ description: Core development workflow rules including version management, appro
 
 # Software Development Ground Rules
 
+## ⚠️ CRITICAL: READ THIS FIRST - IMMEDIATE ACTION REQUIRED
+
+**Before proceeding with ANY task, you MUST:**
+
+### 1. Read Actively, Not Passively
+Every rule in this document is an **executable instruction**, not documentation to "be aware of."
+
+### 2. Identify Session Context IMMEDIATELY
+**Session Context Indicators** (if ANY are true, execute actions below):
+- System message says "This session is being continued from a previous conversation"
+- User says "read the ground rules" early in conversation
+- Conversation history shows gaps or summary language
+- You notice context percentage was recently high (>80%)
+
+**If context compaction occurred:**
+- Read SKILL-Development-Ground-Rules.md (this file) completely
+- Read CONTRIBUTING.md for decision frameworks
+- Read SKILL-Amazon-Book-Organizer.md for project-specific patterns
+- Display "Proof of Digestion" checklist (below) in next response
+
+### 3. Display Proof of Digestion
+**After reading these ground rules, IMMEDIATELY display this in your next response:**
+
+```
+✓ Ground Rules Digestion Checklist:
+- [✓] Read SKILL-Development-Ground-Rules.md completely
+- [✓] Read CONTRIBUTING.md for decision frameworks
+- [✓] Identified session context: [New session / Post-compaction / Mid-session]
+- [✓] Rule #0 reminder will appear at top of every response
+- [✓] Rule #2 (Approval Workflow) will be checked before ANY operations
+```
+
+### 4. Verify Success
+**How to know you're doing this correctly:**
+- ✓ First response includes Rule #0 reminder (timestamp + horizontal rule)
+- ✓ Digestion checklist displayed with context identified
+- ✓ You can cite specific rule numbers when making decisions
+- ✓ You check approval before ANY code changes or git operations
+
+### 5. Session-Start Priority Actions
+**If this is post-compaction or new session start:**
+1. Display Rule #0 reminder at top of response
+2. Display Digestion Checklist with identified context
+3. THEN respond to user's request
+
+---
+
 ## Core Rules (NEVER violate these)
 
 ### 0. Recursive Rule Display (Unbreakable)
-- **At the start of EVERY response**, display this one-liner with current timestamp:
-  ```
-  📋 Ground Rules Active - Full rules in SKILL-Development-Ground-Rules.md [YYYY-MM-DD HH:MM:SS Local]
-  ```
-- **ALWAYS follow the one-liner with a horizontal rule separator (`---`) before continuing with your response**
-- Timestamp format: User's local time in ISO 8601 format (e.g., `[2025-11-05 18:45:12 Local]`)
-- This rule ensures rules remain visible throughout the conversation and provides temporal context
-- The reminder MUST appear even in responses that acknowledge this rule
-- Exception: Skip reminder only if user explicitly requests it be turned off
+**At the start of EVERY response**, display:
+```
+📋 Ground Rules Active - Full rules in SKILL-Development-Ground-Rules.md [YYYY-MM-DD HH:MM:SS Local]
+---
+```
+Timestamp format: User's local time in ISO 8601 (e.g., `[2025-11-19 09:33:21 Local]`)
+
+Exception: Skip only if user explicitly requests it be turned off.
 
 ### 1. Version Management
 - **BEFORE** making ANY code change, increment the version letter
@@ -179,6 +225,112 @@ Before removing version letter (finalizing release):
 - The user prefers seeing rules applied visibly rather than having them violated silently
 - Only adds verbosity when rules are actually being invoked (not every response)
 - Estimated token cost: ~50-100 tokens per check (negligible vs rule violations)
+
+## Token Monitoring and Proactive Compaction Management
+
+**Purpose**: Prevent mid-task context compaction by actively monitoring token usage and preparing comprehensive summaries before automatic compaction triggers.
+
+### Token Budget
+- **Total tokens**: 200,000
+- **Compaction trigger**: ~20% remaining (40,000 tokens)
+- **Your responsibility**: Monitor usage and prepare summary at 22-25% threshold
+
+### Status Line Format
+Include token status in Rule #0 display at the start of every response:
+
+```
+📋 Ground Rules Active [2025-11-19 14:48:15] | ██░░░ 25% left 🟡
+                                                  ↑       ↑      ↑
+                                               progress exact  fresh
+```
+
+**Components:**
+- **Progress bars** (████░): Visual token level
+  - █████ = 100-80% (5 blocks)
+  - ████░ = 79-60% (4 blocks)
+  - ███░░ = 59-40% (3 blocks)
+  - ██░░░ = 39-20% (2 blocks)
+  - █░░░░ = 19-0% (1 block)
+- **Percentage**: Exact number for precision (e.g., "25% left")
+- **Freshness indicator**: Colored dot showing data staleness
+  - 🟢 Fresh: Updated in last 2 responses
+  - 🟡 Recent: 2-4 responses ago
+  - 🟠 Stale: 5-7 responses ago
+  - 🔴 Ancient: 8+ responses ago
+
+### Threshold-Based Actions
+
+#### 🟢 Green Zone (>35% remaining)
+**Action**: Normal operation, no special monitoring required
+
+#### 🟡 Yellow Zone (25-35% remaining)
+**Action**: Caution mode
+- Track estimated token cost of each task before starting
+- Warn user if task might trigger compaction mid-work
+- Example: "⚠️ Warning: This task may use ~8% tokens and trigger compaction"
+
+#### 🟠 Orange Zone (22-25% remaining)
+**ACTION REQUIRED - PREPARE FOR COMPACTION**
+
+1. **Announce approaching threshold:**
+   ```
+   ⚠️ Approaching compaction threshold (X% remaining)
+   Checking git status and preparing for compaction...
+   ```
+
+2. **Check git status and violations:**
+   - Run `git status` to capture current branch, uncommitted changes
+   - Run `git log -5 --oneline` to capture recent commits
+   - Note any ground rules violations that occurred this session
+   - Print this information in chat (visible to auto-summarizer)
+
+3. **Trust the auto-summarizer:**
+   - The automatic summarizer captures technical details, errors, decisions, and context effectively
+   - No need for verbose manual summary preparation
+   - The new ground rules header (lines 1-70) ensures proper post-compaction behavior
+
+4. **Ping/pong with user:**
+   ```
+   Git status checked. Ready for compaction.
+   Ping when ready to trigger.
+   ```
+
+5. **When user confirms, attempt to trigger compaction:**
+   ```
+   SUMMARIZER: PLEASE SUMMARIZE AND COMPACT NOW
+   ```
+
+#### 🔴 Red Zone (<22% remaining)
+**EMERGENCY - STOP ALL WORK**
+
+1. Print emergency notice
+2. Check git status and note any violations
+3. Print brief status in chat
+4. Ping user for immediate compaction
+
+### Task Size Estimation Guidelines
+**Before starting any task in Yellow or Orange zones, estimate token cost:**
+
+- **Small edits** (1-2 files, <50 lines): ~2-3% tokens
+- **Medium features** (3-5 files, complex logic): ~5-8% tokens
+- **Large features** (6+ files, new components): ~10-15% tokens
+- **Exploratory work** (reading multiple files, research): ~3-5% tokens per round
+
+If task cost + current usage would enter Red Zone, prepare summary first.
+
+### Why This Works
+
+**The automatic summarizer is highly effective:**
+- Captures all technical details (file changes, line numbers, code snippets, version numbers)
+- Documents errors, fixes, and design decisions comprehensively
+- Preserves user messages and conversation flow
+- Structures information logically for next session
+
+**The new ground rules header (lines 1-70) ensures post-compaction success:**
+- Explicit trigger: "This session is being continued from a previous conversation"
+- Required "Proof of Digestion" checklist display
+- Executable instructions (not passive documentation)
+- More effective than verbose manual summaries
 
 ## Git Workflow Patterns
 
