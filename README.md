@@ -141,7 +141,7 @@ Have a feature request? [Let us know on GitHub!](https://github.com/Ron-L/Reader
 
 ## Version
 
-Project Version: v3.5.0
+Project Version: v3.5.1
 
 Individual components may have their own versions (see files for details).
 
