@@ -2,13 +2,10 @@
 
 ## Current Priorities (User-Defined)
 
-1. 🏷️ **Project Rename to ReaderWrangler** - 2-3 hours (IN PROGRESS)
-   - **Release 1**: Rename repository + update all files
-   - **Release 2**: Enhanced Getting Started UX (Help menu + empty state)
-2. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
-3. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
-4. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
-5. ✨ **UX Quick Wins** (various) - 1-3 hours each
+1. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
+2. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
+3. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
+4. ✨ **UX Quick Wins** (various) - 1-3 hours each
 
 ---
 
@@ -27,6 +24,16 @@
   - Consider adding to index.html hero section
 
 ## Completed
+
+### Project Rename to ReaderWrangler - COMPLETED (2025-11-18)
+- [x] **Repository Rename** - Changed from "amazon-book-organizer" to "readerwrangler"
+- [x] **Custom Domain Setup** - readerwrangler.com configured with FreeDNS and GitHub Pages
+- [x] **File Updates** - All references updated throughout codebase
+- [x] **Landing Page** - index.html created for custom domain
+- [x] **Bookmarklet Navigation Hub** - Transformed from script runner to multi-step navigation system
+- [x] **Documentation** - README.md, USER-GUIDE.md, "Coming Soon!" section added
+- [x] **SEO Infrastructure** - sitemap.xml, robots.txt, Schema.org structured data
+- [x] **Launch Strategy** - REDDIT-LAUNCH-POST.md, PRODUCTHUNT-LAUNCH-CHECKLIST.md
 
 ### Documentation Accuracy & SEO Setup - COMPLETED (2025-11-18)
 - [x] **Bookmarklet Evolution to Navigation Hub**
