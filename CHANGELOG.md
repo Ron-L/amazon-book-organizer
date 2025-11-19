@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.5.3] - 2025-11-19
+
+### Added
+- **Title Navigation Link** - ReaderWrangler title in app header now links back to index.html
+  - **Invisible Styling**: Link maintains original visual appearance (no color change, no underline)
+  - **Implementation**: Uses inline React styles `color: 'inherit'` and `textDecoration: 'none'`
+  - **User Experience**: Provides easy navigation from app back to landing page
+  - **Location**: App header at [readerwrangler.js:1531-1533](readerwrangler.js#L1531-L1533)
+
 ## [3.5.2] - 2025-11-19
 
 ### Added
