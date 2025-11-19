@@ -2,17 +2,10 @@
 
 ## Current Priorities (User-Defined)
 
-1. 🚨 **CRITICAL: Shift-Click Range Selection Bug** (v3.5.1) - 1-2 hours
-   - **Severity**: CRITICAL - Causes massive data corruption
-   - **Impact**: User selects 10 filtered books, actually moves 1400+ unfiltered books
-   - **Root Cause**: Shift-click calculates range on underlying array instead of filtered/visible results
-   - **User Report**: Filtered on "Ayres" (10 books), shift-clicked first→last, moved 1437 books to "Time Travel" column
-   - **Fix**: Calculate range selection indices based on `visibleBooks` array, not `allBooks` array
-   - **Branch**: `bugfix/shift-click-filtered-selection`
-2. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
-3. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
-4. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
-5. ✨ **UX Quick Wins** (various) - 1-3 hours each
+1. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
+2. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
+3. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
+4. ✨ **UX Quick Wins** (various) - 1-3 hours each
 
 ---
 
@@ -31,6 +24,16 @@
   - Consider adding to index.html hero section
 
 ## Completed
+
+### CRITICAL: Shift-Click Range Selection Bug - COMPLETED (2025-11-19)
+- [x] **Fixed critical data corruption bug** (v3.5.1)
+  - **Severity**: CRITICAL - Caused massive unintended selections
+  - **Impact**: User selected 10 filtered books, actually moved 1437 unfiltered books
+  - **Root Cause**: Shift-click calculated range on underlying array instead of filtered/visible results
+  - **User Report**: Filtered on "Ayres" (10 books), shift-clicked first→last, moved all 1437 books to "Time Travel" column
+  - **Fix**: Changed line 1119 in readerwrangler.js from `const visibleBooks = column.books;` to `const visibleBooks = filteredBooks(column.books);`
+  - **Branch**: `bugfix/shift-click-filtered-selection` (merged to main)
+  - **Commits**: 61738c8 (fix), 3965fc5 (version bump)
 
 ### Project Rename to ReaderWrangler - COMPLETED (2025-11-18)
 - [x] **Repository Rename** - Changed from "amazon-book-organizer" to "readerwrangler"
