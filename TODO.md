@@ -716,6 +716,38 @@ const onCollectionsPage = currentUrl.includes('amazon.com/hz/mycd/digital-consol
 
 ## Features - Optional/Maybe
 
+- [ ] **Book Copy Feature** - Allow same book to appear in multiple columns (Medium priority, Medium difficulty)
+  - **UI**:
+    - Drag = Move (current behavior, removes from previous column)
+    - Ctrl+Drag = Copy (new feature, keeps in original column + adds to target column)
+    - Right-click context menu: "Copy to..." vs "Move to..."
+    - DEL key or right-click "Delete" = Remove from current column only
+  - **Architecture** (array-based, cleaner than multiple DB entries):
+    ```javascript
+    // IndexedDB structure - ONE entry per book with arrays
+    {
+      asin: "B0123456",
+      columnIds: ["next-to-read", "sci-fi", "favorites"],  // Array of columns
+      positions: [0, 5, 2]                                  // Corresponding positions
+    }
+    ```
+  - **Delete Operation**:
+    - User selects book instance and presses DEL (or right-click → Delete)
+    - Remove from specific column: splice out columnId and position from arrays
+    - Safety check: If arrays would become empty, prompt user "Delete last copy?"
+    - If user confirms: remove entire DB entry (book returns to unorganized)
+    - If user cancels: keep the last copy
+  - **Benefits**:
+    - No data duplication in library JSON (still one canonical book record per ASIN)
+    - Book can be in "Next to Read" AND "Sci-Fi" AND "Time Travel Books"
+    - Simpler DB structure than multiple entries with same ASIN
+    - Array indices stay synchronized (columnIds[0] corresponds to positions[0])
+  - **Implementation Notes**:
+    - Library JSON unchanged (one book per ASIN)
+    - Only organization data in IndexedDB uses arrays
+    - Rendering: Loop through columnIds array, render book at positions[i] in each column
+    - Search/filter works same as before (still renders all instances)
+
 - [ ] Explore read.amazon.com/kindle-library - Collections info & reading progress
 - [ ] **Reading Progress tracking for each book** (Medium-Low priority, High difficulty)
   - Show reading progress percentage/position for each book

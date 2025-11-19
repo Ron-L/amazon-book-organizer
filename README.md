@@ -115,8 +115,23 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ---
 
+## Coming Soon!
+
+We're constantly improving ReaderWrangler based on user feedback. Here's what's on the horizon:
+
+- **Duplicate books in multiple columns** - Put the same book in "Next to Read" AND "Sci-Fi" simultaneously
+- **Progress bars during fetch** - Visual feedback showing exactly where you are in the extraction process
+- **Reading progress tracking** - See how far you've read in each book
+- **Enhanced collection filters** - Better integration with your Kindle collections and reading status
+- **Multi-store support** - Organize books from Barnes & Noble, Kobo, and other ebook stores
+
+Have a feature request? [Let us know on GitHub!](https://github.com/Ron-L/ReaderWrangler/issues)
+
+---
+
 ## Documentation
 
+- [USER-GUIDE.md](USER-GUIDE.md) - Complete user guide with tips, workflows, and troubleshooting
 - [CHANGELOG.md](CHANGELOG.md) - Version history and release notes
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Development guide for contributors
 - [TODO.md](TODO.md) - Planned features and known issues
