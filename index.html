@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Landing Page v1.0.4 -->
+    <!-- Landing Page v1.0.5 -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Free tool to scrape your Amazon Kindle library and organize books visually. Easy extraction of covers, ratings, reviews with a simple bookmarklet. Drag-and-drop organization. 100% private - works in your browser.">
@@ -29,6 +29,11 @@
     <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
     <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+
+    <!-- Google Fonts - Gloria Hallelujah for sticky note -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&display=swap" rel="stylesheet">
 
     <!-- Structured Data (Schema.org) for SEO -->
     <script type="application/ld+json">
@@ -83,6 +88,69 @@
             padding: 64px 20px;
             text-align: center;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Sticky note callout */
+        .sticky-note {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            margin-left: 380px;
+            background: linear-gradient(135deg, #fff9c4 0%, #fffde7 100%);
+            color: #5d4037;
+            padding: 35px 25px 30px 25px;
+            border-radius: 2px;
+            box-shadow:
+                3px 3px 0px rgba(0,0,0,0.1),
+                6px 6px 0px rgba(0,0,0,0.08),
+                9px 9px 0px rgba(0,0,0,0.06),
+                0 4px 8px rgba(0,0,0,0.15);
+            transform: rotate(-5deg);
+            font-size: 1em;
+            font-weight: 600;
+            width: 220px;
+            text-align: center;
+            font-family: 'Gloria Hallelujah', cursive;
+        }
+
+        /* Red thumbtack at top */
+        .sticky-note::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 16px;
+            height: 16px;
+            background: radial-gradient(circle, #dc143c 0%, #8b0000 100%);
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);
+        }
+
+        /* Pin shadow/attachment point */
+        .sticky-note::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 8px;
+            height: 8px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 50%;
+        }
+
+        .sticky-note .smiley {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            width: 28px;
+            height: 28px;
+        }
+
+        .sticky-note .smiley svg {
+            width: 100%;
+            height: 100%;
         }
 
         .hero h1 {
@@ -209,6 +277,11 @@
             .features,
             .features-grid {
                 grid-template-columns: 1fr;
+            }
+
+            /* Hide sticky note on mobile */
+            .sticky-note {
+                display: none;
             }
         }
 
@@ -496,6 +569,25 @@
     <div class="hero">
         <h1>📚 ReaderWrangler™</h1>
         <p class="tagline">Wrangle your reader chaos - Your books, your order</p>
+        <div class="sticky-note">
+            <div class="sticky-note-text">
+                It's Not Just Organization;<br>It's Rediscovery!
+            </div>
+            <div class="smiley">
+                <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Left eye (hand-drawn dot) -->
+                    <circle cx="16" cy="18" r="2.5" fill="#5d4037"/>
+                    <!-- Right eye (hand-drawn dot) -->
+                    <circle cx="34" cy="18" r="2.5" fill="#5d4037"/>
+                    <!-- Smile (simple curved line) -->
+                    <path d="M 12,28 Q 25,36 38,28"
+                          fill="none"
+                          stroke="#5d4037"
+                          stroke-width="2.5"
+                          stroke-linecap="round"/>
+                </svg>
+            </div>
+        </div>
         <div class="cta-buttons">
             <a href="install-bookmarklet.html" class="btn btn-primary">Get Started</a>
             <a href="readerwrangler.html" class="btn btn-secondary">Launch App</a>

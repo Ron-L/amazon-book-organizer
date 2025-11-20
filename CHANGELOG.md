@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Landing Page v1.0.5 - TBD
+
+### Added
+- **Sticky Note Callout** - Landing page hero section now features handwritten sticky note
+  - Text: "It's Not Just Organization; It's Rediscovery!"
+  - Hand-drawn smiley face (eyes and smile)
+  - Yellow gradient background with red thumbtack pin
+  - Rotated -5 degrees counterclockwise for authentic sticky note appearance
+  - Positioned to upper-right of hero section
+  - Uses Gloria Hallelujah Google Font for handwritten text
+  - Hidden on mobile devices (≤768px width) to prevent overlap
+  - Location: [index.html:88-149](index.html#L88-L149) (CSS), [index.html:499-517](index.html#L499-L517) (HTML)
+
 ## [3.6.0] - 2025-11-19
 
 ### Added
