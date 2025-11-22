@@ -1,5 +1,6 @@
-// Amazon Collections Fetcher v1.0.2.b
+// Amazon Collections Fetcher v1.1.0 (Adds GUID for status bar tracking)
 // Fetches collection membership and read status for all books in your library
+// Schema Version: 1.1 (Adds GUID for status bar tracking)
 //
 // Instructions:
 // 1. Go to https://www.amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/
@@ -13,8 +14,8 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v1.0.2.b';
-    const SCHEMA_VERSION = '1.0';
+    const FETCHER_VERSION = 'v1.1.0';
+    const SCHEMA_VERSION = '1.1';
     const PAGE_TITLE = document.title;
 
     console.log('========================================');
@@ -28,6 +29,80 @@ async function fetchAmazonCollections() {
     const BATCH_SIZE = 25;
     const FETCH_DELAY_MS = 2000; // 2 seconds between requests
     const FILENAME = 'amazon-collections.json';
+
+    // Generate a unique identifier for this fetch session
+    // Used by the organizer to match JSON files with their IndexedDB manifests
+    const generateGUID = () => {
+        // Use crypto.randomUUID() if available (modern browsers)
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        // Fallback for older browsers using crypto.getRandomValues()
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = crypto.getRandomValues(new Uint8Array(1))[0] % 16;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    };
+
+    // Generate GUID once at start of fetch session
+    const sessionGUID = generateGUID();
+    console.log(`🔑 Session GUID: ${sessionGUID}`);
+
+    // ============================================================================
+    // IndexedDB Manifest Storage (for ReaderWrangler status bar)
+    // ============================================================================
+    // Writes manifest to IndexedDB so the organizer app can track fetch status
+    // without needing to poll manifest files (which doesn't work on GitHub Pages)
+    const DB_NAME = 'ReaderWranglerManifests';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'manifests';
+
+    const writeManifestToIndexedDB = async (manifestData) => {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+            request.onerror = () => {
+                console.warn('⚠️ IndexedDB error (manifest will only be in JSON file):', request.error);
+                resolve(false); // Don't fail the fetch, just warn
+            };
+
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(STORE_NAME)) {
+                    // Use guid as the key
+                    db.createObjectStore(STORE_NAME, { keyPath: 'guid' });
+                    console.log('📦 Created IndexedDB store for manifests');
+                }
+            };
+
+            request.onsuccess = (event) => {
+                const db = event.target.result;
+                try {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+
+                    // Write manifest with guid as key
+                    const putRequest = store.put(manifestData);
+
+                    putRequest.onsuccess = () => {
+                        console.log(`✅ Manifest written to IndexedDB (GUID: ${manifestData.guid})`);
+                        resolve(true);
+                    };
+
+                    putRequest.onerror = () => {
+                        console.warn('⚠️ Failed to write manifest to IndexedDB:', putRequest.error);
+                        resolve(false);
+                    };
+
+                    transaction.oncomplete = () => db.close();
+                } catch (err) {
+                    console.warn('⚠️ IndexedDB transaction error:', err);
+                    resolve(false);
+                }
+            };
+        });
+    };
 
     // ============================================================================
     // Progress Overlay UI (Option C - Minimal)
@@ -613,9 +688,11 @@ async function fetchAmazonCollections() {
     progressUI.updatePhase('Saving Collections', 'Generating and downloading JSON file');
 
     const outputData = {
+        guid: sessionGUID,
         schemaVersion: SCHEMA_VERSION,
-        generatedAt: Date.now(),
         fetcherVersion: FETCHER_VERSION,
+        fetchDate: new Date().toISOString(),
+        generatedAt: Date.now(),  // Kept for backward compatibility
         totalBooksScanned: processedBooks.length,
         booksWithCollections: booksWithCollections,
         books: processedBooks
@@ -640,6 +717,18 @@ async function fetchAmazonCollections() {
     console.log(`✅ File downloaded: ${FILENAME}`);
     console.log(`   File size: ${(jsonString.length / 1024).toFixed(2)} KB`);
     console.log(`   Time elapsed: ${elapsedMin}m ${elapsedSec}s\n`);
+
+    // Write manifest to IndexedDB for ReaderWrangler status bar
+    const manifest = {
+        type: 'collections',  // Identifies this as collections manifest (vs library)
+        guid: sessionGUID,
+        schemaVersion: SCHEMA_VERSION,
+        fetcherVersion: FETCHER_VERSION,
+        fetchDate: outputData.fetchDate,
+        totalBooksScanned: processedBooks.length,
+        booksWithCollections: booksWithCollections
+    };
+    await writeManifestToIndexedDB(manifest);
 
     console.log('========================================');
     console.log('✅ COLLECTIONS FETCH COMPLETE!');

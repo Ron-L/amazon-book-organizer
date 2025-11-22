@@ -1,11 +1,434 @@
 # TODO
 
-## Current Priorities (User-Defined)
+## Prioritized Roadmap (By Priority & Complexity)
 
-1. 🐛 **Collections Filter Bug Fix** (v3.3.3) - 30m-1h
-2. 📚 **Collections Integration - UI Features** (v3.4.1) - 4-8 hours
-3. 🔄 **Phase 3 Retry Logic** (v3.4.1) - 8-12 hours (optional)
-4. ✨ **UX Quick Wins** (various) - 1-3 hours each
+_Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)_
+
+### 🔥 Priority 1: Critical Documentation & Onboarding (HIGH Priority, LOW-MEDIUM Complexity)
+
+1. **📖 Quick Start Video & Written Guide** - HIGH/LOW (2-4 hours)
+   - **Production Plan**: See [VIDEO-PRODUCTION-PLAN.md](VIDEO-PRODUCTION-PLAN.md) for complete details
+   - **TTS Service Selected**: Google Cloud Text-to-Speech (Journey voices, 1M chars/month free)
+   - **Video Series Planned**: 6 short videos (2-4 minutes each) covering:
+     1. Quick Start (2-3 min) - High priority, replaces 10-minute walkthrough
+     2. Installing the Bookmarklet (1-2 min)
+     3. Fetching Your Library (2-3 min)
+     4. Fetching Collections (1-2 min)
+     5. Organizing Your Books (3-4 min) - includes double-click detail view
+     6. Advanced Features (2-3 min)
+   - Written "First 5 Minutes" guide
+   - Problem: Users bounce if forced to watch 10-minute video; missing double-click feature demo
+   - Impact: Reduces onboarding friction significantly; consistent voice across all videos
+
+2. **📚 Comprehensive Documentation Hub** - HIGH/MEDIUM (8-12 hours)
+   - Troubleshooting guide (What if scrape fails partway? How to recover?)
+   - FAQ (Multiple Amazon accounts? Kindle Unlimited books? Mobile support?)
+   - Keyboard shortcuts reference
+   - Data management guide (backup, export, import, JSON format)
+   - Technical details (How bookmarklet handles anti-scraping)
+   - Problem: Users get stuck, have questions, can't find answers
+   - Impact: Reduces support burden, improves user confidence
+
+3. **📱 Mobile Support Clarity** - HIGH/LOW (1 hour)
+   - Document whether app works on mobile devices
+   - Add to FAQ and main page
+   - Problem: Major omission for users who browse libraries on phones/tablets
+   - Impact: Sets correct expectations
+
+4. **📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
+   - Link version display (e.g., "v3.6.0") to CHANGELOG.md
+   - Problem: Users see version numbers but no context
+   - Impact: Transparency about what changed
+
+5. **✅ Fill in Missing Sections in USER-GUIDE.md** - MEDIUM/LOW (2-3 hours)
+   - Complete placeholder sections
+   - Add screenshots/examples
+   - Problem: Partial documentation confuses users
+   - Impact: Complete feature documentation
+
+### 🎯 Priority 2: UX Polish & Error Handling (HIGH Priority, LOW-MEDIUM Complexity)
+
+6. **⏱️ Enhanced Progress Feedback During Extraction** - HIGH/MEDIUM (4-6 hours)
+   - Real-time progress bars ("Extracting book 847 of 2,322...")
+   - Estimated time remaining ("~15 minutes for your library size")
+   - Pause/resume capability for long extractions
+   - Clear error messages with recovery options
+   - Problem: Users get impatient/confused during lengthy initial extraction
+   - Impact: Reduces abandonment during first-time setup
+   - Note: Console already has progress, need UI overlay
+
+7. **🔄 Extraction Error Recovery** - HIGH/MEDIUM (3-4 hours)
+   - "Extraction interrupted. Click to resume from book 847."
+   - Handle partial failures gracefully
+   - Save extraction state to localStorage
+   - Problem: Network issues or browser closes lose all progress
+   - Impact: Prevents data loss, improves reliability
+
+8. **🐛 Collections Filter Bug Fix** - HIGH/LOW (30m-1h)
+   - Collections dropdown still shows old collection names after Clear Everything
+   - Problem: UI state not fully cleared
+   - Impact: Confusing UX after reset
+
+8b. **🐛 Invalid File Selection Causes Status Timeout** - MEDIUM/LOW (30m-1h)
+   - When user selects wrong JSON file in Load Library dialog, status check hangs
+   - Eventually times out with "Library loaded but status check timed out" message
+   - Problem: File picker error doesn't cancel the status check operation
+   - Impact: Minor UX issue - confusing timeout instead of immediate error
+
+9. **✨ UX Quick Wins** - MEDIUM/LOW (1-3 hours each)
+   - Tooltips for control buttons (Backup, Restore, Reset, Clear)
+   - First-run Welcome dialog explaining what ReaderWrangler is
+   - Column name filtering (search by column name)
+   - Title & author text under book covers
+   - Make status dialog draggable/movable (modal → draggable)
+
+### 🔍 Priority 3: Advanced Organization Features (MEDIUM Priority, MEDIUM Complexity)
+
+10. **🔀 Column Sorting** - MEDIUM-HIGH/MEDIUM (4-6 hours)
+    - Sort books within columns by: acquisitionDate, seriesPosition, rating, title, author
+    - Permanent re-ordering (like Excel sort, persists to IndexedDB)
+    - Multi-column selection: apply same sort to each column independently
+    - Users can manually adjust positions after sorting (not locked)
+    - Problem: After organizing books into columns, can't fine-tune order by meaningful criteria
+    - Impact: Completes organization workflow - get books into columns, then order optimally within each
+
+11. **🔎 Advanced Filtering** - MEDIUM/MEDIUM (6-8 hours)
+    - Filter by genre/category
+    - Filter by rating
+    - Filter by acquisition date range
+    - Filter by read/unread status (if available from Amazon)
+    - Filter by series
+    - Problem: Hard to find specific subsets in 2,300+ book library
+    - Impact: Improves discoverability for power users
+
+12. **🏷️ Color-Coding/Tagging System** - MEDIUM/MEDIUM (8-10 hours)
+    - Visual distinction beyond columns
+    - Tag-based organization
+    - Problem: Columns alone may not capture all organizational needs
+    - Impact: More flexible organization
+
+13. **📚 Collections Integration - UI Features** - MEDIUM/MEDIUM (4-8 hours)
+    - Visual indicators (badges/icons) for collections on book covers
+    - Metadata display showing which collections each book belongs to
+    - Filtering by collection name
+    - Filtering by read status (READ/UNREAD/UNKNOWN)
+    - "Uncollected" pseudo-collection
+    - Status: Data merged ✅, UI incomplete
+    - Problem: Collections data fetched but not visible in UI
+    - Impact: Leverage existing Amazon collections in organizer
+
+14. **📖 Enhanced Series Management** - MEDIUM/MEDIUM (6-10 hours)
+    - Expand current "Collect Series Books" button
+    - Automatic series detection
+    - Series reading order visualization
+    - Missing book detection ("You have books 1, 2, and 4 of this series")
+    - Problem: Series books scattered across library
+    - Impact: Better management for series readers
+
+### 📊 Priority 4: Analytics & Export (MEDIUM Priority, LOW-MEDIUM Complexity)
+
+15. **📈 Reading Stats Dashboard** - MEDIUM/MEDIUM (8-12 hours)
+    - Books acquired by month/year
+    - Genre distribution pie chart
+    - Average rating of collection
+    - "Time to read" estimates based on page counts
+    - Problem: No insights into library composition
+    - Impact: Interesting for users, helps rediscover forgotten books
+
+16. **💾 Enhanced Export Options** - MEDIUM/LOW (2-4 hours)
+    - Export organization to CSV (already has JSON)
+    - Print-friendly reading list
+    - Privacy-respecting share feature
+    - Problem: Limited backup/sharing options
+    - Impact: Portability and sharing
+
+### 🔧 Priority 5: Technical Improvements (MEDIUM-LOW Priority, MEDIUM-HIGH Complexity)
+
+17. **🔄 Phase 3 Retry Logic** - MEDIUM/HIGH (8-12 hours, optional)
+    - Retry books with missing review data using same API
+    - Progressive data completeness improvement
+    - Expected improvement: 99.79% → 99.95%+ success rate
+    - Problem: Some books randomly fail review fetch
+    - Impact: Incremental data quality improvement
+
+18. **🗂️ Nested Groups/Hierarchies** - LOW/HIGH (15-20 hours)
+    - "Science Fiction" → "Space Opera" → "Culture Series"
+    - Significant UI rework required
+    - Problem: Flat column structure limits deep organization
+    - Impact: Better for very large libraries (1000+ books)
+
+19. **🤖 Smart Collections (Rule-Based)** - LOW/HIGH (12-16 hours)
+    - "All unread books rated 4.5+"
+    - Requires complex rule engine
+    - Problem: Manual organization is tedious
+    - Impact: Automation for power users
+
+### 🌐 Priority 6: Integrations & Advanced Features (LOW Priority, HIGH-VERY HIGH Complexity)
+
+20. **🔗 Third-Party Integrations** - LOW/HIGH (20-30 hours)
+    - Goodreads sync (import ratings, mark as read)
+    - StoryGraph integration
+    - Export recommendations to Amazon wishlist
+    - Problem: Complex API work, authentication, rate limits
+    - Impact: Niche feature for users of these services
+
+21. **☁️ Multi-Device Sync** - LOW/VERY HIGH (40-60 hours)
+    - Cloud storage option (self-hosted or encrypted)
+    - Sync organization across devices
+    - Problem: Major architectural change, privacy implications
+    - Impact: Convenience for multi-device users
+
+22. **🧠 Smart Recommendations** - LOW/HIGH (30-40 hours)
+    - "You own these similar books you haven't read yet"
+    - "Others who loved [this book] also read [these books] from your library"
+    - Highlight forgotten purchases based on high ratings
+    - Problem: Requires recommendation engine, ML/AI complexity
+    - Impact: Book discovery from existing library
+
+---
+
+## Current Priorities (Active Development)
+
+_Subset of above roadmap currently being worked on_
+
+### Status Bar Redesign (v3.7.0) - IN PROGRESS
+
+**Goal**: Simplify status display with user-first urgency indicators based on Load state only
+
+**Design Document**: [state-matrix.html](state-matrix.html) - Complete 25-state matrix with dialog mockups
+
+---
+
+#### CRITICAL DESIGN RATIONALE (2025-11-21)
+
+**Design Decision: 25 States (Fetch × Load) with Graceful Degradation**
+
+We use a 25-state matrix (5 Fetch statuses × 5 Load statuses) to provide rich status information. When Fetch state is unavailable (DB cleared, GUID mismatch), the system gracefully degrades to Load-state-only behavior.
+
+---
+
+#### Why Manifest Polling (Original Design) Was Broken
+
+**Original Implementation:**
+```javascript
+// App polled manifest every 60 seconds
+fetch(`amazon-manifest.json?t=${Date.now()}`)
+```
+
+**Fatal Flaw Discovered (2025-11-21):**
+1. This is a **relative URL fetch** - resolves relative to where app is served
+2. For **GitHub Pages users**: resolves to `https://ron-l.github.io/readerwrangler/amazon-manifest.json`
+3. **Users can't write files to GitHub!** The manifest would need to be in the repo
+4. Result: Fetch always fails (404), silently falls back to age-based staleness
+5. **We never noticed** because localhost testing worked (manifest in served directory)
+
+**The current manifest polling has been broken for all GitHub Pages users since launch.**
+
+---
+
+#### Why Manifest Must Live in IndexedDB (Not JSON File Polling)
+
+**Option 1: Poll JSON manifest file** ❌ BROKEN
+- Can't poll files on user's local disk (browser security)
+- Can't poll GitHub-hosted files (users can't write to GitHub)
+- Local dev masked this - worked on localhost, failed in production
+
+**Option 2: Manifest only in library JSON file** ❌ LOSES FETCH STATE
+- JSON file is self-describing (has `metadata.fetchDate`)
+- But app can't know about unfetched files on disk
+- No way to detect "you have a fresh file waiting"
+- Would reduce to Load-state-only (5 states, not 25)
+
+**Option 3: Fetcher writes manifest to IndexedDB** ✅ CHOSEN
+- Fetcher runs on Amazon page, writes manifest directly to IndexedDB
+- App reads IndexedDB to get Fetch state
+- Works regardless of where app is hosted
+- Requires GUID to match manifest to correct JSON file
+
+---
+
+#### Why GUID is Required
+
+**Problem: Multiple JSON files, one DB**
+1. User fetches Library A → manifest A written to DB
+2. User fetches Library B → manifest B overwrites manifest A
+3. User loads Library A → DB has manifest B, mismatch!
+
+**Solution: GUID ties manifest to specific JSON file**
+- Fetcher generates GUID, stores in:
+  - JSON file: `metadata.guid`
+  - IndexedDB: manifest record keyed by GUID
+- On load: App checks if loaded JSON's GUID matches any DB manifest
+- Match → use DB manifest for Fetch state
+- No match → fallback to Load-state-only (graceful degradation)
+
+---
+
+#### The 25-State Matrix
+
+**Per Data Type (Library, Collections):**
+
+**Fetch Statuses** (from IndexedDB manifest):
+| Status | Condition | Meaning |
+|--------|-----------|---------|
+| Unknown | No manifest in DB OR GUID mismatch | Can't determine fetch state |
+| Empty | Manifest exists with no fetchDate | Never fetched (or DB cleared) |
+| Fresh | fetchDate < 7 days | Recent fetch available |
+| Stale | fetchDate 7-30 days | Fetch getting old |
+| Obsolete | fetchDate > 30 days | Very old fetch |
+
+**Load Statuses** (from loaded JSON's metadata):
+| Status | Condition | Meaning |
+|--------|-----------|---------|
+| Unknown | No fetchDate in metadata | Legacy JSON file (pre-GUID) |
+| Empty | No data loaded | App has no library data |
+| Fresh | fetchDate < 7 days | Recently loaded data |
+| Stale | fetchDate 7-30 days | Loaded data getting old |
+| Obsolete | fetchDate > 30 days | Very old loaded data |
+
+**Combined = 5 × 5 = 25 states** (see state-matrix.html for full table)
+
+---
+
+#### Urgency Icon Logic
+
+**Status bar shows single urgency icon based on Load status (user-first design):**
+- ✅ if Load is Fresh
+- ⚠️ if Load is Stale
+- ❓ if Load is Unknown (legacy file without fetchDate)
+- 🛑 if Load is Empty or Obsolete
+
+**Key insight:** "Urgency is based ONLY on Load status" because that's what affects the user's experience NOW. Fetch status is informational (shown in dialog).
+
+**Combined urgency across Library + Collections:** worst-case wins
+
+---
+
+#### Graceful Degradation (Load-State-Only Fallback)
+
+**When Fetch state is unavailable:**
+| Situation | Fetch State | Behavior |
+|-----------|-------------|----------|
+| DB cleared (user hit Reset) | Unknown | Use Load state only |
+| GUID mismatch (loaded different file) | Ignored | Use Load state only |
+| First-time user | Unknown | Use Load state only |
+| Legacy JSON (no GUID) | Unknown | Use Load state only |
+
+**Fallback behavior:**
+- App shows Load-state-based urgency icon
+- Dialog shows "Fetch status unknown" for that data type
+- User can still use app normally
+- Suggests re-fetching to enable full status tracking
+
+**This is acceptable because:**
+- Load state alone gives user enough info to take action
+- "Your data is 15 days old" is actionable without knowing Fetch state
+- User who just ran bookmarklet knows they have a fresh file
+
+---
+
+#### Data Storage Architecture
+
+**JSON Files (user's disk):**
+```javascript
+// amazon-library.json
+{
+  metadata: {
+    guid: "abc123-...",           // NEW: ties to DB manifest
+    fetchDate: "2025-11-21T...",  // When fetched
+    totalBooks: 2322,
+    schemaVersion: "3.0.0",
+    accountId: "user@email.com"   // FUTURE: multi-user
+  },
+  books: [...]
+}
+
+// amazon-collections.json
+{
+  metadata: {
+    guid: "def456-...",           // NEW: ties to DB manifest
+    fetchDate: "2025-11-21T...",  // NEW: add this
+    // ... other fields
+  },
+  books: [...]
+}
+```
+
+**IndexedDB (browser storage):**
+```javascript
+// Manifest store - keyed by GUID
+{
+  guid: "abc123-...",
+  type: "library",                // or "collections"
+  fetchDate: "2025-11-21T...",
+  totalBooks: 2322,
+  accountId: "user@email.com"     // FUTURE: multi-user
+}
+```
+
+---
+
+#### Backward Compatibility
+
+**Legacy JSON files (pre-GUID):**
+- No `metadata.guid` field
+- App can't match to DB manifest
+- Falls back to Load-state-only
+- Shows ❓ Unknown for Fetch state in dialog
+- Dialog: "This file predates status tracking. Re-fetch to enable."
+
+**No breaking changes** - old files work, just with degraded status display.
+
+---
+
+#### Implementation Tasks
+
+**Phase 1: Add GUID + fetchDate to fetchers**
+- [x] Generate GUID in library-fetcher.js, add to JSON metadata (v3.4.0.a)
+- [ ] Generate GUID in collections-fetcher.js, add to JSON metadata
+- [ ] Add `metadata.fetchDate` to Collections JSON (currently missing)
+
+**Phase 2: Fetcher writes manifest to IndexedDB**
+- [x] Library fetcher: write manifest to IndexedDB after generating JSON (v3.4.0.a)
+- [ ] Collections fetcher: write manifest to IndexedDB after generating JSON
+- [x] Use same IndexedDB database as organizer app (ReaderWranglerManifests)
+
+**Phase 3: App reads from IndexedDB**
+- [ ] On app load: read manifests from IndexedDB
+- [ ] On JSON load: match GUID to find corresponding manifest
+- [ ] Calculate Fetch state from manifest, Load state from JSON metadata
+- [ ] Handle missing/mismatched GUID gracefully
+
+**Phase 4: Remove old polling code**
+- [ ] Delete `amazon-manifest.json` file generation
+- [ ] Remove `checkManifest()` function and 60-second timer
+- [ ] Remove `manifestData` React state
+- [ ] Remove `MANIFEST_CHECK_INTERVAL` constant
+
+**Phase 5: New status bar UI**
+- [x] Remove version from status bar header (v3.7.0.o) - clarifies "Data Status:" is about data freshness, not app version
+- [ ] Single-line: "Data Status: ✅" (or ⚠️ or 🛑 or ❓)
+- [ ] Tooltip shows summary
+- [ ] Click opens status dialog with full 25-state details
+
+---
+
+#### Groundwork for Multi-User (Optional, Future)
+
+When we implement multi-user support:
+- Add `accountId` to JSON metadata (email from GetPFMDetails API)
+- Store `accountId` in IndexedDB manifest
+- On load: warn if JSON's accountId doesn't match expected account
+- See "Multi-User Design Notes" section below for full plan
+
+---
+
+### Other Active Items
+
+1. 🐛 **Collections Filter Bug Fix** - 30m-1h
+2. 📚 **Collections Integration - UI Features** - 4-8 hours
+3. 🔄 **Phase 3 Retry Logic** - 8-12 hours (optional)
+4. ✨ **UX Quick Wins** - 1-3 hours each
 
 ---
 
@@ -589,6 +1012,95 @@
 4. Test with empty and populated libraries
 5. Commit, merge, tag v3.5.1
 6. Done
+
+---
+
+## Multi-User (Multi-Account) Design Notes
+
+**Status**: Future Enhancement (documented for "Ship Fast" approach - implement single-user first, design for multi-user)
+
+**Problem Statement**:
+What happens when multiple Amazon accounts use ReaderWrangler on the same browser/device?
+- Couples sharing a computer
+- User with personal + work Amazon accounts
+- Testing with multiple accounts
+
+### Design Decisions Made
+
+**1. Identifier: Amazon AccountId (NOT a GUID)**
+- Use Amazon's native accountId as the library identifier
+- Benefits:
+  - User-recognizable (they see their own account name)
+  - Naturally unique per Amazon account
+  - No need to generate/manage separate GUIDs
+  - Collections uses same accountId as Library (tied to same Amazon account)
+
+**2. Where to Find AccountId**
+- **API Discovery (2025-11-21)** - COMPLETE ✅
+  ```
+  POST https://www.amazon.com/hz/mycd/ajax
+  Payload: {"param":{"GetPFMDetails":{}}}
+
+  Response includes:
+    customerName: "Ron Lewis"           // Friendly display name
+    primaryEmailAddress: "user@example.com"  // Unique key
+  ```
+  - Call happens automatically on BOTH pages:
+    - Collections page load (ajax call #13)
+    - Yourbooks page load (confirmed 2025-11-21)
+  - Same endpoint, same response on both pages
+- **Final Design:**
+  - `primaryEmailAddress` → Internal unique key (guaranteed unique per account)
+  - `customerName` → Display to user (friendly, what they expect)
+  - Store both in manifest, keyed by email
+- **DOM Fallback (if needed):**
+  - Yourbooks page: Banner says "Ron Lewis's Books"
+  - Collections page: "Ron" appears in 2 places
+
+**3. Storage Architecture**
+- Fetcher writes manifest directly to IndexedDB (not separate JSON file first)
+- JSON file is primary storage for book data (reviews make it too large for IndexedDB)
+- Each library identified by accountId in IndexedDB
+- Collections uses same accountId as Library
+
+**4. No "Compare" Feature Needed**
+- Users don't need to compare libraries across accounts
+- Each account's library is independent
+
+**5. Clear Behavior**
+- Clear should clear current library only (by accountId)
+- Not a global "clear all accounts" operation
+
+**6. Backup/Restore**
+- Handles the "experimenting with arrangements" use case
+- User can backup their organization, try changes, restore if unhappy
+- Per-account backup/restore (identified by accountId)
+
+**7. AccountId Mismatch Handling (Future)**
+- What if user loads a JSON file from a different account?
+- Options:
+  - Warn user and ask to confirm
+  - Automatically segregate by accountId
+  - Reject mismatched files
+- Decision deferred to implementation time
+
+### Current Implementation (Single-User)
+
+For the initial "Ship Fast" release:
+- Assume single account per browser
+- No accountId tracking yet
+- Library and Collections assumed to be from same account
+- No mismatch detection
+
+### Future Implementation (Multi-User)
+
+When implementing multi-user support:
+1. Scrape accountId from Amazon page (DOM or API response)
+2. Store accountId in manifest (IndexedDB)
+3. Include accountId in JSON file metadata
+4. Detect mismatched files on load
+5. Per-account organization data in IndexedDB
+6. Account switcher UI in status bar
 
 ---
 

@@ -219,12 +219,60 @@ Before removing version letter (finalizing release):
 4. Verify: README.md project version updated
 5. Show checklist completion status
 6. Then remove letter and tag
+7. After push completes → Trigger Post-Release Review (see below)
+
+### After Push/Tag Completes (Post-Release Review):
+**This protocol is MANDATORY after every code release that increments project version.**
+
+1. State: "**Checking Ground Rule: Post-Release Review...**"
+2. Ask user: "Release v[X.Y.Z] complete. Ready for post-mortem?"
+3. When user confirms, conduct brief review:
+   - What worked well?
+   - What mistakes were made?
+   - What lessons learned?
+   - Any ground rules need updating?
+4. Document lessons in NOTES.md under the release entry
+5. If patterns emerge, propose ground rules updates
+
+**Does NOT apply to:**
+- Documentation-only changes (no version increment)
+- Letter-version commits during development (only final release)
 
 **Important Notes:**
 - This protocol is NOT optional - it must happen even if it feels repetitive
 - The user prefers seeing rules applied visibly rather than having them violated silently
 - Only adds verbosity when rules are actually being invoked (not every response)
 - Estimated token cost: ~50-100 tokens per check (negligible vs rule violations)
+
+### Session Checklist Protocol
+
+**Purpose**: Track short-term subtasks within a conversation, separate from TODO.md (long-term roadmap).
+
+**Trigger phrases** (when user says any of these, apply this protocol):
+- "add this to the Session Checklist"
+- "add to checklist"
+- "checklist item"
+- "session task"
+- User provides the current Session Checklist after context compaction
+
+**Rules:**
+1. Print the Session Checklist after completing each task
+2. When user gives multiple items, add them to the checklist and address ONE at a time
+3. Mark items [x] as completed, [ ] as pending
+4. Format: "Session Checklist:" followed by checkbox items
+
+**Post-compaction recovery:**
+After context compaction, user may paste the current Session Checklist. Resume tracking from that state.
+
+**Example:**
+```
+Session Checklist:
+- [x] Fix dialog bug
+- [x] Test localStorage persistence
+- [ ] Update CHANGELOG.md ← current
+- [ ] Squash commits
+- [ ] Tag release
+```
 
 ## Token Monitoring and Proactive Compaction Management
 

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **GUID-Based Status Tracking** - Library fetcher now generates unique GUIDs for status bar tracking (amazon-library-fetcher.js v3.4.0.a)
+  - GUID stored in JSON file `metadata.guid` and IndexedDB manifest
+  - Enables matching loaded files to their fetch manifests
+  - Schema version bumped to 3.1.0
+- **IndexedDB Manifest Storage** - Fetcher writes manifest directly to IndexedDB (amazon-library-fetcher.js v3.4.0.a)
+  - Replaces broken manifest file polling (didn't work on GitHub Pages)
+  - Uses `ReaderWranglerManifests` database with `manifests` object store
+  - Enables future 25-state status tracking
+- **Status Persistence** - Library and Collections status now persisted to localStorage (readerwrangler.js v3.7.0.n)
+  - Status survives page refresh
+  - Uses `readerwrangler-status` localStorage key
+- **State Matrix Design Document** - Added state-matrix.html with complete 25-state matrix specification
+  - Documents all Fetch × Load state combinations
+  - Includes dialog mockups and urgency icon logic
+  - User-first design principle: urgency based on Load state only
+
+### Fixed
+- **Status Dialog Bug** - Fixed dialog showing "No Library Loaded" when library was actually loaded (readerwrangler.js v3.7.0.n)
+  - Dialog now correctly reads from persisted libraryStatus/collectionsStatus
+  - Status initializes properly from localStorage on page load
+
+### Changed
+- **Status Bar UI** - Removed version number from status bar header (readerwrangler.js v3.7.0.o)
+  - Version was cluttering status area meant to show data freshness
+  - "Data Status:" label now clearly refers to library data freshness, not app version
+  - Version remains visible in footer (bottom-right corner)
+  - Per design spec in state-matrix.html line 445
+
 ## [3.6.1] - 2025-11-19
 
 ### Added

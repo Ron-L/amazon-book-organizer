@@ -32,6 +32,47 @@ Complete guide to getting the most out of ReaderWrangler.
 
 ---
 
+## Mobile & Tablet Support
+
+### Desktop First (Recommended)
+
+ReaderWrangler is designed for desktop/laptop use because organizing hundreds or thousands of books requires:
+- **Screen space** to see multiple columns side-by-side
+- **Mouse precision** for drag-and-drop operations
+- **Keyboard shortcuts** (Ctrl+Click, Shift+Click for multi-select)
+- **Horizontal space** for creating and managing columns
+
+### Mobile as a Reference Tool (Useful!)
+
+**Perfect use case**: You're in bed, just finished a book, and want to check what's next in your "Next to Read" column without getting up.
+
+The app loads on mobile devices and you can:
+- ✅ **View your organized columns** (one at a time on phone screens)
+- ✅ **See what's in your "Next to Read" column**
+- ✅ **Browse your book organization**
+- ✅ **Double-click books to see full details** (title, author, rating, description, reviews)
+- ✅ **Use search to find specific books**
+- ✅ **Check if you own a book** before buying
+
+**What doesn't work well on mobile:**
+- ❌ **Drag-and-drop organization** (clunky on touch, no precision)
+- ❌ **Multi-select operations** (Ctrl/Shift+Click don't exist on mobile)
+- ❌ **Creating/renaming columns** (touch typing in small dialogs is frustrating)
+- ❌ **Seeing multiple columns side-by-side** (phone screens too narrow)
+
+**Bottom line**: Use your phone to *reference* your organization (check what to read next, verify you own a book), but do the actual *organizing* on desktop where you have a mouse and screen space.
+
+### Tablets (10+ inches)
+
+**iPad/Android tablets** work better than phones due to larger screens:
+- Touch drag-and-drop is acceptable on tablets (though still less precise than mouse)
+- You can see more content at once
+- Creating columns and basic organization is feasible
+
+**Verdict**: Tablets are usable but desktop is still the optimal experience. If you only have a tablet, it will work - just be patient with touch-based drag operations.
+
+---
+
 ## Using ReaderWrangler on Multiple Devices
 
 Your library organization is stored locally in your browser, but you can easily sync it across devices using the Backup and Restore features.

@@ -1,14 +1,15 @@
-        // ReaderWrangler JS v3.6.0
+        // ReaderWrangler JS v3.7.0 - Status bar redesign with GUID-based status tracking
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "v3.6.0";
+        const APP_VERSION = "v3.7.0";
         document.title = `ReaderWrangler ${APP_VERSION}`;
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
         const SETTINGS_KEY = "readerwrangler-settings";
+        const STATUS_KEY = "readerwrangler-status"; // v3.7.0.n - persist library/collections status
         const DB_NAME = "ReaderWranglerDB";
         const DB_VERSION = 1;
         const BOOKS_STORE = "books";
-        const MANIFEST_CHECK_INTERVAL = 60000; // 60 seconds
+        // MANIFEST_CHECK_INTERVAL removed in v3.6.1 - replaced with IndexedDB manifests
         
         // IndexedDB Helper Functions
         const openDB = () => {
@@ -113,7 +114,104 @@
             await store.clear();
             console.log('✅ Cleared IndexedDB');
         };
-        
+
+        // ============================================================================
+        // Manifest IndexedDB Functions (for status bar - reads from fetcher's DB)
+        // ============================================================================
+        const MANIFEST_DB_NAME = 'ReaderWranglerManifests';
+        const MANIFEST_DB_VERSION = 1;
+        const MANIFEST_STORE = 'manifests';
+
+        // Read all manifests from IndexedDB (written by fetchers)
+        const readManifestsFromIndexedDB = async () => {
+            return new Promise((resolve) => {
+                const request = indexedDB.open(MANIFEST_DB_NAME, MANIFEST_DB_VERSION);
+
+                request.onerror = () => {
+                    console.warn('⚠️ Could not open manifest database:', request.error);
+                    resolve([]); // Return empty array, don't fail
+                };
+
+                request.onupgradeneeded = (event) => {
+                    // Create store if it doesn't exist (shouldn't happen if fetcher ran first)
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(MANIFEST_STORE)) {
+                        db.createObjectStore(MANIFEST_STORE, { keyPath: 'guid' });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    const db = event.target.result;
+                    try {
+                        const transaction = db.transaction([MANIFEST_STORE], 'readonly');
+                        const store = transaction.objectStore(MANIFEST_STORE);
+                        const getAllRequest = store.getAll();
+
+                        getAllRequest.onsuccess = () => {
+                            const manifests = getAllRequest.result || [];
+                            console.log(`📦 Read ${manifests.length} manifest(s) from IndexedDB`);
+                            resolve(manifests);
+                        };
+
+                        getAllRequest.onerror = () => {
+                            console.warn('⚠️ Failed to read manifests:', getAllRequest.error);
+                            resolve([]);
+                        };
+
+                        transaction.oncomplete = () => db.close();
+                    } catch (err) {
+                        console.warn('⚠️ Manifest read error:', err);
+                        resolve([]);
+                    }
+                };
+            });
+        };
+
+        // Find manifest by GUID (to match loaded JSON with fetcher manifest)
+        const findManifestByGUID = async (guid) => {
+            if (!guid) return null;
+            const manifests = await readManifestsFromIndexedDB();
+            return manifests.find(m => m.guid === guid) || null;
+        };
+
+        // Get manifests by type ('library' or 'collections')
+        const getManifestsByType = async (type) => {
+            const manifests = await readManifestsFromIndexedDB();
+            return manifests.filter(m => m.type === type);
+        };
+
+        // Calculate freshness status from fetchDate
+        const calculateFreshness = (fetchDate) => {
+            if (!fetchDate) return 'unknown';
+
+            const now = new Date();
+            const fetchTime = new Date(fetchDate);
+            const daysSinceFetch = (now - fetchTime) / (1000 * 60 * 60 * 24);
+
+            if (daysSinceFetch < 7) return 'fresh';
+            if (daysSinceFetch <= 30) return 'stale';
+            return 'obsolete';
+        };
+
+        // Format relative time for display
+        const formatRelativeTime = (dateString) => {
+            if (!dateString) return 'Unknown';
+
+            const now = new Date();
+            const date = new Date(dateString);
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / (1000 * 60));
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return `${diffDays}d ago`;
+            if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+            return `${diffDays}d ago`;
+        };
+
         function ReaderWrangler() {
             const [books, setBooks] = useState([]);
             const [columns, setColumns] = useState([{ id: 'unorganized', name: 'Unorganized', books: [] }]);
@@ -143,7 +241,7 @@
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
-            const [manifestData, setManifestData] = useState(null);
+            // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
             const [statusModalOpen, setStatusModalOpen] = useState(false);
             const [collectionsData, setCollectionsData] = useState(null); // Map of ASIN -> {readStatus, collections[]}
             const [collectionFilter, setCollectionFilter] = useState(''); // Filter by collection name or special values
@@ -154,6 +252,22 @@
             const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
             const [, forceUpdate] = useState({});
 
+            // Status bar redesign state (v3.6.1 - 25-state matrix)
+            const [libraryStatus, setLibraryStatus] = useState({
+                fetchStatus: 'unknown',  // unknown, empty, fresh, stale, obsolete
+                loadStatus: 'empty',     // unknown, empty, fresh, stale, obsolete
+                fetchDate: null,         // ISO date string from IndexedDB manifest
+                loadDate: null,          // ISO date string from loaded JSON metadata
+                guid: null               // GUID of currently loaded library
+            });
+            const [collectionsStatus, setCollectionsStatus] = useState({
+                fetchStatus: 'unknown',
+                loadStatus: 'empty',
+                fetchDate: null,
+                loadDate: null,
+                guid: null
+            });
+
             // Wrapper for setSyncStatus
             const setSyncStatus = (newStatus) => {
                 setSyncStatusInternal(newStatus);
@@ -162,7 +276,7 @@
                 cacheExpirationDays: 30
             });
             const dragThreshold = 50;
-            const manifestCheckTimer = useRef(null);
+            // manifestCheckTimer removed in v3.6.1 - replaced with IndexedDB manifests
 
             const formatAcquisitionDate = (timestamp) => {
                 if (!timestamp) return '';
@@ -190,73 +304,8 @@
                 return `${days}d ago`;
             };
 
-            const checkManifest = async (booksCount = null, lastSync = null) => {
-                // Use parameters if provided (initial load), otherwise use state (periodic checks)
-                const effectiveBooksCount = booksCount !== null ? booksCount : books.length;
-                const effectiveLastSync = lastSync !== null ? lastSync : lastSyncTime;
-                
-                try {
-                    // Try to read manifest file from same directory with cache-busting
-                    const response = await fetch(`amazon-manifest.json?t=${Date.now()}`);
-                    if (response.ok) {
-                        const manifest = await response.json();
-                        setManifestData(manifest);
-                        
-                        // Compare with last sync time
-                        if (effectiveLastSync) {
-                            const manifestTime = new Date(manifest.lastFetched).getTime();
-
-                            // Check if manifest has more books than we have loaded
-                            if (manifest.totalBooks > effectiveBooksCount) {
-                                setSyncStatus('stale');
-                            } else if (manifestTime > effectiveLastSync) {
-                                setSyncStatus('stale');
-                            } else {
-                                // Check if data is older than expiration days
-                                const daysSinceSync = (Date.now() - effectiveLastSync) / (1000 * 60 * 60 * 24);
-                                if (daysSinceSync > settings.cacheExpirationDays) {
-                                    setSyncStatus('stale');
-                                } else {
-                                    setSyncStatus('fresh');
-                                    if (lastSync !== null) setLastSyncTime(lastSync);
-                                }
-                            }
-                        } else {
-                            // No previous sync
-                            setSyncStatus('stale');
-                        }
-                    } else {
-                        // No manifest file found - check if we have books loaded
-                        if (effectiveBooksCount > 0 && effectiveLastSync) {
-                            // We have books, check if they're stale based on age
-                            const daysSinceSync = (Date.now() - effectiveLastSync) / (1000 * 60 * 60 * 24);
-                            if (daysSinceSync > settings.cacheExpirationDays) {
-                                setSyncStatus('stale');
-                            } else {
-                                setSyncStatus('fresh');
-                            }
-                        } else {
-                            // No books and no manifest
-                            setSyncStatus('none');
-                        }
-                    }
-                } catch (error) {
-                    // Can't read manifest (expected for file:// protocol or no file)
-                    // Only set to 'none' if we don't have books loaded
-                    if (effectiveBooksCount > 0 && effectiveLastSync) {
-                        // We have books, check if they're stale based on age
-                        const daysSinceSync = (Date.now() - effectiveLastSync) / (1000 * 60 * 60 * 24);
-                        if (daysSinceSync > settings.cacheExpirationDays) {
-                            setSyncStatus('stale');
-                        } else {
-                            setSyncStatus('fresh');
-                        }
-                    } else {
-                        // No books loaded at all
-                        setSyncStatus('none');
-                    }
-                }
-            };
+            // checkManifest function removed in v3.6.1 - replaced with IndexedDB manifests
+            // Status is now computed from libraryStatus and collectionsStatus state
 
             // Initial load from IndexedDB
             useEffect(() => {
@@ -266,6 +315,20 @@
                         const savedSettings = localStorage.getItem(SETTINGS_KEY);
                         if (savedSettings) {
                             setSettings(JSON.parse(savedSettings));
+                        }
+
+                        // Restore libraryStatus and collectionsStatus from localStorage (v3.7.0.n)
+                        const savedStatus = localStorage.getItem(STATUS_KEY);
+                        if (savedStatus) {
+                            const statusData = JSON.parse(savedStatus);
+                            if (statusData.libraryStatus) {
+                                setLibraryStatus(statusData.libraryStatus);
+                                console.log('📦 Restored libraryStatus from localStorage:', statusData.libraryStatus.loadStatus);
+                            }
+                            if (statusData.collectionsStatus) {
+                                setCollectionsStatus(statusData.collectionsStatus);
+                                console.log('📦 Restored collectionsStatus from localStorage:', statusData.collectionsStatus.loadStatus);
+                            }
                         }
 
                         // Load books from IndexedDB
@@ -315,10 +378,52 @@
                             }
                         }
 
-                        // Check manifest after loading - delay slightly to ensure React state has updated
-                        setTimeout(() => {
-                            checkManifest(loadedBooks.length, effectiveLastSync);
-                        }, 100);
+                        // checkManifest call removed in v3.6.1 - replaced with IndexedDB manifests
+
+                        // Check IndexedDB manifests for fetch status (v3.6.1 status bar)
+                        const checkIndexedDBManifests = async () => {
+                            try {
+                                const manifests = await readManifestsFromIndexedDB();
+
+                                // Check for fresh library manifest (even if we don't have a loaded GUID match)
+                                const libraryManifests = manifests.filter(m => m.type === 'library');
+                                if (libraryManifests.length > 0) {
+                                    // Find the most recent library manifest
+                                    const mostRecent = libraryManifests.reduce((latest, m) =>
+                                        new Date(m.fetchDate) > new Date(latest.fetchDate) ? m : latest
+                                    );
+                                    const fetchStatus = calculateFreshness(mostRecent.fetchDate);
+                                    setLibraryStatus(prev => ({
+                                        ...prev,
+                                        fetchStatus,
+                                        fetchDate: mostRecent.fetchDate
+                                    }));
+                                    console.log(`📦 Library fetch status from IndexedDB: ${fetchStatus} (${formatRelativeTime(mostRecent.fetchDate)})`);
+                                }
+
+                                // Check for fresh collections manifest
+                                const collectionsManifests = manifests.filter(m => m.type === 'collections');
+                                if (collectionsManifests.length > 0) {
+                                    const mostRecent = collectionsManifests.reduce((latest, m) =>
+                                        new Date(m.fetchDate) > new Date(latest.fetchDate) ? m : latest
+                                    );
+                                    const fetchStatus = calculateFreshness(mostRecent.fetchDate);
+                                    setCollectionsStatus(prev => ({
+                                        ...prev,
+                                        fetchStatus,
+                                        fetchDate: mostRecent.fetchDate
+                                    }));
+                                    console.log(`📦 Collections fetch status from IndexedDB: ${fetchStatus} (${formatRelativeTime(mostRecent.fetchDate)})`);
+                                }
+                            } catch (err) {
+                                console.warn('Could not check IndexedDB manifests:', err);
+                            }
+                        };
+                        await checkIndexedDBManifests();
+
+                        // Loading complete - set syncStatus to indicate we're done loading
+                        // Actual status display now comes from libraryStatus/collectionsStatus
+                        setSyncStatus('none');
                     } catch (error) {
                         console.error('Failed to load data:', error);
                         setSyncStatus('none');
@@ -328,21 +433,8 @@
                 loadData();
             }, []);
 
-            // Periodic manifest checking
-            useEffect(() => {
-                if (syncStatus !== 'loading') {
-                    manifestCheckTimer.current = setInterval(() => {
-                        checkManifest();
-                    }, MANIFEST_CHECK_INTERVAL);
-
-                    return () => {
-                        if (manifestCheckTimer.current) {
-                            clearInterval(manifestCheckTimer.current);
-                        }
-                    };
-                }
-            }, [syncStatus]);
-
+            // Periodic manifest checking removed in v3.6.1 - replaced with IndexedDB manifests
+            // Status is now based on libraryStatus/collectionsStatus state, updated on load
 
             // Auto-save organization
             useEffect(() => {
@@ -371,6 +463,12 @@
             useEffect(() => {
                 localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
             }, [settings]);
+
+            // Save libraryStatus and collectionsStatus to localStorage (v3.7.0.n)
+            useEffect(() => {
+                const statusData = { libraryStatus, collectionsStatus };
+                localStorage.setItem(STATUS_KEY, JSON.stringify(statusData));
+            }, [libraryStatus, collectionsStatus]);
 
             // Expose books to window for debugging
             useEffect(() => {
@@ -456,8 +554,7 @@
                             await loadEnrichedData(text, (bookCount) => {
                                 callbackFired = true;
                                 clearTimeout(timeoutId);
-                                // Check manifest now that books are loaded
-                                checkManifest(bookCount, syncTime);
+                                // checkManifest removed in v3.6.1 - status updated in loadEnrichedData
                             });
 
                         } catch (error) {
@@ -647,13 +744,28 @@
                     await clearIndexedDB();
                     localStorage.removeItem(STORAGE_KEY);
                     localStorage.removeItem(CACHE_KEY);
+                    localStorage.removeItem(STATUS_KEY); // v3.7.0.n - clear saved status
                     setBooks([]);
                     setColumns([{ id: 'unorganized', name: 'Unorganized', books: [] }]);
                     setDataSource('none');
                     setBlankImageBooks(new Set());
                     setLastSyncTime(null);
-                    setManifestData(null);
                     setSyncStatus('none');
+                    // Reset v3.6.1 status bar state
+                    setLibraryStatus({
+                        fetchStatus: 'unknown',
+                        loadStatus: 'empty',
+                        fetchDate: null,
+                        loadDate: null,
+                        guid: null
+                    });
+                    setCollectionsStatus({
+                        fetchStatus: 'unknown',
+                        loadStatus: 'empty',
+                        fetchDate: null,
+                        loadDate: null,
+                        guid: null
+                    });
                     console.log('✅ Cleared library - app reset to initial state');
                 } catch (error) {
                     console.error('Failed to clear library:', error);
@@ -721,8 +833,8 @@
 
                     const collectionsJson = await response.json();
 
-                    // Validate schema version
-                    if (collectionsJson.schemaVersion !== '1.0') {
+                    // Validate schema version (1.0 or 1.1)
+                    if (!['1.0', '1.1'].includes(collectionsJson.schemaVersion)) {
                         console.warn('Collections data schema version mismatch, skipping');
                         return null;
                     }
@@ -740,6 +852,32 @@
                     console.log(`✅ Loaded collections data for ${collectionsMap.size} books`);
                     console.log(`   - ${collectionsJson.booksWithCollections} books have collections`);
                     console.log(`   - Fetcher version: ${collectionsJson.fetcherVersion}`);
+                    if (collectionsJson.guid) {
+                        console.log(`   - GUID: ${collectionsJson.guid}`);
+                    }
+
+                    // Update collections status (v3.6.1 status bar)
+                    const loadStatus = collectionsJson.fetchDate ? calculateFreshness(collectionsJson.fetchDate) : 'unknown';
+                    let fetchStatus = 'unknown';
+                    let fetchDate = null;
+
+                    // Try to find matching manifest in IndexedDB by GUID
+                    if (collectionsJson.guid) {
+                        const manifest = await findManifestByGUID(collectionsJson.guid);
+                        if (manifest) {
+                            fetchStatus = calculateFreshness(manifest.fetchDate);
+                            fetchDate = manifest.fetchDate;
+                            console.log(`📦 Found matching collections manifest in IndexedDB`);
+                        }
+                    }
+
+                    setCollectionsStatus({
+                        fetchStatus,
+                        loadStatus,
+                        fetchDate,
+                        loadDate: collectionsJson.fetchDate || null,
+                        guid: collectionsJson.guid || null
+                    });
 
                     setCollectionsData(collectionsMap);
                     return collectionsMap;
@@ -807,6 +945,34 @@
                 console.log(`   Books without descriptions: ${metadata.booksWithoutDescriptions}`);
                 console.log(`   Fetched: ${new Date(metadata.fetchDate).toLocaleString()}`);
                 console.log(`   Fetcher version: ${metadata.fetcherVersion}`);
+                if (metadata.guid) {
+                    console.log(`   GUID: ${metadata.guid}`);
+                }
+
+                // Update library status from loaded JSON metadata (v3.6.1 status bar)
+                const loadStatus = metadata.fetchDate ? calculateFreshness(metadata.fetchDate) : 'unknown';
+                let fetchStatus = 'unknown';
+                let fetchDate = null;
+
+                // Try to find matching manifest in IndexedDB by GUID
+                if (metadata.guid) {
+                    const manifest = await findManifestByGUID(metadata.guid);
+                    if (manifest) {
+                        fetchStatus = calculateFreshness(manifest.fetchDate);
+                        fetchDate = manifest.fetchDate;
+                        console.log(`📦 Found matching manifest in IndexedDB (GUID: ${metadata.guid})`);
+                    } else {
+                        console.log(`📦 No matching manifest in IndexedDB (GUID: ${metadata.guid})`);
+                    }
+                }
+
+                setLibraryStatus({
+                    fetchStatus,
+                    loadStatus,
+                    fetchDate,
+                    loadDate: metadata.fetchDate || null,
+                    guid: metadata.guid || null
+                });
 
                 // Load collections data (optional, non-blocking)
                 const collections = await loadCollectionsData();
@@ -1473,48 +1639,48 @@
                 });
             };
 
+            // Calculate combined urgency from Library and Collections status
+            // Urgency is based ONLY on Load status (what's in the app right now)
+            const getUrgencyInfo = () => {
+                const libLoad = libraryStatus.loadStatus;
+                const colLoad = collectionsStatus.loadStatus;
+
+                // Priority: empty/obsolete > stale > unknown > fresh
+                const urgencyOrder = { empty: 4, obsolete: 3, stale: 2, unknown: 1, fresh: 0 };
+                const worstStatus = urgencyOrder[libLoad] >= urgencyOrder[colLoad] ? libLoad : colLoad;
+
+                const urgencyMap = {
+                    empty: { icon: '🛑', text: 'Must act', color: 'text-red-600', tooltip: 'Please click to see required action(s)' },
+                    obsolete: { icon: '🛑', text: 'Obsolete', color: 'text-red-600', tooltip: 'Please click to see required action(s)' },
+                    stale: { icon: '⚠️', text: 'Stale', color: 'text-orange-600', tooltip: 'Please click to see suggested action(s)' },
+                    unknown: { icon: '❓', text: 'Unknown', color: 'text-gray-500', tooltip: 'Please click to see available info' },
+                    fresh: { icon: '✅', text: 'Fresh', color: 'text-green-700', tooltip: 'No actions required' }
+                };
+
+                return urgencyMap[worstStatus] || urgencyMap.unknown;
+            };
+
             const renderStatusIndicator = () => {
-                const newBooksCount = manifestData?.totalBooks - books.length;
-                const bookWord = newBooksCount === 1 ? 'book' : 'books';
+                const urgency = getUrgencyInfo();
+                const isLoading = syncStatus === 'loading';
 
-                // Pre-load ALL icons and show/hide with CSS - no src changes, instant display
-                const iconStyle = (isVisible) => ({
-                    width: '16px',
-                    height: '16px',
-                    marginRight: '4px',
-                    verticalAlign: 'middle',
-                    display: isVisible ? 'inline-block' : 'none'
-                });
-
-                const statusText = {
-                    loading: 'Loading...',
-                    none: 'Click here to load library',
-                    fresh: `Fresh ${lastSyncTime ? `(${getRelativeTime(lastSyncTime)})` : ''}`,
-                    stale: `Stale ${newBooksCount > 0 ? `(${newBooksCount} new ${bookWord})` : ''}`,
-                    unknown: 'Unknown status - Please refresh'
-                };
-
-                const textClass = {
-                    loading: 'text-gray-500',
-                    none: 'text-gray-500',
-                    fresh: 'text-green-700',
-                    stale: 'text-orange-600',
-                    unknown: 'text-red-600'
-                };
-
-                const isClickable = syncStatus !== 'loading';
+                if (isLoading) {
+                    return (
+                        <span className="text-sm text-gray-500">
+                            <span className="inline-block animate-spin mr-1">⏳</span>
+                            Loading...
+                        </span>
+                    );
+                }
 
                 return (
                     <span
-                        className={`text-sm ${textClass[syncStatus]} ${isClickable ? 'status-indicator' : ''}`}
-                        onClick={isClickable ? () => setStatusModalOpen(true) : undefined}
+                        className={`text-sm ${urgency.color} status-indicator`}
+                        onClick={() => setStatusModalOpen(true)}
+                        title={urgency.tooltip}
                     >
-                        <img src="images/busy.png" alt="Loading" style={iconStyle(syncStatus === 'loading')} className={syncStatus === 'loading' ? 'icon-spin' : ''} />
-                        <img src="images/empty.png" alt="No library" style={iconStyle(syncStatus === 'none')} className={syncStatus === 'none' ? 'icon-pulse' : ''} />
-                        <img src="images/fresh.png" alt="Fresh" style={iconStyle(syncStatus === 'fresh')} />
-                        <img src="images/stale.png" alt="Stale" style={iconStyle(syncStatus === 'stale')} />
-                        <img src="images/question-mark.png" alt="Unknown" style={iconStyle(syncStatus === 'unknown')} />
-                        {statusText[syncStatus]}
+                        <span className="mr-1">{urgency.icon}</span>
+                        Data Status: {urgency.text}
                     </span>
                 );
             };
@@ -1536,7 +1702,7 @@
                                     <p className="text-sm text-gray-600 mt-1">
                                         {dataSource === 'enriched' ? '✨ With ratings & reviews' :
                                          dataSource === 'csv' ? '📄 Basic CSV data' :
-                                         '📂 No library loaded'} • {APP_VERSION} • {renderStatusIndicator()}
+                                         '📂 No library loaded'} • {renderStatusIndicator()}
                                     </p>
                                 </div>
                             </div>
@@ -1619,71 +1785,138 @@
                         </div>
                     </div>
 
-                    {statusModalOpen && (
+                    {statusModalOpen && (() => {
+                        const urgency = getUrgencyInfo();
+                        const statusIcon = (status) => {
+                            const icons = { fresh: '✅', stale: '⚠️', obsolete: '🛑', empty: '🗄️', unknown: '❓' };
+                            return icons[status] || '❓';
+                        };
+                        const statusLabel = (status, date) => {
+                            if (status === 'empty') return 'Missing';
+                            if (status === 'unknown') return 'Unknown';
+                            const label = status.charAt(0).toUpperCase() + status.slice(1);
+                            if (date) {
+                                const d = new Date(date);
+                                const days = Math.floor((Date.now() - d.getTime()) / (1000 * 60 * 60 * 24));
+                                if (days < 1) return `${label} (today)`;
+                                if (days === 1) return `${label} (1d ago)`;
+                                return `${label} (${days}d ago)`;
+                            }
+                            return label;
+                        };
+                        const needsLibraryAction = ['empty', 'stale', 'obsolete', 'unknown'].includes(libraryStatus.loadStatus);
+                        const needsCollectionsAction = ['empty', 'stale', 'obsolete'].includes(collectionsStatus.loadStatus);
+                        const hasFreshFetch = libraryStatus.fetchStatus === 'fresh';
+
+                        return (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setStatusModalOpen(false)}>
-                            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex justify-between items-start mb-4">
+                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+                                {/* Header with darker background */}
+                                <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                                        {syncStatus === 'fresh' && <><img src="images/fresh.png" alt="" className="status-icon" /> Fresh Data</>}
-                                        {syncStatus === 'stale' && <><img src="images/stale.png" alt="" className="status-icon" /> Stale Data</>}
-                                        {syncStatus === 'none' && <><img src="images/empty.png" alt="" className="status-icon" /> No Library Loaded</>}
-                                        {syncStatus === 'unknown' && <><img src="images/question-mark.png" alt="" className="status-icon" /> Unknown Status</>}
+                                        <span>{urgency.icon}</span>
+                                        {urgency.text === 'Fresh' ? 'All Good!' :
+                                         urgency.text === 'Must act' ? 'Action Required' :
+                                         urgency.text === 'Stale' ? 'Update Recommended' :
+                                         urgency.text === 'Obsolete' ? 'Action Required' : 'Status Info'}
                                     </h2>
-                                    <button onClick={() => setStatusModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+                                    <button onClick={() => setStatusModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
                                 </div>
-                                
-                                {syncStatus === 'fresh' && (
+
+                                {/* Main content area */}
+                                <div className="p-6">
+                                {/* Contextual guidance based on state - ACTION FIRST */}
+                                {libraryStatus.loadStatus === 'fresh' && collectionsStatus.loadStatus === 'fresh' && (
                                     <div className="space-y-3">
                                         <p className="text-sm text-gray-700">
                                             ✅ <strong>You're using the latest data!</strong>
                                         </p>
                                         <div className="text-sm text-gray-600">
                                             <p><strong>Books:</strong> {books.length}</p>
-                                            <p><strong>Library loaded:</strong> {lastSyncTime && new Date(lastSyncTime).toLocaleString()}</p>
                                         </div>
                                         <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
                                             <p><strong>To add new books:</strong></p>
-                                            <p className="mt-1">Click the bookmarklet on your online library page to fetch updated data, then click the Stale indicator to reload.</p>
+                                            <p className="mt-1">Click the bookmarklet on your Amazon library page to fetch updated data.</p>
                                         </div>
                                     </div>
                                 )}
-                                
-                                {syncStatus === 'stale' && (
+
+                                {libraryStatus.loadStatus === 'empty' && (
                                     <div className="space-y-3">
                                         <p className="text-sm text-gray-700">
-                                            📚 <strong>New data available from fetcher!</strong>
+                                            {hasFreshFetch ?
+                                                <>📥 <strong>Fresh library data is ready to load!</strong></> :
+                                                <>📚 <strong>No library loaded yet.</strong></>
+                                            }
                                         </p>
-                                        {manifestData && (
-                                            <div className="text-sm text-gray-600">
-                                                <p><strong>Manifest shows:</strong></p>
-                                                <p>• Total books in file: {manifestData.totalBooks}</p>
-                                                <p>• Your current books: {books.length}</p>
-                                                <p>• New books to load: {manifestData.totalBooks - books.length}</p>
-                                                <p className="mt-2"><strong>Last fetcher run:</strong> {new Date(manifestData.lastFetched).toLocaleString()}</p>
+                                        {hasFreshFetch ? (
+                                            <>
+                                                <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
+                                                    <p>Click "Load Library" to import your fetched data.</p>
+                                                </div>
+                                                <button
+                                                    onClick={syncNow}
+                                                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                                                    Load Library
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div className="border border-blue-200 rounded overflow-hidden text-sm text-gray-700">
+                                                {/* Header - question only */}
+                                                <div className="bg-blue-100 px-3 py-2 border-b border-blue-200">
+                                                    <p className="text-center font-medium">Do you already have a library file?</p>
+                                                </div>
+                                                {/* Content zone with column headers */}
+                                                <div className="bg-blue-50 p-3">
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="text-center">
+                                                            <p className="font-medium text-green-700 mb-2">✓ Yes</p>
+                                                            <button
+                                                                onClick={syncNow}
+                                                                className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
+                                                                Load Library
+                                                            </button>
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-medium text-gray-600 mb-2">✗ No</p>
+                                                            <ol className="list-decimal ml-4 space-y-1 text-xs">
+                                                                <li>Go to <a href="https://www.amazon.com/yourbooks" target="_blank" rel="noopener" className="text-blue-600 underline">Amazon Library</a></li>
+                                                                <li>Click the bookmarklet</li>
+                                                                <li>Choose "Fetch Library"</li>
+                                                                <li>Return here to load</li>
+                                                            </ol>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
-                                        <button
-                                            onClick={syncNow}
-                                            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-                                            Load Updated Library
-                                        </button>
                                     </div>
                                 )}
-                                
-                                {syncStatus === 'none' && (
+
+                                {(libraryStatus.loadStatus === 'stale' || libraryStatus.loadStatus === 'obsolete') && (
                                     <div className="space-y-3">
                                         <p className="text-sm text-gray-700">
-                                            No library data loaded yet.
+                                            {libraryStatus.loadStatus === 'stale' ?
+                                                <>⚠️ <strong>Your library data is getting old.</strong></> :
+                                                <>🛑 <strong>Your library data is out of date.</strong></>
+                                            }
                                         </p>
                                         <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
-                                            <p><strong>To get started:</strong></p>
-                                            <ol className="list-decimal ml-4 mt-2 space-y-1">
-                                                <li>Install the bookmarklet (see README for installer link)</li>
-                                                <li>Go to your online library page and click the bookmarklet to fetch your books</li>
-                                                <li>Click "Load Library" below to upload the downloaded JSON file</li>
-                                            </ol>
+                                            {hasFreshFetch ? (
+                                                <p>Fresh data is available! Click "Load Library" to update.</p>
+                                            ) : (
+                                                <>
+                                                    <p><strong>To refresh your library:</strong></p>
+                                                    <ol className="list-decimal ml-4 mt-2 space-y-1">
+                                                        <li>Go to <a href="https://www.amazon.com/yourbooks" target="_blank" rel="noopener" className="text-blue-600 underline">Amazon Library</a></li>
+                                                        <li>Click the ReaderWrangler bookmarklet</li>
+                                                        <li>Choose "Fetch Library"</li>
+                                                        <li>Return here and click "Load Library"</li>
+                                                    </ol>
+                                                </>
+                                            )}
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={syncNow}
                                             className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
                                             Load Library
@@ -1691,25 +1924,71 @@
                                     </div>
                                 )}
 
-                                {syncStatus === 'unknown' && (
+                                {libraryStatus.loadStatus === 'unknown' && libraryStatus.loadStatus !== 'empty' && (
                                     <div className="space-y-3">
                                         <p className="text-sm text-gray-700">
-                                            ⚠️ <strong>Status check timed out.</strong>
+                                            ❓ <strong>Status unknown</strong>
                                         </p>
-                                        <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-gray-700">
-                                            <p>The library was loaded but the status verification didn't complete in time.</p>
-                                            <p className="mt-2"><strong>Please refresh the page to continue.</strong></p>
+                                        <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm text-gray-700">
+                                            <p>Your library file doesn't have date tracking metadata.</p>
+                                            <p className="mt-1">Re-fetch to enable full status tracking.</p>
                                         </div>
                                         <button
-                                            onClick={() => window.location.reload()}
-                                            className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">
-                                            Refresh Page
+                                            onClick={syncNow}
+                                            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                                            Load Library
                                         </button>
                                     </div>
                                 )}
+
+                                {/* Library is Fresh but Collections needs action */}
+                                {libraryStatus.loadStatus === 'fresh' && collectionsStatus.loadStatus !== 'fresh' && (
+                                    <div className="space-y-3">
+                                        <p className="text-sm text-gray-700">
+                                            {collectionsStatus.loadStatus === 'empty' || collectionsStatus.loadStatus === 'unknown' ?
+                                                <>📁 <strong>Collections not loaded yet</strong> (optional)</> :
+                                                <>⚠️ <strong>Collections data is getting old</strong></>
+                                            }
+                                        </p>
+                                        <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
+                                            <p>Your library is up to date! Collections are optional for organizing books by Amazon's categories.</p>
+                                            <p className="mt-2"><strong>To add collections:</strong></p>
+                                            <ol className="list-decimal ml-4 mt-1 space-y-1 text-xs">
+                                                <li>Go to <a href="https://www.amazon.com/hz/mycd/myx" target="_blank" rel="noopener" className="text-blue-600 underline">Amazon Collections</a></li>
+                                                <li>Click the ReaderWrangler bookmarklet</li>
+                                                <li>Choose "Fetch Collections"</li>
+                                                <li>Return here and load collections</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Status Grid - secondary detail info at bottom */}
+                                <div className="grid grid-cols-2 gap-4 mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-700 mb-1">📚 Library</p>
+                                        <p className="text-xs text-gray-600">
+                                            Fetch: {statusIcon(libraryStatus.fetchStatus)} {statusLabel(libraryStatus.fetchStatus, libraryStatus.fetchDate)}
+                                        </p>
+                                        <p className="text-xs text-gray-600">
+                                            Load: {statusIcon(libraryStatus.loadStatus)} {statusLabel(libraryStatus.loadStatus, libraryStatus.loadDate)}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-700 mb-1">📁 Collections</p>
+                                        <p className="text-xs text-gray-600">
+                                            Fetch: {statusIcon(collectionsStatus.fetchStatus)} {statusLabel(collectionsStatus.fetchStatus, collectionsStatus.fetchDate)}
+                                        </p>
+                                        <p className="text-xs text-gray-600">
+                                            Load: {statusIcon(collectionsStatus.loadStatus)} {statusLabel(collectionsStatus.loadStatus, collectionsStatus.loadDate)}
+                                        </p>
+                                    </div>
+                                </div>
+                                </div>
                             </div>
                         </div>
-                    )}
+                        );
+                    })()}
 
                     {settingsOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setSettingsOpen(false)}>

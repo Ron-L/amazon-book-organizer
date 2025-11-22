@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ReaderWrangler State Matrix - Simplified User-First Design</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        th {
+            background-color: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            vertical-align: top;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .state-num {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        .urgency-good {
+            font-size: 1.5em;
+            text-align: center;
+        }
+        .urgency-warn {
+            font-size: 1.5em;
+            text-align: center;
+        }
+        .urgency-critical {
+            font-size: 1.5em;
+            text-align: center;
+        }
+        .icon-cell {
+            text-align: center;
+            font-size: 0.9em;
+        }
+        .dialog-msg {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-left: 3px solid #667eea;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+        }
+        .tooltip {
+            font-style: italic;
+            color: #555;
+            font-size: 0.95em;
+        }
+        .legend {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .legend h2 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .legend ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .legend li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .legend li:last-child {
+            border-bottom: none;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 ReaderWrangler State Matrix - Simplified User-First Design</h1>
+    <p><strong>Purpose:</strong> Complete state matrix showing all 25 combinations of Fetch × Load states (5 × 5) with user-focused urgency indicators.</p>
+
+    <div class="highlight">
+        <h3>🎯 Key Design Principle: USER-FIRST, NOT ENGINEER-FIRST</h3>
+        <p><strong>Urgency is based ONLY on Load state</strong> (what's in the app right now), not Fetch state (what's in the file).</p>
+        <ul>
+            <li><strong>Load = Unknown</strong> → ❓ Info needed (legacy file without fetchDate)</li>
+            <li><strong>Load = Empty</strong> → 🛑 Must act (can't use app at all)</li>
+            <li><strong>Load = Fresh</strong> → ✅ All good (can work right now)</li>
+            <li><strong>Load = Stale</strong> → ⚠️ Should act (data getting old, 7-30 days)</li>
+            <li><strong>Load = Obsolete</strong> → 🛑 Must act (data too old, >30 days)</li>
+        </ul>
+        <p><strong>Why?</strong> User cares about "Can I use my library RIGHT NOW?" not "What's the file status?"</p>
+        <p><strong>Fetch state affects the ACTION</strong> (what to do when clicked), not the URGENCY (whether action is needed).</p>
+    </div>
+
+    <div class="legend">
+        <h2>Icon Legend</h2>
+
+        <h3>Urgency Icons (What User Sees)</h3>
+        <ul>
+            <li><strong>❓</strong> Unknown → Please click to see available info (legacy file)</li>
+            <li><strong>✅</strong> All good → No actions required (clickable for info)</li>
+            <li><strong>⚠️</strong> Should act → Please click to see suggested action(s)</li>
+            <li><strong>🛑</strong> Must act → Please click to see required action(s)</li>
+        </ul>
+
+        <h3>Design Notes</h3>
+        <ul>
+            <li><strong>Colorblind-friendly:</strong> Three distinct shapes (checkmark, triangle, octagon) convey meaning even in grayscale</li>
+            <li><strong>Tooltips:</strong> Hover shows urgency-specific message</li>
+            <li><strong>Click behavior:</strong> Opens dialog with action guidance (even for ✅ states)</li>
+        </ul>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%;">State #</th>
+                <th style="width: 10%;">Fetch Status</th>
+                <th style="width: 10%;">Load Status</th>
+                <th style="width: 8%;">Urgency<br><small>(Icon)</small></th>
+                <th style="width: 20%;">Tooltip<br><small>(On hover)</small></th>
+                <th style="width: 47%;">Dialog Message<br><small>(On click)</small></th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Unknown Fetch States (GUID mismatch, DB cleared, legacy) -->
+            <tr>
+                <td class="state-num">1</td>
+                <td class="icon-cell"><strong>Unknown</strong><br><small>No DB manifest</small></td>
+                <td class="icon-cell"><strong>Unknown</strong><br><small>Legacy file</small></td>
+                <td class="urgency-critical">❓</td>
+                <td class="tooltip">Please click to see available info</td>
+                <td class="dialog-msg">
+                    <strong>Status Unknown</strong><br><br>
+                    Your library file doesn't have date tracking metadata.<br>
+                    Re-fetch to enable full status tracking.<br><br>
+                    <strong>[Fetch Library Button]</strong><br>
+                    Opens amazon.com/yourbooks in new tab<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ❓ Unknown&nbsp;&nbsp;&nbsp;&nbsp;Fetch: ❓ Unknown<br>
+                    Load: ❓ Unknown&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Load: ❓ Unknown
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">2</td>
+                <td class="icon-cell"><strong>Unknown</strong><br><small>No DB manifest</small></td>
+                <td class="icon-cell"><strong>Empty</strong><br><small>Never loaded</small></td>
+                <td class="urgency-critical">🛑</td>
+                <td class="tooltip">Please click to see required action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ❓ Unknown&nbsp;&nbsp;&nbsp;&nbsp;Fetch: ❓ Unknown<br>
+                    Load: 🗄️ Missing&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Load: ❓ Unknown
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">3</td>
+                <td class="icon-cell"><strong>Unknown</strong><br><small>No DB manifest</small></td>
+                <td class="icon-cell"><strong>Fresh</strong><br><small>3h ago</small></td>
+                <td class="urgency-good">✅</td>
+                <td class="tooltip">No actions required</td>
+                <td class="dialog-msg">
+                    <strong>✅ App data is current!</strong><br><br>
+                    Fetch status unknown (no DB manifest).<br>
+                    App data is fresh - continue organizing!<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ❓ Unknown&nbsp;&nbsp;&nbsp;&nbsp;Fetch: ❓ Unknown<br>
+                    Load: ✅ Fresh (3h)&nbsp;&nbsp;Load: ✅ Fresh (3h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">4</td>
+                <td class="icon-cell"><strong>Unknown</strong><br><small>No DB manifest</small></td>
+                <td class="icon-cell"><strong>Stale</strong><br><small>15d ago</small></td>
+                <td class="urgency-warn">⚠️</td>
+                <td class="tooltip">Please click to see suggested action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    → Then reload library into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ❓ Unknown&nbsp;&nbsp;&nbsp;&nbsp;Fetch: ❓ Unknown<br>
+                    Load: ⚠️ Stale (15d)&nbsp;&nbsp;Load: ✅ Fresh (3h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">5</td>
+                <td class="icon-cell"><strong>Unknown</strong><br><small>No DB manifest</small></td>
+                <td class="icon-cell"><strong>Obsolete</strong><br><small>45d ago</small></td>
+                <td class="urgency-critical">🛑</td>
+                <td class="tooltip">Please click to see required action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    → Then reload library into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ❓ Unknown&nbsp;&nbsp;&nbsp;&nbsp;Fetch: ❓ Unknown<br>
+                    Load: 🛑 Obsolete (45d)&nbsp;Load: ✅ Fresh (3h)
+                </td>
+            </tr>
+
+            <!-- Empty Fetch States -->
+            <tr>
+                <td class="state-num">6</td>
+                <td class="icon-cell"><strong>Empty</strong><br><small>Never fetched</small></td>
+                <td class="icon-cell"><strong>Unknown</strong><br><small>Legacy file</small></td>
+                <td class="urgency-critical">❓</td>
+                <td class="tooltip">Please click to see available info</td>
+                <td class="dialog-msg">
+                    <strong>Status Unknown</strong><br><br>
+                    Your library file doesn't have date tracking metadata.<br>
+                    Re-fetch to enable full status tracking.<br><br>
+                    <strong>[Fetch Library Button]</strong><br>
+                    Opens amazon.com/yourbooks in new tab<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: 🗄️ Missing&nbsp;&nbsp;&nbsp;&nbsp;Fetch: ❓ Unknown<br>
+                    Load: ❓ Unknown&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Load: ❓ Unknown
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">7</td>
+                <td class="icon-cell"><strong>Empty</strong><br><small>Never fetched</small></td>
+                <td class="icon-cell"><strong>Empty</strong><br><small>Never loaded</small></td>
+                <td class="urgency-critical">🛑</td>
+                <td class="tooltip">Please click to see required action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: 🗄️ Missing&nbsp;&nbsp;&nbsp;&nbsp;Fetch: 🗄️ Missing<br>
+                    Load: 🗄️ Missing&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Load: 🗄️ Missing
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">8</td>
+                <td class="icon-cell"><strong>Empty</strong><br><small>File deleted</small></td>
+                <td class="icon-cell"><strong>Fresh</strong><br><small>3h ago</small></td>
+                <td class="urgency-good">✅</td>
+                <td class="tooltip">No actions required</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong> (Optional)<br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    <em>Note: App data is current, file needed for future reloads only</em><br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: 🗄️ Missing&nbsp;&nbsp;&nbsp;&nbsp;Fetch: ✅ Fresh (3h)<br>
+                    Load: ✅ Fresh (3h)&nbsp;&nbsp;Load: ✅ Fresh (3h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">9</td>
+                <td class="icon-cell"><strong>Empty</strong><br><small>File deleted</small></td>
+                <td class="icon-cell"><strong>Stale</strong><br><small>12d ago</small></td>
+                <td class="urgency-warn">⚠️</td>
+                <td class="tooltip">Please click to see suggested action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    → Then reload library into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: 🗄️ Missing&nbsp;&nbsp;&nbsp;&nbsp;Fetch: ✅ Fresh (3h)<br>
+                    Load: ⚠️ Stale (12d)&nbsp;&nbsp;Load: ✅ Fresh (3h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">10</td>
+                <td class="icon-cell"><strong>Empty</strong><br><small>File deleted</small></td>
+                <td class="icon-cell"><strong>Obsolete</strong><br><small>45d ago</small></td>
+                <td class="urgency-critical">🛑</td>
+                <td class="tooltip">Please click to see required action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    → Then reload library into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: 🗄️ Missing&nbsp;&nbsp;&nbsp;&nbsp;Fetch: ✅ Fresh (3h)<br>
+                    Load: 🛑 Obsolete (45d)&nbsp;Load: ✅ Fresh (3h)
+                </td>
+            </tr>
+
+            <!-- Fresh Fetch States -->
+            <tr>
+                <td class="state-num">11</td>
+                <td class="icon-cell"><strong>Fresh</strong><br><small>2h ago</small></td>
+                <td class="icon-cell"><strong>Unknown</strong><br><small>Legacy file</small></td>
+                <td class="urgency-critical">❓</td>
+                <td class="tooltip">Please click to see available info</td>
+                <td class="dialog-msg">
+                    <strong>Status Unknown</strong><br><br>
+                    Your library file doesn't have date tracking metadata.<br>
+                    A fresh fetch is available - load it to update your library.<br><br>
+                    <strong>[Load Library Button]</strong><br>
+                    Opens file picker dialog<br>
+                    → Select amazon-library.json from Downloads<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ✅ Fresh (2h)&nbsp;&nbsp;Fetch: ❓ Unknown<br>
+                    Load: ❓ Unknown&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Load: ❓ Unknown
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">12</td>
+                <td class="icon-cell"><strong>Fresh</strong><br><small>2h ago</small></td>
+                <td class="icon-cell"><strong>Empty</strong><br><small>Never loaded</small></td>
+                <td class="urgency-critical">🛑</td>
+                <td class="tooltip">Please click to see required action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Load Library Button]</strong><br><br>
+                    Opens file picker dialog<br>
+                    → Select amazon-library.json from Downloads<br>
+                    → Library data loads into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ✅ Fresh (2h)&nbsp;&nbsp;Fetch: ✅ Fresh (2h)<br>
+                    Load: 🗄️ Missing&nbsp;&nbsp;&nbsp;&nbsp;Load: ✅ Fresh (2h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">13</td>
+                <td class="icon-cell"><strong>Fresh</strong><br><small>3h ago</small></td>
+                <td class="icon-cell"><strong>Fresh</strong><br><small>3h ago</small></td>
+                <td class="urgency-good">✅</td>
+                <td class="tooltip">No actions required</td>
+                <td class="dialog-msg">
+                    <strong>✅ Everything is up to date!</strong> 🎉<br><br>
+                    Your library file and app data are both fresh.<br>
+                    Continue organizing your books!<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ✅ Fresh (3h)&nbsp;&nbsp;Fetch: ✅ Fresh (3h)<br>
+                    Load: ✅ Fresh (3h)&nbsp;&nbsp;Load: ✅ Fresh (3h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">14</td>
+                <td class="icon-cell"><strong>Fresh</strong><br><small>1h ago</small></td>
+                <td class="icon-cell"><strong>Stale</strong><br><small>15d ago</small></td>
+                <td class="urgency-warn">⚠️</td>
+                <td class="tooltip">Please click to see suggested action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Load Library Button]</strong><br><br>
+                    Opens file picker dialog<br>
+                    → Select amazon-library.json from Downloads<br>
+                    → Fresh library data loads into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ✅ Fresh (1h)&nbsp;&nbsp;Fetch: ✅ Fresh (1h)<br>
+                    Load: ⚠️ Stale (15d)&nbsp;&nbsp;Load: ✅ Fresh (1h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">15</td>
+                <td class="icon-cell"><strong>Fresh</strong><br><small>1h ago</small></td>
+                <td class="icon-cell"><strong>Obsolete</strong><br><small>90d ago</small></td>
+                <td class="urgency-critical">🛑</td>
+                <td class="tooltip">Please click to see required action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Load Library Button]</strong><br><br>
+                    Opens file picker dialog<br>
+                    → Select amazon-library.json from Downloads<br>
+                    → Fresh library data loads into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ✅ Fresh (1h)&nbsp;&nbsp;Fetch: ✅ Fresh (1h)<br>
+                    Load: 🛑 Obsolete (90d)&nbsp;Load: ✅ Fresh (1h)
+                </td>
+            </tr>
+
+            <!-- Stale Fetch States -->
+            <tr>
+                <td class="state-num">16</td>
+                <td class="icon-cell"><strong>Stale</strong><br><small>10d ago</small></td>
+                <td class="icon-cell"><strong>Unknown</strong><br><small>Legacy file</small></td>
+                <td class="urgency-critical">❓</td>
+                <td class="tooltip">Please click to see available info</td>
+                <td class="dialog-msg">
+                    <strong>Status Unknown</strong><br><br>
+                    Your library file doesn't have date tracking metadata.<br>
+                    Consider re-fetching for fresh data with status tracking.<br><br>
+                    <strong>[Fetch Library Button]</strong><br>
+                    Opens amazon.com/yourbooks in new tab<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ⚠️ Stale (10d)&nbsp;&nbsp;Fetch: ❓ Unknown<br>
+                    Load: ❓ Unknown&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Load: ❓ Unknown
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">17</td>
+                <td class="icon-cell"><strong>Stale</strong><br><small>10d ago</small></td>
+                <td class="icon-cell"><strong>Empty</strong><br><small>Never loaded</small></td>
+                <td class="urgency-critical">🛑</td>
+                <td class="tooltip">Please click to see required action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    → Then reload library into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ⚠️ Stale (10d)&nbsp;&nbsp;Fetch: ✅ Fresh (1h)<br>
+                    Load: 🗄️ Missing&nbsp;&nbsp;&nbsp;&nbsp;Load: ✅ Fresh (1h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">18</td>
+                <td class="icon-cell"><strong>Stale</strong><br><small>12d ago</small></td>
+                <td class="icon-cell"><strong>Fresh</strong><br><small>2h ago</small></td>
+                <td class="urgency-good">✅</td>
+                <td class="tooltip">No actions required</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong> (Optional)<br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    <em>Note: App data is current, fresh file is for future reloads</em><br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ⚠️ Stale (12d)&nbsp;&nbsp;Fetch: ✅ Fresh (1h)<br>
+                    Load: ✅ Fresh (2h)&nbsp;&nbsp;Load: ✅ Fresh (1h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">19</td>
+                <td class="icon-cell"><strong>Stale</strong><br><small>18d ago</small></td>
+                <td class="icon-cell"><strong>Stale</strong><br><small>18d ago</small></td>
+                <td class="urgency-warn">⚠️</td>
+                <td class="tooltip">Please click to see suggested action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    → Then reload library into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ⚠️ Stale (18d)&nbsp;&nbsp;Fetch: ✅ Fresh (1h)<br>
+                    Load: ⚠️ Stale (18d)&nbsp;&nbsp;Load: ✅ Fresh (1h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">20</td>
+                <td class="icon-cell"><strong>Stale</strong><br><small>20d ago</small></td>
+                <td class="icon-cell"><strong>Obsolete</strong><br><small>60d ago</small></td>
+                <td class="urgency-critical">🛑</td>
+                <td class="tooltip">Please click to see required action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    → Then reload library into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: ⚠️ Stale (20d)&nbsp;&nbsp;Fetch: ✅ Fresh (1h)<br>
+                    Load: 🛑 Obsolete (60d)&nbsp;Load: ✅ Fresh (1h)
+                </td>
+            </tr>
+
+            <!-- Obsolete Fetch States -->
+            <tr>
+                <td class="state-num">21</td>
+                <td class="icon-cell"><strong>Obsolete</strong><br><small>45d ago</small></td>
+                <td class="icon-cell"><strong>Unknown</strong><br><small>Legacy file</small></td>
+                <td class="urgency-critical">❓</td>
+                <td class="tooltip">Please click to see available info</td>
+                <td class="dialog-msg">
+                    <strong>Status Unknown</strong><br><br>
+                    Your library file doesn't have date tracking metadata.<br>
+                    You have a very old fetch available. Re-fetch recommended.<br><br>
+                    <strong>[Fetch Library Button]</strong><br>
+                    Opens amazon.com/yourbooks in new tab<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: 🛑 Obsolete (45d)&nbsp;Fetch: ❓ Unknown<br>
+                    Load: ❓ Unknown&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Load: ❓ Unknown
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">22</td>
+                <td class="icon-cell"><strong>Obsolete</strong><br><small>45d ago</small></td>
+                <td class="icon-cell"><strong>Empty</strong><br><small>Never loaded</small></td>
+                <td class="urgency-critical">🛑</td>
+                <td class="tooltip">Please click to see required action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    → Then load library into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: 🛑 Obsolete (45d)&nbsp;Fetch: ✅ Fresh (1h)<br>
+                    Load: 🗄️ Missing&nbsp;&nbsp;&nbsp;&nbsp;Load: ✅ Fresh (1h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">23</td>
+                <td class="icon-cell"><strong>Obsolete</strong><br><small>50d ago</small></td>
+                <td class="icon-cell"><strong>Fresh</strong><br><small>1h ago</small></td>
+                <td class="urgency-good">✅</td>
+                <td class="tooltip">No actions required</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong> (Optional)<br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    <em>Note: App data is current, fresh file is for future reloads</em><br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: 🛑 Obsolete (50d)&nbsp;Fetch: ✅ Fresh (1h)<br>
+                    Load: ✅ Fresh (1h)&nbsp;&nbsp;Load: ✅ Fresh (1h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">24</td>
+                <td class="icon-cell"><strong>Obsolete</strong><br><small>40d ago</small></td>
+                <td class="icon-cell"><strong>Stale</strong><br><small>22d ago</small></td>
+                <td class="urgency-warn">⚠️</td>
+                <td class="tooltip">Please click to see suggested action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    → Then reload library into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: 🛑 Obsolete (40d)&nbsp;Fetch: ✅ Fresh (1h)<br>
+                    Load: ⚠️ Stale (22d)&nbsp;&nbsp;Load: ✅ Fresh (1h)
+                </td>
+            </tr>
+            <tr>
+                <td class="state-num">25</td>
+                <td class="icon-cell"><strong>Obsolete</strong><br><small>60d ago</small></td>
+                <td class="icon-cell"><strong>Obsolete</strong><br><small>60d ago</small></td>
+                <td class="urgency-critical">🛑</td>
+                <td class="tooltip">Please click to see required action(s)</td>
+                <td class="dialog-msg">
+                    <strong>[Fetch Library Button]</strong><br><br>
+                    Opens amazon.com/yourbooks in new tab<br>
+                    → Click ReaderWrangler bookmarklet<br>
+                    → Choose "Fetch Library"<br>
+                    → Then reload library into app<br><br>
+                    <strong>Library</strong>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>Collections</strong><br>
+                    Fetch: 🛑 Obsolete (60d)&nbsp;Fetch: ✅ Fresh (1h)<br>
+                    Load: 🛑 Obsolete (60d)&nbsp;Load: ✅ Fresh (1h)
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Implementation Summary</h2>
+
+    <h3>Status Display (What User Sees in App)</h3>
+    <p><strong>Status Bar Layout:</strong></p>
+    <pre style="background-color: #f8f9fa; padding: 15px; border-left: 3px solid #667eea; font-family: 'Courier New', monospace;">
+ReaderWrangler™
+
+✨ With ratings & reviews • 2,322 books
+Data Status: ✅
+    </pre>
+    <p><strong>Urgency Icon Logic</strong> (worst-case across Library AND Collections):</p>
+    <ul>
+        <li><strong>✅</strong> if both Library Load AND Collections Load are Fresh</li>
+        <li><strong>⚠️</strong> if any Load is Stale (but none are Empty/Obsolete/Unknown)</li>
+        <li><strong>❓</strong> if any Load is Unknown (legacy file without fetchDate)</li>
+        <li><strong>🛑</strong> if any Load is Empty or Obsolete</li>
+    </ul>
+    <p><strong>Label:</strong> "Data Status:" clarifies this refers to library data freshness (not app version, code version, etc.)</p>
+
+    <h3>Tooltip Behavior</h3>
+    <ul>
+        <li><strong>❓</strong> → "Please click to see available info"</li>
+        <li><strong>✅</strong> → "No actions required"</li>
+        <li><strong>⚠️</strong> → "Please click to see suggested action(s)"</li>
+        <li><strong>🛑</strong> → "Please click to see required action(s)"</li>
+    </ul>
+
+    <h3>Click Behavior</h3>
+    <ul>
+        <li><strong>All states are clickable</strong> (even ✅ shows informational message)</li>
+        <li><strong>Dialog shows Library actions</strong> unless Library is Fresh/Fresh (then shows Collections actions)</li>
+        <li><strong>Action buttons</strong> open Amazon pages in new tab with clear instructions</li>
+    </ul>
+
+    <h3>Collections Variant</h3>
+    <p>Collections uses the <strong>identical 25-state matrix</strong> with same logic:</p>
+    <ul>
+        <li>Same urgency calculation (based on Collections Load state)</li>
+        <li>Same icons (❓✅⚠️🛑)</li>
+        <li>Same tooltips</li>
+        <li>Dialog messages adjusted to reference "Collections" and "amazon.com/hz/mycd/myx" page</li>
+        <li>Emphasis on "optional feature" in messaging</li>
+    </ul>
+
+    <h3>Freshness Thresholds</h3>
+    <ul>
+        <li><strong>Unknown:</strong> No fetchDate in metadata (legacy JSON file)</li>
+        <li><strong>Empty:</strong> Never fetched or never loaded</li>
+        <li><strong>Fresh:</strong> &lt; 7 days</li>
+        <li><strong>Stale:</strong> 7-30 days</li>
+        <li><strong>Obsolete:</strong> &gt; 30 days</li>
+    </ul>
+
+    <h3>Accessibility Considerations</h3>
+    <ul>
+        <li><strong>✓ Colorblind-friendly:</strong> Four distinct shapes work in grayscale (❓ question mark, ✅ checkmark, ⚠️ triangle, 🛑 octagon)</li>
+        <li><strong>✓ Keyboard navigation:</strong> Status icon is focusable and clickable via Enter/Space</li>
+        <li><strong>✓ Screen reader support:</strong> ARIA labels describe urgency level and action needed</li>
+        <li><strong>Note:</strong> Visual drag-and-drop organizer has inherent limitations for blind users (core functionality requires seeing book covers and columns)</li>
+    </ul>
+
+</body>
+</html>

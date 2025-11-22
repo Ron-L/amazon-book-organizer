@@ -1,0 +1,106 @@
+ReaderWrangler - Video 1: Quick Start
+Script for Google Cloud Text-to-Speech (Journey-D or Journey-F)
+Estimated Duration: 2:45 at 0.9x speed
+Character Count: ~1,875 characters
+
+===== SCENE 1: Landing Page (0:00-0:20) =====
+
+Have hundreds of Kindle books... but can never find what to read next?
+
+Amazon shows you all your books... but won't let you organize them.
+
+ReaderWrangler fixes that.
+
+In the next two minutes... you'll extract your entire Kindle library from Amazon... and organize it however you want.
+
+Let's get started.
+
+===== SCENE 2: Install Bookmarklet (0:20-0:45) =====
+
+First... visit ReadyWrangler dot com and click "Get Started."
+
+You'll see a button that says "ReaderWrangler Navigator."
+
+Just drag it to your bookmarks bar.
+
+That's it. Installation done.
+
+This bookmarklet is your control panel... for everything that follows.
+
+===== SCENE 3: Fetch Library (0:45-1:30) =====
+
+Now click the bookmarklet.
+
+A menu appears. Select "Go to Library Fetcher Amazon Page."
+
+You're now on Amazon's "Your Books" page.
+
+Click the bookmarklet again... and select "Fetch Library Data."
+
+The bookmarklet starts extracting your books... covers... ratings... reviews... everything.
+
+The browser console shows progress as it works.
+
+For a smaller library... this goes pretty quickly.
+
+For larger libraries with hundreds or thousands of books... grab a coffee. It takes time to extract everything properly.
+
+When it's done... a JSON file downloads automatically to your computer.
+
+That's your entire library... ready to organize.
+
+===== SCENE 4: Fetch Collections (1:30-1:50) =====
+
+One more quick step.
+
+Click the bookmarklet... and select "Go to Collections Fetcher Amazon Page."
+
+Click the bookmarklet again... and select "Fetch Collections Data."
+
+This grabs your reading status... which books you've finished... which ones are in progress.
+
+Another JSON file downloads.
+
+Now you have everything.
+
+===== SCENE 5: Launch App & Organize (1:50-2:45) =====
+
+Click the bookmarklet one last time... and select "Launch App."
+
+Click the gray "No Library" text at the top... and load the JSON file you just downloaded.
+
+Boom. There's your entire library.
+
+Now the fun part.
+
+Create a column by clicking "New Column." Name it "Next to Read."
+
+Drag books into it.
+
+Create another column. "Finished Books."
+
+Drag some more.
+
+Use search to find a specific author... then drag all their books to a new "Favorite Authors" column.
+
+Click any book to see full details... ratings... reviews... descriptions.
+
+Everything from Amazon... now organized your way.
+
+===== SCENE 6: Wrap Up (2:45-3:00) =====
+
+That's it.
+
+Your books... your order... finally.
+
+Everything runs in your browser. Your data never leaves your computer.
+
+Start wrangling your reading chaos... today.
+
+========================================
+NOTES FOR TTS INPUT:
+- Use 0.9x speed for instructional clarity
+- Ellipses (...) = 0.5 second pause
+- Period (.) = 0.3 second pause
+- Emphasize key phrases naturally
+========================================
