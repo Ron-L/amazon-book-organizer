@@ -27,6 +27,21 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Can't use search to find a specific column or divider by name
    - Impact: Consistent search behavior across all named elements
 
+**0-G. 📐 Inline filter bar when expanded** - LOW/LOW (1 hour)
+   - When filter panel expanded, show primary filters inline with "Filters ▼ (N books)"
+   - Saves one row of vertical space in both primary and primary+advanced states
+   - Collapsed state unchanged
+   - Mobile: acceptable if cramped since app is view-only on mobile anyway
+   - Problem: Filter panel takes too much vertical space on laptops
+   - Impact: More vertical space for book columns
+
+**0-H. 📱 Mobile: Landing page hero too tall** - LOW/LOW (30 min)
+   - Hero/title section takes 50% of vertical space on phone
+   - Hero doesn't scroll, limiting visible content
+   - Reduce hero height on mobile breakpoints
+   - Problem: Poor mobile landing page experience
+   - Impact: Better first impression on mobile devices
+
 **1. 📝 Book Notes** - LOW/LOW (2-3 hours)
    - Personal notes on individual books ("Why did I buy this?", "Who recommended it?")
    - See [docs/design/BOOK-NOTES.md](docs/design/BOOK-NOTES.md) for full spec
