@@ -19,7 +19,7 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v2.0.0';
+    const FETCHER_VERSION = 'v2.1.0';
     const SCHEMA_VERSION = '2.0';
     const PAGE_TITLE = document.title;
 
@@ -245,7 +245,67 @@ async function fetchAmazonCollections() {
             `;
         }
 
-        return { create, updatePhase, updateDetail, updateProgress, remove, showComplete, showError, isAborted };
+        // Show save button and return Promise that resolves with 'save' or 'cancel'.
+        // WHY THIS EXISTS: createWritable() requires an active "user gesture" (click/keypress).
+        // After fetching collections (even if fast), the original gesture from selecting the file has expired.
+        // This button provides a fresh user gesture immediately before calling createWritable().
+        // Without this, Chrome throws: "SecurityError: Must be handling a user gesture to show a file picker"
+        function showSaveButton(bookCount) {
+            return new Promise((resolve) => {
+                if (!overlay) create();
+                overlay.innerHTML = `
+                    <div style="font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">
+                        ✅ Fetch Complete!
+                    </div>
+                    <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                        ${bookCount.toLocaleString()} books' collections ready to save
+                    </div>
+                    <button id="saveLibraryBtn" style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border: none;
+                        padding: 12px 20px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        width: 100%;
+                        transition: transform 0.1s;
+                    ">
+                        💾 Save Library File
+                    </button>
+                    <div style="font-size: 12px; color: #999; margin-top: 10px; text-align: center;">
+                        Click to save updated library
+                    </div>
+                    <button id="cancelSaveBtn" title="Discard fetched data" style="
+                        background: transparent;
+                        color: #999;
+                        border: 1px solid #ccc;
+                        padding: 6px 16px;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        cursor: pointer;
+                        margin-top: 15px;
+                    ">
+                        Cancel
+                    </button>
+                `;
+                const saveBtn = overlay.querySelector('#saveLibraryBtn');
+                saveBtn.onmouseover = () => saveBtn.style.transform = 'scale(1.02)';
+                saveBtn.onmouseout = () => saveBtn.style.transform = 'scale(1)';
+                saveBtn.onclick = () => {
+                    resolve('save');
+                };
+                const cancelBtn = overlay.querySelector('#cancelSaveBtn');
+                cancelBtn.onmouseover = () => { cancelBtn.style.borderColor = '#999'; cancelBtn.style.color = '#666'; };
+                cancelBtn.onmouseout = () => { cancelBtn.style.borderColor = '#ccc'; cancelBtn.style.color = '#999'; };
+                cancelBtn.onclick = () => {
+                    resolve('cancel');
+                };
+            });
+        }
+
+        return { create, updatePhase, updateDetail, updateProgress, remove, showComplete, showError, isAborted, showSaveButton };
     })();
 
     // Initialize progress UI
@@ -838,12 +898,28 @@ async function fetchAmazonCollections() {
 
     // Save using File System Access API if we have a file handle, otherwise download
     if (fileHandle) {
-        // Write back to the same file - browser will confirm overwrite
-        console.log(`   💾 Saving to original file location...`);
-        const writable = await fileHandle.createWritable();
-        await writable.write(jsonString);
-        await writable.close();
-        console.log(`✅ Updated library file in place`);
+        // Show save button to get fresh user gesture before writing
+        // Chrome requires an active "user gesture" for createWritable() - the original
+        // gesture from file selection has expired after fetching collections data
+        const userChoice = await progressUI.showSaveButton(processedBooks.length);
+        if (userChoice === 'cancel') {
+            console.error('   ❌ Save cancelled by user - data discarded');
+            progressUI.showError('Cancelled - your fetched data was discarded');
+            return;
+        }
+
+        // Now we have a fresh user gesture from the button click
+        try {
+            console.log(`   💾 Saving to original file location...`);
+            const writable = await fileHandle.createWritable();
+            await writable.write(jsonString);
+            await writable.close();
+            console.log(`✅ Updated library file in place`);
+        } catch (e) {
+            console.error('   ❌ Failed to save file:', e.message);
+            progressUI.showError(`Failed to save: ${e.message}`);
+            return;
+        }
     } else {
         // Fallback for Firefox/Safari - traditional download
         console.log(`   ⚠️  IMPORTANT: Save this file as "${FILENAME}", replacing your existing file!`);

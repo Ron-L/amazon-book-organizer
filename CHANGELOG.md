@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.15.1] - 2026-01-12
+
+### Fixed
+- **Collections Fetcher save button** - Fix SecurityError on file save (0-B)
+  - File version: amazon-collections-fetcher.js v2.1.0
+  - Chrome requires fresh user gesture for `createWritable()` after long operations
+  - Added save button before file write to provide fresh user gesture
+  - Same fix previously applied to Library Fetcher in v4.6.0
+
+- **Data Status shows correct state when Collections empty** - Fix misleading status (0-A)
+  - File version: readerwrangler.js v4.15.1
+  - Export backup no longer creates fake collections section when no collections data exists
+  - Import correctly resets collections status when file has no collections
+  - "Not loaded" text now displays in red for visibility
+  - Fetched date shows orange (stale) or red (empty/obsolete) based on status
+
 ## [4.15.0] - 2026-01-11
 
 ### Changed
