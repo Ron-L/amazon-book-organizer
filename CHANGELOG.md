@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.15.4] - 2026-01-12
+
+### Changed
+- **Search filter includes column/divider names** - Find columns and dividers by name (0-F)
+  - File version: readerwrangler.js v4.15.4
+  - Title/Author search now also matches column names and divider labels
+  - Column appears if its name matches search term (even with no matching books)
+  - Divider appears if its label matches search term (even with no books under it)
+  - Column appears if any of its divider labels match search term
+
 ## [4.15.3] - 2026-01-12
 
 ### Changed

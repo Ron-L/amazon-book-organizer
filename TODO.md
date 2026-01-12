@@ -20,13 +20,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Impact: Flexible organization, Filter→Cut→Unfilter→Paste workflow
    - Related: Supersedes P3-T1 Book Copy Feature
 
-**0-F. 🔍 Search filter includes column/divider names** - LOW/LOW (30 min)
-   - Title/Author search should also match column names and divider labels
-   - Shows column if its name matches, even if no books match
-   - Shows divider if its label matches, even if no books under it match
-   - Problem: Can't use search to find a specific column or divider by name
-   - Impact: Consistent search behavior across all named elements
-
 **0-G. 📐 Inline filter bar when expanded** - LOW/LOW (1 hour)
    - When filter panel expanded, show primary filters inline with "Filters ▼ (N books)"
    - Saves one row of vertical space in both primary and primary+advanced states

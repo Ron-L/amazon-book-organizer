@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.15.3";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.3";  // Build version for this file
+        const APP_VERSION = "4.15.4";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.15.4";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -3174,17 +3174,22 @@
                     return matchesSearch && matchesReadStatus && matchesCollection && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries && matchesDateRange;
                 });
 
-                // v4.16.0.a - Post-process: hide dividers with no books under them when filters active
+                // v4.15.3 - Post-process: hide dividers with no books under them when filters active
                 if (!filtersActive) return result;
 
                 // Walk backwards through array, tracking if we've seen a book since last divider
                 // A divider is kept only if there's at least one book between it and the next divider (or end)
+                // v4.15.4.a - Also keep divider if its label matches searchTerm
                 let hasBookAfter = false;
                 const keepDivider = new Set();
                 for (let i = result.length - 1; i >= 0; i--) {
                     const item = result[i];
                     if (item && item.type === 'divider') {
                         if (hasBookAfter) {
+                            keepDivider.add(item.id);
+                        }
+                        // v4.15.4.a - Keep divider if its label matches search term
+                        if (searchTerm && item.label && item.label.toLowerCase().includes(searchTerm.toLowerCase())) {
                             keepDivider.add(item.id);
                         }
                         hasBookAfter = false; // Reset for next divider section
@@ -4159,9 +4164,16 @@
                             }
                         }}>
                             {columns.filter(column => {
-                                // v4.16.0.a - Hide empty columns when filters are active
+                                // v4.15.3 - Hide empty columns when filters are active
                                 if (!hasActiveFilters) return true;
-                                // Column has visible books if filteredBooks returns any non-divider items
+                                // v4.15.4.a - Show column if its name matches search term
+                                if (searchTerm && column.name.toLowerCase().includes(searchTerm.toLowerCase())) return true;
+                                // v4.15.4.b - Show column if any divider label matches search term
+                                if (searchTerm && column.books.some(item =>
+                                    item && item.type === 'divider' && item.label &&
+                                    item.label.toLowerCase().includes(searchTerm.toLowerCase())
+                                )) return true;
+                                // Otherwise, show column if it has visible books
                                 return filteredBooks(column.books).some(item => !(item && item.type === 'divider'));
                             }).map((column, colIndex) => (
                                 <div key={column.id}
