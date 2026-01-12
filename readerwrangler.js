@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.15.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.0";  // Build version for this file
+        const APP_VERSION = "4.15.1";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.15.1";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -857,6 +857,8 @@
                         }));
 
                     // v4.0.0.b: Build v2.0 backup format with isBackup flag
+                    // v4.15.1.b: Only include collections section if we have real collections data
+                    const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
                     const exportData = {
                         schemaVersion: "2.0",
                         isBackup: true,
@@ -865,13 +867,6 @@
                             fetcherVersion: "app-export",
                             totalBooks: bookItems.length,
                             items: bookItems
-                        },
-                        collections: {
-                            fetchDate: collectionsStatus.loadDate || new Date().toISOString(),
-                            fetcherVersion: "app-export",
-                            totalBooksScanned: collectionItems.length,
-                            booksWithCollections: collectionItems.filter(b => b.collections.length > 0).length,
-                            items: collectionItems
                         },
                         organization: {
                             columns: columns.map(col => ({
@@ -885,6 +880,17 @@
                             appVersion: ORGANIZER_VERSION
                         }
                     };
+
+                    // v4.15.1.b: Only add collections section if we have real data (fix 0-A bug)
+                    if (hasRealCollections) {
+                        exportData.collections = {
+                            fetchDate: collectionsStatus.loadDate,
+                            fetcherVersion: "app-export",
+                            totalBooksScanned: collectionItems.length,
+                            booksWithCollections: collectionItems.filter(b => b.collections.length > 0).length,
+                            items: collectionItems
+                        };
+                    }
 
                     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
                     const url = URL.createObjectURL(blob);
@@ -1100,6 +1106,11 @@
                     } else {
                         console.log('📚 No collections data in file (run Collections Fetcher to add)');
                         collections = null;
+                        // Reset collections status when no collections in file (v4.15.1 - bug fix 0-A)
+                        setCollectionsStatus({
+                            loadStatus: 'empty',
+                            loadDate: null
+                        });
                     }
                 }
                 // Legacy v1.x format - object with metadata and books array
@@ -3545,25 +3556,29 @@
 
                                 {/* Content - informational only */}
                                 <div className="p-6 space-y-4">
-                                    {/* Library info */}
+                                    {/* Library info - v4.15.1.c: Red text for non-fresh status */}
                                     <div className="border-b border-gray-200 pb-3">
                                         <p className="text-sm text-gray-700">
-                                            📚 <strong>Library:</strong> {books.length > 0 ? `${books.length} books` : 'Not loaded'}
+                                            📚 <strong>Library:</strong> {books.length > 0
+                                                ? `${books.length} books`
+                                                : <span className="text-red-600 font-medium">Not loaded</span>}
                                         </p>
                                         {libraryStatus.loadDate && (
-                                            <p className="text-xs text-gray-500 mt-1">
+                                            <p className={`text-xs mt-1 ${libraryStatus.loadStatus === 'fresh' ? 'text-gray-500' : libraryStatus.loadStatus === 'stale' ? 'text-orange-500' : 'text-red-500'}`}>
                                                 Fetched: {new Date(libraryStatus.loadDate).toLocaleString()}
                                             </p>
                                         )}
                                     </div>
 
-                                    {/* Collections info */}
+                                    {/* Collections info - v4.15.1.c: Red text for non-fresh status */}
                                     <div className="border-b border-gray-200 pb-3">
                                         <p className="text-sm text-gray-700">
-                                            📁 <strong>Collections:</strong> {booksWithCollections > 0 ? `${booksWithCollections} books with collection data` : 'Not loaded'}
+                                            📁 <strong>Collections:</strong> {booksWithCollections > 0
+                                                ? `${booksWithCollections} books with collection data`
+                                                : <span className="text-red-600 font-medium">Not loaded</span>}
                                         </p>
                                         {collectionsStatus.loadDate && (
-                                            <p className="text-xs text-gray-500 mt-1">
+                                            <p className={`text-xs mt-1 ${collectionsStatus.loadStatus === 'fresh' ? 'text-gray-500' : collectionsStatus.loadStatus === 'stale' ? 'text-orange-500' : 'text-red-500'}`}>
                                                 Fetched: {new Date(collectionsStatus.loadDate).toLocaleString()}
                                             </p>
                                         )}
