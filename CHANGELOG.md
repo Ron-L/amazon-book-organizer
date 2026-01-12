@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.15.2] - 2026-01-12
+
+### Fixed
+- **Column count excludes dividers** - Fix misleading count in column headers (0-C)
+  - File version: readerwrangler.js v4.15.2
+  - Column header count now shows only books, not dividers
+  - Filtered count also excludes dividers
+  - Matches status bar behavior which already excluded dividers
+
 ## [4.15.1] - 2026-01-12
 
 ### Fixed
