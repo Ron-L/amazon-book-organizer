@@ -8,11 +8,25 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**0-C. 🐛 Column counts include dividers** - LOW/LOW (30 min)
-   - Column header shows count of all items (books + dividers)
-   - When filtering, reduced count still includes dividers
-   - Should count only books, not dividers
-   - Problem: Misleading count - user expects book count, not total item count
+**0-D. 🔍 Hide empty columns/dividers when filtering** - LOW/LOW (2-3 hours)
+   - When any filter is active, hide columns with no matching books
+   - Hide dividers with no matching books under them (until next divider or column end)
+   - Show all when filter cleared
+   - Status bar "Showing X of Y" provides context for hidden content
+   - Problem: Scrolling past empty columns defeats purpose of filtering
+   - Impact: Focused view of filtered results, especially with 100+ columns
+
+**0-E. ✂️ Cut/Copy/Paste for books (Ctrl+X/C/V)** - LOW/MEDIUM (4-5 hours)
+   - Ctrl+X cuts (moves), Ctrl+C copies (creates additional placement)
+   - Click target position, Ctrl+V pastes; Escape clears clipboard
+   - Visual feedback: Cut items 50% opacity + dashed border; Copy items normal opacity + dashed border
+   - Status bar: "2 books cut - click destination and Ctrl+V to paste"
+   - Copy enables anthologies/crossovers to appear in multiple series columns
+   - Book count shows unique books, not total placements
+   - Works with multi-select (Ctrl+click)
+   - Problem: Long-distance drag is awkward; anthologies need multiple placements
+   - Impact: Flexible organization, Filter→Cut→Unfilter→Paste workflow
+   - Related: Supersedes P3-T1 Book Copy Feature
 
 **1. 📝 Book Notes** - LOW/LOW (2-3 hours)
    - Personal notes on individual books ("Why did I buy this?", "Who recommended it?")
@@ -144,14 +158,10 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 📚 Priority 3: Nice-to-Have Features
 
-**1. Book Copy Feature** #Optional - MEDIUM/MEDIUM (8-10 hours)
-   - Allow same book to appear in multiple columns
-   - See [docs/design/BOOK-COPY.md](docs/design/BOOK-COPY.md) for full spec
-   - Array-based architecture, Ctrl+Drag UI, delete operation
-   - Status: Deferred - Tags feature covers most use cases (cross-categorization)
-   - Remaining use case: Anthologies with stories from multiple series/authors
-   - Problem: Can't organize same book multiple ways
-   - Impact: Power-user feature for edge cases
+**1. Book Copy Feature** #Optional - SUPERSEDED by P1-0-E
+   - ~~Allow same book to appear in multiple columns~~
+   - See P1-0-E Cut/Copy/Paste which includes Copy functionality
+   - Original spec: [docs/design/BOOK-COPY.md](docs/design/BOOK-COPY.md)
 
 **2. 📖 Enhanced Series Management** - MEDIUM/MEDIUM (6-10 hours)
    - Expand current "Group Series Books" button

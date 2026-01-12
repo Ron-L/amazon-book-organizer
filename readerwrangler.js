@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.15.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.1";  // Build version for this file
+        const APP_VERSION = "4.15.2";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.15.2";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -4169,7 +4169,7 @@
                                                     <span className="pencil-icon text-gray-400 text-sm">✏️</span>
                                                 </div>
                                             )}
-                                            <span className="text-sm text-gray-500">({filteredBooks(column.books).length})</span>
+                                            <span className="text-sm text-gray-500">({filteredBooks(column.books).filter(item => !(item && item.type === 'divider')).length})</span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <div className="relative" ref={columnMenuOpen === column.id ? columnMenuRef : null}>
