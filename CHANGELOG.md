@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.15.3] - 2026-01-12
+
+### Changed
+- **Hide empty columns/dividers when filtering** - Focused view of filtered results (0-D)
+  - File version: readerwrangler.js v4.15.3
+  - When any filter is active, columns with no matching books are hidden
+  - Dividers with no matching books under them are hidden
+  - All columns/dividers reappear when filters are cleared
+  - Status bar "Showing X of Y" provides context for hidden content
+
 ## [4.15.2] - 2026-01-12
 
 ### Fixed

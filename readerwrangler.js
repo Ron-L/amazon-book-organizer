@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.15.2";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.2";  // Build version for this file
+        const APP_VERSION = "4.15.3";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.15.3";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -3093,7 +3093,11 @@
             };
 
             const filteredBooks = (bookIds) => {
-                return bookIds.map(item => {
+                // Check if any filter is active (needed inside function scope for divider hiding)
+                const filtersActive = !!(searchTerm || readStatusFilter || collectionFilter ||
+                    ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo);
+
+                const result = bookIds.map(item => {
                     // v3.11.0 - Handle dividers (pass through as-is)
                     if (typeof item === 'object' && item.type === 'divider') {
                         return item;
@@ -3101,7 +3105,7 @@
                     // Regular book ID - look up book object
                     return books.find(b => b.id === item);
                 }).filter(book => {
-                    // v3.11.0 - Dividers always pass through filters
+                    // v3.11.0 - Dividers always pass through filters (will be post-processed below)
                     if (typeof book === 'object' && book.type === 'divider') return true;
 
                     if (!book) return false;
@@ -3169,10 +3173,40 @@
 
                     return matchesSearch && matchesReadStatus && matchesCollection && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries && matchesDateRange;
                 });
+
+                // v4.16.0.a - Post-process: hide dividers with no books under them when filters active
+                if (!filtersActive) return result;
+
+                // Walk backwards through array, tracking if we've seen a book since last divider
+                // A divider is kept only if there's at least one book between it and the next divider (or end)
+                let hasBookAfter = false;
+                const keepDivider = new Set();
+                for (let i = result.length - 1; i >= 0; i--) {
+                    const item = result[i];
+                    if (item && item.type === 'divider') {
+                        if (hasBookAfter) {
+                            keepDivider.add(item.id);
+                        }
+                        hasBookAfter = false; // Reset for next divider section
+                    } else if (item) {
+                        hasBookAfter = true;
+                    }
+                }
+
+                return result.filter(item => {
+                    if (item && item.type === 'divider') {
+                        return keepDivider.has(item.id);
+                    }
+                    return true;
+                });
             };
 
             // v4.0.1 - Keep filteredBooksRef updated for Ctrl+A handler
             filteredBooksRef.current = filteredBooks;
+
+            // v4.16.0.a - Check if any filter is active (for hiding empty columns/dividers)
+            const hasActiveFilters = !!(searchTerm || readStatusFilter || collectionFilter ||
+                ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo);
 
             // Calculate combined urgency from Library and Collections status
             // Urgency is based ONLY on Load status (what's in the app right now)
@@ -4124,7 +4158,12 @@
                                 clearSelection();
                             }
                         }}>
-                            {columns.map((column, colIndex) => (
+                            {columns.filter(column => {
+                                // v4.16.0.a - Hide empty columns when filters are active
+                                if (!hasActiveFilters) return true;
+                                // Column has visible books if filteredBooks returns any non-divider items
+                                return filteredBooks(column.books).some(item => !(item && item.type === 'divider'));
+                            }).map((column, colIndex) => (
                                 <div key={column.id}
                                      data-column-id={column.id}
                                      onClick={() => setActiveColumnId(column.id)}

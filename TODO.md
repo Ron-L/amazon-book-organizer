@@ -8,14 +8,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**0-D. 🔍 Hide empty columns/dividers when filtering** - LOW/LOW (2-3 hours)
-   - When any filter is active, hide columns with no matching books
-   - Hide dividers with no matching books under them (until next divider or column end)
-   - Show all when filter cleared
-   - Status bar "Showing X of Y" provides context for hidden content
-   - Problem: Scrolling past empty columns defeats purpose of filtering
-   - Impact: Focused view of filtered results, especially with 100+ columns
-
 **0-E. ✂️ Cut/Copy/Paste for books (Ctrl+X/C/V)** - LOW/MEDIUM (4-5 hours)
    - Ctrl+X cuts (moves), Ctrl+C copies (creates additional placement)
    - Click target position, Ctrl+V pastes; Escape clears clipboard
@@ -27,6 +19,13 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Long-distance drag is awkward; anthologies need multiple placements
    - Impact: Flexible organization, Filter→Cut→Unfilter→Paste workflow
    - Related: Supersedes P3-T1 Book Copy Feature
+
+**0-F. 🔍 Search filter includes column/divider names** - LOW/LOW (30 min)
+   - Title/Author search should also match column names and divider labels
+   - Shows column if its name matches, even if no books match
+   - Shows divider if its label matches, even if no books under it match
+   - Problem: Can't use search to find a specific column or divider by name
+   - Impact: Consistent search behavior across all named elements
 
 **1. 📝 Book Notes** - LOW/LOW (2-3 hours)
    - Personal notes on individual books ("Why did I buy this?", "Who recommended it?")
