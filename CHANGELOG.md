@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Dev tasks script** - Renamed `update-timestamp.py` to `dev-tasks.py` with backup sync feature
+  - File version: dev-tasks.py v1.0.0
+  - Optional backup sync to cloud folder (Dropbox, Google Drive, etc.)
+  - Configure via `dev-tasks.cfg` (see `dev-tasks.cfg.example`)
+  - Auto-cleans old backups in sync folder
+
 ## [4.15.7] - 2026-01-13
 
 ### Fixed

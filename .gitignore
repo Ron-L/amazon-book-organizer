@@ -49,3 +49,6 @@ SKILL-*.zip
 
 # Ground rules debug log (not committed)
 SKILL-Development-Ground-Rules-Log.md
+
+# Dev tasks config (user-specific paths)
+dev-tasks.cfg

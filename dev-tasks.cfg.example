@@ -1,0 +1,7 @@
+[backup_sync]
+# Path to sync backups to (e.g., C:/Users/You/Dropbox/ReaderWrangler)
+# Leave empty to disable backup sync
+path =
+
+# Number of backups to keep in sync folder
+keep_count = 1
