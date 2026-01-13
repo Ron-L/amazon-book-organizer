@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.g";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.h";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -371,21 +371,22 @@
                         if (filters.showHidden !== undefined) setShowHidden(filters.showHidden);
 
                         // v4.15.6.f: Load datePreset, with migration from old dateFrom/dateTo format
-                        if (filters.datePreset !== undefined) {
+                        // v4.15.6.h: Fixed to check for truthy values, not just defined
+                        if (filters.datePreset) {
                             // New format: datePreset controls the filter
                             setDatePreset(filters.datePreset);
                             if (filters.datePreset === 'custom') {
                                 // Custom preset: also restore the manual dates
-                                if (filters.dateFrom !== undefined) setDateFrom(filters.dateFrom);
-                                if (filters.dateTo !== undefined) setDateTo(filters.dateTo);
+                                if (filters.dateFrom) setDateFrom(filters.dateFrom);
+                                if (filters.dateTo) setDateTo(filters.dateTo);
                             }
                             // For non-custom presets, the useEffect will compute dateFrom/dateTo
                         } else if (filters.dateFrom || filters.dateTo) {
                             // Migration: old format had dateFrom/dateTo but no datePreset
                             // Treat as custom date range
                             setDatePreset('custom');
-                            if (filters.dateFrom !== undefined) setDateFrom(filters.dateFrom);
-                            if (filters.dateTo !== undefined) setDateTo(filters.dateTo);
+                            if (filters.dateFrom) setDateFrom(filters.dateFrom);
+                            if (filters.dateTo) setDateTo(filters.dateTo);
                         }
                     }
                 } catch (e) {
