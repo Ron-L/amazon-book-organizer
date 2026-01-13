@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.d";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.e";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -397,6 +397,47 @@
                     console.error('Failed to save filters to localStorage:', e);
                 }
             }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, dateFrom, dateTo, showHidden]);
+
+            // Compute dateFrom/dateTo from datePreset selection (v4.15.6.e)
+            React.useEffect(() => {
+                if (!datePreset || datePreset === 'custom') {
+                    // 'custom' uses manual dateFrom/dateTo, don't override
+                    // '' (All Dates) clears the date filter
+                    if (datePreset === '') {
+                        setDateFrom('');
+                        setDateTo('');
+                    }
+                    return;
+                }
+
+                const today = new Date();
+                const formatDate = (d) => d.toISOString().split('T')[0]; // YYYY-MM-DD
+
+                let from = '';
+                let to = formatDate(today);
+
+                if (datePreset === 'last30') {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() - 30);
+                    from = formatDate(d);
+                } else if (datePreset === 'last90') {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() - 90);
+                    from = formatDate(d);
+                } else if (datePreset === 'lastYear') {
+                    const d = new Date(today);
+                    d.setFullYear(d.getFullYear() - 1);
+                    from = formatDate(d);
+                } else if (datePreset.startsWith('year')) {
+                    // Year preset: yearYYYY format
+                    const year = parseInt(datePreset.substring(4));
+                    from = `${year}-01-01`;
+                    to = `${year}-12-31`;
+                }
+
+                setDateFrom(from);
+                setDateTo(to);
+            }, [datePreset]);
 
             const formatAcquisitionDate = (timestamp) => {
                 if (!timestamp) return '';
@@ -3507,7 +3548,7 @@
                                                             aria-label="Filter by acquisition date"
                                                             style={{maxWidth: '150px'}}
                                                             className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                                                            <option value="">All Time</option>
+                                                            <option value="">All Dates</option>
                                                             <option value="last30">Last 30 Days</option>
                                                             <option value="last90">Last 90 Days</option>
                                                             <option value="lastYear">Last 12 Months</option>
