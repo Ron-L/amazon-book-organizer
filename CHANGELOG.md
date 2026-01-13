@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.15.5] - 2026-01-12
+
+### Changed
+- **Compact inline filter bar** - Saves vertical space with reorganized filter layout (0-G)
+  - File version: readerwrangler.js v4.15.5
+  - Three-state toggle button: Filters → More Filters → Hide
+  - Primary filters (Search, Status, Collection) display inline with toggle button
+  - Advanced filters (Rating, Series, Wishlist, Type, Dates) shown on second row
+  - HTML table layout for natural column alignment
+  - Graceful proportional shrinking on narrower viewports
+
 ## [4.15.4] - 2026-01-12
 
 ### Changed

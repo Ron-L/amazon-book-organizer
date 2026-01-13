@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.15.4";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.4";  // Build version for this file
+        const APP_VERSION = "4.15.5";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.15.5";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -3312,230 +3312,265 @@
                             </div>
                         </div>
 
-                        {/* Filter Panel (NEW v3.8.0, updated v3.8.0.k, v4.1.0.l removed Add Column - now floats with columns, v4.3.0.b added book count) */}
-                        <div className="flex gap-4 items-center mb-4">
+                        {/* Filter Panel (v4.15.5.e - Three-state toggle: Filters → More Filters → Hide) */}
+                        <div className="flex flex-wrap gap-2 items-start mb-4">
+                            {/* Three-State Filter Toggle Button - fixed width to prevent jumping */}
                             <button
                                 onClick={() => {
-                                    // v4.14.0.b - Reset advanced filters when closing main panel
-                                    if (filterPanelOpen) {
+                                    // v4.15.5.e - Three-state cycle: closed → primary → advanced → closed
+                                    if (!filterPanelOpen) {
+                                        setFilterPanelOpen(true);
+                                        setShowAdvancedFilters(false);
+                                    } else if (!showAdvancedFilters) {
+                                        setShowAdvancedFilters(true);
+                                    } else {
+                                        setFilterPanelOpen(false);
                                         setShowAdvancedFilters(false);
                                     }
-                                    setFilterPanelOpen(!filterPanelOpen);
                                 }}
-                                className={`px-4 py-2 border rounded-lg flex items-center gap-2 ${
+                                className={`px-4 py-2 border rounded-lg flex items-center justify-start gap-2 min-w-[150px] ${
                                     (searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo)
                                     ? `border-blue-500 text-blue-700 font-semibold ${!filterPanelOpen ? 'filter-button-active' : ''}`
                                     : 'border-gray-300 text-gray-700'
                                 }`}
-                                title="Toggle filter panel">
-                                🔍 Filters {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo) &&
-                                    `(${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, dateFrom, dateTo].filter(Boolean).length})`}
-                                {filterPanelOpen ? ' ▼' : ' ▶'}
+                                title={!filterPanelOpen ? 'Show filters' : !showAdvancedFilters ? 'Show more filters' : 'Hide filters'}>
+                                🔍 {!filterPanelOpen ? 'Filters' : !showAdvancedFilters ? 'More Filters' : 'Hide'}
+                                {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo) &&
+                                    ` (${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, dateFrom, dateTo].filter(Boolean).length})`}
                             </button>
-                            {books.length > 0 && <span className="text-base text-gray-500">({books.length} books)</span>}
-                        </div>
 
-                        {/* Collapsible Filter Panel (v3.8.0.k, restructured v4.14.0.a - Primary/Advanced split) */}
-                        {filterPanelOpen && (
-                            <div className="bg-white border border-gray-300 rounded-lg p-4 mb-4">
-                                {/* PRIMARY FILTERS - Always visible (v4.14.0.a) */}
-                                <div className="flex flex-wrap gap-2 items-center">
-                                    {/* Search */}
-                                    <div className="relative flex items-center">
-                                        <span className="absolute left-3 text-gray-400" title="Search">🔍</span>
-                                        <input type="text"
-                                               placeholder="Title or author..."
-                                               value={searchTerm}
-                                               onChange={(e) => setSearchTerm(e.target.value)}
-                                               aria-label="Search by title or author"
-                                               className="pl-10 pr-8 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[180px] max-w-[300px]" />
-                                        {searchTerm && (
-                                            <button
-                                                onClick={() => setSearchTerm('')}
-                                                className="absolute right-2 text-gray-400 hover:text-gray-600 text-lg"
-                                                title="Clear search">
-                                                ×
-                                            </button>
+                            {/* Book count - only when panel closed (v4.15.5.b) */}
+                            {books.length > 0 && !filterPanelOpen && <span className="text-base text-gray-500 py-2">({books.length} books)</span>}
+
+                            {/* FILTER TABLE - v4.15.5.j - HTML table with tuned column widths */}
+                            {filterPanelOpen && (
+                                <table className="border-collapse" style={{borderSpacing: '4px'}}>
+                                    <colgroup>
+                                        <col /> {/* Column 1: Search/Rating - auto width */}
+                                        <col style={{width: '148px'}} /> {/* Column 2: Status/Series */}
+                                        <col style={{width: '188px'}} /> {/* Column 3: Collection/Wishlist */}
+                                        <col style={{width: '140px'}} /> {/* Column 4: Type */}
+                                        <col /> {/* Column 5: Date From - auto */}
+                                        <col /> {/* Column 6: Date To - auto */}
+                                    </colgroup>
+                                    <tbody>
+                                        {/* ROW 1: Primary Filters */}
+                                        <tr className="align-middle">
+                                            {/* Search with icon - 50px left padding to align box with Rating below */}
+                                            <td className="pr-2 py-1" style={{paddingLeft: '50px'}}>
+                                                <div className="relative flex items-center">
+                                                    <span className="absolute left-3 text-gray-400" title="Search for Title, Author, Column or Divider">🔍</span>
+                                                    <input type="text"
+                                                           placeholder="Title or author..."
+                                                           value={searchTerm}
+                                                           onChange={(e) => setSearchTerm(e.target.value)}
+                                                           title="Search for Title, Author, Column or Divider"
+                                                           aria-label="Search by title, author, column or divider"
+                                                           className="w-full pl-10 pr-8 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
+                                                    {searchTerm && (
+                                                        <button
+                                                            onClick={() => setSearchTerm('')}
+                                                            className="absolute right-2 text-gray-400 hover:text-gray-600 text-lg"
+                                                            title="Clear search">
+                                                            ×
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            {/* Read Status */}
+                                            <td className="px-2 py-1">
+                                                <div className="flex items-center gap-1">
+                                                    <span title="Read Status">📖</span>
+                                                    <select
+                                                        value={readStatusFilter}
+                                                        onChange={(e) => setReadStatusFilter(e.target.value)}
+                                                        aria-label="Filter by read status"
+                                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                        <option value="">All Status</option>
+                                                        <option value="READ">✓ Read</option>
+                                                        <option value="UNREAD">○ Unread</option>
+                                                        <option value="UNKNOWN">? Unknown</option>
+                                                    </select>
+                                                </div>
+                                            </td>
+
+                                            {/* Collection */}
+                                            <td className="px-2 py-1">
+                                                <div className="flex items-center gap-1">
+                                                    <span title="Collection">🗂️</span>
+                                                    <select
+                                                        value={collectionFilter}
+                                                        onChange={(e) => setCollectionFilter(e.target.value)}
+                                                        aria-label="Filter by collection"
+                                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                        <option value="">All Collections</option>
+                                                        <option value="UNCOLLECTED">📚 Uncollected</option>
+                                                        {getAllCollectionNames().map(name => (
+                                                            <option key={name} value={name}>{name}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            </td>
+
+                                            {/* Empty cells for columns 4-6 in row 1 */}
+                                            <td></td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+
+                                        {/* ROW 2: Advanced Filters (only shown when expanded) */}
+                                        {showAdvancedFilters && (
+                                            <tr className="align-middle">
+                                                {/* Rating - left padding to match Search above */}
+                                                <td className="pr-2 py-1 pl-6">
+                                                    <div className="flex items-center gap-1">
+                                                        <span title="Rating">⭐</span>
+                                                        <select
+                                                            value={ratingFilter}
+                                                            onChange={(e) => setRatingFilter(e.target.value)}
+                                                            aria-label="Filter by rating"
+                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                            <option value="">All Ratings</option>
+                                                            <option value="5">5★</option>
+                                                            <option value="4">4+★</option>
+                                                            <option value="3">3+★</option>
+                                                            <option value="2">2+★</option>
+                                                            <option value="1">1+★</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+
+                                                {/* Series */}
+                                                <td className="px-2 py-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span title="Series">📚</span>
+                                                        <select
+                                                            value={seriesFilter}
+                                                            onChange={(e) => setSeriesFilter(e.target.value)}
+                                                            aria-label="Filter by series"
+                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                            <option value="">All Series</option>
+                                                            <option value="NOT_IN_SERIES">📖 Not in Series</option>
+                                                            {getAllSeriesNames().map(name => (
+                                                                <option key={name} value={name}>{name}</option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </td>
+
+                                                {/* Wishlist */}
+                                                <td className="px-2 py-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span title="Wishlist">❤️</span>
+                                                        <select
+                                                            value={wishlistFilter}
+                                                            onChange={(e) => setWishlistFilter(e.target.value)}
+                                                            aria-label="Filter by wishlist status"
+                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                            <option value="">All Books</option>
+                                                            <option value="owned">Owned Only</option>
+                                                            <option value="wishlist">Wishlist Only</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+
+                                                {/* Ownership Type */}
+                                                <td className="px-2 py-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span title="Ownership">🏷️</span>
+                                                        <select
+                                                            value={ownershipFilter}
+                                                            onChange={(e) => setOwnershipFilter(e.target.value)}
+                                                            aria-label="Filter by ownership type"
+                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                            <option value="">All Types</option>
+                                                            <option value="purchased">Purchased</option>
+                                                            <option value="sample">Sample</option>
+                                                            <option value="borrowed">Borrowed</option>
+                                                            <option value="prime">Prime</option>
+                                                            <option value="kindleUnlimited">Kindle Unlimited</option>
+                                                            <option value="koll">KOLL</option>
+                                                            <option value="comixology">Comixology</option>
+                                                        </select>
+                                                    </div>
+                                                </td>
+
+                                                {/* Date From */}
+                                                <td className="px-2 py-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span title="Acquisition Date From">📅</span>
+                                                        <input
+                                                            type="date"
+                                                            value={dateFrom}
+                                                            onChange={(e) => setDateFrom(e.target.value)}
+                                                            aria-label="Acquisition date from"
+                                                            className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                        />
+                                                    </div>
+                                                </td>
+
+                                                {/* Date To */}
+                                                <td className="pl-2 py-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span title="Acquisition Date To">📅</span>
+                                                        <input
+                                                            type="date"
+                                                            value={dateTo}
+                                                            onChange={(e) => setDateTo(e.target.value)}
+                                                            aria-label="Acquisition date to"
+                                                            className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                        />
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         )}
-                                    </div>
 
-                                    {/* Read Status */}
-                                    <div className="flex items-center">
-                                        <span className="mr-1" title="Read Status">📖</span>
-                                        <select
-                                            value={readStatusFilter}
-                                            onChange={(e) => setReadStatusFilter(e.target.value)}
-                                            aria-label="Filter by read status"
-                                            className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[120px] max-w-[180px]">
-                                            <option value="">All Status</option>
-                                            <option value="READ">✓ Read</option>
-                                            <option value="UNREAD">○ Unread</option>
-                                            <option value="UNKNOWN">? Unknown</option>
-                                        </select>
-                                    </div>
-
-                                    {/* Collection */}
-                                    <div className="flex items-center">
-                                        <span className="mr-1" title="Collection">🗂️</span>
-                                        <select
-                                            value={collectionFilter}
-                                            onChange={(e) => setCollectionFilter(e.target.value)}
-                                            aria-label="Filter by collection"
-                                            className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[140px] max-w-[220px]">
-                                            <option value="">All Collections</option>
-                                            <option value="UNCOLLECTED">📚 Uncollected</option>
-                                            {getAllCollectionNames().map(name => (
-                                                <option key={name} value={name}>{name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {/* More Filters Toggle (v4.14.0.a) */}
-                                    <button
-                                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-                                        className={`px-3 py-2 border rounded-lg flex items-center gap-1 text-sm ${
-                                            (ratingFilter || seriesFilter || wishlistFilter || ownershipFilter || dateFrom || dateTo)
-                                            ? 'border-blue-500 text-blue-700 font-semibold'
-                                            : 'border-gray-300 text-gray-600 hover:border-gray-400'
-                                        }`}
-                                        aria-expanded={showAdvancedFilters}
-                                        title="Toggle advanced filters">
-                                        {showAdvancedFilters ? '▼' : '▶'} More Filters
-                                        {(() => {
-                                            const activeCount = [ratingFilter, seriesFilter, wishlistFilter, ownershipFilter, dateFrom, dateTo].filter(Boolean).length;
-                                            return activeCount > 0 ? ` (${activeCount})` : '';
-                                        })()}
-                                    </button>
-                                </div>
-
-                                {/* ADVANCED FILTERS - Collapsible (v4.14.0.a) */}
-                                {/* v4.14.0.d - Removed redundant "Clear All" button from primary row; Active Filters Banner already has it */}
-                                {showAdvancedFilters && (
-                                    <div className="mt-3 pt-3 border-t border-gray-200 bg-gray-50 -mx-4 px-4 pb-3 rounded-b-lg">
-                                        <div className="flex flex-wrap gap-2 items-center">
-                                            {/* Rating */}
-                                            <div className="flex items-center">
-                                                <span className="mr-1" title="Rating">⭐</span>
-                                                <select
-                                                    value={ratingFilter}
-                                                    onChange={(e) => setRatingFilter(e.target.value)}
-                                                    aria-label="Filter by rating"
-                                                    className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[120px] max-w-[180px]">
-                                                    <option value="">All Ratings</option>
-                                                    <option value="5">5★</option>
-                                                    <option value="4">4+★</option>
-                                                    <option value="3">3+★</option>
-                                                    <option value="2">2+★</option>
-                                                    <option value="1">1+★</option>
-                                                </select>
-                                            </div>
-
-                                            {/* Series */}
-                                            <div className="flex items-center">
-                                                <span className="mr-1" title="Series">📚</span>
-                                                <select
-                                                    value={seriesFilter}
-                                                    onChange={(e) => setSeriesFilter(e.target.value)}
-                                                    aria-label="Filter by series"
-                                                    className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[120px] max-w-[220px]">
-                                                    <option value="">All Series</option>
-                                                    <option value="NOT_IN_SERIES">📖 Not in Series</option>
-                                                    {getAllSeriesNames().map(name => (
-                                                        <option key={name} value={name}>{name}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            {/* Wishlist */}
-                                            <div className="flex items-center">
-                                                <span className="mr-1" title="Wishlist">❤️</span>
-                                                <select
-                                                    value={wishlistFilter}
-                                                    onChange={(e) => setWishlistFilter(e.target.value)}
-                                                    aria-label="Filter by wishlist status"
-                                                    className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[120px] max-w-[180px]">
-                                                    <option value="">All Books</option>
-                                                    <option value="owned">Owned Only</option>
-                                                    <option value="wishlist">Wishlist Only</option>
-                                                </select>
-                                            </div>
-
-                                            {/* Ownership Type */}
-                                            <div className="flex items-center">
-                                                <span className="mr-1" title="Ownership">🏷️</span>
-                                                <select
-                                                    value={ownershipFilter}
-                                                    onChange={(e) => setOwnershipFilter(e.target.value)}
-                                                    aria-label="Filter by ownership type"
-                                                    className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[120px] max-w-[180px]">
-                                                    <option value="">All Types</option>
-                                                    <option value="purchased">Purchased</option>
-                                                    <option value="sample">Sample</option>
-                                                    <option value="borrowed">Borrowed</option>
-                                                    <option value="prime">Prime</option>
-                                                    <option value="kindleUnlimited">Kindle Unlimited</option>
-                                                    <option value="koll">KOLL</option>
-                                                    <option value="comixology">Comixology</option>
-                                                </select>
-                                            </div>
-
-                                            {/* Date From */}
-                                            <div className="flex items-center">
-                                                <span className="mr-1" title="Acquisition Date From">📅</span>
-                                                <input
-                                                    type="date"
-                                                    value={dateFrom}
-                                                    onChange={(e) => setDateFrom(e.target.value)}
-                                                    aria-label="Acquisition date from"
-                                                    className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[130px] max-w-[160px]"
-                                                />
-                                            </div>
-
-                                            {/* Date To */}
-                                            <div className="flex items-center">
-                                                <span className="mr-1" title="Acquisition Date To">📅</span>
-                                                <input
-                                                    type="date"
-                                                    value={dateTo}
-                                                    onChange={(e) => setDateTo(e.target.value)}
-                                                    aria-label="Acquisition date to"
-                                                    className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[130px] max-w-[160px]"
-                                                />
-                                            </div>
-
-                                            {(dateFrom || dateTo) && (
-                                                <button
-                                                    onClick={() => {
-                                                        setDateFrom('');
-                                                        setDateTo('');
-                                                    }}
-                                                    className="px-2 py-2 text-blue-700 hover:text-blue-900 font-semibold text-sm"
-                                                    title="Clear date range">
-                                                    Clear Dates
-                                                </button>
+                                        {/* ROW 3: Showing count and controls */}
+                                        <tr className="align-middle">
+                                            {/* Showing - 50px left padding to align with boxes above */}
+                                            <td className="pr-2 py-1" style={{paddingLeft: '50px'}}>
+                                                <span className="text-sm text-gray-600">
+                                                    Showing: {columns.reduce((sum, col) => sum + filteredBooks(col.books).filter(item => !(item && item.type === 'divider')).length, 0)} of {books.length} books
+                                                </span>
+                                            </td>
+                                            <td className="px-2 py-1">
+                                                <label className="flex items-center gap-2 cursor-pointer text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={showHidden}
+                                                        onChange={(e) => setShowHidden(e.target.checked)}
+                                                        className="w-4 h-4 rounded border-gray-300 text-blue-700 focus:ring-blue-500"
+                                                    />
+                                                    <span className="text-gray-600">Show Hidden</span>
+                                                </label>
+                                            </td>
+                                            {/* Clear Dates button - only when dates are set (columns 3-6) */}
+                                            {(dateFrom || dateTo) && showAdvancedFilters ? (
+                                                <td colSpan="4" className="pl-2 py-1 text-right">
+                                                    <button
+                                                        onClick={() => {
+                                                            setDateFrom('');
+                                                            setDateTo('');
+                                                        }}
+                                                        className="px-2 py-1 text-blue-700 hover:text-blue-900 font-semibold text-sm"
+                                                        title="Clear date range">
+                                                        Clear Dates
+                                                    </button>
+                                                </td>
+                                            ) : (
+                                                <>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td></td>
+                                                </>
                                             )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Result Counter (v4.1.0.f - Show Hidden moved here, count order fixed, v4.14.0.c - Clear All moved to primary row) */}
-                                <div className="mt-3 pt-3 border-t border-gray-200 flex items-center gap-4 text-sm text-gray-600">
-                                    <span>
-                                        Showing: {columns.reduce((sum, col) => sum + filteredBooks(col.books).filter(item => !(item && item.type === 'divider')).length, 0)} of {books.length} books
-                                    </span>
-                                    {/* Show Hidden toggle - next to count since it affects what's shown (v4.1.0.f) */}
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={showHidden}
-                                            onChange={(e) => setShowHidden(e.target.checked)}
-                                            className="w-4 h-4 rounded border-gray-300 text-blue-700 focus:ring-blue-500"
-                                        />
-                                        <span className="text-gray-600">Show Hidden</span>
-                                    </label>
-                                </div>
-                            </div>
-                        )}
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
 
                         {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel) */}
                         {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo) && (

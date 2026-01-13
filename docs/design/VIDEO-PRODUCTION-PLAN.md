@@ -33,6 +33,7 @@ When re-recording, add mentions of:
 - Colors: Blue gradient (#3b82f6 → #2563eb → #1d4ed8) with new logo branding
 - Layout: Book count moved to filters row, Data Status next to Import/Export/Reset
 - Logo: New ReaderWrangler icon in app header (84px) and landing page hero (160px)
+- **Filter Panel** (v4.15.5): Compact inline layout with three-state toggle (Filters/More Filters/Hide)
 
 ---
 
