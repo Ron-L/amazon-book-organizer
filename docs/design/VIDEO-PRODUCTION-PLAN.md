@@ -34,6 +34,7 @@ When re-recording, add mentions of:
 - Layout: Book count moved to filters row, Data Status next to Import/Export/Reset
 - Logo: New ReaderWrangler icon in app header (84px) and landing page hero (160px)
 - **Filter Panel** (v4.15.5): Compact inline layout with three-state toggle (Filters/More Filters/Hide)
+- **Date Filter** (v4.15.6): Simplified preset dropdown replaces two date pickers
 
 ---
 

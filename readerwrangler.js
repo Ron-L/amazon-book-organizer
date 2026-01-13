@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.5";  // Build version for this file
+        const APP_VERSION = "4.15.6";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.15.6";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -305,6 +305,7 @@
             const [seriesFilter, setSeriesFilter] = useState(''); // Filter by series name or "NOT_IN_SERIES" (NEW v3.8.0.k)
             const [dateFrom, setDateFrom] = useState(''); // Filter by acquisition date from (YYYY-MM-DD) (NEW v3.8.0.k)
             const [dateTo, setDateTo] = useState(''); // Filter by acquisition date to (YYYY-MM-DD) (NEW v3.8.0.k)
+            const [datePreset, setDatePreset] = useState(''); // Date filter preset: '' | 'last30' | 'last90' | 'lastYear' | '2025' | '2024' | '2023' | 'custom' (NEW v4.15.6)
             const [filterPanelOpen, setFilterPanelOpen] = useState(false); // Collapsible filter panel state (NEW v3.8.0)
             const [showAdvancedFilters, setShowAdvancedFilters] = useState(false); // Show advanced filters section (NEW v4.14.0.a, v4.14.0.b - no persistence, resets when panel closes)
             const [showHidden, setShowHidden] = useState(false); // Show hidden books toggle (NEW v4.1.0.d)
@@ -354,7 +355,10 @@
             });
             const dragThreshold = 50;
 
-            // Load saved filters from localStorage on mount (v3.8.0.f, updated v3.8.0.k)
+            // v4.15.6: Track initial mount to prevent save effect from overwriting loaded values
+            const filtersLoadedRef = useRef(false);
+
+            // Load saved filters from localStorage on mount (v3.8.0.f, updated v3.8.0.k, v4.15.6)
             React.useEffect(() => {
                 try {
                     const savedFilters = localStorage.getItem(FILTERS_KEY);
@@ -367,17 +371,39 @@
                         if (filters.wishlistFilter !== undefined) setWishlistFilter(filters.wishlistFilter);
                         if (filters.ownershipFilter !== undefined) setOwnershipFilter(filters.ownershipFilter);
                         if (filters.seriesFilter !== undefined) setSeriesFilter(filters.seriesFilter);
-                        if (filters.dateFrom !== undefined) setDateFrom(filters.dateFrom);
-                        if (filters.dateTo !== undefined) setDateTo(filters.dateTo);
                         if (filters.showHidden !== undefined) setShowHidden(filters.showHidden);
+
+                        // v4.15.6: Load datePreset, with migration from old dateFrom/dateTo format
+                        if (filters.datePreset) {
+                            // New format: datePreset controls the filter
+                            setDatePreset(filters.datePreset);
+                            if (filters.datePreset === 'custom') {
+                                // Custom preset: also restore the manual dates
+                                if (filters.dateFrom) setDateFrom(filters.dateFrom);
+                                if (filters.dateTo) setDateTo(filters.dateTo);
+                            }
+                            // For non-custom presets, the useEffect will compute dateFrom/dateTo
+                        } else if (filters.dateFrom || filters.dateTo) {
+                            // Migration: old format had dateFrom/dateTo but no datePreset
+                            // Treat as custom date range
+                            setDatePreset('custom');
+                            if (filters.dateFrom) setDateFrom(filters.dateFrom);
+                            if (filters.dateTo) setDateTo(filters.dateTo);
+                        }
                     }
                 } catch (e) {
                     console.error('Failed to load filters from localStorage:', e);
                 }
+                // v4.15.6: Mark filters as loaded after a small delay to let React batch state updates
+                setTimeout(() => {
+                    filtersLoadedRef.current = true;
+                }, 100);
             }, []); // Empty dependency array = run once on mount
 
-            // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d)
+            // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d, v4.15.6)
             React.useEffect(() => {
+                // v4.15.6: Skip save during initial load to prevent overwriting
+                if (!filtersLoadedRef.current) return;
                 try {
                     const filters = {
                         searchTerm,
@@ -387,15 +413,59 @@
                         wishlistFilter,
                         ownershipFilter,
                         seriesFilter,
-                        dateFrom,
-                        dateTo,
+                        datePreset,  // v4.15.6: Save preset instead of raw dates (except for custom)
+                        dateFrom: datePreset === 'custom' ? dateFrom : '',  // Only save dates for custom preset
+                        dateTo: datePreset === 'custom' ? dateTo : '',
                         showHidden
                     };
                     localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
                 } catch (e) {
                     console.error('Failed to save filters to localStorage:', e);
                 }
-            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, dateFrom, dateTo, showHidden]);
+            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden]);
+
+            // Compute dateFrom/dateTo from datePreset selection (v4.15.6)
+            React.useEffect(() => {
+                // Skip during initial load - the load effect will set dateFrom/dateTo directly
+                if (!filtersLoadedRef.current) return;
+                if (!datePreset || datePreset === 'custom') {
+                    // 'custom' uses manual dateFrom/dateTo, don't override
+                    // '' (All Dates) clears the date filter
+                    if (datePreset === '') {
+                        setDateFrom('');
+                        setDateTo('');
+                    }
+                    return;
+                }
+
+                const today = new Date();
+                const formatDate = (d) => d.toISOString().split('T')[0]; // YYYY-MM-DD
+
+                let from = '';
+                let to = formatDate(today);
+
+                if (datePreset === 'last30') {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() - 30);
+                    from = formatDate(d);
+                } else if (datePreset === 'last90') {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() - 90);
+                    from = formatDate(d);
+                } else if (datePreset === 'lastYear') {
+                    const d = new Date(today);
+                    d.setFullYear(d.getFullYear() - 1);
+                    from = formatDate(d);
+                } else if (datePreset.startsWith('year')) {
+                    // Year preset: yearYYYY format
+                    const year = parseInt(datePreset.substring(4));
+                    from = `${year}-01-01`;
+                    to = `${year}-12-31`;
+                }
+
+                setDateFrom(from);
+                setDateTo(to);
+            }, [datePreset]);
 
             const formatAcquisitionDate = (timestamp) => {
                 if (!timestamp) return '';
@@ -3335,8 +3405,9 @@
                                 }`}
                                 title={!filterPanelOpen ? 'Show filters' : !showAdvancedFilters ? 'Show more filters' : 'Hide filters'}>
                                 🔍 {!filterPanelOpen ? 'Filters' : !showAdvancedFilters ? 'More Filters' : 'Hide'}
-                                {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo) &&
-                                    ` (${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, dateFrom, dateTo].filter(Boolean).length})`}
+                                {/* v4.15.6.g: Use datePreset for count instead of dateFrom/dateTo */}
+                                {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset) &&
+                                    ` (${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, datePreset].filter(Boolean).length})`}
                             </button>
 
                             {/* Book count - only when panel closed (v4.15.5.b) */}
@@ -3496,37 +3567,53 @@
                                                     </div>
                                                 </td>
 
-                                                {/* Date From */}
-                                                <td className="px-2 py-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <span title="Acquisition Date From">📅</span>
-                                                        <input
-                                                            type="date"
-                                                            value={dateFrom}
-                                                            onChange={(e) => setDateFrom(e.target.value)}
-                                                            aria-label="Acquisition date from"
-                                                            className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                        />
-                                                    </div>
-                                                </td>
-
-                                                {/* Date To */}
-                                                <td className="pl-2 py-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <span title="Acquisition Date To">📅</span>
-                                                        <input
-                                                            type="date"
-                                                            value={dateTo}
-                                                            onChange={(e) => setDateTo(e.target.value)}
-                                                            aria-label="Acquisition date to"
-                                                            className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                        />
+                                                {/* Date Preset with Clear button (v4.15.6.c) */}
+                                                <td className="px-2 py-1" colSpan="2">
+                                                    <div className="flex items-center gap-2">
+                                                        <span title="Acquisition Date">📅</span>
+                                                        <select
+                                                            value={datePreset}
+                                                            onChange={(e) => {
+                                                                const newPreset = e.target.value;
+                                                                // v4.15.6.g: Clear dates when switching to Custom (fresh start)
+                                                                if (newPreset === 'custom') {
+                                                                    setDateFrom('');
+                                                                    setDateTo('');
+                                                                }
+                                                                setDatePreset(newPreset);
+                                                            }}
+                                                            aria-label="Filter by acquisition date"
+                                                            style={{maxWidth: '150px'}}
+                                                            className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                            <option value="">All Dates</option>
+                                                            <option value="last30">Last 30 Days</option>
+                                                            <option value="last90">Last 90 Days</option>
+                                                            <option value="lastYear">Last 12 Months</option>
+                                                            {/* Dynamic year options: current year and 2 previous years (v4.15.6.d) */}
+                                                            {[0, 1, 2].map(offset => {
+                                                                const year = new Date().getFullYear() - offset;
+                                                                return <option key={year} value={`year${year}`}>{year}</option>;
+                                                            })}
+                                                            <option value="custom">Custom...</option>
+                                                        </select>
+                                                        {datePreset && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setDatePreset('');
+                                                                    setDateFrom('');
+                                                                    setDateTo('');
+                                                                }}
+                                                                className="text-blue-700 hover:text-blue-900 font-semibold text-sm whitespace-nowrap"
+                                                                title="Clear date filter">
+                                                                Clear
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
                                         )}
 
-                                        {/* ROW 3: Showing count and controls */}
+                                        {/* ROW 3: Showing count, Show Hidden, and Custom date pickers (v4.15.6.c) */}
                                         <tr className="align-middle">
                                             {/* Showing - 50px left padding to align with boxes above */}
                                             <td className="pr-2 py-1" style={{paddingLeft: '50px'}}>
@@ -3545,19 +3632,36 @@
                                                     <span className="text-gray-600">Show Hidden</span>
                                                 </label>
                                             </td>
-                                            {/* Clear Dates button - only when dates are set (columns 3-6) */}
-                                            {(dateFrom || dateTo) && showAdvancedFilters ? (
-                                                <td colSpan="4" className="pl-2 py-1 text-right">
-                                                    <button
-                                                        onClick={() => {
-                                                            setDateFrom('');
-                                                            setDateTo('');
-                                                        }}
-                                                        className="px-2 py-1 text-blue-700 hover:text-blue-900 font-semibold text-sm"
-                                                        title="Clear date range">
-                                                        Clear Dates
-                                                    </button>
-                                                </td>
+                                            {/* Custom date pickers - only when Custom preset selected (columns 3-6) */}
+                                            {showAdvancedFilters && datePreset === 'custom' ? (
+                                                <>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td className="px-2 py-1">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-sm text-gray-500">From:</span>
+                                                            <input
+                                                                type="date"
+                                                                value={dateFrom}
+                                                                onChange={(e) => setDateFrom(e.target.value)}
+                                                                aria-label="Acquisition date from"
+                                                                className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                    <td className="pl-2 py-1">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-sm text-gray-500">To:</span>
+                                                            <input
+                                                                type="date"
+                                                                value={dateTo}
+                                                                onChange={(e) => setDateTo(e.target.value)}
+                                                                aria-label="Acquisition date to"
+                                                                className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                </>
                                             ) : (
                                                 <>
                                                     <td></td>
@@ -3572,26 +3676,33 @@
                             )}
                         </div>
 
-                        {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel) */}
-                        {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo) && (
+                        {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel, v4.15.6.m - use datePreset) */}
+                        {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || datePreset) && (
                             <div className="bg-blue-100 border border-blue-300 rounded-lg px-4 py-2 mb-4 flex items-center justify-between">
                                 <div className="flex items-center gap-2 flex-wrap text-sm">
                                     <span className="font-semibold">🔍 Active:</span>
                                     {searchTerm && <span>Search: "{searchTerm}"</span>}
-                                    {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
                                     {readStatusFilter && <span>Read: {readStatusFilter}</span>}
-                                    {readStatusFilter && (collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {readStatusFilter && (collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
                                     {collectionFilter && <span>Collection: {collectionFilter === 'UNCOLLECTED' ? 'Uncollected' : collectionFilter}</span>}
-                                    {collectionFilter && (ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {collectionFilter && (ratingFilter || wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
                                     {ratingFilter && <span>Rating: {ratingFilter}+★</span>}
-                                    {ratingFilter && (wishlistFilter || seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {ratingFilter && (wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
                                     {wishlistFilter && <span>Wishlist: {wishlistFilter === 'owned' ? 'Owned Only' : 'Wishlist Only'}</span>}
-                                    {wishlistFilter && (ownershipFilter || seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {wishlistFilter && (ownershipFilter || seriesFilter || datePreset) && <span>|</span>}
                                     {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
-                                    {ownershipFilter && (seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {ownershipFilter && (seriesFilter || datePreset) && <span>|</span>}
                                     {seriesFilter && <span>Series: {seriesFilter === 'NOT_IN_SERIES' ? 'Not in Series' : seriesFilter}</span>}
-                                    {seriesFilter && (dateFrom || dateTo) && <span>|</span>}
-                                    {(dateFrom || dateTo) && <span>Date: {dateFrom || '...'} to {dateTo || '...'}</span>}
+                                    {seriesFilter && datePreset && <span>|</span>}
+                                    {datePreset && <span>Date: {
+                                        datePreset === 'custom' ? `${dateFrom || '...'} to ${dateTo || '...'}` :
+                                        datePreset === 'last30' ? 'Last 30 Days' :
+                                        datePreset === 'last90' ? 'Last 90 Days' :
+                                        datePreset === 'lastYear' ? 'Last 12 Months' :
+                                        datePreset.startsWith('year') ? datePreset.substring(4) :
+                                        datePreset
+                                    }</span>}
                                 </div>
                                 <button
                                     onClick={() => {
@@ -3602,6 +3713,7 @@
                                         setWishlistFilter('');
                                         setOwnershipFilter('');
                                         setSeriesFilter('');
+                                        setDatePreset('');
                                         setDateFrom('');
                                         setDateTo('');
                                     }}

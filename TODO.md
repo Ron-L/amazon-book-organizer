@@ -8,6 +8,13 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
+**0-H. 📱 Mobile: Landing page hero too tall** - LOW/LOW (30 min)
+   - Hero/title section takes 50% of vertical space on phone
+   - Hero doesn't scroll, limiting visible content
+   - Reduce hero height on mobile breakpoints
+   - Problem: Poor mobile landing page experience
+   - Impact: Better first impression on mobile devices
+
 **0-E. ✂️ Cut/Copy/Paste for books (Ctrl+X/C/V)** - LOW/MEDIUM (4-5 hours)
    - Ctrl+X cuts (moves), Ctrl+C copies (creates additional placement)
    - Click target position, Ctrl+V pastes; Escape clears clipboard
@@ -19,22 +26,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Long-distance drag is awkward; anthologies need multiple placements
    - Impact: Flexible organization, Filter→Cut→Unfilter→Paste workflow
    - Related: Supersedes P3-T1 Book Copy Feature
-
-**0-H. 📱 Mobile: Landing page hero too tall** - LOW/LOW (30 min)
-   - Hero/title section takes 50% of vertical space on phone
-   - Hero doesn't scroll, limiting visible content
-   - Reduce hero height on mobile breakpoints
-   - Problem: Poor mobile landing page experience
-   - Impact: Better first impression on mobile devices
-
-**0-I. 📅 Simplify date range filter** - LOW/LOW (1 hour)
-   - Current two date pickers take significant width in advanced filters row
-   - Options to consider:
-     - Preset dropdown: "Last 30 days", "Last 90 days", "Last year", "2024", "2023", "All time"
-     - Single "Since" date: Just a "From" date (most use cases don't need "To")
-     - Year dropdown: Simple year selector
-   - Problem: Two date pickers are wide and rarely used together
-   - Impact: More compact advanced filter row
 
 **1. 📝 Book Notes** - LOW/LOW (2-3 hours)
    - Personal notes on individual books ("Why did I buy this?", "Who recommended it?")
