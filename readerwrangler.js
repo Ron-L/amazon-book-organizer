@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.e";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.f";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -355,7 +355,7 @@
             });
             const dragThreshold = 50;
 
-            // Load saved filters from localStorage on mount (v3.8.0.f, updated v3.8.0.k)
+            // Load saved filters from localStorage on mount (v3.8.0.f, updated v3.8.0.k, v4.15.6.f)
             React.useEffect(() => {
                 try {
                     const savedFilters = localStorage.getItem(FILTERS_KEY);
@@ -368,16 +368,32 @@
                         if (filters.wishlistFilter !== undefined) setWishlistFilter(filters.wishlistFilter);
                         if (filters.ownershipFilter !== undefined) setOwnershipFilter(filters.ownershipFilter);
                         if (filters.seriesFilter !== undefined) setSeriesFilter(filters.seriesFilter);
-                        if (filters.dateFrom !== undefined) setDateFrom(filters.dateFrom);
-                        if (filters.dateTo !== undefined) setDateTo(filters.dateTo);
                         if (filters.showHidden !== undefined) setShowHidden(filters.showHidden);
+
+                        // v4.15.6.f: Load datePreset, with migration from old dateFrom/dateTo format
+                        if (filters.datePreset !== undefined) {
+                            // New format: datePreset controls the filter
+                            setDatePreset(filters.datePreset);
+                            if (filters.datePreset === 'custom') {
+                                // Custom preset: also restore the manual dates
+                                if (filters.dateFrom !== undefined) setDateFrom(filters.dateFrom);
+                                if (filters.dateTo !== undefined) setDateTo(filters.dateTo);
+                            }
+                            // For non-custom presets, the useEffect will compute dateFrom/dateTo
+                        } else if (filters.dateFrom || filters.dateTo) {
+                            // Migration: old format had dateFrom/dateTo but no datePreset
+                            // Treat as custom date range
+                            setDatePreset('custom');
+                            if (filters.dateFrom !== undefined) setDateFrom(filters.dateFrom);
+                            if (filters.dateTo !== undefined) setDateTo(filters.dateTo);
+                        }
                     }
                 } catch (e) {
                     console.error('Failed to load filters from localStorage:', e);
                 }
             }, []); // Empty dependency array = run once on mount
 
-            // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d)
+            // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d, v4.15.6.f)
             React.useEffect(() => {
                 try {
                     const filters = {
@@ -388,15 +404,16 @@
                         wishlistFilter,
                         ownershipFilter,
                         seriesFilter,
-                        dateFrom,
-                        dateTo,
+                        datePreset,  // v4.15.6.f: Save preset instead of raw dates (except for custom)
+                        dateFrom: datePreset === 'custom' ? dateFrom : '',  // Only save dates for custom preset
+                        dateTo: datePreset === 'custom' ? dateTo : '',
                         showHidden
                     };
                     localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
                 } catch (e) {
                     console.error('Failed to save filters to localStorage:', e);
                 }
-            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, dateFrom, dateTo, showHidden]);
+            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden]);
 
             // Compute dateFrom/dateTo from datePreset selection (v4.15.6.e)
             React.useEffect(() => {
