@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.15.7] - 2026-01-13
+
+### Fixed
+- **Backup filename uses local time** - Fix UTC date bug showing wrong date after 6pm
+  - File version: readerwrangler.js v4.15.7
+  - Filename now includes time: `readerwrangler-backup-2026-01-13 10.51.json`
+  - Allows multiple backups per day without OS renaming
+
 ## [4.15.6] - 2026-01-13
 
 ### Changed
