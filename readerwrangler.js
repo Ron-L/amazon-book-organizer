@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.a";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.b";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -3515,6 +3515,37 @@
                                                             <option value="2023">2023</option>
                                                             <option value="custom">Custom...</option>
                                                         </select>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+
+                                        {/* ROW 2.5: Custom date pickers (only shown when Custom preset selected) (v4.15.6.b) */}
+                                        {showAdvancedFilters && datePreset === 'custom' && (
+                                            <tr className="align-middle">
+                                                <td colSpan="4"></td>
+                                                <td className="px-2 py-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-sm text-gray-500">From:</span>
+                                                        <input
+                                                            type="date"
+                                                            value={dateFrom}
+                                                            onChange={(e) => setDateFrom(e.target.value)}
+                                                            aria-label="Acquisition date from"
+                                                            className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="pl-2 py-1">
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-sm text-gray-500">To:</span>
+                                                        <input
+                                                            type="date"
+                                                            value={dateTo}
+                                                            onChange={(e) => setDateTo(e.target.value)}
+                                                            aria-label="Acquisition date to"
+                                                            className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                        />
                                                     </div>
                                                 </td>
                                             </tr>
