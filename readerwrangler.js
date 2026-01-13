@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.j";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.k";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -441,13 +441,18 @@
             }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden]);
 
             // Compute dateFrom/dateTo from datePreset selection (v4.15.6.e)
+            // v4.15.6.k: Added logging
             React.useEffect(() => {
+                console.log('[v4.15.6.k] datePreset effect triggered, datePreset=', datePreset);
                 if (!datePreset || datePreset === 'custom') {
                     // 'custom' uses manual dateFrom/dateTo, don't override
                     // '' (All Dates) clears the date filter
                     if (datePreset === '') {
+                        console.log('[v4.15.6.k] Clearing dates (All Dates selected)');
                         setDateFrom('');
                         setDateTo('');
+                    } else {
+                        console.log('[v4.15.6.k] Custom preset - not modifying dates');
                     }
                     return;
                 }
