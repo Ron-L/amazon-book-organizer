@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.c";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.d";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -3511,9 +3511,11 @@
                                                             <option value="last30">Last 30 Days</option>
                                                             <option value="last90">Last 90 Days</option>
                                                             <option value="lastYear">Last 12 Months</option>
-                                                            <option value="2025">2025</option>
-                                                            <option value="2024">2024</option>
-                                                            <option value="2023">2023</option>
+                                                            {/* Dynamic year options: current year and 2 previous years (v4.15.6.d) */}
+                                                            {[0, 1, 2].map(offset => {
+                                                                const year = new Date().getFullYear() - offset;
+                                                                return <option key={year} value={`year${year}`}>{year}</option>;
+                                                            })}
                                                             <option value="custom">Custom...</option>
                                                         </select>
                                                         {datePreset && (
