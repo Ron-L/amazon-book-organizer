@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.h";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.i";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -355,6 +355,9 @@
             });
             const dragThreshold = 50;
 
+            // v4.15.6.i: Track initial mount to prevent save effect from overwriting loaded values
+            const filtersLoadedRef = useRef(false);
+
             // Load saved filters from localStorage on mount (v3.8.0.f, updated v3.8.0.k, v4.15.6.f)
             React.useEffect(() => {
                 try {
@@ -392,10 +395,20 @@
                 } catch (e) {
                     console.error('Failed to load filters from localStorage:', e);
                 }
+                // v4.15.6.i: Mark filters as loaded after a small delay to let React batch state updates
+                setTimeout(() => {
+                    filtersLoadedRef.current = true;
+                    console.log('[v4.15.6.i] Filters loaded, save enabled');
+                }, 100);
             }, []); // Empty dependency array = run once on mount
 
-            // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d, v4.15.6.f)
+            // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d, v4.15.6.f, v4.15.6.i)
             React.useEffect(() => {
+                // v4.15.6.i: Skip save during initial load to prevent overwriting
+                if (!filtersLoadedRef.current) {
+                    console.log('[v4.15.6.i] Save skipped - filters not yet loaded');
+                    return;
+                }
                 try {
                     const filters = {
                         searchTerm,
@@ -410,6 +423,7 @@
                         dateTo: datePreset === 'custom' ? dateTo : '',
                         showHidden
                     };
+                    console.log('[v4.15.6.i] Saving filters:', { datePreset: filters.datePreset, dateFrom: filters.dateFrom, dateTo: filters.dateTo });
                     localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
                 } catch (e) {
                     console.error('Failed to save filters to localStorage:', e);
