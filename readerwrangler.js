@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.i";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.j";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -375,13 +375,23 @@
 
                         // v4.15.6.f: Load datePreset, with migration from old dateFrom/dateTo format
                         // v4.15.6.h: Fixed to check for truthy values, not just defined
+                        // v4.15.6.j: Added logging to debug load behavior
+                        console.log('[v4.15.6.j] Loading date filters:', { datePreset: filters.datePreset, dateFrom: filters.dateFrom, dateTo: filters.dateTo });
                         if (filters.datePreset) {
                             // New format: datePreset controls the filter
+                            console.log('[v4.15.6.j] Setting datePreset to:', filters.datePreset);
                             setDatePreset(filters.datePreset);
                             if (filters.datePreset === 'custom') {
                                 // Custom preset: also restore the manual dates
-                                if (filters.dateFrom) setDateFrom(filters.dateFrom);
-                                if (filters.dateTo) setDateTo(filters.dateTo);
+                                console.log('[v4.15.6.j] Custom preset - setting dates:', { dateFrom: filters.dateFrom, dateTo: filters.dateTo });
+                                if (filters.dateFrom) {
+                                    console.log('[v4.15.6.j] Calling setDateFrom with:', filters.dateFrom);
+                                    setDateFrom(filters.dateFrom);
+                                }
+                                if (filters.dateTo) {
+                                    console.log('[v4.15.6.j] Calling setDateTo with:', filters.dateTo);
+                                    setDateTo(filters.dateTo);
+                                }
                             }
                             // For non-custom presets, the useEffect will compute dateFrom/dateTo
                         } else if (filters.dateFrom || filters.dateTo) {
