@@ -2,7 +2,7 @@
 
 ## Content Update Tracker
 
-**Last Updated**: 2026-01-07
+**Last Updated**: 2026-01-13
 
 Before producing/updating videos, review this list of changes since the plan was written:
 
@@ -35,6 +35,7 @@ When re-recording, add mentions of:
 - Logo: New ReaderWrangler icon in app header (84px) and landing page hero (160px)
 - **Filter Panel** (v4.15.5): Compact inline layout with three-state toggle (Filters/More Filters/Hide)
 - **Date Filter** (v4.15.6): Simplified preset dropdown replaces two date pickers
+- **Mobile Landing Page** (v4.15.8): Hero scrolls on mobile, mobile-specific sync instructions
 
 ---
 

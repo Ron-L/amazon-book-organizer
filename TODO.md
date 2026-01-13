@@ -8,13 +8,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**0-H. 📱 Mobile: Landing page hero too tall** - LOW/LOW (30 min)
-   - Hero/title section takes 50% of vertical space on phone
-   - Hero doesn't scroll, limiting visible content
-   - Reduce hero height on mobile breakpoints
-   - Problem: Poor mobile landing page experience
-   - Impact: Better first impression on mobile devices
-
 **0-E. ✂️ Cut/Copy/Paste for books (Ctrl+X/C/V)** - LOW/MEDIUM (4-5 hours)
    - Ctrl+X cuts (moves), Ctrl+C copies (creates additional placement)
    - Click target position, Ctrl+V pastes; Escape clears clipboard
@@ -234,7 +227,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Add to FAQ and main page
    - Problem: Major omission for users who browse libraries on phones/tablets
    - Impact: Sets correct expectations
-   - Note: Mobile page view of index.html - hero takes 50% of screen.
 
 **4. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
    - Link version display (e.g., "v3.6.0") to CHANGELOG.md

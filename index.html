@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <script>const LANDING_VERSION = 'v1.2.1'; console.log('ReaderWrangler Landing Page ' + LANDING_VERSION);</script>
+    <script>const LANDING_VERSION = 'v1.2.3'; console.log('ReaderWrangler Landing Page ' + LANDING_VERSION);</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Free tool to scrape your Amazon Kindle library and organize books visually. Easy extraction of covers, ratings, reviews with a simple bookmarklet. Drag-and-drop organization. 100% private - works in your browser.">
     <meta name="keywords" content="scrape amazon kindle library, organize kindle books visually, amazon kindle organizer, extract kindle books, visual book organizer, kindle book manager, amazon book list extractor, kindle collection organizer, organize ebooks">
@@ -456,12 +456,19 @@
         }
 
         @media (max-width: 768px) {
+            /* v1.2.2: Mobile hero - remove sticky, reduce padding */
+            .hero {
+                position: relative;
+                padding: 32px 20px;
+            }
+
             .hero h1 {
                 font-size: 2em;
             }
 
             .hero .tagline {
                 font-size: 1.2em;
+                margin-bottom: 20px;
             }
 
             .section h2 {
@@ -470,6 +477,135 @@
 
             .features {
                 grid-template-columns: 1fr;
+            }
+
+            /* v1.2.2.c: Hide desktop-only Getting Started elements on mobile */
+            .desktop-only {
+                display: none !important;
+            }
+
+            /* v1.2.2.c: Show mobile-only section */
+            .mobile-only {
+                display: block !important;
+            }
+
+            /* v1.2.2.d: Scale comparison slider images on mobile */
+            .comparison-section {
+                margin: 30px 0;
+            }
+
+            .comparison-section p {
+                font-size: 0.95em;
+                margin-bottom: 15px;
+            }
+
+            .comparison-container {
+                padding: 0 10px;
+            }
+
+            /* Scale images to show full width - rotate phone for larger view */
+            img-comparison-slider img {
+                width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+
+            /* v1.2.2.i: Fix bullet indentation on mobile */
+            ul {
+                padding-left: 20px;
+                margin-left: 0;
+            }
+        }
+
+        /* v1.2.2.e/f/j: Landscape mobile - short height means phone rotated */
+        @media (max-height: 500px) and (orientation: landscape) {
+            /* v1.2.2.j: Prevent horizontal overflow */
+            html, body {
+                overflow-x: hidden;
+            }
+
+            .hero {
+                position: relative;
+                padding: 16px 20px;
+                width: 100%;
+                box-sizing: border-box;
+                overflow: hidden;
+            }
+
+            .hero h1 {
+                font-size: 1.5em;
+                margin-bottom: 8px;
+            }
+
+            .hero .tagline {
+                font-size: 1em;
+                margin-bottom: 12px;
+            }
+
+            .cta-buttons {
+                gap: 10px;
+            }
+
+            .btn {
+                padding: 10px 20px;
+                font-size: 1em;
+            }
+
+            /* v1.2.2.m: Reposition logo for landscape mobile - center-relative like desktop */
+            .hero-icon {
+                position: absolute;
+                left: 50%;
+                margin-left: -350px;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 120px;
+                height: auto;
+            }
+
+            /* v1.2.2.m: Reposition sticky note for landscape mobile - center-relative like desktop */
+            .sticky-note {
+                position: absolute;
+                left: 50%;
+                margin-left: 250px;
+                right: auto;
+                top: 50%;
+                transform: translateY(-50%) rotate(-3deg);
+                width: 120px;
+                padding: 15px 12px 12px 12px;
+                font-size: 0.7em;
+            }
+
+            /* v1.2.2.f/j: Full-width containers in landscape */
+            .container {
+                padding: 20px 15px;
+                max-width: 100% !important;
+                width: 100%;
+                box-sizing: border-box;
+            }
+
+            .section {
+                margin-bottom: 30px;
+            }
+
+            /* v1.2.2.f: Fix bullet indentation */
+            ul {
+                padding-left: 20px;
+                margin-left: 0;
+            }
+
+            /* v1.2.2.h: Comparison slider same as portrait - scale to width */
+            .comparison-section {
+                margin: 20px 0;
+            }
+
+            .comparison-container {
+                padding: 0 10px;
+            }
+
+            img-comparison-slider img {
+                width: 100%;
+                height: auto;
+                object-fit: contain;
             }
         }
 
@@ -614,51 +750,72 @@
 
             <p>With hundreds or thousands of books in your collection, great reads get buried and forgotten. ReaderWrangler lets you create custom groups like "Next to Read" or "Time Travel Books," drag and drop books into organized columns, and double-click any cover to see full details—so you never lose track of what to read next.</p>
 
-            <h2 style="margin-top: 40px;">Get Started Now!</h2>
+            <!-- v1.2.2.c: Mobile-only section -->
+            <div class="mobile-only" style="display: none; margin-top: 40px;">
+                <h2>📱 Best on Desktop</h2>
+                <p style="font-size: 1.1em; line-height: 1.7; margin-bottom: 20px;">ReaderWrangler shines on a big screen. The bookmarklet that fetches your Amazon library requires a desktop browser, and drag-and-drop organization works best with a mouse and plenty of screen space.</p>
+                <p style="font-size: 1.1em; line-height: 1.7; margin-bottom: 25px;"><strong>But you can still browse on mobile!</strong> Once you've organized your collection on desktop, sync your data to your phone and view your curated reading lists anywhere—perfect for picking your next read from the couch or bookstore.</p>
 
-            <div id="index-bookmarklet-container" style="text-align: center; margin: 30px 0;">
-                <!-- Bookmarklet will be injected here by JavaScript -->
+                <details style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-top: 20px;">
+                    <summary style="font-weight: 600; color: #2563eb; cursor: pointer; font-size: 1.1em;">How to View on Mobile ▾</summary>
+                    <div style="margin-top: 15px; padding-left: 10px;">
+                        <p style="margin-bottom: 12px;"><strong>1.</strong> On desktop: Click <strong>"Export/Backup"</strong> in ReaderWrangler</p>
+                        <p style="margin-bottom: 12px;"><strong>2.</strong> Save the backup file to cloud storage (Dropbox, Google Drive, iCloud)</p>
+                        <p style="margin-bottom: 12px;"><strong>3.</strong> On your phone: Download the file from cloud storage to your Downloads folder</p>
+                        <p style="margin-bottom: 12px;"><strong>4.</strong> Open <a href="readerwrangler.html" style="color: #2563eb;">readerwrangler.com</a> and tap <strong>"Launch App"</strong></p>
+                        <p><strong>5.</strong> Tap the status bar and select your backup file</p>
+                    </div>
+                </details>
             </div>
 
-            <p style="text-align: center; margin-bottom: 10px; font-size: 1.1em; color: #2563eb; font-weight: 600;">Here's how:</p>
+            <!-- v1.2.2.c: Desktop-only section -->
+            <div class="desktop-only">
+                <h2 style="margin-top: 40px;">Get Started Now!</h2>
 
-            <p style="text-align: center; margin: 20px 0;">
-                <img src="images/bookmarklet-install.gif" alt="Drag bookmarklet to bookmarks bar" style="max-width: 50%; height: auto; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            </p>
+                <div id="index-bookmarklet-container" style="text-align: center; margin: 30px 0;">
+                    <!-- Bookmarklet will be injected here by JavaScript -->
+                </div>
 
-            <p style="text-align: center; font-size: 0.95em; color: #777; margin: 20px 0 10px 0;">
-                Still need <a href="install-bookmarklet.html" style="color: #2563eb; text-decoration: none; font-weight: 500;">help</a>?
-            </p>
+                <p style="text-align: center; margin-bottom: 10px; font-size: 1.1em; color: #2563eb; font-weight: 600;">Here's how:</p>
 
-            <div class="quick-start">
-                <h2>Quick Start</h2>
-                <div class="quick-start-steps">
-                    <div class="quick-start-step">
-                        <h4>1. One-Time Install of Bookmarklet</h4>
-                        <p>A. <strong>Visit the <a href="install-bookmarklet.html">Get Started</a> page</strong></p>
-                        <p>B. <strong>Drag the button there to your bookmarks bar</strong></p>
-                    </div>
+                <p style="text-align: center; margin: 20px 0;">
+                    <img src="images/bookmarklet-install.gif" alt="Drag bookmarklet to bookmarks bar" style="max-width: 50%; height: auto; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                </p>
 
-                    <div class="quick-start-step">
-                        <h4>2. Fetch Your Data from Amazon.com (Initial Setup)</h4>
-                        <p>A. <strong>Click the bookmarklet</strong> and select "Go to Library Fetcher Amazon Page"</p>
-                        <p>B. <strong>Click the bookmarklet again</strong> and select "Fetch Library Data"</p>
+                <p style="text-align: center; font-size: 0.95em; color: #777; margin: 20px 0 10px 0;">
+                    Still need <a href="install-bookmarklet.html" style="color: #2563eb; text-decoration: none; font-weight: 500;">help</a>?
+                </p>
 
-                        <p style="margin-top: 15px;">C. <strong>Click the bookmarklet</strong> and select "Go to Collections Fetcher Amazon Page"</p>
-                        <p>D. <strong>Click the bookmarklet again</strong> and select "Fetch Collections Data"</p>
-
-                        <div class="note">
-                            <strong>💡 Keeping Your Library Current:</strong> Do this once to get your complete library, then repeat occasionally to fetch newly purchased books. ReaderWrangler will merge the new books while preserving your organization.
+                <div class="quick-start">
+                    <h2>Quick Start</h2>
+                    <div class="quick-start-steps">
+                        <div class="quick-start-step">
+                            <h4>1. One-Time Install of Bookmarklet</h4>
+                            <p>A. <strong>Visit the <a href="install-bookmarklet.html">Get Started</a> page</strong></p>
+                            <p>B. <strong>Drag the button there to your bookmarks bar</strong></p>
                         </div>
-                    </div>
 
-                    <div class="quick-start-step">
-                        <h4>3. Start Organizing!</h4>
-                        <p>A. <strong>Click the bookmarklet</strong> and select "Launch App"</p>
-                        <p>B. <strong>Organize your books:</strong> Load the downloaded JSON file into the organizer</p>
+                        <div class="quick-start-step">
+                            <h4>2. Fetch Your Data from Amazon.com (Initial Setup)</h4>
+                            <p>A. <strong>Click the bookmarklet</strong> and select "Go to Library Fetcher Amazon Page"</p>
+                            <p>B. <strong>Click the bookmarklet again</strong> and select "Fetch Library Data"</p>
 
-                        <div class="note">
-                            <strong>🔒 Your Privacy Matters:</strong> All processing happens in your browser - your data never leaves your computer.
+                            <p style="margin-top: 15px;">C. <strong>Click the bookmarklet</strong> and select "Go to Collections Fetcher Amazon Page"</p>
+                            <p>D. <strong>Click the bookmarklet again</strong> and select "Fetch Collections Data"</p>
+
+                            <div class="note">
+                                <strong>💡 Keeping Your Library Current:</strong> Do this once to get your complete library, then repeat occasionally to fetch newly purchased books. ReaderWrangler will merge the new books while preserving your organization.
+                            </div>
+                        </div>
+
+                        <div class="quick-start-step">
+                            <h4>3. Start Organizing!</h4>
+                            <p>A. <strong>Click the bookmarklet</strong> and select "Launch App"</p>
+                            <p>B. <strong>Organize your books:</strong> Load the downloaded JSON file into the organizer</p>
+
+                            <div class="note">
+                                <strong>🔒 Your Privacy Matters:</strong> All processing happens in your browser - your data never leaves your computer.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -819,7 +976,12 @@
     <div class="container">
         <h2>Recent Features</h2>
         <div class="section">
-            <p><strong>v4.9.0 - Ownership Badges & Filter</strong> (January 2026)</p>
+            <p><strong>v4.14.0 - Cover Image Caching</strong> (January 2026)</p>
+            <ul style="line-height: 1.8; margin-top: 10px;">
+                <li><strong>Local browser cache</strong> - Book covers cached locally for instant loading on subsequent visits</li>
+                <li><strong>~65% faster</strong> - Subsequent loads from cache vs network</li>
+            </ul>
+            <p style="margin-top: 20px;"><strong>v4.9.0 - Ownership Badges & Filter</strong> (January 2026)</p>
             <ul style="line-height: 1.8; margin-top: 10px;">
                 <li><strong>Ownership badges</strong> - Visual badges on book covers showing non-purchased books (Sample, Borrowed, Prime/KU/KOLL/Comixology)</li>
                 <li><strong>Ownership filter</strong> - Filter library by ownership type in the filter panel</li>
@@ -849,7 +1011,6 @@
         <div class="section">
             <p>We're constantly improving ReaderWrangler based on user feedback. Here's what's on the horizon:</p>
             <ul style="line-height: 1.8; margin-top: 20px;">
-                <li><strong>Improved book cover fetching performance</strong> - Faster load times with local caching</li>
                 <li><strong>Book notes</strong> - Personal notes on individual books ("Why did I buy this?")</li>
                 <li><strong>Tags</strong> - Tag books and dividers for cross-library thematic organization</li>
                 <li><strong>Column carousel</strong> - Infinite horizontal carousel for navigating many columns</li>

@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configure via `dev-tasks.cfg` (see `dev-tasks.cfg.example`)
   - Auto-cleans old backups in sync folder
 
+## [4.15.8] - 2026-01-13
+
+### Changed
+- **Mobile-friendly landing page** - Hero section now scrolls on mobile devices (0-H)
+  - File version: index.html v1.2.3
+  - Portrait: Hero no longer sticky, replaced Get Started with mobile sync instructions
+  - Landscape: Logo and sticky note repositioned relative to center content
+  - Comparison slider scales to full width on mobile
+  - Updated Recent Features with v4.14.0 Cover Image Caching
+
 ## [4.15.7] - 2026-01-13
 
 ### Fixed

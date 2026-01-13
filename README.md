@@ -129,6 +129,10 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v4.14.0 - Cover Image Caching** (January 2026)
+- **Local browser cache** - Book covers cached locally for instant loading on subsequent visits
+- **~65% faster** - Subsequent loads from cache vs network
+
 **v4.9.0 - Ownership Badges & Filter** (January 2026)
 - **Ownership badges** - Visual badges on book covers showing non-purchased books (Sample, Borrowed, Prime/KU/KOLL/Comixology)
 - **Ownership filter** - Filter library by ownership type in the filter panel
@@ -154,7 +158,6 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 We're constantly improving ReaderWrangler based on user feedback. Here's what's on the horizon:
 
-- **Improved book cover fetching performance** - Faster load times with local caching
 - **Book notes** - Personal notes on individual books ("Why did I buy this?")
 - **Tags** - Tag books and dividers for cross-library thematic organization
 - **Column carousel** - Infinite horizontal carousel for navigating many columns
