@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.f";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.g";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -3394,8 +3394,9 @@
                                 }`}
                                 title={!filterPanelOpen ? 'Show filters' : !showAdvancedFilters ? 'Show more filters' : 'Hide filters'}>
                                 🔍 {!filterPanelOpen ? 'Filters' : !showAdvancedFilters ? 'More Filters' : 'Hide'}
-                                {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo) &&
-                                    ` (${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, dateFrom, dateTo].filter(Boolean).length})`}
+                                {/* v4.15.6.g: Use datePreset for count instead of dateFrom/dateTo */}
+                                {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset) &&
+                                    ` (${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, datePreset].filter(Boolean).length})`}
                             </button>
 
                             {/* Book count - only when panel closed (v4.15.5.b) */}
@@ -3561,7 +3562,15 @@
                                                         <span title="Acquisition Date">📅</span>
                                                         <select
                                                             value={datePreset}
-                                                            onChange={(e) => setDatePreset(e.target.value)}
+                                                            onChange={(e) => {
+                                                                const newPreset = e.target.value;
+                                                                // v4.15.6.g: Clear dates when switching to Custom (fresh start)
+                                                                if (newPreset === 'custom') {
+                                                                    setDateFrom('');
+                                                                    setDateTo('');
+                                                                }
+                                                                setDatePreset(newPreset);
+                                                            }}
                                                             aria-label="Filter by acquisition date"
                                                             style={{maxWidth: '150px'}}
                                                             className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
