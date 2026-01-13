@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.15.6] - 2026-01-13
+
+### Changed
+- **Simplified date range filter** - Compact preset dropdown replaces two date pickers (0-I)
+  - File version: readerwrangler.js v4.15.6
+  - Preset dropdown with options: All Dates, Last 30 Days, Last 90 Days, Last 12 Months, dynamic years (YYYY, YYYY-1, YYYY-2), Custom
+  - "Custom" option expands inline date pickers for manual date range selection
+  - Active Filters banner shows friendly preset names
+  - Filter state persists across page refresh, migrates from old dateFrom/dateTo format
+
 ## [4.15.5] - 2026-01-12
 
 ### Changed
