@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.b";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.c";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -3497,15 +3497,16 @@
                                                     </div>
                                                 </td>
 
-                                                {/* Date Preset (v4.15.6) */}
+                                                {/* Date Preset with Clear button (v4.15.6.c) */}
                                                 <td className="px-2 py-1" colSpan="2">
-                                                    <div className="flex items-center gap-1">
+                                                    <div className="flex items-center gap-2">
                                                         <span title="Acquisition Date">📅</span>
                                                         <select
                                                             value={datePreset}
                                                             onChange={(e) => setDatePreset(e.target.value)}
                                                             aria-label="Filter by acquisition date"
-                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                            style={{maxWidth: '150px'}}
+                                                            className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                                                             <option value="">All Time</option>
                                                             <option value="last30">Last 30 Days</option>
                                                             <option value="last90">Last 90 Days</option>
@@ -3515,43 +3516,24 @@
                                                             <option value="2023">2023</option>
                                                             <option value="custom">Custom...</option>
                                                         </select>
+                                                        {datePreset && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setDatePreset('');
+                                                                    setDateFrom('');
+                                                                    setDateTo('');
+                                                                }}
+                                                                className="text-blue-700 hover:text-blue-900 font-semibold text-sm whitespace-nowrap"
+                                                                title="Clear date filter">
+                                                                Clear
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
                                         )}
 
-                                        {/* ROW 2.5: Custom date pickers (only shown when Custom preset selected) (v4.15.6.b) */}
-                                        {showAdvancedFilters && datePreset === 'custom' && (
-                                            <tr className="align-middle">
-                                                <td colSpan="4"></td>
-                                                <td className="px-2 py-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-sm text-gray-500">From:</span>
-                                                        <input
-                                                            type="date"
-                                                            value={dateFrom}
-                                                            onChange={(e) => setDateFrom(e.target.value)}
-                                                            aria-label="Acquisition date from"
-                                                            className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                        />
-                                                    </div>
-                                                </td>
-                                                <td className="pl-2 py-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-sm text-gray-500">To:</span>
-                                                        <input
-                                                            type="date"
-                                                            value={dateTo}
-                                                            onChange={(e) => setDateTo(e.target.value)}
-                                                            aria-label="Acquisition date to"
-                                                            className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                        />
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-
-                                        {/* ROW 3: Showing count and controls */}
+                                        {/* ROW 3: Showing count, Show Hidden, and Custom date pickers (v4.15.6.c) */}
                                         <tr className="align-middle">
                                             {/* Showing - 50px left padding to align with boxes above */}
                                             <td className="pr-2 py-1" style={{paddingLeft: '50px'}}>
@@ -3570,20 +3552,36 @@
                                                     <span className="text-gray-600">Show Hidden</span>
                                                 </label>
                                             </td>
-                                            {/* Clear Date Filter button - only when date preset is set (columns 3-6) (v4.15.6) */}
-                                            {datePreset && showAdvancedFilters ? (
-                                                <td colSpan="4" className="pl-2 py-1 text-right">
-                                                    <button
-                                                        onClick={() => {
-                                                            setDatePreset('');
-                                                            setDateFrom('');
-                                                            setDateTo('');
-                                                        }}
-                                                        className="px-2 py-1 text-blue-700 hover:text-blue-900 font-semibold text-sm"
-                                                        title="Clear date filter">
-                                                        Clear Date
-                                                    </button>
-                                                </td>
+                                            {/* Custom date pickers - only when Custom preset selected (columns 3-6) */}
+                                            {showAdvancedFilters && datePreset === 'custom' ? (
+                                                <>
+                                                    <td></td>
+                                                    <td></td>
+                                                    <td className="px-2 py-1">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-sm text-gray-500">From:</span>
+                                                            <input
+                                                                type="date"
+                                                                value={dateFrom}
+                                                                onChange={(e) => setDateFrom(e.target.value)}
+                                                                aria-label="Acquisition date from"
+                                                                className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                    <td className="pl-2 py-1">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-sm text-gray-500">To:</span>
+                                                            <input
+                                                                type="date"
+                                                                value={dateTo}
+                                                                onChange={(e) => setDateTo(e.target.value)}
+                                                                aria-label="Acquisition date to"
+                                                                className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            />
+                                                        </div>
+                                                    </td>
+                                                </>
                                             ) : (
                                                 <>
                                                     <td></td>
