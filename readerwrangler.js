@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.m";  // Build version for this file
+        const APP_VERSION = "4.15.6";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.15.6";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -355,10 +355,10 @@
             });
             const dragThreshold = 50;
 
-            // v4.15.6.i: Track initial mount to prevent save effect from overwriting loaded values
+            // v4.15.6: Track initial mount to prevent save effect from overwriting loaded values
             const filtersLoadedRef = useRef(false);
 
-            // Load saved filters from localStorage on mount (v3.8.0.f, updated v3.8.0.k, v4.15.6.f)
+            // Load saved filters from localStorage on mount (v3.8.0.f, updated v3.8.0.k, v4.15.6)
             React.useEffect(() => {
                 try {
                     const savedFilters = localStorage.getItem(FILTERS_KEY);
@@ -373,25 +373,14 @@
                         if (filters.seriesFilter !== undefined) setSeriesFilter(filters.seriesFilter);
                         if (filters.showHidden !== undefined) setShowHidden(filters.showHidden);
 
-                        // v4.15.6.f: Load datePreset, with migration from old dateFrom/dateTo format
-                        // v4.15.6.h: Fixed to check for truthy values, not just defined
-                        // v4.15.6.j: Added logging to debug load behavior
-                        console.log('[v4.15.6.j] Loading date filters:', { datePreset: filters.datePreset, dateFrom: filters.dateFrom, dateTo: filters.dateTo });
+                        // v4.15.6: Load datePreset, with migration from old dateFrom/dateTo format
                         if (filters.datePreset) {
                             // New format: datePreset controls the filter
-                            console.log('[v4.15.6.j] Setting datePreset to:', filters.datePreset);
                             setDatePreset(filters.datePreset);
                             if (filters.datePreset === 'custom') {
                                 // Custom preset: also restore the manual dates
-                                console.log('[v4.15.6.j] Custom preset - setting dates:', { dateFrom: filters.dateFrom, dateTo: filters.dateTo });
-                                if (filters.dateFrom) {
-                                    console.log('[v4.15.6.j] Calling setDateFrom with:', filters.dateFrom);
-                                    setDateFrom(filters.dateFrom);
-                                }
-                                if (filters.dateTo) {
-                                    console.log('[v4.15.6.j] Calling setDateTo with:', filters.dateTo);
-                                    setDateTo(filters.dateTo);
-                                }
+                                if (filters.dateFrom) setDateFrom(filters.dateFrom);
+                                if (filters.dateTo) setDateTo(filters.dateTo);
                             }
                             // For non-custom presets, the useEffect will compute dateFrom/dateTo
                         } else if (filters.dateFrom || filters.dateTo) {
@@ -405,20 +394,16 @@
                 } catch (e) {
                     console.error('Failed to load filters from localStorage:', e);
                 }
-                // v4.15.6.i: Mark filters as loaded after a small delay to let React batch state updates
+                // v4.15.6: Mark filters as loaded after a small delay to let React batch state updates
                 setTimeout(() => {
                     filtersLoadedRef.current = true;
-                    console.log('[v4.15.6.i] Filters loaded, save enabled');
                 }, 100);
             }, []); // Empty dependency array = run once on mount
 
-            // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d, v4.15.6.f, v4.15.6.i)
+            // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d, v4.15.6)
             React.useEffect(() => {
-                // v4.15.6.i: Skip save during initial load to prevent overwriting
-                if (!filtersLoadedRef.current) {
-                    console.log('[v4.15.6.i] Save skipped - filters not yet loaded');
-                    return;
-                }
+                // v4.15.6: Skip save during initial load to prevent overwriting
+                if (!filtersLoadedRef.current) return;
                 try {
                     const filters = {
                         searchTerm,
@@ -428,37 +413,27 @@
                         wishlistFilter,
                         ownershipFilter,
                         seriesFilter,
-                        datePreset,  // v4.15.6.f: Save preset instead of raw dates (except for custom)
+                        datePreset,  // v4.15.6: Save preset instead of raw dates (except for custom)
                         dateFrom: datePreset === 'custom' ? dateFrom : '',  // Only save dates for custom preset
                         dateTo: datePreset === 'custom' ? dateTo : '',
                         showHidden
                     };
-                    console.log('[v4.15.6.i] Saving filters:', { datePreset: filters.datePreset, dateFrom: filters.dateFrom, dateTo: filters.dateTo });
                     localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
                 } catch (e) {
                     console.error('Failed to save filters to localStorage:', e);
                 }
             }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden]);
 
-            // Compute dateFrom/dateTo from datePreset selection (v4.15.6.e)
-            // v4.15.6.k: Added logging
-            // v4.15.6.l: Skip during initial load to prevent clearing loaded dates
+            // Compute dateFrom/dateTo from datePreset selection (v4.15.6)
             React.useEffect(() => {
-                console.log('[v4.15.6.l] datePreset effect triggered, datePreset=', datePreset, 'filtersLoaded=', filtersLoadedRef.current);
                 // Skip during initial load - the load effect will set dateFrom/dateTo directly
-                if (!filtersLoadedRef.current) {
-                    console.log('[v4.15.6.l] Skipping - filters not yet loaded');
-                    return;
-                }
+                if (!filtersLoadedRef.current) return;
                 if (!datePreset || datePreset === 'custom') {
                     // 'custom' uses manual dateFrom/dateTo, don't override
                     // '' (All Dates) clears the date filter
                     if (datePreset === '') {
-                        console.log('[v4.15.6.l] Clearing dates (All Dates selected)');
                         setDateFrom('');
                         setDateTo('');
-                    } else {
-                        console.log('[v4.15.6.l] Custom preset - not modifying dates');
                     }
                     return;
                 }
