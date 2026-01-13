@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.k";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.l";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -442,17 +442,23 @@
 
             // Compute dateFrom/dateTo from datePreset selection (v4.15.6.e)
             // v4.15.6.k: Added logging
+            // v4.15.6.l: Skip during initial load to prevent clearing loaded dates
             React.useEffect(() => {
-                console.log('[v4.15.6.k] datePreset effect triggered, datePreset=', datePreset);
+                console.log('[v4.15.6.l] datePreset effect triggered, datePreset=', datePreset, 'filtersLoaded=', filtersLoadedRef.current);
+                // Skip during initial load - the load effect will set dateFrom/dateTo directly
+                if (!filtersLoadedRef.current) {
+                    console.log('[v4.15.6.l] Skipping - filters not yet loaded');
+                    return;
+                }
                 if (!datePreset || datePreset === 'custom') {
                     // 'custom' uses manual dateFrom/dateTo, don't override
                     // '' (All Dates) clears the date filter
                     if (datePreset === '') {
-                        console.log('[v4.15.6.k] Clearing dates (All Dates selected)');
+                        console.log('[v4.15.6.l] Clearing dates (All Dates selected)');
                         setDateFrom('');
                         setDateTo('');
                     } else {
-                        console.log('[v4.15.6.k] Custom preset - not modifying dates');
+                        console.log('[v4.15.6.l] Custom preset - not modifying dates');
                     }
                     return;
                 }
