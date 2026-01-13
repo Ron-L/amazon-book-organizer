@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.6";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.7.a";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -966,8 +966,9 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    // v4.0.0.b: Backup filename with date
-                    const dateStr = new Date().toISOString().split('T')[0];
+                    // v4.15.7: Backup filename with local date and time (fixes UTC date bug after 6pm)
+                    const now = new Date();
+                    const dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}.${String(now.getMinutes()).padStart(2,'0')}`;
                     a.download = `readerwrangler-backup-${dateStr}.json`;
                     a.click();
                     URL.revokeObjectURL(url);
