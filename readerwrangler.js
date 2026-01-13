@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.6.l";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.m";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -3701,26 +3701,33 @@
                             )}
                         </div>
 
-                        {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel) */}
-                        {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo) && (
+                        {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel, v4.15.6.m - use datePreset) */}
+                        {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || datePreset) && (
                             <div className="bg-blue-100 border border-blue-300 rounded-lg px-4 py-2 mb-4 flex items-center justify-between">
                                 <div className="flex items-center gap-2 flex-wrap text-sm">
                                     <span className="font-semibold">🔍 Active:</span>
                                     {searchTerm && <span>Search: "{searchTerm}"</span>}
-                                    {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
                                     {readStatusFilter && <span>Read: {readStatusFilter}</span>}
-                                    {readStatusFilter && (collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {readStatusFilter && (collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
                                     {collectionFilter && <span>Collection: {collectionFilter === 'UNCOLLECTED' ? 'Uncollected' : collectionFilter}</span>}
-                                    {collectionFilter && (ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {collectionFilter && (ratingFilter || wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
                                     {ratingFilter && <span>Rating: {ratingFilter}+★</span>}
-                                    {ratingFilter && (wishlistFilter || seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {ratingFilter && (wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
                                     {wishlistFilter && <span>Wishlist: {wishlistFilter === 'owned' ? 'Owned Only' : 'Wishlist Only'}</span>}
-                                    {wishlistFilter && (ownershipFilter || seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {wishlistFilter && (ownershipFilter || seriesFilter || datePreset) && <span>|</span>}
                                     {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
-                                    {ownershipFilter && (seriesFilter || dateFrom || dateTo) && <span>|</span>}
+                                    {ownershipFilter && (seriesFilter || datePreset) && <span>|</span>}
                                     {seriesFilter && <span>Series: {seriesFilter === 'NOT_IN_SERIES' ? 'Not in Series' : seriesFilter}</span>}
-                                    {seriesFilter && (dateFrom || dateTo) && <span>|</span>}
-                                    {(dateFrom || dateTo) && <span>Date: {dateFrom || '...'} to {dateTo || '...'}</span>}
+                                    {seriesFilter && datePreset && <span>|</span>}
+                                    {datePreset && <span>Date: {
+                                        datePreset === 'custom' ? `${dateFrom || '...'} to ${dateTo || '...'}` :
+                                        datePreset === 'last30' ? 'Last 30 Days' :
+                                        datePreset === 'last90' ? 'Last 90 Days' :
+                                        datePreset === 'lastYear' ? 'Last 12 Months' :
+                                        datePreset.startsWith('year') ? datePreset.substring(4) :
+                                        datePreset
+                                    }</span>}
                                 </div>
                                 <button
                                     onClick={() => {
@@ -3731,6 +3738,7 @@
                                         setWishlistFilter('');
                                         setOwnershipFilter('');
                                         setSeriesFilter('');
+                                        setDatePreset('');
                                         setDateFrom('');
                                         setDateTo('');
                                     }}
