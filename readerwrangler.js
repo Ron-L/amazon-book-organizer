@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.15.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.5";  // Build version for this file
+        const ORGANIZER_VERSION = "4.15.6.a";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -305,6 +305,7 @@
             const [seriesFilter, setSeriesFilter] = useState(''); // Filter by series name or "NOT_IN_SERIES" (NEW v3.8.0.k)
             const [dateFrom, setDateFrom] = useState(''); // Filter by acquisition date from (YYYY-MM-DD) (NEW v3.8.0.k)
             const [dateTo, setDateTo] = useState(''); // Filter by acquisition date to (YYYY-MM-DD) (NEW v3.8.0.k)
+            const [datePreset, setDatePreset] = useState(''); // Date filter preset: '' | 'last30' | 'last90' | 'lastYear' | '2025' | '2024' | '2023' | 'custom' (NEW v4.15.6)
             const [filterPanelOpen, setFilterPanelOpen] = useState(false); // Collapsible filter panel state (NEW v3.8.0)
             const [showAdvancedFilters, setShowAdvancedFilters] = useState(false); // Show advanced filters section (NEW v4.14.0.a, v4.14.0.b - no persistence, resets when panel closes)
             const [showHidden, setShowHidden] = useState(false); // Show hidden books toggle (NEW v4.1.0.d)
@@ -3496,31 +3497,24 @@
                                                     </div>
                                                 </td>
 
-                                                {/* Date From */}
-                                                <td className="px-2 py-1">
+                                                {/* Date Preset (v4.15.6) */}
+                                                <td className="px-2 py-1" colSpan="2">
                                                     <div className="flex items-center gap-1">
-                                                        <span title="Acquisition Date From">📅</span>
-                                                        <input
-                                                            type="date"
-                                                            value={dateFrom}
-                                                            onChange={(e) => setDateFrom(e.target.value)}
-                                                            aria-label="Acquisition date from"
-                                                            className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                        />
-                                                    </div>
-                                                </td>
-
-                                                {/* Date To */}
-                                                <td className="pl-2 py-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <span title="Acquisition Date To">📅</span>
-                                                        <input
-                                                            type="date"
-                                                            value={dateTo}
-                                                            onChange={(e) => setDateTo(e.target.value)}
-                                                            aria-label="Acquisition date to"
-                                                            className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                        />
+                                                        <span title="Acquisition Date">📅</span>
+                                                        <select
+                                                            value={datePreset}
+                                                            onChange={(e) => setDatePreset(e.target.value)}
+                                                            aria-label="Filter by acquisition date"
+                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                                            <option value="">All Time</option>
+                                                            <option value="last30">Last 30 Days</option>
+                                                            <option value="last90">Last 90 Days</option>
+                                                            <option value="lastYear">Last 12 Months</option>
+                                                            <option value="2025">2025</option>
+                                                            <option value="2024">2024</option>
+                                                            <option value="2023">2023</option>
+                                                            <option value="custom">Custom...</option>
+                                                        </select>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -3545,17 +3539,18 @@
                                                     <span className="text-gray-600">Show Hidden</span>
                                                 </label>
                                             </td>
-                                            {/* Clear Dates button - only when dates are set (columns 3-6) */}
-                                            {(dateFrom || dateTo) && showAdvancedFilters ? (
+                                            {/* Clear Date Filter button - only when date preset is set (columns 3-6) (v4.15.6) */}
+                                            {datePreset && showAdvancedFilters ? (
                                                 <td colSpan="4" className="pl-2 py-1 text-right">
                                                     <button
                                                         onClick={() => {
+                                                            setDatePreset('');
                                                             setDateFrom('');
                                                             setDateTo('');
                                                         }}
                                                         className="px-2 py-1 text-blue-700 hover:text-blue-900 font-semibold text-sm"
-                                                        title="Clear date range">
-                                                        Clear Dates
+                                                        title="Clear date filter">
+                                                        Clear Date
                                                     </button>
                                                 </td>
                                             ) : (
