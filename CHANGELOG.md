@@ -14,6 +14,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configure via `dev-tasks.cfg` (see `dev-tasks.cfg.example`)
   - Auto-cleans old backups in sync folder
 
+## [4.16.0] - 2026-01-17
+
+### Added
+- **Cut/Copy/Paste for books (Ctrl+X/C/V)** - Flexible book organization with clipboard operations (0-E)
+  - File version: readerwrangler.js v4.16.0
+  - Ctrl+X cuts selected books (50% opacity + dashed border visual)
+  - Ctrl+C copies selected books (normal opacity + dashed border visual)
+  - Ctrl+V pastes at selected position or top of column
+  - Escape cancels clipboard operation
+  - Works with multi-select (Ctrl+Click, Shift+Click, Ctrl+A)
+  - Footer shows clipboard status: "2 books cut - click destination and Ctrl+V"
+  - Toast notification appears above pasted books
+
+- **Book copies** - Same book can appear in multiple columns
+  - Ctrl+C creates copies (new instances with unique GUIDs)
+  - Ctrl+Drag copies books instead of moving them
+  - Book count shows unique books + copies: "2344 (+1 copy) books"
+  - Per-instance hidden state (hide one copy without hiding others)
+  - Last-copy protection warns before deleting the only visible copy
+
+- **Delete key** - DEL key removes selected books with last-copy protection
+  - Also available via right-click context menu
+
+- **Enhanced context menu** - Submenus for Move/Copy operations
+  - Move to → submenu lists all columns
+  - Copy to → submenu lists all columns
+  - Cut/Copy/Paste options with keyboard shortcuts shown
+  - Delete option with last-copy protection
+
+### Fixed
+- Undo/Redo works correctly with GUID-based book entries
+- Columns with only hidden books hide when "Show Hidden" is off
+- Empty columns remain visible when filters are active
+
 ## [4.15.8] - 2026-01-13
 
 ### Changed

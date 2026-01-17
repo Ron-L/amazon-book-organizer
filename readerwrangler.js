@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.15.8";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.15.8";  // Build version for this file
+        const APP_VERSION = "4.16.0";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.16.0";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -254,6 +254,7 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [draggedBook, setDraggedBook] = useState(null);
             const [draggedFromColumn, setDraggedFromColumn] = useState(null);
+            const [draggedBookIndex, setDraggedBookIndex] = useState(null); // v4.16.0.d - Track dragged book's index
             const [draggedColumn, setDraggedColumn] = useState(null);
             const [columnDropTarget, setColumnDropTarget] = useState(null);
             const [modalBook, setModalBook] = useState(null);
@@ -278,6 +279,8 @@
             const [settingsOpen, setSettingsOpen] = useState(false);
             const [deleteDialogOpen, setDeleteDialogOpen] = useState(null);
             const [deleteDestination, setDeleteDestination] = useState('');
+            // v4.16.0.aq - State for "last copy" delete warning dialog
+            const [lastCopyDialogData, setLastCopyDialogData] = useState(null); // {lastCopyEntries: [...], deletableEntries: [...], deletedCount: number}
             const [showAllReviews, setShowAllReviews] = useState(false);
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
@@ -298,6 +301,7 @@
             const [selectedDivider, setSelectedDivider] = useState(null); // v3.13.0 - Selected divider {columnId, dividerId}
             const [activeColumnId, setActiveColumnId] = useState(null); // Track which column has focus for Ctrl+A
             const [contextMenu, setContextMenu] = useState(null); // {x, y, bookId, columnId}
+            const [contextSubmenu, setContextSubmenu] = useState(null); // v4.16.0.ba - 'move' | 'copy' | null for submenu hover
             const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
             const [ratingFilter, setRatingFilter] = useState(''); // Filter by minimum rating (NEW v3.8.0)
             const [wishlistFilter, setWishlistFilter] = useState(''); // Filter by wishlist status: '' | 'owned' | 'wishlist' (NEW v3.8.0)
@@ -311,6 +315,50 @@
             const [showHidden, setShowHidden] = useState(false); // Show hidden books toggle (NEW v4.1.0.d)
             const [, forceUpdate] = useState({});
             const [coverUrlMap, setCoverUrlMap] = useState({}); // Cover image cache URL map (v4.13.0)
+            // v4.16.0 - Clipboard state for Cut/Copy/Paste
+            const [clipboard, setClipboard] = useState(null); // {type: 'cut'|'copy', bookIds: [], sourcePositions: []}
+            // v4.16.0.g - Clipboard status message for footer
+            const [clipboardMessage, setClipboardMessage] = useState(null); // "3 books cut" or "5 books copied"
+            // v4.16.0.l - Toast animation state
+            const [toastVisible, setToastVisible] = useState(false);
+            const [toastAnimating, setToastAnimating] = useState(false);
+            // v4.16.0.m - Track position of last selected book for toast placement
+            const [toastPosition, setToastPosition] = useState({ x: 0, y: 0 });
+            // v4.16.0.o - Footer clipboard text only visible after toast lands
+            const [footerClipboardVisible, setFooterClipboardVisible] = useState(false);
+            // v4.16.0.s - Per-instance hidden state (Set of instanceIds)
+            const [hiddenInstances, setHiddenInstances] = useState(new Set());
+
+            // v4.16.0.s - Helper to extract bookId from column entry (handles legacy string and new object format)
+            // Entry types: string (legacy bookId), {type:'divider',...}, {instanceId, bookId} (new format)
+            const getBookIdFromEntry = (entry) => {
+                if (typeof entry === 'string') return entry;  // Legacy format
+                if (entry && entry.type === 'divider') return null;  // Divider
+                if (entry && entry.bookId) return entry.bookId;  // New instance format
+                return null;
+            };
+
+            // v4.16.0.s - Helper to get instanceId from entry (null for legacy entries)
+            const getInstanceId = (entry) => {
+                if (typeof entry === 'string') return null;  // Legacy format has no instanceId
+                if (entry && entry.instanceId) return entry.instanceId;
+                return null;
+            };
+
+            // v4.16.0.s - Generate UUID for new instances
+            const generateInstanceId = () => {
+                return 'inst-' + crypto.randomUUID();
+            };
+
+            // v4.16.0.s - Helper to check if a column contains a specific bookId
+            const columnHasBook = (columnBooks, bookId) => {
+                return columnBooks.some(entry => getBookIdFromEntry(entry) === bookId);
+            };
+
+            // v4.16.0.s - Helper to find index of bookId in column (first occurrence)
+            const findBookIndexInColumn = (columnBooks, bookId) => {
+                return columnBooks.findIndex(entry => getBookIdFromEntry(entry) === bookId);
+            };
 
             // v3.11.0.d - Ref for column menu click-outside detection
             const columnMenuRef = useRef(null);
@@ -325,6 +373,10 @@
             // v3.14.0.x - Use refs for ghost position to eliminate ALL React re-renders during drag
             const dragGhostRef = useRef(null);
             const dragPosRef = useRef({ x: 0, y: 0 });
+
+            // v4.16.0.au - Copy-drag tracking (Ctrl+Drag to copy instead of move)
+            const isCopyDragRef = useRef(false);
+            const dragTooltipRef = useRef(null);
 
             // v3.14.0.r - Row-based grid index for O(log R) drop position lookup
             // Structure: { columnId: { rowBoundaries: [y1, y2, ...], rows: [{type, startIndex, items, top, bottom}, ...], columnRect } }
@@ -554,6 +606,7 @@
                                     }));
                                     setColumns(restoredColumns);
                                     setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
+                                    setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
                                     setDataSource(state.organization.dataSource || 'enriched');
                                     effectiveLastSync = state.lastSyncTime || Date.now();
                                     setLastSyncTime(effectiveLastSync);
@@ -588,7 +641,9 @@
             }, []);
 
             // Auto-save organization
+            // v4.16.0.ab - Guard: Skip save while loading to prevent race condition
             useEffect(() => {
+                if (syncStatus === 'loading') return;
                 if (books.length > 0 && columns.length > 0) {
                     try {
                         const state = {
@@ -599,7 +654,8 @@
                                     bookIds: col.books
                                 })),
                                 dataSource,
-                                blankImageBooks: Array.from(blankImageBooks)
+                                blankImageBooks: Array.from(blankImageBooks),
+                                hiddenInstances: Array.from(hiddenInstances) // v4.16.0.z
                             },
                             lastSyncTime: lastSyncTime || Date.now(),
                             savedAt: Date.now()
@@ -609,7 +665,7 @@
                         console.warn('Could not auto-save organization:', e);
                     }
                 }
-            }, [columns, blankImageBooks, dataSource, lastSyncTime]);
+            }, [syncStatus, columns, blankImageBooks, dataSource, lastSyncTime, hiddenInstances]);
 
             useEffect(() => {
                 localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -632,6 +688,15 @@
                     if (e.key === 'Escape') {
                         clearSelection();
                         setContextMenu(null);
+                        // v4.16.0 - Also clear clipboard on Escape
+                        setClipboard(null);
+                        // v4.16.0.g - Clear clipboard message on Escape
+                        setClipboardMessage(null);
+                        // v4.16.0.l - Clear toast state on Escape
+                        setToastVisible(false);
+                        setToastAnimating(false);
+                        // v4.16.0.o - Clear footer clipboard visibility
+                        setFooterClipboardVisible(false);
                     }
 
                     // v4.8.0 - Ctrl+Z: Undo
@@ -652,17 +717,306 @@
                         if (column && filteredBooksRef.current) {
                             const visibleBooks = filteredBooksRef.current(column.books);
                             // Filter out dividers - only select actual books
-                            const bookIds = visibleBooks
-                                .filter(item => item && !(typeof item === 'object' && item.type === 'divider'))
-                                .map(book => book.id);
-                            setSelectedBooks(new Set(bookIds));
+                            // v4.16.0.d - Use composite keys with indices for selection
+                            const compositeKeys = [];
+                            visibleBooks.forEach((item, filteredIndex) => {
+                                if (!item || (typeof item === 'object' && item.type === 'divider')) return;
+                                const book = item;
+                                // Find actual index in column.books
+                                const filteredBooksBeforeThis = visibleBooks.slice(0, filteredIndex);
+                                const sameBookCountBefore = filteredBooksBeforeThis.filter(b => b && b.id === book.id).length;
+                                let occurrenceCount = 0;
+                                for (let i = 0; i < column.books.length; i++) {
+                                    // v4.16.0.ah - Use getBookIdFromEntry to handle GUID entries
+                                    if (getBookIdFromEntry(column.books[i]) === book.id) {
+                                        if (occurrenceCount === sameBookCountBefore) {
+                                            compositeKeys.push(`${activeColumnId}:${book.id}:${i}`);
+                                            break;
+                                        }
+                                        occurrenceCount++;
+                                    }
+                                }
+                            });
+                            setSelectedBooks(new Set(compositeKeys));
+                        }
+                    }
+
+                    // v4.16.0 - Ctrl+X: Cut selected books
+                    // v4.16.0.d - Parse composite keys "columnId:bookId:index" from selection
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'x' && selectedBooks.size > 0) {
+                        e.preventDefault();
+                        // Build source positions from composite keys
+                        const sourcePositions = [];
+                        const bookIds = [];
+                        for (const key of selectedBooks) {
+                            const [columnId, bookId, indexStr] = key.split(':');
+                            const index = parseInt(indexStr, 10);
+                            sourcePositions.push({ columnId, index, bookId });
+                            bookIds.push(bookId);
+                        }
+                        setClipboard({ type: 'cut', bookIds, sourcePositions });
+                        // v4.16.0.g - Set clipboard status message
+                        const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} cut`;
+                        setClipboardMessage(message);
+                        // v4.16.0.l - Show toast and animate to footer
+                        // v4.16.0.m - Slower animation (1.0s instead of 0.5s)
+                        // v4.16.0.o - Hide footer text until toast lands
+                        setFooterClipboardVisible(false);
+                        setToastVisible(true);
+                        setToastAnimating(false);
+                        setTimeout(() => {
+                            setToastAnimating(true);
+                            setTimeout(() => {
+                                setToastVisible(false);
+                                setToastAnimating(false);
+                                setFooterClipboardVisible(true); // Show footer text when toast lands
+                            }, 1000); // Animation duration (2x slower)
+                        }, 1500); // Wait before animating
+                        console.log(`✂️ Cut ${bookIds.length} book(s) to clipboard`);
+                    }
+
+                    // v4.16.0 - Ctrl+C: Copy selected books
+                    // v4.16.0.d - Parse composite keys "columnId:bookId:index" from selection
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'c' && selectedBooks.size > 0) {
+                        e.preventDefault();
+                        const sourcePositions = [];
+                        const bookIds = [];
+                        for (const key of selectedBooks) {
+                            const [columnId, bookId, indexStr] = key.split(':');
+                            const index = parseInt(indexStr, 10);
+                            // v4.16.0.ap - Capture instanceId for hidden state copying
+                            // v4.16.0.be - Also capture isHidden for legacy entries
+                            const column = columns.find(c => c.id === columnId);
+                            const entry = column?.books[index];
+                            const instanceId = entry ? getInstanceId(entry) : null;
+                            // v4.16.0.be - Determine hidden state: GUID uses hiddenInstances, legacy uses book.isHidden
+                            const book = books.find(b => b.id === bookId);
+                            const isHidden = instanceId
+                                ? hiddenInstances.has(instanceId)
+                                : (book?.isHidden || false);
+                            sourcePositions.push({ columnId, index, bookId, instanceId, isHidden });
+                            bookIds.push(bookId);
+                        }
+                        setClipboard({ type: 'copy', bookIds, sourcePositions });
+                        // v4.16.0.g - Set clipboard status message
+                        const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} copied`;
+                        setClipboardMessage(message);
+                        // v4.16.0.l - Show toast and animate to footer
+                        // v4.16.0.m - Slower animation (1.0s instead of 0.5s)
+                        // v4.16.0.o - Hide footer text until toast lands
+                        setFooterClipboardVisible(false);
+                        setToastVisible(true);
+                        setToastAnimating(false);
+                        setTimeout(() => {
+                            setToastAnimating(true);
+                            setTimeout(() => {
+                                setToastVisible(false);
+                                setToastAnimating(false);
+                                setFooterClipboardVisible(true); // Show footer text when toast lands
+                            }, 1000); // Animation duration (2x slower)
+                        }, 1500); // Wait before animating
+                        console.log(`📋 Copied ${bookIds.length} book(s) to clipboard`);
+                    }
+
+                    // v4.16.0 - Ctrl+V: Paste to active column
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'v' && clipboard && clipboard.bookIds.length > 0) {
+                        e.preventDefault();
+                        if (!activeColumnId) {
+                            console.log('⚠️ No active column - click a column first');
+                            return;
+                        }
+
+                        const targetColumn = columns.find(col => col.id === activeColumnId);
+                        if (!targetColumn) return;
+
+                        // v4.16.0.ao - Calculate paste index: before selected book, or top if no selection
+                        const selectedInTarget = getSelectedEntries().filter(sel => sel.columnId === activeColumnId);
+                        const pasteIndex = selectedInTarget.length > 0
+                            ? Math.min(...selectedInTarget.map(sel => sel.index))
+                            : 0;
+
+                        if (clipboard.type === 'cut') {
+                            // Cut: Remove from source columns, add to target
+                            // v4.16.0.k - Use sourcePositions to remove only specific instances
+                            // v4.16.0.u - Preserve original entries (don't create new GUIDs for moves)
+                            setColumns(prevColumns => {
+                                // First pass: collect entries being removed (preserving original format)
+                                const entriesToMove = [];
+                                clipboard.sourcePositions.forEach(pos => {
+                                    const sourceCol = prevColumns.find(c => c.id === pos.columnId);
+                                    if (sourceCol && sourceCol.books[pos.index]) {
+                                        entriesToMove.push(sourceCol.books[pos.index]);
+                                    }
+                                });
+
+                                // v4.16.0.ao - Count how many items are being removed from target column BEFORE pasteIndex
+                                const indicesToRemoveFromTarget = clipboard.sourcePositions
+                                    .filter(pos => pos.columnId === activeColumnId && pos.index < pasteIndex)
+                                    .length;
+                                const adjustedPasteIndex = pasteIndex - indicesToRemoveFromTarget;
+
+                                const newColumns = prevColumns.map(col => {
+                                    // Build a set of indices to remove for this column
+                                    const indicesToRemove = new Set();
+                                    clipboard.sourcePositions.forEach(pos => {
+                                        if (pos.columnId === col.id) {
+                                            indicesToRemove.add(pos.index);
+                                        }
+                                    });
+
+                                    return {
+                                        ...col,
+                                        books: col.books.filter((item, idx) => {
+                                            if (typeof item === 'object' && item.type === 'divider') return true;
+                                            return !indicesToRemove.has(idx);
+                                        })
+                                    };
+                                });
+                                // v4.16.0.ao - Add entries at adjusted paste index (before selected book)
+                                const targetIdx = newColumns.findIndex(col => col.id === activeColumnId);
+                                if (targetIdx !== -1) {
+                                    const newBooks = [...newColumns[targetIdx].books];
+                                    newBooks.splice(adjustedPasteIndex, 0, ...entriesToMove);
+                                    newColumns[targetIdx] = {
+                                        ...newColumns[targetIdx],
+                                        books: newBooks
+                                    };
+                                }
+                                return newColumns;
+                            });
+                            console.log(`✂️ Pasted (moved) ${clipboard.bookIds.length} book(s) to ${targetColumn.name}`);
+                            // Clear clipboard after cut+paste
+                            setClipboard(null);
+                            // v4.16.0.g - Clear clipboard message after cut+paste
+                            setClipboardMessage(null);
+                            // v4.16.0.l - Clear toast state after cut+paste
+                            setToastVisible(false);
+                            setToastAnimating(false);
+                            // v4.16.0.o - Clear footer clipboard visibility
+                            setFooterClipboardVisible(false);
+                            clearSelection();
+                        } else {
+                            // Copy: Add to target column (keep source)
+                            // v4.16.0.s - Create new GUID-based entries for copied books
+                            // v4.16.0.ao - Insert at paste index (before selected book)
+                            // v4.16.0.ap - Copy hidden state from source instances
+                            // v4.16.0.be - Use isHidden captured at copy time (supports legacy entries)
+                            const newEntries = clipboard.sourcePositions.map(pos => ({
+                                instanceId: generateInstanceId(),
+                                bookId: pos.bookId,
+                                sourceIsHidden: pos.isHidden // v4.16.0.be - Use captured hidden state
+                            }));
+
+                            // v4.16.0.ap - Copy hidden state for instances that were hidden
+                            // v4.16.0.be - Use sourceIsHidden (captured at copy time) instead of checking hiddenInstances
+                            const newHiddenInstanceIds = newEntries
+                                .filter(entry => entry.sourceIsHidden)
+                                .map(entry => entry.instanceId);
+
+                            if (newHiddenInstanceIds.length > 0) {
+                                setHiddenInstances(prev => {
+                                    const updated = new Set(prev);
+                                    newHiddenInstanceIds.forEach(id => updated.add(id));
+                                    return updated;
+                                });
+                            }
+
+                            // Clean entries before storing (remove sourceInstanceId)
+                            const cleanEntries = newEntries.map(({ instanceId, bookId }) => ({ instanceId, bookId }));
+
+                            setColumns(prevColumns => {
+                                return prevColumns.map(col => {
+                                    if (col.id === activeColumnId) {
+                                        const newBooks = [...col.books];
+                                        newBooks.splice(pasteIndex, 0, ...cleanEntries);
+                                        return {
+                                            ...col,
+                                            books: newBooks
+                                        };
+                                    }
+                                    return col;
+                                });
+                            });
+                            console.log(`📋 Pasted (copied) ${clipboard.bookIds.length} book(s) to ${targetColumn.name}`);
+                            // Keep clipboard for copy (can paste again)
+                            // v4.16.0.g - Keep message for copy (can paste again)
+                        }
+                    }
+
+                    // v4.16.0.bd - DEL key: Delete selected books (with last-copy protection)
+                    if (e.key === 'Delete' && selectedBooks.size > 0) {
+                        e.preventDefault();
+                        const selectedEntries = getSelectedEntries();
+                        if (selectedEntries.length === 0) return;
+
+                        // Count total copies of each bookId across ALL columns
+                        const bookIdCounts = {};
+                        columns.forEach(col => {
+                            col.books.forEach(entry => {
+                                const bookId = getBookIdFromEntry(entry);
+                                if (bookId) {
+                                    bookIdCounts[bookId] = (bookIdCounts[bookId] || 0) + 1;
+                                }
+                            });
+                        });
+
+                        // v4.16.0.bd - Count how many of each bookId are selected for deletion
+                        const selectedCounts = {};
+                        selectedEntries.forEach(sel => {
+                            selectedCounts[sel.bookId] = (selectedCounts[sel.bookId] || 0) + 1;
+                        });
+
+                        // Categorize selected entries: last-copy vs deletable
+                        // v4.16.0.bd - "last copy" = deleting would leave zero copies in library
+                        const lastCopyEntries = [];
+                        const deletableEntries = [];
+                        selectedEntries.forEach(sel => {
+                            const remainingAfterDelete = bookIdCounts[sel.bookId] - selectedCounts[sel.bookId];
+                            if (remainingAfterDelete === 0) {
+                                lastCopyEntries.push(sel);
+                            } else {
+                                deletableEntries.push(sel);
+                            }
+                        });
+
+                        // Delete the deletable entries immediately
+                        if (deletableEntries.length > 0) {
+                            setColumns(prevColumns => {
+                                // Build map of columnId -> indices to remove
+                                const indicesToRemoveByColumn = {};
+                                deletableEntries.forEach(sel => {
+                                    if (!indicesToRemoveByColumn[sel.columnId]) {
+                                        indicesToRemoveByColumn[sel.columnId] = new Set();
+                                    }
+                                    indicesToRemoveByColumn[sel.columnId].add(sel.index);
+                                });
+
+                                return prevColumns.map(col => {
+                                    const indicesToRemove = indicesToRemoveByColumn[col.id];
+                                    if (!indicesToRemove) return col;
+                                    return {
+                                        ...col,
+                                        books: col.books.filter((_, idx) => !indicesToRemove.has(idx))
+                                    };
+                                });
+                            });
+                            console.log(`🗑️ Deleted ${deletableEntries.length} book(s)`);
+                            clearSelection();
+                        }
+
+                        // Show dialog for last-copy entries (if any)
+                        if (lastCopyEntries.length > 0) {
+                            setLastCopyDialogData({
+                                lastCopyEntries,
+                                deletedCount: deletableEntries.length
+                            });
                         }
                     }
                 };
 
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [activeColumnId, columns]);
+            }, [activeColumnId, columns, selectedBooks, clipboard, hiddenInstances]);
 
             // Initialize activeColumnId to first column when columns are loaded
             useEffect(() => {
@@ -672,8 +1026,12 @@
             }, [columns, activeColumnId]);
 
             // Close context menu on click
+            // v4.16.0.az - Also clear submenu state
             useEffect(() => {
-                const handleClick = () => setContextMenu(null);
+                const handleClick = () => {
+                    setContextMenu(null);
+                    setContextSubmenu(null);
+                };
                 if (contextMenu) {
                     window.addEventListener('click', handleClick);
                     return () => window.removeEventListener('click', handleClick);
@@ -803,14 +1161,15 @@
                     b.series && b.series === modalBook.series && b.id !== modalBook.id
                 );
                 
-                const inCurrentColumn = allSeriesBooks.filter(b => 
-                    currentColumn.books.includes(b.id)
+                // v4.16.0.s - Use helper for both legacy and new entry formats
+                const inCurrentColumn = allSeriesBooks.filter(b =>
+                    columnHasBook(currentColumn.books, b.id)
                 );
-                
-                const inOtherColumns = allSeriesBooks.filter(b => 
-                    !currentColumn.books.includes(b.id)
+
+                const inOtherColumns = allSeriesBooks.filter(b =>
+                    !columnHasBook(currentColumn.books, b.id)
                 ).map(b => {
-                    const col = columns.find(c => c.books.includes(b.id));
+                    const col = columns.find(c => columnHasBook(c.books, b.id));
                     return { ...b, columnName: col?.name || 'Unknown' };
                 });
                 
@@ -852,24 +1211,34 @@
                     return posA - posB;
                 });
                 
-                const currentBookIndexInTarget = targetColumn.books.indexOf(modalBook.id);
-                
+                // v4.16.0.s - Use helper for index lookup with both entry formats
+                const currentBookIndexInTarget = findBookIndexInColumn(targetColumn.books, modalBook.id);
+
                 const newColumns = columns.map(col => {
                     if (col.id === modalColumnId) {
-                        let newBooks = col.books.filter(id => 
-                            !allBooksInSeries.find(b => b.id === id)
-                        );
-                        
+                        // v4.16.0.s - Filter using helper, create new GUID entries
+                        let newBooks = col.books.filter(entry => {
+                            const entryBookId = getBookIdFromEntry(entry);
+                            return !allBooksInSeries.find(b => b.id === entryBookId);
+                        });
+
                         const insertIndex = Math.min(currentBookIndexInTarget, newBooks.length);
-                        newBooks.splice(insertIndex, 0, ...allBooksInSeries.map(b => b.id));
-                        
+                        // v4.16.0.s - Create new GUID entries for collected series books
+                        const newEntries = allBooksInSeries.map(b => ({
+                            instanceId: generateInstanceId(),
+                            bookId: b.id
+                        }));
+                        newBooks.splice(insertIndex, 0, ...newEntries);
+
                         return { ...col, books: newBooks };
                     } else if (includeAllColumns) {
                         return {
                             ...col,
-                            books: col.books.filter(id => 
-                                !allBooksInSeries.find(b => b.id === id)
-                            )
+                            // v4.16.0.s - Filter using helper
+                            books: col.books.filter(entry => {
+                                const entryBookId = getBookIdFromEntry(entry);
+                                return !allBooksInSeries.find(b => b.id === entryBookId);
+                            })
                         };
                     }
                     return col;
@@ -1102,16 +1471,6 @@
                 console.log(`📚 Collections data merged:`);
                 console.log(`   - ${booksWithCollections} books have collections`);
                 console.log(`   - ${readBooks} READ, ${unreadBooks} UNREAD, ${mergedBooks.length - readBooks - unreadBooks} UNKNOWN`);
-
-                // Show sample book with collections for verification
-                const sampleBook = mergedBooks.find(b => b.collections.length > 0);
-                if (sampleBook) {
-                    console.log(`\n📖 Sample book with collections:`);
-                    console.log(`   Title: ${sampleBook.title}`);
-                    console.log(`   ASIN: ${sampleBook.asin}`);
-                    console.log(`   Read Status: ${sampleBook.readStatus}`);
-                    console.log(`   Collections: ${sampleBook.collections.map(c => c.name).join(', ')}`);
-                }
 
                 return mergedBooks;
             };
@@ -1361,16 +1720,6 @@
                     console.log(`📚 Collections data merged:`);
                     console.log(`   - ${booksWithCollections} books have collections`);
                     console.log(`   - ${readBooks} READ, ${unreadBooks} UNREAD, ${processedBooks.length - readBooks - unreadBooks} UNKNOWN`);
-
-                    // Show sample book with collections for verification
-                    const sampleBook = processedBooks.find(b => b.collections.length > 0);
-                    if (sampleBook) {
-                        console.log(`\n📖 Sample book with collections:`);
-                        console.log(`   Title: ${sampleBook.title}`);
-                        console.log(`   ASIN: ${sampleBook.asin}`);
-                        console.log(`   Read Status: ${sampleBook.readStatus}`);
-                        console.log(`   Collections: ${sampleBook.collections.map(c => c.name).join(', ')}`);
-                    }
                 }
 
                 // Save to IndexedDB
@@ -1675,11 +2024,19 @@
                     let insertIndex = 0; // Default to top
                     if (selectedBooks.size > 0) {
                         // Find first selected book in this column
-                        const firstSelectedIndex = col.books.findIndex(item =>
-                            typeof item === 'string' && selectedBooks.has(item)
-                        );
-                        if (firstSelectedIndex !== -1) {
-                            insertIndex = firstSelectedIndex;
+                        // v4.16.0.d - Check composite keys with indices for this column
+                        let minIndex = Infinity;
+                        for (const key of selectedBooks) {
+                            const [keyColumnId, bookId, indexStr] = key.split(':');
+                            if (keyColumnId === columnId) {
+                                const index = parseInt(indexStr, 10);
+                                if (index < minIndex) {
+                                    minIndex = index;
+                                }
+                            }
+                        }
+                        if (minIndex !== Infinity) {
+                            insertIndex = minIndex;
                         }
                     }
 
@@ -1921,40 +2278,114 @@
             };
 
             // Multi-select helper functions
-            const toggleBookSelection = (bookId) => {
+            // v4.16.0.c - Selection now uses composite keys "columnId:bookId:index" to support selecting individual instances
+            // v4.16.0.d - Added index to support multiple copies of same book in same column
+            const toggleBookSelection = (bookId, columnId, index) => {
+                const key = `${columnId}:${bookId}:${index}`;
                 setSelectedBooks(prev => {
                     const newSet = new Set(prev);
-                    if (newSet.has(bookId)) {
-                        newSet.delete(bookId);
+                    if (newSet.has(key)) {
+                        newSet.delete(key);
                     } else {
-                        newSet.add(bookId);
+                        newSet.add(key);
                     }
                     return newSet;
                 });
             };
 
-            const selectBookRange = (startBookId, endBookId, columnId) => {
+            const selectBookRange = (startBookId, endBookId, columnId, startIndex, endIndex) => {
                 // Only select within the same column
                 const column = columns.find(col => col.id === columnId);
                 if (!column) return;
 
                 const visibleBooks = filteredBooks(column.books);
-                const startIdx = visibleBooks.findIndex(b => b.id === startBookId);
-                const endIdx = visibleBooks.findIndex(b => b.id === endBookId);
 
-                if (startIdx === -1 || endIdx === -1) return;
+                // Find the filtered positions of start and end books
+                let startFilteredIdx = -1;
+                let endFilteredIdx = -1;
+                // v4.16.0.ai - Use getBookIdFromEntry to handle GUID entries
+                for (let i = 0; i < visibleBooks.length; i++) {
+                    const book = visibleBooks[i];
+                    if (!book || book.type === 'divider') continue;
+                    // Find actual index in column.books
+                    const filteredBooksBeforeThis = visibleBooks.slice(0, i);
+                    const sameBookCountBefore = filteredBooksBeforeThis.filter(b => b && b.id === book.id).length;
+                    let occurrenceCount = 0;
+                    for (let j = 0; j < column.books.length; j++) {
+                        if (getBookIdFromEntry(column.books[j]) === book.id) {
+                            if (occurrenceCount === sameBookCountBefore) {
+                                if (j === startIndex) startFilteredIdx = i;
+                                if (j === endIndex) endFilteredIdx = i;
+                                break;
+                            }
+                            occurrenceCount++;
+                        }
+                    }
+                }
 
-                const [min, max] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)];
+                if (startFilteredIdx === -1 || endFilteredIdx === -1) return;
+
+                const [min, max] = [Math.min(startFilteredIdx, endFilteredIdx), Math.max(startFilteredIdx, endFilteredIdx)];
                 const rangeBooks = visibleBooks.slice(min, max + 1);
-                const rangeIds = rangeBooks.map(book => book.id);
 
-                setSelectedBooks(new Set(rangeIds));
+                // v4.16.0.d - Use composite keys with indices for range selection
+                // v4.16.0.ai - Use getBookIdFromEntry to handle GUID entries
+                const rangeKeys = [];
+                for (let i = 0; i < rangeBooks.length; i++) {
+                    const book = rangeBooks[i];
+                    if (!book || book.type === 'divider') continue;
+                    // Calculate actualIndex for this book
+                    const filteredBooksBeforeThis = visibleBooks.slice(0, min + i);
+                    const sameBookCountBefore = filteredBooksBeforeThis.filter(b => b && b.id === book.id).length;
+                    let occurrenceCount = 0;
+                    for (let j = 0; j < column.books.length; j++) {
+                        if (getBookIdFromEntry(column.books[j]) === book.id) {
+                            if (occurrenceCount === sameBookCountBefore) {
+                                rangeKeys.push(`${columnId}:${book.id}:${j}`);
+                                break;
+                            }
+                            occurrenceCount++;
+                        }
+                    }
+                }
+
+                setSelectedBooks(new Set(rangeKeys));
             };
 
             const clearSelection = () => {
                 setSelectedBooks(new Set());
                 setLastClickedBook(null);
                 setSelectedDivider(null); // v3.13.0 - Clear divider selection too
+            };
+
+            // v4.16.0.c - Helper to get book IDs from composite selection keys
+            const getSelectedBookIds = () => {
+                return Array.from(selectedBooks).map(key => key.split(':')[1]);
+            };
+
+            // v4.16.0.c - Helper to get book objects from composite selection keys
+            const getSelectedBooksList = () => {
+                return getSelectedBookIds().map(id => books.find(b => b.id === id)).filter(Boolean);
+            };
+
+            // v4.16.0.w - Helper to get full entry info from composite selection keys
+            // Returns array of {columnId, index, entry, bookId, instanceId} for each selection
+            const getSelectedEntries = () => {
+                return Array.from(selectedBooks).map(key => {
+                    const [columnId, bookId, indexStr] = key.split(':');
+                    const index = parseInt(indexStr, 10);
+                    const column = columns.find(c => c.id === columnId);
+                    if (!column) return null;
+                    const entry = column.books[index];
+                    if (!entry) return null;
+                    return {
+                        columnId,
+                        index,
+                        entry,
+                        bookId: getBookIdFromEntry(entry),
+                        instanceId: getInstanceId(entry)
+                    };
+                }).filter(Boolean);
             };
 
             // v4.8.0 - Undo/Redo core functions
@@ -1984,30 +2415,80 @@
                         console.log('[UNDO MOVE_BOOKS] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => {
                             console.log('[UNDO MOVE_BOOKS] Processing columns...');
+                            // v4.16.0.aj - Use entries if available, fallback to bookIds for legacy actions
+                            const entriesToRestore = action.entries || action.bookIds;
                             return cols.map(col => {
                                 if (col.id === action.toColId) {
-                                    // Remove books from target column
+                                    // v4.16.0.aj - Remove from target by matching entries or bookIds
                                     const beforeCount = col.books.length;
-                                    const filtered = col.books.filter(id => !action.bookIds.includes(id));
+                                    let filtered;
+                                    if (action.entries) {
+                                        // New format: remove specific entries by instanceId or exact match
+                                        const instanceIdsToRemove = new Set(
+                                            action.entries
+                                                .filter(e => e && typeof e === 'object' && e.instanceId)
+                                                .map(e => e.instanceId)
+                                        );
+                                        const bookIdsToRemove = action.entries
+                                            .filter(e => typeof e === 'string')
+                                            .concat(action.entries.filter(e => e && typeof e === 'object' && !e.instanceId).map(e => e.bookId || e));
+                                        filtered = col.books.filter(entry => {
+                                            if (typeof entry === 'object' && entry.instanceId) {
+                                                return !instanceIdsToRemove.has(entry.instanceId);
+                                            }
+                                            const entryBookId = getBookIdFromEntry(entry);
+                                            return !bookIdsToRemove.includes(entryBookId);
+                                        });
+                                    } else {
+                                        // Legacy format: filter by bookId
+                                        filtered = col.books.filter(entry => {
+                                            const entryBookId = getBookIdFromEntry(entry);
+                                            return !action.bookIds.includes(entryBookId);
+                                        });
+                                    }
                                     console.log(`[UNDO MOVE_BOOKS] Target col "${col.name}": ${beforeCount} -> ${filtered.length} books (removed ${beforeCount - filtered.length})`);
                                     return { ...col, books: filtered };
                                 }
                                 if (col.id === action.fromColId) {
-                                    // Re-insert books at original positions
+                                    // Re-insert entries at original positions
                                     const newBooks = [...col.books];
                                     console.log(`[UNDO MOVE_BOOKS] Source col "${col.name}" before insert: ${newBooks.length} books`);
-                                    console.log(`[UNDO MOVE_BOOKS] Books to insert: ${action.bookIds.length}, at indices: ${action.fromIndices}`);
-                                    // Sort by fromIndices ascending so insertions maintain correct positions
-                                    const sortedPairs = action.bookIds
-                                        .map((bookId, i) => ({ bookId, index: action.fromIndices[i] }))
+                                    console.log(`[UNDO MOVE_BOOKS] Entries to insert: ${entriesToRestore.length}, at indices: ${action.fromIndices}`);
+                                    // v4.16.0.aj - Sort by fromIndices ascending, use actual entries
+                                    const sortedPairs = entriesToRestore
+                                        .map((entry, i) => ({ entry, index: action.fromIndices[i] }))
                                         .sort((a, b) => a.index - b.index);
-                                    console.log('[UNDO MOVE_BOOKS] Sorted pairs:', JSON.stringify(sortedPairs));
-                                    sortedPairs.forEach(({ bookId, index }) => {
-                                        console.log(`[UNDO MOVE_BOOKS] Splicing "${bookId}" at index ${index}, array length: ${newBooks.length}`);
-                                        newBooks.splice(index, 0, bookId);
+                                    console.log('[UNDO MOVE_BOOKS] Sorted pairs count:', sortedPairs.length);
+                                    sortedPairs.forEach(({ entry, index }) => {
+                                        console.log(`[UNDO MOVE_BOOKS] Splicing entry at index ${index}, array length: ${newBooks.length}`);
+                                        newBooks.splice(index, 0, entry);
                                     });
                                     console.log(`[UNDO MOVE_BOOKS] Source col "${col.name}" after insert: ${newBooks.length} books`);
                                     return { ...col, books: newBooks };
+                                }
+                                return col;
+                            });
+                        });
+                        break;
+                    case 'COPY_BOOKS':
+                        // v4.16.0.au - Undo copy: just remove the copied entries from target column
+                        console.log('[UNDO COPY_BOOKS] Action:', JSON.stringify(action, null, 2));
+                        setColumns(cols => {
+                            return cols.map(col => {
+                                if (col.id === action.toColId) {
+                                    const instanceIdsToRemove = new Set(
+                                        action.entries
+                                            .filter(e => e && typeof e === 'object' && e.instanceId)
+                                            .map(e => e.instanceId)
+                                    );
+                                    const filtered = col.books.filter(entry => {
+                                        if (typeof entry === 'object' && entry.instanceId) {
+                                            return !instanceIdsToRemove.has(entry.instanceId);
+                                        }
+                                        return true;
+                                    });
+                                    console.log(`[UNDO COPY_BOOKS] Removed ${col.books.length - filtered.length} copied entries from "${col.name}"`);
+                                    return { ...col, books: filtered };
                                 }
                                 return col;
                             });
@@ -2018,24 +2499,42 @@
                         console.log('[UNDO REORDER_BOOKS] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => {
                             console.log('[UNDO REORDER_BOOKS] Processing columns...');
+                            // v4.16.0.aj - Use entries if available, fallback to bookIds for legacy actions
+                            const entriesToRestore = action.entries || action.bookIds;
                             return cols.map(col => {
                                 if (col.id === action.colId) {
                                     const newBooks = [...col.books];
                                     console.log(`[UNDO REORDER_BOOKS] Col "${col.name}" before: ${newBooks.length} books`);
-                                    // First remove the books from their current positions
-                                    action.bookIds.forEach(bookId => {
-                                        const idx = newBooks.indexOf(bookId);
-                                        if (idx !== -1) newBooks.splice(idx, 1);
-                                    });
+                                    // v4.16.0.aj - Remove entries by instanceId or bookId
+                                    if (action.entries) {
+                                        // New format: find and remove specific entries
+                                        action.entries.forEach(entry => {
+                                            let idx = -1;
+                                            if (typeof entry === 'object' && entry.instanceId) {
+                                                idx = newBooks.findIndex(e => e && typeof e === 'object' && e.instanceId === entry.instanceId);
+                                            } else {
+                                                const bookId = getBookIdFromEntry(entry);
+                                                idx = newBooks.findIndex(e => getBookIdFromEntry(e) === bookId);
+                                            }
+                                            if (idx !== -1) newBooks.splice(idx, 1);
+                                        });
+                                    } else {
+                                        // Legacy format: remove by bookId
+                                        action.bookIds.forEach(bookId => {
+                                            const idx = newBooks.findIndex(e => getBookIdFromEntry(e) === bookId);
+                                            if (idx !== -1) newBooks.splice(idx, 1);
+                                        });
+                                    }
                                     console.log(`[UNDO REORDER_BOOKS] After removal: ${newBooks.length} books`);
                                     // Then insert them back at their original positions (sorted ascending)
-                                    const sortedPairs = action.bookIds
-                                        .map((bookId, i) => ({ bookId, index: action.fromIndices[i] }))
+                                    // v4.16.0.aj - Use actual entries instead of bookIds
+                                    const sortedPairs = entriesToRestore
+                                        .map((entry, i) => ({ entry, index: action.fromIndices[i] }))
                                         .sort((a, b) => a.index - b.index);
-                                    console.log('[UNDO REORDER_BOOKS] Sorted pairs:', JSON.stringify(sortedPairs));
-                                    sortedPairs.forEach(({ bookId, index }) => {
-                                        console.log(`[UNDO REORDER_BOOKS] Splicing "${bookId}" at index ${index}, array length: ${newBooks.length}`);
-                                        newBooks.splice(index, 0, bookId);
+                                    console.log('[UNDO REORDER_BOOKS] Sorted pairs count:', sortedPairs.length);
+                                    sortedPairs.forEach(({ entry, index }) => {
+                                        console.log(`[UNDO REORDER_BOOKS] Splicing entry at index ${index}, array length: ${newBooks.length}`);
+                                        newBooks.splice(index, 0, entry);
                                     });
                                     console.log(`[UNDO REORDER_BOOKS] After insert: ${newBooks.length} books`);
                                     return { ...col, books: newBooks };
@@ -2140,36 +2639,76 @@
             const executeRedo = (action) => {
                 switch (action.type) {
                     case 'MOVE_BOOKS':
-                        // Move books to target column
+                        // v4.16.0.ak - Move books to target column (use entries for GUID support)
                         setColumns(cols => cols.map(col => {
                             if (col.id === action.fromColId) {
+                                // v4.16.0.ak - Remove by instanceId if entries available, else by bookId
+                                if (action.entries) {
+                                    const instanceIdsToRemove = new Set(
+                                        action.entries
+                                            .filter(e => e && typeof e === 'object' && e.instanceId)
+                                            .map(e => e.instanceId)
+                                    );
+                                    const bookIdsToRemove = new Set(
+                                        action.entries
+                                            .filter(e => typeof e === 'string')
+                                            .concat(action.entries.filter(e => e && typeof e === 'object' && !e.instanceId).map(e => e.bookId || e))
+                                    );
+                                    return { ...col, books: col.books.filter((entry, idx) => {
+                                        if (typeof entry === 'object' && entry.instanceId) {
+                                            return !instanceIdsToRemove.has(entry.instanceId);
+                                        }
+                                        // For legacy string entries, check if this index matches fromIndices
+                                        if (typeof entry === 'string' && action.fromIndices) {
+                                            return !action.fromIndices.includes(idx);
+                                        }
+                                        return !bookIdsToRemove.has(entry);
+                                    }) };
+                                }
                                 return { ...col, books: col.books.filter(id => !action.bookIds.includes(id)) };
                             }
                             if (col.id === action.toColId) {
                                 const newBooks = [...col.books];
-                                newBooks.splice(action.toIndex, 0, ...action.bookIds);
+                                // v4.16.0.ak - Insert entries if available, else bookIds
+                                const entriesToInsert = action.entries || action.bookIds;
+                                newBooks.splice(action.toIndex, 0, ...entriesToInsert);
+                                return { ...col, books: newBooks };
+                            }
+                            return col;
+                        }));
+                        break;
+                    case 'COPY_BOOKS':
+                        // v4.16.0.au - Redo copy: re-add the copied entries to target column
+                        setColumns(cols => cols.map(col => {
+                            if (col.id === action.toColId) {
+                                const newBooks = [...col.books];
+                                newBooks.splice(action.toIndex, 0, ...action.entries);
                                 return { ...col, books: newBooks };
                             }
                             return col;
                         }));
                         break;
                     case 'REORDER_BOOKS':
-                        // Re-apply the reorder (move books to target position)
+                        // v4.16.0.ak - Re-apply the reorder (use entries for GUID support)
                         setColumns(cols => cols.map(col => {
                             if (col.id === action.colId) {
                                 const newBooks = [...col.books];
-                                // Remove books from current positions
-                                action.bookIds.forEach(bookId => {
-                                    const idx = newBooks.indexOf(bookId);
-                                    if (idx !== -1) newBooks.splice(idx, 1);
+                                // v4.16.0.ak - Remove by index (fromIndices) for precise targeting
+                                // Sort indices descending to remove from end first
+                                const sortedIndices = [...action.fromIndices].sort((a, b) => b - a);
+                                sortedIndices.forEach(idx => {
+                                    if (idx >= 0 && idx < newBooks.length) {
+                                        newBooks.splice(idx, 1);
+                                    }
                                 });
                                 // Calculate adjusted insert index (same logic as original reorder)
                                 let adjustedIndex = action.toIndex;
                                 action.fromIndices.forEach(origIdx => {
                                     if (origIdx < action.toIndex) adjustedIndex--;
                                 });
-                                // Insert at target position
-                                newBooks.splice(adjustedIndex, 0, ...action.bookIds);
+                                // v4.16.0.ak - Insert entries if available, else bookIds
+                                const entriesToInsert = action.entries || action.bookIds;
+                                newBooks.splice(adjustedIndex, 0, ...entriesToInsert);
                                 return { ...col, books: newBooks };
                             }
                             return col;
@@ -2381,17 +2920,28 @@
                 return columnElements.length;
             };
 
-            const handleMouseDown = (e, book, columnId) => {
-                // Don't start drag if using modifier keys for selection
-                if (e.ctrlKey || e.metaKey || e.shiftKey) {
+            const handleMouseDown = (e, book, columnId, bookIndex) => {
+                // v4.16.0.bc - Block Shift for range selection (handled by onClick)
+                if (e.shiftKey) {
                     return;
                 }
 
+                // v4.16.0.bc - Track Ctrl state for potential copy-drag
+                const isCtrlHeld = e.ctrlKey || e.metaKey;
+                isCopyDragRef.current = isCtrlHeld;
+
+                // v4.16.0.bc - Always preventDefault to enable drag, but don't clear selection for Ctrl
+                // Ctrl+Click multi-select is handled by onClick; Ctrl+Drag copy needs drag to work
                 e.preventDefault();
 
-                // If clicking a book that's not in the selection, clear selection first
-                if (selectedBooks.size > 0 && !selectedBooks.has(book.id)) {
-                    clearSelection();
+                // v4.16.0.bc - Only clear selection for non-Ctrl clicks on unselected books
+                // For Ctrl+Click, onClick will toggle selection; for Ctrl+Drag, we keep current selection
+                if (!isCtrlHeld) {
+                    // If clicking a book that's not in the selection, clear selection first
+                    // v4.16.0.d - Use composite key with index for selection check
+                    if (selectedBooks.size > 0 && !selectedBooks.has(`${columnId}:${book.id}:${bookIndex}`)) {
+                        clearSelection();
+                    }
                 }
 
                 setDragStartPos({ x: e.clientX, y: e.clientY });
@@ -2399,6 +2949,7 @@
                 dragPosRef.current = { x: e.clientX, y: e.clientY };
                 setDraggedBook(book);
                 setDraggedFromColumn(columnId);
+                setDraggedBookIndex(bookIndex); // v4.16.0.d - Remember dragged book's index
                 setIsDragging(false);
                 // v3.14.0.w - Use ref instead of state
                 dropTargetRef.current = null;
@@ -2445,8 +2996,9 @@
                 bookElements.forEach(el => {
                     const rect = el.getBoundingClientRect();
                     const bookId = el.dataset.bookId;
-                    const actualIndex = column.books.indexOf(bookId);
-                    if (actualIndex !== -1) {
+                    // v4.16.0.al - Use data-index attribute for accurate index (supports GUID entries)
+                    const actualIndex = el.dataset.index !== undefined ? parseInt(el.dataset.index, 10) : column.books.indexOf(bookId);
+                    if (actualIndex !== -1 && !isNaN(actualIndex)) {
                         allItems.push({
                             type: 'book',
                             id: bookId,
@@ -2807,6 +3359,38 @@
                     ghost.style.left = (x - 50) + 'px';
                     ghost.style.top = (y - 75) + 'px';
                 }
+                // v4.16.0.au - Update tooltip position (below ghost)
+                // v4.16.0.ax - Measure actual ghost height to position tooltip correctly
+                const tooltip = dragTooltipRef.current;
+                if (tooltip && ghost) {
+                    const ghostHeight = ghost.offsetHeight || 150;  // Fallback to 150 if not measured yet
+                    const tooltipGap = 8;  // Gap between ghost bottom and tooltip
+                    tooltip.style.left = (x - 50) + 'px';
+                    tooltip.style.top = (y - 75 + ghostHeight + tooltipGap) + 'px';
+                }
+            };
+
+            // v4.16.0.au - Update drag tooltip text based on copy mode and target column
+            // v4.16.0.ay - Added isInvalid parameter for invalid drop targets
+            const updateDragTooltip = (isCopy, targetColumnId, isInvalid = false) => {
+                const tooltip = dragTooltipRef.current;
+                if (!tooltip) return;
+
+                if (isInvalid) {
+                    tooltip.textContent = `🚫 Can't drop here`;
+                    tooltip.style.display = 'block';
+                    return;
+                }
+
+                const targetColumn = columns.find(c => c.id === targetColumnId);
+                const columnName = targetColumn ? targetColumn.name : '';  // v4.16.0.aw - Fix: columns use .name not .title
+
+                if (columnName) {
+                    tooltip.textContent = isCopy ? `+ Copy to ${columnName}` : `→ Move to ${columnName}`;
+                    tooltip.style.display = 'block';
+                } else {
+                    tooltip.style.display = 'none';
+                }
             };
 
             const handleMouseMove = (e) => {
@@ -2843,6 +3427,9 @@
                         buildAllColumnIndexes();
                     }
 
+                    // v4.16.0.au - Track Ctrl state during drag for copy mode
+                    isCopyDragRef.current = e.ctrlKey || e.metaKey;
+
                     const target = e.target.closest('[data-column-id]');
                     if (target) {
                         const columnId = target.dataset.columnId;
@@ -2852,6 +3439,9 @@
                         // v3.14.0.w - Update ref instead of state to avoid React re-renders
                         dropTargetRef.current = dropPos;
                         updateIndicatorPosition();
+
+                        // v4.16.0.au - Update drag tooltip with copy/move and target column
+                        updateDragTooltip(isCopyDragRef.current, columnId);
 
                         // v3.14.0.h - Debug logging when drop target changes
                         const prevDropTarget = prevDropTargetRef.current;
@@ -2921,6 +3511,8 @@
                         // v3.14.0.w - Clear ref and hide indicator
                         dropTargetRef.current = null;
                         updateIndicatorPosition();
+                        // v4.16.0.ay - Show invalid drop target tooltip
+                        updateDragTooltip(false, null, true);
                         // Clear auto-scroll if mouse leaves column
                         if (autoScrollInterval) {
                             clearInterval(autoScrollInterval);
@@ -2992,106 +3584,182 @@
                 // v3.13.0 - Handle dividers (can move with their book group if selected)
                 const isDivider = typeof draggedBook === 'object' && draggedBook.type === 'divider';
 
-                // Determine which items to move
-                let itemsToMove;
+                // v4.16.0.ae/af - Determine which items to move using indices (not bookIds)
+                // This fixes bug where dragging one instance of a duplicated book affected all copies
+                // v4.16.0.af - Include columnId to support multi-column selection
+                let itemsToMoveInfo; // Array of {columnId, index, entry, bookId} or divider objects
+                let isDraggingSelection = false;
+
                 if (isDivider) {
                     // v3.13.0 - If divider is selected, move divider + all books in its group
                     if (selectedDivider && selectedDivider.dividerId === draggedBook.id) {
-                        // Build array: [divider, ...bookIds]
-                        itemsToMove = [draggedBook, ...Array.from(selectedBooks)];
+                        // Build array: divider + selected entries
+                        const selectedEntries = getSelectedEntries();
+                        itemsToMoveInfo = [
+                            { isDivider: true, divider: draggedBook, columnId: draggedFromColumn },
+                            ...selectedEntries.map(sel => ({ columnId: sel.columnId, index: sel.index, entry: sel.entry, bookId: sel.bookId }))
+                        ];
+                        isDraggingSelection = true;
                     } else {
                         // Divider not selected: move alone
-                        itemsToMove = [draggedBook];
+                        itemsToMoveInfo = [{ isDivider: true, divider: draggedBook, columnId: draggedFromColumn }];
                     }
                 } else {
                     // Regular book: move selection or just this book
-                    itemsToMove = (selectedBooks.size > 0 && selectedBooks.has(draggedBook.id)
-                        ? Array.from(selectedBooks) // Move all selected books
-                        : [draggedBook.id]); // Move just the dragged book
+                    // v4.16.0.d - Use composite key with index for selection check
+                    const isInSelection = selectedBooks.size > 0 && selectedBooks.has(`${draggedFromColumn}:${draggedBook.id}:${draggedBookIndex}`);
+                    if (isInSelection) {
+                        // Move all selected books - use getSelectedEntries for accurate indices
+                        // v4.16.0.af - Include columnId for multi-column selection support
+                        const selectedEntries = getSelectedEntries();
+                        itemsToMoveInfo = selectedEntries.map(sel => ({ columnId: sel.columnId, index: sel.index, entry: sel.entry, bookId: sel.bookId }));
+                        isDraggingSelection = true;
+                    } else {
+                        // Move just the dragged book - use draggedBookIndex
+                        const sourceCol = columns.find(c => c.id === draggedFromColumn);
+                        itemsToMoveInfo = [{
+                            columnId: draggedFromColumn,
+                            index: draggedBookIndex,
+                            entry: sourceCol.books[draggedBookIndex],
+                            bookId: draggedBook.id
+                        }];
+                    }
                 }
 
                 if (draggedFromColumn === dropTarget.columnId) {
-                    // Same column: reorder
-                    // v4.8.0 - Capture original positions for undo (books only, not dividers)
-                    const currentCol = columns.find(c => c.id === draggedFromColumn);
-                    const bookIdsToMove = itemsToMove.filter(item => typeof item !== 'object' || item.type !== 'divider');
-                    const fromIndicesReorder = bookIdsToMove.map(bookId => currentCol.books.indexOf(bookId));
-                    // v4.8.0 - Capture divider's original index for undo
-                    const dividerFromIndex = isDivider ? currentCol.books.findIndex(b =>
-                        typeof b === 'object' && b.type === 'divider' && b.id === draggedBook.id
-                    ) : -1;
+                    // Same column: reorder or copy
+                    // v4.16.0.ae - Extract indices and entries from itemsToMoveInfo
+                    const bookEntries = itemsToMoveInfo.filter(item => !item.isDivider);
+                    const dividerEntry = itemsToMoveInfo.find(item => item.isDivider);
+                    const fromIndicesReorder = bookEntries.map(item => item.index);
+                    const bookIdsToMove = bookEntries.map(item => item.bookId);
 
-                    setColumns(columns.map(col => {
-                        if (col.id === draggedFromColumn) {
-                            const newBooks = [...col.books];
+                    // v4.16.0.au - Check if this is a copy operation (Ctrl held) - books only, not dividers
+                    const isCopyOperation = isCopyDragRef.current && !isDivider;
 
-                            // v3.13.0 - Filter items to move (handle divider objects and book IDs)
-                            const itemsToMoveFiltered = itemsToMove.filter(item => {
-                                if (typeof item === 'object' && item.type === 'divider') {
-                                    // Divider: check if exists in column
-                                    return newBooks.some(b => typeof b === 'object' && b.type === 'divider' && b.id === item.id);
-                                } else {
-                                    // Book ID: check if exists in column
-                                    return newBooks.includes(item);
-                                }
+                    if (isCopyOperation && bookEntries.length > 0) {
+                        // v4.16.0.au - COPY within same column: Create new GUID entries at drop position
+                        // v4.16.0.be - Capture isHidden for both GUID and legacy entries
+                        const newEntries = bookEntries.map(item => {
+                            const sourceInstanceId = typeof item.entry === 'object' && item.entry.instanceId ? item.entry.instanceId : null;
+                            const book = books.find(b => b.id === item.bookId);
+                            // v4.16.0.be - Determine hidden state: GUID uses hiddenInstances, legacy uses book.isHidden
+                            const sourceIsHidden = sourceInstanceId
+                                ? hiddenInstances.has(sourceInstanceId)
+                                : (book?.isHidden || false);
+                            return {
+                                instanceId: generateInstanceId(),
+                                bookId: item.bookId,
+                                sourceIsHidden
+                            };
+                        });
+
+                        // Copy hidden state for instances that were hidden
+                        // v4.16.0.be - Use sourceIsHidden (supports legacy entries)
+                        const newHiddenInstanceIds = newEntries
+                            .filter(entry => entry.sourceIsHidden)
+                            .map(entry => entry.instanceId);
+
+                        if (newHiddenInstanceIds.length > 0) {
+                            setHiddenInstances(prev => {
+                                const updated = new Set(prev);
+                                newHiddenInstanceIds.forEach(id => updated.add(id));
+                                return updated;
                             });
-
-                            // Remove all items to move
-                            itemsToMoveFiltered.forEach(item => {
-                                if (typeof item === 'object' && item.type === 'divider') {
-                                    const idx = newBooks.findIndex(b => typeof b === 'object' && b.type === 'divider' && b.id === item.id);
-                                    if (idx !== -1) newBooks.splice(idx, 1);
-                                } else {
-                                    const idx = newBooks.indexOf(item);
-                                    if (idx !== -1) newBooks.splice(idx, 1);
-                                }
-                            });
-
-                            // Calculate adjusted insert index
-                            let adjustedIndex = dropTarget.index;
-                            itemsToMoveFiltered.forEach(item => {
-                                let originalIndex;
-                                if (typeof item === 'object' && item.type === 'divider') {
-                                    originalIndex = col.books.findIndex(b => typeof b === 'object' && b.type === 'divider' && b.id === item.id);
-                                } else {
-                                    originalIndex = col.books.indexOf(item);
-                                }
-                                if (originalIndex !== -1 && originalIndex < dropTarget.index) {
-                                    adjustedIndex--;
-                                }
-                            });
-
-                            // Insert all items at the target position
-                            newBooks.splice(adjustedIndex, 0, ...itemsToMoveFiltered);
-
-                            return { ...col, books: newBooks };
                         }
-                        return col;
-                    }));
 
-                    // v4.8.0 - Record REORDER_BOOKS action (only for books, not dividers)
-                    if (bookIdsToMove.length > 0 && !isDivider) {
+                        // Clean entries before storing
+                        const cleanEntries = newEntries.map(({ instanceId, bookId }) => ({ instanceId, bookId }));
+
+                        const currentCol = columns.find(c => c.id === draggedFromColumn);
+                        setColumns(columns.map(col => {
+                            if (col.id === draggedFromColumn) {
+                                const newBooks = [...col.books];
+                                const insertIndex = Math.min(dropTarget.index, newBooks.length);
+                                newBooks.splice(insertIndex, 0, ...cleanEntries);
+                                return { ...col, books: newBooks };
+                            }
+                            return col;
+                        }));
+
+                        // Record COPY_BOOKS action for undo
                         recordAction({
-                            type: 'REORDER_BOOKS',
+                            type: 'COPY_BOOKS',
                             bookIds: [...bookIdsToMove],
-                            colId: draggedFromColumn,
-                            fromIndices: fromIndicesReorder,
+                            entries: [...cleanEntries],
+                            toColId: draggedFromColumn,
                             toIndex: dropTarget.index
                         });
-                    }
-                    // v4.8.0 - Record REORDER_DIVIDER action
-                    if (isDivider && dividerFromIndex !== -1) {
-                        recordAction({
-                            type: 'REORDER_DIVIDER',
-                            dividerId: draggedBook.id,
-                            dividerLabel: draggedBook.label,
-                            colId: draggedFromColumn,
-                            fromIndex: dividerFromIndex,
-                            toIndex: dropTarget.index
-                        });
+
+                        console.log(`📋 Copied ${cleanEntries.length} book(s) within ${currentCol.title}`);
+                    } else {
+                        // v4.8.0 - Capture divider's original index for undo
+                        const currentCol = columns.find(c => c.id === draggedFromColumn);
+                        const dividerFromIndex = isDivider ? currentCol.books.findIndex(b =>
+                            typeof b === 'object' && b.type === 'divider' && b.id === draggedBook.id
+                        ) : -1;
+
+                        setColumns(columns.map(col => {
+                            if (col.id === draggedFromColumn) {
+                                const newBooks = [...col.books];
+
+                                // v4.16.0.ae - Collect indices to remove (divider index + book indices)
+                                const indicesToRemove = new Set(fromIndicesReorder);
+                                if (dividerEntry && dividerFromIndex !== -1) {
+                                    indicesToRemove.add(dividerFromIndex);
+                                }
+
+                                // v4.16.0.ae - Remove entries by index, preserving them for re-insertion
+                                // Sort indices descending so we can splice without affecting other indices
+                                const sortedIndices = Array.from(indicesToRemove).sort((a, b) => b - a);
+                                const removedEntries = [];
+                                sortedIndices.forEach(idx => {
+                                    removedEntries.unshift(newBooks[idx]); // unshift to maintain order
+                                    newBooks.splice(idx, 1);
+                                });
+
+                                // Calculate adjusted insert index
+                                let adjustedIndex = dropTarget.index;
+                                sortedIndices.forEach(idx => {
+                                    if (idx < dropTarget.index) {
+                                        adjustedIndex--;
+                                    }
+                                });
+
+                                // Insert all items at the target position (preserving original format)
+                                newBooks.splice(adjustedIndex, 0, ...removedEntries);
+
+                                return { ...col, books: newBooks };
+                            }
+                            return col;
+                        }));
+
+                        // v4.8.0 - Record REORDER_BOOKS action (only for books, not dividers)
+                        // v4.16.0.aj - Store entries for proper undo with GUID support
+                        if (bookIdsToMove.length > 0 && !isDivider) {
+                            recordAction({
+                                type: 'REORDER_BOOKS',
+                                bookIds: [...bookIdsToMove],
+                                entries: bookEntries.map(item => item.entry), // v4.16.0.aj
+                                colId: draggedFromColumn,
+                                fromIndices: fromIndicesReorder,
+                                toIndex: dropTarget.index
+                            });
+                        }
+                        // v4.8.0 - Record REORDER_DIVIDER action
+                        if (isDivider && dividerFromIndex !== -1) {
+                            recordAction({
+                                type: 'REORDER_DIVIDER',
+                                dividerId: draggedBook.id,
+                                dividerLabel: draggedBook.label,
+                                colId: draggedFromColumn,
+                                fromIndex: dividerFromIndex,
+                                toIndex: dropTarget.index
+                            });
+                        }
                     }
                 } else {
-                    // Cross-column: move items (dividers can only move within same column)
+                    // Cross-column: move or copy items (dividers can only move within same column)
                     if (isDivider) {
                         console.log('Dividers cannot be moved between columns');
                         setDraggedBook(null);
@@ -3102,36 +3770,123 @@
                         return;
                     }
 
-                    // v4.8.0 - Capture original positions for undo
-                    const sourceCol = columns.find(c => c.id === draggedFromColumn);
+                    // v4.16.0.au - Check if this is a copy operation (Ctrl held)
+                    const isCopyOperation = isCopyDragRef.current;
+
+                    // v4.16.0.af - Group items by source column to handle multi-column selection
                     const targetCol = columns.find(c => c.id === dropTarget.columnId);
-                    const fromIndices = itemsToMove.map(bookId => sourceCol.books.indexOf(bookId));
+                    const bookIdsToMove = itemsToMoveInfo.map(item => item.bookId);
                     const actualToIndex = Math.min(dropTarget.index, targetCol.books.length);
 
-                    setColumns(columns.map(col => {
-                        if (col.id === draggedFromColumn) {
-                            // Remove books from source column
-                            return { ...col, books: col.books.filter(id => !itemsToMove.includes(id)) };
-                        }
-                        if (col.id === dropTarget.columnId) {
-                            // Add books to target column
-                            const newBooks = [...col.books];
-                            const insertIndex = Math.min(dropTarget.index, newBooks.length);
-                            newBooks.splice(insertIndex, 0, ...itemsToMove);
-                            return { ...col, books: newBooks };
-                        }
-                        return col;
-                    }));
+                    if (isCopyOperation) {
+                        // v4.16.0.au - COPY: Create new GUID entries, don't remove from source
+                        // v4.16.0.be - Capture isHidden for both GUID and legacy entries
+                        const newEntries = itemsToMoveInfo.map(item => {
+                            const sourceInstanceId = typeof item.entry === 'object' && item.entry.instanceId ? item.entry.instanceId : null;
+                            const book = books.find(b => b.id === item.bookId);
+                            // v4.16.0.be - Determine hidden state: GUID uses hiddenInstances, legacy uses book.isHidden
+                            const sourceIsHidden = sourceInstanceId
+                                ? hiddenInstances.has(sourceInstanceId)
+                                : (book?.isHidden || false);
+                            return {
+                                instanceId: generateInstanceId(),
+                                bookId: item.bookId,
+                                sourceIsHidden
+                            };
+                        });
 
-                    // v4.8.0 - Record action for undo
-                    recordAction({
-                        type: 'MOVE_BOOKS',
-                        bookIds: [...itemsToMove],
-                        fromColId: draggedFromColumn,
-                        toColId: dropTarget.columnId,
-                        fromIndices,
-                        toIndex: actualToIndex
-                    });
+                        // Copy hidden state for instances that were hidden
+                        // v4.16.0.be - Use sourceIsHidden (supports legacy entries)
+                        const newHiddenInstanceIds = newEntries
+                            .filter(entry => entry.sourceIsHidden)
+                            .map(entry => entry.instanceId);
+
+                        if (newHiddenInstanceIds.length > 0) {
+                            setHiddenInstances(prev => {
+                                const updated = new Set(prev);
+                                newHiddenInstanceIds.forEach(id => updated.add(id));
+                                return updated;
+                            });
+                        }
+
+                        // Clean entries before storing (remove sourceInstanceId)
+                        const cleanEntries = newEntries.map(({ instanceId, bookId }) => ({ instanceId, bookId }));
+
+                        setColumns(columns.map(col => {
+                            if (col.id === dropTarget.columnId) {
+                                const newBooks = [...col.books];
+                                const insertIndex = Math.min(dropTarget.index, newBooks.length);
+                                newBooks.splice(insertIndex, 0, ...cleanEntries);
+                                return { ...col, books: newBooks };
+                            }
+                            return col;
+                        }));
+
+                        // Record COPY_BOOKS action for undo
+                        recordAction({
+                            type: 'COPY_BOOKS',
+                            bookIds: [...bookIdsToMove],
+                            entries: [...cleanEntries],
+                            toColId: dropTarget.columnId,
+                            toIndex: actualToIndex
+                        });
+
+                        console.log(`📋 Copied ${cleanEntries.length} book(s) to ${targetCol.title}`);
+                    } else {
+                        // v4.16.0.af - MOVE: Remove from source, add to target
+                        const entriesToMove = itemsToMoveInfo.map(item => item.entry);
+
+                        // Build map of columnId -> Set of indices to remove
+                        const indicesToRemoveByColumn = new Map();
+                        itemsToMoveInfo.forEach(item => {
+                            if (!indicesToRemoveByColumn.has(item.columnId)) {
+                                indicesToRemoveByColumn.set(item.columnId, new Set());
+                            }
+                            indicesToRemoveByColumn.get(item.columnId).add(item.index);
+                        });
+
+                        // For undo, capture fromIndices from the primary drag column
+                        const fromIndices = itemsToMoveInfo
+                            .filter(item => item.columnId === draggedFromColumn)
+                            .map(item => item.index);
+
+                        setColumns(columns.map(col => {
+                            // Check if this column has items to remove
+                            const indicesToRemove = indicesToRemoveByColumn.get(col.id);
+                            if (indicesToRemove && indicesToRemove.size > 0) {
+                                // Remove by index from this source column
+                                const filteredBooks = col.books.filter((_, idx) => !indicesToRemove.has(idx));
+                                // If this is also the target, add entries
+                                if (col.id === dropTarget.columnId) {
+                                    const newBooks = [...filteredBooks];
+                                    const insertIndex = Math.min(dropTarget.index, newBooks.length);
+                                    newBooks.splice(insertIndex, 0, ...entriesToMove);
+                                    return { ...col, books: newBooks };
+                                }
+                                return { ...col, books: filteredBooks };
+                            }
+                            if (col.id === dropTarget.columnId) {
+                                // Add original entries to target column (preserving format)
+                                const newBooks = [...col.books];
+                                const insertIndex = Math.min(dropTarget.index, newBooks.length);
+                                newBooks.splice(insertIndex, 0, ...entriesToMove);
+                                return { ...col, books: newBooks };
+                            }
+                            return col;
+                        }));
+
+                        // v4.8.0 - Record action for undo
+                        // v4.16.0.aj - Store entries for proper undo with GUID support
+                        recordAction({
+                            type: 'MOVE_BOOKS',
+                            bookIds: [...bookIdsToMove],
+                            entries: [...entriesToMove],
+                            fromColId: draggedFromColumn,
+                            toColId: dropTarget.columnId,
+                            fromIndices,
+                            toIndex: actualToIndex
+                        });
+                    }
                 }
 
                 new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/book-dragged';
@@ -3173,8 +3928,15 @@
                     if (typeof item === 'object' && item.type === 'divider') {
                         return item;
                     }
-                    // Regular book ID - look up book object
-                    return books.find(b => b.id === item);
+                    // v4.16.0.s - Handle both legacy string and new {instanceId, bookId} format
+                    const bookId = getBookIdFromEntry(item);
+                    const instanceId = getInstanceId(item);
+                    const book = books.find(b => b.id === bookId);
+                    // Attach instanceId to book for per-instance hidden check
+                    if (book && instanceId) {
+                        return { ...book, _instanceId: instanceId };
+                    }
+                    return book;
                 }).filter(book => {
                     // v3.11.0 - Dividers always pass through filters (will be post-processed below)
                     if (typeof book === 'object' && book.type === 'divider') return true;
@@ -3212,8 +3974,19 @@
                     const matchesOwnership = !ownershipFilter ||
                         (book.ownershipType || 'purchased') === ownershipFilter;
 
-                    // Hidden filter (NEW v4.1.0.d) - hide hidden books unless showHidden is checked
-                    const matchesHidden = showHidden || !book.isHidden;
+                    // Hidden filter (v4.1.0.d, v4.16.0.s - per-instance hidden support)
+                    // New format: check hiddenInstances Set by instanceId
+                    // Legacy format: check book.isHidden flag
+                    let matchesHidden = true;
+                    if (!showHidden) {
+                        if (book._instanceId) {
+                            // New format - check per-instance hidden
+                            matchesHidden = !hiddenInstances.has(book._instanceId);
+                        } else {
+                            // Legacy format - check book-level hidden
+                            matchesHidden = !book.isHidden;
+                        }
+                    }
 
                     // Series filter (NEW v3.8.0.k)
                     let matchesSeries = true;
@@ -3331,9 +4104,34 @@
             };
 
             return (
-                <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 text-gray-900" 
-                     onMouseMove={handleMouseMove} 
+                <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 text-gray-900"
+                     onMouseMove={handleMouseMove}
                      onMouseUp={handleMouseUp}>
+                    {/* v4.16.0.l - CSS for toast animation */}
+                    {/* v4.16.0.m - 1.0s ease-in animation for gravity-like falling */}
+                    {/* v4.16.0.p - Gray bg with dark text (was light blue) */}
+                    <style>{`
+                        .clipboard-toast {
+                            position: fixed;
+                            background: #f3f4f6;
+                            color: #374151;
+                            padding: 12px 24px;
+                            border-radius: 8px;
+                            font-size: 14px;
+                            font-weight: 500;
+                            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+                            z-index: 9999;
+                            transition: all 1.0s ease-in;
+                        }
+
+                        .clipboard-toast.animating {
+                            background: transparent;
+                            color: #6b7280;
+                            box-shadow: none;
+                            font-size: 12px;
+                            padding: 0;
+                        }
+                    `}</style>
                     <div className="bg-white border-b border-gray-300 p-4 shadow-sm">
                         <div className="flex justify-between items-start mb-4">
                             <div className="flex items-start gap-3">
@@ -3352,19 +4150,20 @@
                             <div className="flex gap-2 items-center">
                                 {renderStatusIndicator()}
                                 <span className="text-gray-300 mx-1">|</span>
+                                {/* v4.16.0.q - Subtle button styling (Option 3) */}
                                 <button onClick={importLibrary}
-                                        className="px-3 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-medium"
+                                        className="px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg text-sm font-medium"
                                         title="Import library file - merges with existing books, preserving your organization. Also restores from backup files.">
                                     📥 Import
                                 </button>
                                 <button onClick={exportLibrary}
-                                        className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium"
+                                        className="px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg text-sm font-medium"
                                         disabled={books.length === 0}
                                         title="Save backup with your organization">
                                     💾 Export
                                 </button>
                                 <button onClick={clearLibrary}
-                                        className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium"
+                                        className="px-3 py-2 bg-white hover:bg-gray-50 text-red-700 border border-gray-300 rounded-lg text-sm font-medium"
                                         title="Click for details about what will be reset">
                                     🗑️ Reset App
                                 </button>
@@ -3412,7 +4211,22 @@
                             </button>
 
                             {/* Book count - only when panel closed (v4.15.5.b) */}
-                            {books.length > 0 && !filterPanelOpen && <span className="text-base text-gray-500 py-2">({books.length} books)</span>}
+                            {/* v4.16.0.bi - Include copy count in collapsed view */}
+                            {books.length > 0 && !filterPanelOpen && (
+                                <span className="text-base text-gray-500 py-2">
+                                    {(() => {
+                                        const allEntries = columns.flatMap(col =>
+                                            col.books.filter(item => !(item && item.type === 'divider'))
+                                        );
+                                        const allBookIds = new Set(allEntries.map(entry => getBookIdFromEntry(entry)));
+                                        const totalCopyCount = allEntries.length - allBookIds.size;
+                                        const copyText = totalCopyCount > 0
+                                            ? ` (+${totalCopyCount} ${totalCopyCount === 1 ? 'copy' : 'copies'})`
+                                            : '';
+                                        return `${books.length}${copyText} books`;
+                                    })()}
+                                </span>
+                            )}
 
                             {/* FILTER TABLE - v4.15.5.j - HTML table with tuned column widths */}
                             {filterPanelOpen && (
@@ -3615,11 +4429,38 @@
                                         )}
 
                                         {/* ROW 3: Showing count, Show Hidden, and Custom date pickers (v4.15.6.c) */}
+                                        {/* v4.16.0.bf - Show unique books + copies count */}
                                         <tr className="align-middle">
                                             {/* Showing - 50px left padding to align with boxes above */}
                                             <td className="pr-2 py-1" style={{paddingLeft: '50px'}}>
                                                 <span className="text-sm text-gray-600">
-                                                    Showing: {columns.reduce((sum, col) => sum + filteredBooks(col.books).filter(item => !(item && item.type === 'divider')).length, 0)} of {books.length} books
+                                                    {(() => {
+                                                        // v4.16.0.bf - Calculate unique books and copies for filtered and total
+                                                        // v4.16.0.bg - Fix: filteredBooks() returns enriched book objects with .id, not raw entries
+                                                        const filteredResults = columns.flatMap(col =>
+                                                            filteredBooks(col.books).filter(item => !(item && item.type === 'divider'))
+                                                        );
+                                                        // Use book.id for filtered results (enriched book objects)
+                                                        const filteredBookIds = new Set(filteredResults.map(book => book.id));
+                                                        const filteredUniqueCount = filteredBookIds.size;
+                                                        const filteredCopyCount = filteredResults.length - filteredUniqueCount;
+
+                                                        // Use getBookIdFromEntry for raw column entries
+                                                        const allEntries = columns.flatMap(col =>
+                                                            col.books.filter(item => !(item && item.type === 'divider'))
+                                                        );
+                                                        const allBookIds = new Set(allEntries.map(entry => getBookIdFromEntry(entry)));
+                                                        const totalCopyCount = allEntries.length - allBookIds.size;
+
+                                                        const filteredCopyText = filteredCopyCount > 0
+                                                            ? ` (+${filteredCopyCount} ${filteredCopyCount === 1 ? 'copy' : 'copies'})`
+                                                            : '';
+                                                        const totalCopyText = totalCopyCount > 0
+                                                            ? ` (+${totalCopyCount} ${totalCopyCount === 1 ? 'copy' : 'copies'})`
+                                                            : '';
+
+                                                        return `Showing: ${filteredUniqueCount}${filteredCopyText} of ${books.length}${totalCopyText} books`;
+                                                    })()}
                                                 </span>
                                             </td>
                                             <td className="px-2 py-1">
@@ -4004,7 +4845,7 @@
                                         className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">
                                         Cancel
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={confirmDeleteColumn}
                                         className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">
                                         Delete Column
@@ -4013,6 +4854,118 @@
                             </div>
                         </div>
                     )}
+
+                    {/* v4.16.0.aq - Last copy warning dialog */}
+                    {/* v4.16.0.ar - Handle already-hidden entries separately */}
+                    {lastCopyDialogData && (() => {
+                        // Partition entries into already-hidden vs can-hide
+                        const alreadyHidden = lastCopyDialogData.lastCopyEntries.filter(sel => {
+                            if (sel.instanceId) {
+                                return hiddenInstances.has(sel.instanceId);
+                            } else {
+                                const book = books.find(b => b.id === sel.bookId);
+                                return book?.isHidden;
+                            }
+                        });
+                        const canHide = lastCopyDialogData.lastCopyEntries.filter(sel => {
+                            if (sel.instanceId) {
+                                return !hiddenInstances.has(sel.instanceId);
+                            } else {
+                                const book = books.find(b => b.id === sel.bookId);
+                                return !book?.isHidden;
+                            }
+                        });
+                        const totalLastCopy = lastCopyDialogData.lastCopyEntries.length;
+
+                        return (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                                <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md" onClick={(e) => e.stopPropagation()}>
+                                    <h2 className="text-xl font-bold text-gray-900 mb-4">Cannot Delete</h2>
+                                    <p className="text-sm text-gray-700 mb-4">
+                                        {totalLastCopy === 1 ? (
+                                            <>
+                                                <strong>"{books.find(b => b.id === lastCopyDialogData.lastCopyEntries[0].bookId)?.title || 'This book'}"</strong> is the only copy in your library and cannot be deleted.
+                                            </>
+                                        ) : (
+                                            <>
+                                                <strong>{totalLastCopy} books</strong> are the only copies in your library and cannot be deleted.
+                                            </>
+                                        )}
+                                    </p>
+                                    {lastCopyDialogData.deletedCount > 0 && (
+                                        <p className="text-sm text-gray-500 mb-4">
+                                            ({lastCopyDialogData.deletedCount} other book{lastCopyDialogData.deletedCount !== 1 ? 's were' : ' was'} deleted.)
+                                        </p>
+                                    )}
+                                    {/* v4.16.0.ar - Adaptive messaging based on hidden state */}
+                                    {/* v4.16.0.as - Improved wording with "These X books" */}
+                                    {alreadyHidden.length === totalLastCopy ? (
+                                        // All are already hidden
+                                        <p className="text-sm text-gray-700 mb-4">
+                                            {totalLastCopy === 1 ? 'This book is' : `These ${totalLastCopy} books are`} already hidden.
+                                        </p>
+                                    ) : alreadyHidden.length > 0 ? (
+                                        // Mixed: some hidden, some not
+                                        <p className="text-sm text-gray-700 mb-4">
+                                            {alreadyHidden.length === 1 ? '1 is' : `These ${alreadyHidden.length} are`} already hidden. Would you like to hide the other {canHide.length}?
+                                        </p>
+                                    ) : (
+                                        // None hidden
+                                        <p className="text-sm text-gray-700 mb-4">
+                                            Would you like to hide {totalLastCopy === 1 ? 'it' : 'them'} instead?
+                                        </p>
+                                    )}
+                                    <div className="flex gap-2 justify-end">
+                                        <button
+                                            onClick={() => {
+                                                setLastCopyDialogData(null);
+                                                clearSelection();
+                                            }}
+                                            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">
+                                            {alreadyHidden.length === totalLastCopy ? 'OK' : 'Cancel'}
+                                        </button>
+                                        {canHide.length > 0 && (
+                                            <button
+                                                onClick={() => {
+                                                    // Hide only the canHide entries
+                                                    const guidEntries = canHide.filter(sel => sel.instanceId);
+                                                    const legacyEntries = canHide.filter(sel => !sel.instanceId);
+
+                                                    // Handle GUID entries: add to hiddenInstances
+                                                    if (guidEntries.length > 0) {
+                                                        setHiddenInstances(prev => {
+                                                            const next = new Set(prev);
+                                                            guidEntries.forEach(sel => next.add(sel.instanceId));
+                                                            return next;
+                                                        });
+                                                    }
+
+                                                    // Handle legacy entries: update book.isHidden
+                                                    if (legacyEntries.length > 0) {
+                                                        const legacyBookIds = legacyEntries.map(sel => sel.bookId);
+                                                        const updatedBooks = books.map(book => {
+                                                            if (legacyBookIds.includes(book.id)) {
+                                                                return { ...book, isHidden: true };
+                                                            }
+                                                            return book;
+                                                        });
+                                                        setBooks(updatedBooks);
+                                                        saveBooksToIndexedDB(updatedBooks);
+                                                    }
+
+                                                    console.log(`👁️ Hid ${canHide.length} last-copy book(s)`);
+                                                    setLastCopyDialogData(null);
+                                                    clearSelection();
+                                                }}
+                                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                                                Hide{canHide.length > 1 ? ` ${canHide.length}` : ''}
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {collectSeriesOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onClick={() => setCollectSeriesOpen(false)}>
@@ -4311,7 +5264,17 @@
                                 clearSelection();
                             }
                         }}>
-                            {columns.filter(column => {
+                            {/* v4.16.0.e - Compute filtered books once per column for performance */}
+                            {columns.map(column => ({
+                                column,
+                                filteredBooks: filteredBooks(column.books)
+                            })).filter(({ column, filteredBooks: colFilteredBooks }) => {
+                                // v4.16.0.am - Show truly empty columns (never had books) even with filters
+                                const bookEntries = column.books.filter(item => !(item && item.type === 'divider'));
+                                if (bookEntries.length === 0) return true;
+                                // v4.16.0.an - Hide columns with only hidden books when Show Hidden is off
+                                const hasVisibleBooks = colFilteredBooks.some(item => !(item && item.type === 'divider'));
+                                if (!showHidden && !hasVisibleBooks) return false;
                                 // v4.15.3 - Hide empty columns when filters are active
                                 if (!hasActiveFilters) return true;
                                 // v4.15.4.a - Show column if its name matches search term
@@ -4321,9 +5284,9 @@
                                     item && item.type === 'divider' && item.label &&
                                     item.label.toLowerCase().includes(searchTerm.toLowerCase())
                                 )) return true;
-                                // Otherwise, show column if it has visible books
-                                return filteredBooks(column.books).some(item => !(item && item.type === 'divider'));
-                            }).map((column, colIndex) => (
+                                // Otherwise, show column if it has visible books (hide if filtered-empty)
+                                return colFilteredBooks.some(item => !(item && item.type === 'divider'));
+                            }).map(({ column, filteredBooks: colFilteredBooks }, colIndex) => (
                                 <div key={column.id}
                                      data-column-id={column.id}
                                      onClick={() => setActiveColumnId(column.id)}
@@ -4368,7 +5331,8 @@
                                                     <span className="pencil-icon text-gray-400 text-sm">✏️</span>
                                                 </div>
                                             )}
-                                            <span className="text-sm text-gray-500">({filteredBooks(column.books).filter(item => !(item && item.type === 'divider')).length})</span>
+                                            {/* v4.16.0.e - Use pre-computed colFilteredBooks for performance */}
+                                            <span className="text-sm text-gray-500">({colFilteredBooks.filter(item => !(item && item.type === 'divider')).length})</span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                             <div className="relative" ref={columnMenuOpen === column.id ? columnMenuRef : null}>
@@ -4459,7 +5423,9 @@
                                             }
                                         }}>
                                             {/* v3.14.0.v - Old start-of-column indicator removed; overlay handles it */}
-                                            {filteredBooks(column.books).map((item) => {
+                                            {/* v4.16.0.d - Added filteredIndex for instance-based selection */}
+                                            {/* v4.16.0.e - Use pre-computed colFilteredBooks for performance */}
+                                            {colFilteredBooks.map((item, filteredIndex) => {
                                                 // v3.11.0 - Handle dividers
                                                 if (typeof item === 'object' && item.type === 'divider') {
                                                     const isHovering = hoveringDivider && hoveringDivider.columnId === column.id && hoveringDivider.dividerId === item.id;
@@ -4534,12 +5500,40 @@
 
                                                 // Regular book rendering
                                                 const book = item;
-                                                // v3.14.0.v - actualIndex removed; overlay handles indicators now
+                                                // v4.16.0.d - Find actual index in column.books for instance-based selection
+                                                // v4.16.0.e - Use pre-computed colFilteredBooks for performance
+                                                // Need to find which occurrence this is (in case of duplicates in same column)
+                                                const filteredBooksBeforeThis = colFilteredBooks.slice(0, filteredIndex);
+                                                const sameBookCountBefore = filteredBooksBeforeThis.filter(b => b && b.id === book.id).length;
+                                                // Find the Nth occurrence of this bookId in column.books
+                                                // v4.16.0.y - Use getBookIdFromEntry to handle both legacy strings and GUID objects
+                                                let occurrenceCount = 0;
+                                                let actualIndex = -1;
+                                                for (let i = 0; i < column.books.length; i++) {
+                                                    if (getBookIdFromEntry(column.books[i]) === book.id) {
+                                                        if (occurrenceCount === sameBookCountBefore) {
+                                                            actualIndex = i;
+                                                            break;
+                                                        }
+                                                        occurrenceCount++;
+                                                    }
+                                                }
+
+                                                // v4.16.0.x - Per-instance hidden check
+                                                // GUID entries: check hiddenInstances Set using _instanceId from filteredBooks
+                                                // Legacy entries: check book.isHidden
+                                                const isInstanceHidden = book._instanceId
+                                                    ? hiddenInstances.has(book._instanceId)
+                                                    : book.isHidden;
 
                                                 return (
-                                                    <div key={book.id} className="relative book-item" data-book-id={book.id}>
-                                                        <div className={`book-clickable ${selectedBooks.has(book.id) ? 'selected' : ''} ${draggedBook?.id === book.id && isDragging ? 'dragging' : ''} ${book.isWishlist || book.isHidden ? 'opacity-40' : ''}`}
-                                                             onMouseDown={(e) => handleMouseDown(e, book, column.id)}
+                                                    <div key={`${book.id}-${actualIndex}`} className="relative book-item" data-book-id={book.id} data-index={actualIndex}>
+                                                        {/* v4.16.0.d - Use composite key with index for selection check */}
+                                                        {/* v4.16.0.f - Check clipboard sourcePositions for instance-specific visual */}
+                                                        {/* v4.16.0.x - Use isInstanceHidden for per-instance opacity */}
+                                                        {/* v4.16.0.ag - Dragging visual now instance-specific using column+index */}
+                                                        <div className={`book-clickable ${selectedBooks.has(`${column.id}:${book.id}:${actualIndex}`) ? 'selected' : ''} ${draggedBook?.id === book.id && isDragging && draggedFromColumn === column.id && draggedBookIndex === actualIndex ? 'dragging' : ''} ${book.isWishlist || isInstanceHidden ? 'opacity-40' : ''} ${clipboard?.sourcePositions?.some(pos => pos.columnId === column.id && pos.index === actualIndex && pos.bookId === book.id) ? (clipboard.type === 'cut' ? 'cut-pending' : 'copy-pending') : ''}`}
+                                                             onMouseDown={(e) => handleMouseDown(e, book, column.id, actualIndex)}
                                                              onClick={(e) => {
                                                                  e.stopPropagation();
 
@@ -4548,26 +5542,34 @@
                                                                  // Always set active column when clicking a book
                                                                  setActiveColumnId(column.id);
 
+                                                                 // v4.16.0.m - Capture book position for toast placement
+                                                                 const rect = e.currentTarget.getBoundingClientRect();
+                                                                 setToastPosition({
+                                                                     x: rect.left + rect.width / 2,
+                                                                     y: rect.top
+                                                                 });
+
                                                                  if (e.ctrlKey || e.metaKey) {
                                                                      // Ctrl+Click: Toggle selection
-                                                                     toggleBookSelection(book.id);
-                                                                     setLastClickedBook({ id: book.id, columnId: column.id });
+                                                                     // v4.16.0.d - Pass actualIndex for instance-based selection
+                                                                     toggleBookSelection(book.id, column.id, actualIndex);
+                                                                     setLastClickedBook({ id: book.id, columnId: column.id, index: actualIndex });
                                                                  } else if (e.shiftKey) {
                                                                      // Shift+Click: Range selection
                                                                      if (lastClickedBook && lastClickedBook.columnId === column.id) {
                                                                          // Range from last clicked book to this book (same column)
-                                                                         selectBookRange(lastClickedBook.id, book.id, column.id);
+                                                                         selectBookRange(lastClickedBook.id, book.id, column.id, lastClickedBook.index, actualIndex);
                                                                      } else {
                                                                          // No anchor point or different column: treat as single click
                                                                          clearSelection();
-                                                                         toggleBookSelection(book.id);
-                                                                         setLastClickedBook({ id: book.id, columnId: column.id });
+                                                                         toggleBookSelection(book.id, column.id, actualIndex);
+                                                                         setLastClickedBook({ id: book.id, columnId: column.id, index: actualIndex });
                                                                      }
                                                                  } else {
                                                                      // Single click: Select this book (replace selection)
                                                                      clearSelection();
-                                                                     toggleBookSelection(book.id);
-                                                                     setLastClickedBook({ id: book.id, columnId: column.id });
+                                                                     toggleBookSelection(book.id, column.id, actualIndex);
+                                                                     setLastClickedBook({ id: book.id, columnId: column.id, index: actualIndex });
                                                                  }
                                                              }}
                                                              onDoubleClick={(e) => {
@@ -4578,9 +5580,10 @@
                                                              onContextMenu={(e) => {
                                                                  e.preventDefault();
                                                                  // Right-click: If book not in selection, select it first
-                                                                 if (!selectedBooks.has(book.id)) {
+                                                                 // v4.16.0.d - Use composite key with index for selection check
+                                                                 if (!selectedBooks.has(`${column.id}:${book.id}:${actualIndex}`)) {
                                                                      clearSelection();
-                                                                     toggleBookSelection(book.id);
+                                                                     toggleBookSelection(book.id, column.id, actualIndex);
                                                                  }
                                                                  // Show context menu
                                                                  setContextMenu({
@@ -4646,7 +5649,8 @@
                                                                     ) : null;
                                                                 })()}
                                                                 {/* Top-left: Selection or Collections badge */}
-                                                                {selectedBooks.has(book.id) ? (
+                                                                {/* v4.16.0.d - Use composite key with index for selection check */}
+                                                                {selectedBooks.has(`${column.id}:${book.id}:${actualIndex}`) ? (
                                                                     <div className="absolute top-1 left-1 bg-blue-700 rounded-full w-6 h-6 flex items-center justify-center z-10">
                                                                         <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                                                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
@@ -4657,8 +5661,8 @@
                                                                         📁 {book.collections.length}
                                                                     </div>
                                                                 )}
-                                                                {/* Hidden book overlay (v4.1.0.d, v4.1.0.e larger) - full cover red 🚫 */}
-                                                                {book.isHidden && showHidden && (
+                                                                {/* Hidden book overlay (v4.1.0.d, v4.1.0.e larger, v4.16.0.x per-instance) */}
+                                                                {isInstanceHidden && showHidden && (
                                                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                                         <span style={{ fontSize: '90px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>🚫</span>
                                                                     </div>
@@ -4688,22 +5692,14 @@
                         </div>
                     </div>
 
-                    {selectedBooks.size > 0 && (
-                        <div className="fixed bottom-20 right-4 bg-blue-700 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 z-50">
-                            <span className="font-medium">{selectedBooks.size} book{selectedBooks.size !== 1 ? 's' : ''} selected</span>
-                            <button
-                                onClick={clearSelection}
-                                className="hover:bg-blue-800 px-3 py-1 rounded bg-blue-500 transition-colors">
-                                Clear
-                            </button>
-                        </div>
-                    )}
+                    {/* v4.16.0.n - Removed floating selection box, now shown in footer */}
 
+                    {/* v4.16.0.az - Context menu with submenus for Move to / Copy to */}
                     {contextMenu && (() => {
                         // v4.1.0.e - Calculate menu position to avoid going off-screen
-                        // Estimate menu height: header(28) + columns(40 each) + separator(9) + 3 items(40 each) + separator(9) + hide(40) + padding(8) ≈ 300px max
-                        const menuHeight = 300;
-                        const menuWidth = 200;
+                        const menuHeight = 400; // Increased for new items
+                        const menuWidth = 220;
+                        const submenuWidth = 200;
                         const viewportHeight = window.innerHeight;
                         const viewportWidth = window.innerWidth;
 
@@ -4716,62 +5712,341 @@
                             ? Math.max(10, contextMenu.x - menuWidth)
                             : contextMenu.x;
 
+                        // v4.16.0.az - Determine submenu position (left or right of main menu)
+                        const submenuOnLeft = left + menuWidth + submenuWidth > viewportWidth;
+
+                        // Get other columns for submenus
+                        const otherColumns = columns.filter(col => col.id !== contextMenu.columnId);
+
+                        // v4.16.0.az - Helper to handle move operation
+                        const handleMoveToColumn = (targetColId) => {
+                            const selectedEntries = getSelectedEntries();
+                            const toIndex = 0;
+                            const entriesToMove = selectedEntries.map(sel => sel.entry);
+                            const fromIndices = selectedEntries.map(sel => sel.index);
+                            const booksToMove = selectedEntries.map(sel => sel.bookId);
+                            const indicesToRemove = new Set(fromIndices);
+
+                            setColumns(columns.map(column => {
+                                if (column.id === contextMenu.columnId) {
+                                    return { ...column, books: column.books.filter((item, idx) => !indicesToRemove.has(idx)) };
+                                }
+                                if (column.id === targetColId) {
+                                    return { ...column, books: [...entriesToMove, ...column.books] };
+                                }
+                                return column;
+                            }));
+                            recordAction({
+                                type: 'MOVE_BOOKS',
+                                bookIds: booksToMove,
+                                entries: entriesToMove,
+                                fromColId: contextMenu.columnId,
+                                toColId: targetColId,
+                                fromIndices: fromIndices,
+                                toIndex: toIndex
+                            });
+                            clearSelection();
+                            setContextMenu(null);
+                            setContextSubmenu(null);
+                        };
+
+                        // v4.16.0.az - Helper to handle copy operation
+                        // v4.16.0.be - Capture isHidden for both GUID and legacy entries
+                        const handleCopyToColumn = (targetColId) => {
+                            const selectedEntries = getSelectedEntries();
+                            const toIndex = 0;
+
+                            // Create new GUID-based entries for copied books
+                            // v4.16.0.be - Capture hidden state at copy time
+                            const newEntries = selectedEntries.map(sel => {
+                                const book = books.find(b => b.id === sel.bookId);
+                                // v4.16.0.be - Determine hidden state: GUID uses hiddenInstances, legacy uses book.isHidden
+                                const sourceIsHidden = sel.instanceId
+                                    ? hiddenInstances.has(sel.instanceId)
+                                    : (book?.isHidden || false);
+                                return {
+                                    instanceId: generateInstanceId(),
+                                    bookId: sel.bookId,
+                                    sourceIsHidden
+                                };
+                            });
+
+                            // Copy hidden state for instances that were hidden
+                            // v4.16.0.be - Use sourceIsHidden (supports legacy entries)
+                            const newHiddenInstanceIds = newEntries
+                                .filter(entry => entry.sourceIsHidden)
+                                .map(entry => entry.instanceId);
+
+                            if (newHiddenInstanceIds.length > 0) {
+                                setHiddenInstances(prev => {
+                                    const updated = new Set(prev);
+                                    newHiddenInstanceIds.forEach(id => updated.add(id));
+                                    return updated;
+                                });
+                            }
+
+                            // Clean entries before storing
+                            const cleanEntries = newEntries.map(({ instanceId, bookId }) => ({ instanceId, bookId }));
+
+                            setColumns(columns.map(column => {
+                                if (column.id === targetColId) {
+                                    return { ...column, books: [...cleanEntries, ...column.books] };
+                                }
+                                return column;
+                            }));
+                            recordAction({
+                                type: 'COPY_BOOKS',
+                                bookIds: selectedEntries.map(sel => sel.bookId),
+                                entries: cleanEntries,
+                                toColId: targetColId,
+                                toIndex: toIndex
+                            });
+                            clearSelection();
+                            setContextMenu(null);
+                            setContextSubmenu(null);
+                        };
+
+                        // v4.16.0.az - Helper for Cut operation (same as Ctrl+X)
+                        const handleCut = () => {
+                            const sourcePositions = [];
+                            const bookIds = [];
+                            for (const key of selectedBooks) {
+                                const [columnId, bookId, indexStr] = key.split(':');
+                                const index = parseInt(indexStr, 10);
+                                sourcePositions.push({ columnId, index, bookId });
+                                bookIds.push(bookId);
+                            }
+                            setClipboard({ type: 'cut', bookIds, sourcePositions });
+                            const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} cut`;
+                            setClipboardMessage(message);
+                            setFooterClipboardVisible(false);
+                            setToastVisible(true);
+                            setToastAnimating(false);
+                            setTimeout(() => {
+                                setToastAnimating(true);
+                                setTimeout(() => {
+                                    setToastVisible(false);
+                                    setToastAnimating(false);
+                                    setFooterClipboardVisible(true);
+                                }, 1000);
+                            }, 1500);
+                            setContextMenu(null);
+                            setContextSubmenu(null);
+                        };
+
+                        // v4.16.0.az - Helper for Copy operation (same as Ctrl+C)
+                        // v4.16.0.be - Also capture isHidden for legacy entries
+                        const handleCopy = () => {
+                            const sourcePositions = [];
+                            const bookIds = [];
+                            for (const key of selectedBooks) {
+                                const [columnId, bookId, indexStr] = key.split(':');
+                                const index = parseInt(indexStr, 10);
+                                const column = columns.find(c => c.id === columnId);
+                                const entry = column?.books[index];
+                                const instanceId = entry ? getInstanceId(entry) : null;
+                                // v4.16.0.be - Determine hidden state: GUID uses hiddenInstances, legacy uses book.isHidden
+                                const book = books.find(b => b.id === bookId);
+                                const isHidden = instanceId
+                                    ? hiddenInstances.has(instanceId)
+                                    : (book?.isHidden || false);
+                                sourcePositions.push({ columnId, index, bookId, instanceId, isHidden });
+                                bookIds.push(bookId);
+                            }
+                            setClipboard({ type: 'copy', bookIds, sourcePositions });
+                            const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} copied`;
+                            setClipboardMessage(message);
+                            setFooterClipboardVisible(false);
+                            setToastVisible(true);
+                            setToastAnimating(false);
+                            setTimeout(() => {
+                                setToastAnimating(true);
+                                setTimeout(() => {
+                                    setToastVisible(false);
+                                    setToastAnimating(false);
+                                    setFooterClipboardVisible(true);
+                                }, 1000);
+                            }, 1500);
+                            setContextMenu(null);
+                            setContextSubmenu(null);
+                        };
+
+                        // v4.16.0.az - Helper for Paste operation (same as Ctrl+V)
+                        const handlePaste = () => {
+                            if (!clipboard || clipboard.bookIds.length === 0) return;
+
+                            const targetColumnId = contextMenu.columnId;
+                            const targetColumn = columns.find(col => col.id === targetColumnId);
+                            if (!targetColumn) return;
+
+                            const selectedInTarget = getSelectedEntries().filter(sel => sel.columnId === targetColumnId);
+                            const pasteIndex = selectedInTarget.length > 0
+                                ? Math.min(...selectedInTarget.map(sel => sel.index))
+                                : 0;
+
+                            if (clipboard.type === 'cut') {
+                                setColumns(prevColumns => {
+                                    const entriesToMove = [];
+                                    clipboard.sourcePositions.forEach(pos => {
+                                        const sourceCol = prevColumns.find(c => c.id === pos.columnId);
+                                        if (sourceCol && sourceCol.books[pos.index]) {
+                                            entriesToMove.push(sourceCol.books[pos.index]);
+                                        }
+                                    });
+
+                                    const indicesToRemoveFromTarget = clipboard.sourcePositions
+                                        .filter(pos => pos.columnId === targetColumnId && pos.index < pasteIndex)
+                                        .length;
+                                    const adjustedPasteIndex = pasteIndex - indicesToRemoveFromTarget;
+
+                                    const newColumns = prevColumns.map(col => {
+                                        const indicesToRemove = new Set();
+                                        clipboard.sourcePositions.forEach(pos => {
+                                            if (pos.columnId === col.id) {
+                                                indicesToRemove.add(pos.index);
+                                            }
+                                        });
+                                        return {
+                                            ...col,
+                                            books: col.books.filter((item, idx) => {
+                                                if (typeof item === 'object' && item.type === 'divider') return true;
+                                                return !indicesToRemove.has(idx);
+                                            })
+                                        };
+                                    });
+                                    const targetIdx = newColumns.findIndex(col => col.id === targetColumnId);
+                                    if (targetIdx !== -1) {
+                                        const newBooks = [...newColumns[targetIdx].books];
+                                        newBooks.splice(adjustedPasteIndex, 0, ...entriesToMove);
+                                        newColumns[targetIdx] = { ...newColumns[targetIdx], books: newBooks };
+                                    }
+                                    return newColumns;
+                                });
+                                setClipboard(null);
+                                setClipboardMessage(null);
+                                setToastVisible(false);
+                                setToastAnimating(false);
+                                setFooterClipboardVisible(false);
+                                clearSelection();
+                            } else {
+                                // Copy: create new entries
+                                // v4.16.0.be - Use isHidden captured at copy time (supports legacy entries)
+                                const newEntries = clipboard.sourcePositions.map(pos => ({
+                                    instanceId: generateInstanceId(),
+                                    bookId: pos.bookId,
+                                    sourceIsHidden: pos.isHidden // v4.16.0.be - Use captured hidden state
+                                }));
+
+                                // v4.16.0.be - Use sourceIsHidden (captured at copy time) instead of checking hiddenInstances
+                                const newHiddenInstanceIds = newEntries
+                                    .filter(entry => entry.sourceIsHidden)
+                                    .map(entry => entry.instanceId);
+
+                                if (newHiddenInstanceIds.length > 0) {
+                                    setHiddenInstances(prev => {
+                                        const updated = new Set(prev);
+                                        newHiddenInstanceIds.forEach(id => updated.add(id));
+                                        return updated;
+                                    });
+                                }
+
+                                const cleanEntries = newEntries.map(({ instanceId, bookId }) => ({ instanceId, bookId }));
+
+                                setColumns(prevColumns => {
+                                    return prevColumns.map(col => {
+                                        if (col.id === targetColumnId) {
+                                            const newBooks = [...col.books];
+                                            newBooks.splice(pasteIndex, 0, ...cleanEntries);
+                                            return { ...col, books: newBooks };
+                                        }
+                                        return col;
+                                    });
+                                });
+                                recordAction({
+                                    type: 'COPY_BOOKS',
+                                    bookIds: clipboard.bookIds,
+                                    entries: cleanEntries,
+                                    toColId: targetColumnId,
+                                    toIndex: pasteIndex
+                                });
+                            }
+                            setContextMenu(null);
+                            setContextSubmenu(null);
+                        };
+
                         return (
-                        <div className="fixed bg-white border border-gray-300 rounded-lg shadow-xl z-[60] py-1 min-w-[180px]"
+                        <div className="fixed bg-white border border-gray-300 rounded-lg shadow-xl z-[60] py-1 min-w-[200px]"
                              style={{
                                  left: `${left}px`,
                                  top: `${top}px`
                              }}
                              onClick={(e) => e.stopPropagation()}>
-                            <div className="px-2 py-1 text-xs font-semibold text-gray-500 border-b border-gray-200">
+                            {/* Header */}
+                            <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 border-b border-gray-200">
                                 {selectedBooks.size} book{selectedBooks.size !== 1 ? 's' : ''} selected
                             </div>
-                            {columns.filter(col => col.id !== contextMenu.columnId).map(col => (
-                                <button
-                                    key={col.id}
-                                    className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
-                                    onClick={() => {
-                                        // Move selected books to this column
-                                        const booksToMove = Array.from(selectedBooks);
-                                        // v4.8.0 - Capture original positions for undo
-                                        const sourceCol = columns.find(c => c.id === contextMenu.columnId);
-                                        const fromIndices = booksToMove.map(bookId => sourceCol.books.indexOf(bookId));
-                                        const targetCol = columns.find(c => c.id === col.id);
-                                        const toIndex = targetCol.books.length; // Adding at end
 
-                                        setColumns(columns.map(column => {
-                                            if (column.id === contextMenu.columnId) {
-                                                // Remove from source column
-                                                return { ...column, books: column.books.filter(id => !booksToMove.includes(id)) };
-                                            }
-                                            if (column.id === col.id) {
-                                                // Add to target column at the end
-                                                return { ...column, books: [...column.books, ...booksToMove] };
-                                            }
-                                            return column;
-                                        }));
-                                        // v4.8.0 - Record action for undo
-                                        recordAction({
-                                            type: 'MOVE_BOOKS',
-                                            bookIds: booksToMove,
-                                            fromColId: contextMenu.columnId,
-                                            toColId: col.id,
-                                            fromIndices: fromIndices,
-                                            toIndex: toIndex
-                                        });
-                                        clearSelection();
-                                        setContextMenu(null);
-                                    }}>
-                                    📁 Move to "{col.name}"
+                            {/* Move to submenu trigger */}
+                            <div className="relative"
+                                 onMouseEnter={() => setContextSubmenu('move')}
+                                 onMouseLeave={() => setContextSubmenu(null)}>
+                                <button className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center justify-between">
+                                    <span className="flex items-center gap-2">📁 Move to</span>
+                                    <span className="text-gray-400">▶</span>
                                 </button>
-                            ))}
-                            {/* Separator (v4.1.0.d) */}
+                                {/* Move to submenu */}
+                                {contextSubmenu === 'move' && otherColumns.length > 0 && (
+                                    <div className="absolute bg-white border border-gray-300 rounded-lg shadow-xl py-1 min-w-[180px] max-h-[300px] overflow-y-auto"
+                                         style={{
+                                             top: 0,
+                                             [submenuOnLeft ? 'right' : 'left']: '100%'
+                                         }}>
+                                        {otherColumns.map(col => (
+                                            <button
+                                                key={col.id}
+                                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 truncate"
+                                                onClick={() => handleMoveToColumn(col.id)}>
+                                                {col.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Copy to submenu trigger */}
+                            <div className="relative"
+                                 onMouseEnter={() => setContextSubmenu('copyTo')}
+                                 onMouseLeave={() => setContextSubmenu(null)}>
+                                <button className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center justify-between">
+                                    <span className="flex items-center gap-2">⧉ Copy to</span>
+                                    <span className="text-gray-400">▶</span>
+                                </button>
+                                {/* Copy to submenu */}
+                                {contextSubmenu === 'copyTo' && otherColumns.length > 0 && (
+                                    <div className="absolute bg-white border border-gray-300 rounded-lg shadow-xl py-1 min-w-[180px] max-h-[300px] overflow-y-auto"
+                                         style={{
+                                             top: 0,
+                                             [submenuOnLeft ? 'right' : 'left']: '100%'
+                                         }}>
+                                        {otherColumns.map(col => (
+                                            <button
+                                                key={col.id}
+                                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 truncate"
+                                                onClick={() => handleCopyToColumn(col.id)}>
+                                                {col.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="border-t border-gray-200 my-1"></div>
-                            {/* Open in Amazon (v4.1.0.d) */}
+
+                            {/* Open in Amazon */}
                             <button
                                 className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
                                 onClick={() => {
-                                    const selectedBooksList = Array.from(selectedBooks).map(id => books.find(b => b.id === id)).filter(Boolean);
+                                    const selectedBooksList = getSelectedBooksList();
                                     const count = selectedBooksList.length;
                                     if (count > 10) {
                                         alert('Too many books selected. Please select 10 or fewer to open in Amazon.');
@@ -4787,58 +6062,193 @@
                                         });
                                     }
                                     setContextMenu(null);
+                                    setContextSubmenu(null);
                                 }}>
                                 🔗 Open in Amazon
                             </button>
-                            {/* Copy Title(s) (v4.1.0.d) */}
+
+                            {/* Copy Title(s) */}
                             <button
                                 className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
                                 onClick={() => {
-                                    const selectedBooksList = Array.from(selectedBooks).map(id => books.find(b => b.id === id)).filter(Boolean);
+                                    const selectedBooksList = getSelectedBooksList();
                                     const titles = selectedBooksList.map(book => book.title).join('\n');
                                     navigator.clipboard.writeText(titles);
                                     setContextMenu(null);
+                                    setContextSubmenu(null);
                                 }}>
-                                📋 Copy Title{selectedBooks.size !== 1 ? 's' : ''}
+                                📝 Copy Title{selectedBooks.size !== 1 ? 's' : ''}
                             </button>
-                            {/* Separator (v4.1.0.d) */}
+
                             <div className="border-t border-gray-200 my-1"></div>
-                            {/* Hide/Unhide Book(s) (v4.1.0.d) */}
+
+                            {/* v4.16.0.az - Cut/Copy/Paste with keyboard shortcuts */}
+                            <button
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center justify-between"
+                                onClick={handleCut}>
+                                <span className="flex items-center gap-2">✂️ Cut</span>
+                                <span className="text-xs text-gray-400">Ctrl+X</span>
+                            </button>
+                            <button
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center justify-between"
+                                onClick={handleCopy}>
+                                <span className="flex items-center gap-2">📑 Copy</span>
+                                <span className="text-xs text-gray-400">Ctrl+C</span>
+                            </button>
+                            <button
+                                className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between ${clipboard && clipboard.bookIds.length > 0 ? 'hover:bg-blue-50 text-gray-700' : 'text-gray-300 cursor-not-allowed'}`}
+                                onClick={handlePaste}
+                                disabled={!clipboard || clipboard.bookIds.length === 0}>
+                                <span className="flex items-center gap-2">📋 Paste</span>
+                                <span className="text-xs text-gray-400">Ctrl+V</span>
+                            </button>
+
+                            <div className="border-t border-gray-200 my-1"></div>
+
+                            {/* Hide/Unhide Book(s) */}
                             {(() => {
-                                const selectedBooksList = Array.from(selectedBooks).map(id => books.find(b => b.id === id)).filter(Boolean);
-                                const allHidden = selectedBooksList.every(book => book.isHidden);
+                                const selectedEntries = getSelectedEntries();
+                                const allHidden = selectedEntries.every(sel => {
+                                    if (sel.instanceId) {
+                                        return hiddenInstances.has(sel.instanceId);
+                                    } else {
+                                        const book = books.find(b => b.id === sel.bookId);
+                                        return book?.isHidden;
+                                    }
+                                });
+
                                 return (
                                     <button
                                         className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
                                         onClick={async () => {
                                             const newHiddenState = !allHidden;
-                                            // v4.8.0 - Capture previous states for undo
-                                            const previousStates = {};
-                                            selectedBooksList.forEach(book => {
-                                                previousStates[book.id] = book.isHidden || false;
-                                            });
-                                            const updatedBooks = books.map(book => {
-                                                if (selectedBooks.has(book.id)) {
-                                                    return { ...book, isHidden: newHiddenState };
-                                                }
-                                                return book;
-                                            });
-                                            setBooks(updatedBooks);
-                                            await saveBooksToIndexedDB(updatedBooks);
-                                            // v4.8.0 - Record action for undo
-                                            recordAction({
-                                                type: 'TOGGLE_HIDE',
-                                                bookIds: Array.from(selectedBooks),
-                                                previousStates: previousStates,
-                                                newState: newHiddenState
-                                            });
+                                            const guidEntries = selectedEntries.filter(sel => sel.instanceId);
+                                            const legacyEntries = selectedEntries.filter(sel => !sel.instanceId);
+
+                                            if (guidEntries.length > 0) {
+                                                setHiddenInstances(prev => {
+                                                    const next = new Set(prev);
+                                                    guidEntries.forEach(sel => {
+                                                        if (newHiddenState) {
+                                                            next.add(sel.instanceId);
+                                                        } else {
+                                                            next.delete(sel.instanceId);
+                                                        }
+                                                    });
+                                                    return next;
+                                                });
+                                            }
+
+                                            if (legacyEntries.length > 0) {
+                                                const legacyBookIds = legacyEntries.map(sel => sel.bookId);
+                                                const updatedBooks = books.map(book => {
+                                                    if (legacyBookIds.includes(book.id)) {
+                                                        return { ...book, isHidden: newHiddenState };
+                                                    }
+                                                    return book;
+                                                });
+                                                setBooks(updatedBooks);
+                                                await saveBooksToIndexedDB(updatedBooks);
+                                            }
+
+                                            if (legacyEntries.length > 0) {
+                                                const previousStates = {};
+                                                legacyEntries.forEach(sel => {
+                                                    const book = books.find(b => b.id === sel.bookId);
+                                                    previousStates[sel.bookId] = book?.isHidden || false;
+                                                });
+                                                recordAction({
+                                                    type: 'TOGGLE_HIDE',
+                                                    bookIds: legacyEntries.map(sel => sel.bookId),
+                                                    previousStates: previousStates,
+                                                    newState: newHiddenState
+                                                });
+                                            }
+
                                             clearSelection();
                                             setContextMenu(null);
+                                            setContextSubmenu(null);
                                         }}>
                                         {allHidden ? '👁️' : '🚫'} {allHidden ? 'Unhide' : 'Hide'} Book{selectedBooks.size !== 1 ? 's' : ''}
                                     </button>
                                 );
                             })()}
+
+                            <div className="border-t border-gray-200 my-1"></div>
+
+                            {/* Delete */}
+                            <button
+                                className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-red-600 flex items-center gap-2"
+                                onClick={() => {
+                                    const selectedEntries = getSelectedEntries();
+                                    if (selectedEntries.length === 0) {
+                                        setContextMenu(null);
+                                        setContextSubmenu(null);
+                                        return;
+                                    }
+
+                                    const bookIdCounts = {};
+                                    columns.forEach(col => {
+                                        col.books.forEach(entry => {
+                                            const bookId = getBookIdFromEntry(entry);
+                                            if (bookId) {
+                                                bookIdCounts[bookId] = (bookIdCounts[bookId] || 0) + 1;
+                                            }
+                                        });
+                                    });
+
+                                    // v4.16.0.bd - Count how many of each bookId are selected for deletion
+                                    const selectedCounts = {};
+                                    selectedEntries.forEach(sel => {
+                                        selectedCounts[sel.bookId] = (selectedCounts[sel.bookId] || 0) + 1;
+                                    });
+
+                                    // v4.16.0.bd - "last copy" = deleting would leave zero copies in library
+                                    const lastCopyEntries = [];
+                                    const deletableEntries = [];
+                                    selectedEntries.forEach(sel => {
+                                        const remainingAfterDelete = bookIdCounts[sel.bookId] - selectedCounts[sel.bookId];
+                                        if (remainingAfterDelete === 0) {
+                                            lastCopyEntries.push(sel);
+                                        } else {
+                                            deletableEntries.push(sel);
+                                        }
+                                    });
+
+                                    if (deletableEntries.length > 0) {
+                                        const indicesToRemoveByColumn = {};
+                                        deletableEntries.forEach(sel => {
+                                            if (!indicesToRemoveByColumn[sel.columnId]) {
+                                                indicesToRemoveByColumn[sel.columnId] = new Set();
+                                            }
+                                            indicesToRemoveByColumn[sel.columnId].add(sel.index);
+                                        });
+
+                                        setColumns(prevColumns => {
+                                            return prevColumns.map(col => {
+                                                const indicesToRemove = indicesToRemoveByColumn[col.id];
+                                                if (!indicesToRemove) return col;
+                                                return {
+                                                    ...col,
+                                                    books: col.books.filter((_, idx) => !indicesToRemove.has(idx))
+                                                };
+                                            });
+                                        });
+                                        clearSelection();
+                                    }
+
+                                    if (lastCopyEntries.length > 0) {
+                                        setLastCopyDialogData({
+                                            lastCopyEntries,
+                                            deletedCount: deletableEntries.length
+                                        });
+                                    }
+
+                                    setContextMenu(null);
+                                    setContextSubmenu(null);
+                                }}>
+                                🗑️ Delete Book{selectedBooks.size !== 1 ? 's' : ''}
+                            </button>
                         </div>
                         );
                     })()}
@@ -4853,7 +6263,8 @@
                                  width: '100px'
                              }}>
                             {/* Show stacked effect if dragging multiple books */}
-                            {selectedBooks.size > 1 && selectedBooks.has(draggedBook.id) && (
+                            {/* v4.16.0.d - Use composite key with index for selection check */}
+                            {selectedBooks.size > 1 && selectedBooks.has(`${draggedFromColumn}:${draggedBook.id}:${draggedBookIndex}`) && (
                                 <>
                                     <div className="absolute" style={{ left: '8px', top: '8px', opacity: 0.4 }}>
                                         <div className="w-full aspect-[2/3] rounded drag-ghost-border bg-blue-100" style={{ width: '100px' }}></div>
@@ -4880,13 +6291,35 @@
                                          className="w-full rounded drag-ghost-border" />
                                 )}
                                 {/* Count badge for multiple books */}
-                                {selectedBooks.size > 1 && selectedBooks.has(draggedBook.id) && (
+                                {/* v4.16.0.d - Use composite key with index for selection check */}
+                                {selectedBooks.size > 1 && selectedBooks.has(`${draggedFromColumn}:${draggedBook.id}:${draggedBookIndex}`) && (
                                     <div className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold border-2 border-white">
                                         {selectedBooks.size}
                                     </div>
                                 )}
                             </div>
                         </div>
+                    )}
+
+                    {/* v4.16.0.au - Drag tooltip showing "Move to X" or "+ Copy to X" */}
+                    {isDragging && draggedBook && (
+                        <div
+                            ref={dragTooltipRef}
+                            style={{
+                                position: 'fixed',
+                                left: dragPosRef.current.x - 50,
+                                top: dragPosRef.current.y + 80,
+                                display: 'none',
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                color: 'white',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                whiteSpace: 'nowrap',
+                                pointerEvents: 'none',
+                                zIndex: 10001
+                            }}
+                        />
                     )}
 
                     {/* v3.14.0.w - Overlay drop indicator using ref for direct DOM updates */}
@@ -4921,9 +6354,72 @@
                         }} />
                     </div>
 
+                    {/* v4.16.0.l - Toast notification that animates to footer */}
+                    {/* v4.16.0.m - Position above last clicked book, ease-in animation */}
+                    {toastVisible && (
+                        <div className={`clipboard-toast ${toastAnimating ? 'animating' : ''}`}
+                             style={toastAnimating ? {
+                                 left: '16px',
+                                 top: 'calc(100vh - 22px)',
+                                 transform: 'none'
+                             } : {
+                                 left: `${toastPosition.x}px`,
+                                 top: `${toastPosition.y - 40}px`,
+                                 transform: 'translateX(-50%)'
+                             }}>
+                            {clipboardMessage}
+                        </div>
+                    )}
+
                     {/* Affiliate Disclosure Footer (v4.4.0) */}
-                    <div className="fixed bottom-0 left-0 right-0 bg-gray-100 border-t border-gray-200 py-1 px-4 text-center text-xs text-gray-500 z-40">
-                        As an Amazon Associate, I earn from qualifying purchases. | <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700" title="Report issues or request features">Feedback</a> | <a href="security.html" className="hover:text-gray-700" title="Security & Privacy information">Security</a> | Build v{ORGANIZER_VERSION}
+                    {/* v4.16.0.j - Restructured to include clipboard message on left */}
+                    <div className="fixed bottom-0 left-0 right-0 bg-gray-100 border-t border-gray-200 py-1 px-4 text-xs text-gray-500 z-40 flex items-center justify-between">
+                        {/* Left: Clipboard and Selection status (v4.16.0.n - clipboard first for toast target) */}
+                        <div className="text-left flex items-center gap-3">
+                            {/* Clipboard (always leftmost for toast animation target) */}
+                            {/* v4.16.0.o - Only show when footerClipboardVisible (after toast lands) */}
+                            {clipboardMessage && footerClipboardVisible && (
+                                <span className="flex items-center gap-1">
+                                    {clipboardMessage}
+                                    <button
+                                        onClick={() => {
+                                            setClipboard(null);
+                                            setClipboardMessage(null);
+                                            setToastVisible(false);
+                                            setToastAnimating(false);
+                                            setFooterClipboardVisible(false);
+                                        }}
+                                        className="ml-1 text-gray-400 hover:text-gray-600"
+                                        title="Clear clipboard (or press Escape)"
+                                        style={{ fontSize: '14px', lineHeight: '1' }}
+                                    >✕</button>
+                                </span>
+                            )}
+                            {/* Separator when both present */}
+                            {clipboardMessage && footerClipboardVisible && selectedBooks.size > 0 && <span className="text-gray-400">•</span>}
+                            {/* Selection count */}
+                            {selectedBooks.size > 0 && (
+                                <span className="flex items-center gap-1">
+                                    {selectedBooks.size} book{selectedBooks.size !== 1 ? 's' : ''} selected
+                                    <button
+                                        onClick={() => clearSelection()}
+                                        className="ml-1 text-gray-400 hover:text-gray-600"
+                                        title="Clear selection (or press Escape)"
+                                        style={{ fontSize: '14px', lineHeight: '1' }}
+                                    >✕</button>
+                                </span>
+                            )}
+                            {/* Non-breaking space when both empty to maintain layout */}
+                            {!clipboardMessage && selectedBooks.size === 0 && '\u00A0'}
+                        </div>
+                        {/* Center: Affiliate disclosure */}
+                        <div className="text-center flex-1">
+                            As an Amazon Associate, I earn from qualifying purchases. | <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700" title="Report issues or request features">Feedback</a> | <a href="security.html" className="hover:text-gray-700" title="Security & Privacy information">Security</a>
+                        </div>
+                        {/* Right: Build version */}
+                        <div className="text-right">
+                            Build v{ORGANIZER_VERSION}
+                        </div>
                     </div>
                 </div>
             );

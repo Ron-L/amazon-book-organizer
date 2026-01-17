@@ -8,19 +8,22 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**0-E. ✂️ Cut/Copy/Paste for books (Ctrl+X/C/V)** - LOW/MEDIUM (4-5 hours)
-   - Ctrl+X cuts (moves), Ctrl+C copies (creates additional placement)
-   - Click target position, Ctrl+V pastes; Escape clears clipboard
-   - Visual feedback: Cut items 50% opacity + dashed border; Copy items normal opacity + dashed border
-   - Status bar: "2 books cut - click destination and Ctrl+V to paste"
-   - Copy enables anthologies/crossovers to appear in multiple series columns
-   - Book count shows unique books, not total placements
-   - Works with multi-select (Ctrl+click)
-   - Problem: Long-distance drag is awkward; anthologies need multiple placements
-   - Impact: Flexible organization, Filter→Cut→Unfilter→Paste workflow
-   - Related: Supersedes P3-T1 Book Copy Feature
+**0-H Cleanup**
+   - Remove PRODUCTHUNT-LAUNCH-CHECKLIST.md
+   - Follow recommendations in TERMINOLOGY-CLEANUP-ACTION-PLAN.md
+   - Review readerwrangler-amazon-terms-strategy.md
 
-**1. 📝 Book Notes** - LOW/LOW (2-3 hours)
+**0-G. Social media icons use old logo**
+
+**0-F. Confirm**
+   - Can extract price
+   - can extract book category (SF, etc)
+   - see Price and Tags.txt.  Also contains "More like this"
+
+**1. Column Arranger - Split Pane UI**
+   - see docs/design/COLUMN-ARRANGER.md
+
+**2. 📝 Book Notes** - LOW/LOW (2-3 hours)
    - Personal notes on individual books ("Why did I buy this?", "Who recommended it?")
    - See [docs/design/BOOK-NOTES.md](docs/design/BOOK-NOTES.md) for full spec
    - Sticky note styling in detail modal (matches landing page brand element)
@@ -29,7 +32,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Book descriptions don't always capture why you bought or want to read a book
    - Impact: Personal context preserved with each book
 
-**2. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
+**3. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
    - Tags for books (explicit) and divs (positional inheritance)
    - See [docs/design/TAGS.md](docs/design/TAGS.md) for full spec
    - Books inherit div tags while under that div; lost when moved out
@@ -38,7 +41,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Can't find thematically related books (Time Travel, Military SF) across 100+ columns
    - Impact: Cross-library thematic organization, reduced scrolling through empty columns
 
-**3. 🎠 Column Carousel** - MEDIUM/MEDIUM (8-12 hours)
+**4. 🎠 Column Carousel** - MEDIUM/MEDIUM (8-12 hours)
    - Infinite horizontal carousel for columns (excludes pinned columns)
    - See [docs/design/COLUMN-CAROUSEL.md](docs/design/COLUMN-CAROUSEL.md) for full spec
    - Click-to-pin columns to left side; pinned columns exit carousel
@@ -47,8 +50,9 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Mobile: swipe to spin, carousel locks during book drag
    - Problem: 7+ columns becomes unwieldy with linear horizontal scroll
    - Impact: Scalable navigation for large column counts (20+)
+   - filtering would apply to carousel
 
-**4. 📚 Series Page Bulk Import** - MEDIUM/MEDIUM (6-10 hours)
+**5. 📚 Series Page Bulk Import** - MEDIUM/MEDIUM (6-10 hours)
    - See [docs/design/SERIES-PAGE-BULK-IMPORT.md](docs/design/SERIES-PAGE-BULK-IMPORT.md) for full spec
    - Bulk import all books from an Amazon series page as wishlist entries
    - Destroyer series Reference URL: https://www.amazon.com/dp/B0D775V4W9?binding=kindle_edition
@@ -60,7 +64,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Adding 100+ books from a series requires visiting each product page individually
    - Impact: One-click bulk wishlist population for entire series
 
-**5. 💰 Wishlist Price Tracking** - MEDIUM/MEDIUM (6-10 hours)
+**6. 💰 Wishlist Price Tracking** - MEDIUM/MEDIUM (6-10 hours)
    - Fetch current prices for wishlist books from Amazon product pages
    - Target price field in wishlist book data
    - Filter in APP: show wishlist books with current price ≤ target price
@@ -71,6 +75,8 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Jumping between ReaderWrangler and eReaderIQ for price tracking
    - Impact: Streamlined wishlist-to-purchase workflow
 
+**7. Launch**
+   - COMMUNITY-SHARING-PLAN.md
 ---
 
 ### ✨ Priority 2: High Priority Features
@@ -150,12 +156,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 📚 Priority 3: Nice-to-Have Features
 
-**1. Book Copy Feature** #Optional - SUPERSEDED by P1-0-E
-   - ~~Allow same book to appear in multiple columns~~
-   - See P1-0-E Cut/Copy/Paste which includes Copy functionality
-   - Original spec: [docs/design/BOOK-COPY.md](docs/design/BOOK-COPY.md)
-
-**2. 📖 Enhanced Series Management** - MEDIUM/MEDIUM (6-10 hours)
+**1. 📖 Enhanced Series Management** - MEDIUM/MEDIUM (6-10 hours)
    - Expand current "Group Series Books" button
    - Automatic series detection
    - Series reading order visualization
@@ -163,19 +164,19 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Series books scattered across library
    - Impact: Better management for series readers
 
-**3. 🏷️ Color-Coding/Tagging System** - MEDIUM/MEDIUM (8-10 hours)
+**2. 🏷️ Color-Coding/Tagging System** - MEDIUM/MEDIUM (8-10 hours)
    - Visual distinction beyond columns
    - Tag-based organization
    - Problem: Columns alone may not capture all organizational needs
    - Impact: More flexible organization
 
-**4. 🤖 Smart Collections (Rule-Based)** #Optional - LOW/HIGH (12-16 hours)
+**3. 🤖 Smart Collections (Rule-Based)** #Optional - LOW/HIGH (12-16 hours)
    - "All unread books rated 4.5+"
    - Requires complex rule engine
    - Problem: Manual organization is tedious
    - Impact: Automation for power users
 
-**5. 🎯 Wishlist Integration - Series Gap Detection** #Optional - MEDIUM/VERY HIGH (20-30 hours)
+**4. 🎯 Wishlist Integration - Series Gap Detection** #Optional - MEDIUM/VERY HIGH (20-30 hours)
    - Automatic series detection for owned books (requires series metadata)
    - Identify missing books in series (e.g., own books 1, 2, 4 but not 3)
    - Fetch metadata for missing books via Amazon API or series page scraping
@@ -198,7 +199,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
      - Wishlist auto-population workflow
      - Series column UI for gap visualization
 
-**6. ✨ UX Quick Wins** - MEDIUM/LOW (1-3 hours each)
+**5. ✨ UX Quick Wins** - MEDIUM/LOW (1-3 hours each)
    - Tooltips for control buttons (Backup, Restore, Reset, Clear)
    - First-run Welcome dialog explaining what ReaderWrangler is
    - **Keyboard shortcuts help** - "?" icon or Ctrl+? to show shortcuts dialog (Undo/Redo, multi-select, etc.)

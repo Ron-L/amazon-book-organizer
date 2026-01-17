@@ -21,6 +21,9 @@ Before producing/updating videos, review this list of changes since the plan was
 - [ ] **Undo/Redo** (v4.8.0) - Ctrl+Z to undo, Ctrl+Y to redo
 - [ ] **Ownership Badges** (v4.9.0) - Visual badges on book covers (Sample, Borrowed, Prime/KU/KOLL/Comixology)
 - [ ] **Ownership Filter** (v4.9.0) - Filter by ownership type in filter panel
+- [ ] **Cut/Copy/Paste** (v4.16.0) - Ctrl+X/C/V for books, Ctrl+Drag to copy, book copies in multiple columns
+- [ ] **Delete key** (v4.16.0) - DEL removes selected books with last-copy protection
+- [ ] **Enhanced context menu** (v4.16.0) - Move to/Copy to submenus, Cut/Copy/Paste with shortcuts
 
 ### Quick Start Script Updates Needed
 When re-recording, add mentions of:

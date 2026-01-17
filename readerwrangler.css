@@ -155,6 +155,24 @@ body { margin: 0; padding: 0; overflow: hidden; }
     outline-color: #1d4ed8;
     transform: scale(1.05);
 }
+/* v4.16.0.a - Cut/Copy visual feedback (higher specificity to override selected/hover) */
+.book-clickable.cut-pending,
+.book-clickable.cut-pending.selected,
+.book-clickable.cut-pending:hover,
+.book-clickable.cut-pending.selected:hover {
+    opacity: 0.5;
+    outline: 2px dashed #f97316 !important;
+    outline-offset: 2px;
+    box-shadow: none;
+}
+.book-clickable.copy-pending,
+.book-clickable.copy-pending.selected,
+.book-clickable.copy-pending:hover,
+.book-clickable.copy-pending.selected:hover {
+    outline: 2px dashed #3b82f6 !important;
+    outline-offset: 2px;
+    box-shadow: none;
+}
 .status-indicator {
     cursor: pointer;
     padding: 4px 8px;
