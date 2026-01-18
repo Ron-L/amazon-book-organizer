@@ -23,7 +23,7 @@ Complete guide to getting the most out of ReaderWrangler.
 
 **What the video covers**:
 - Installing the bookmarklet
-- Extracting your library and collections data
+- Importing your library and collections data
 - Creating your first custom columns
 - Organizing books with drag-and-drop
 - Using multi-select for bulk operations
@@ -102,7 +102,7 @@ Your library organization is stored locally in your browser, but you can easily 
 - **Backup** saves your complete organization (columns, book positions, custom groups) to a JSON file
 - Your cloud storage service syncs this file across your devices automatically
 - **Restore** loads the organization from the synced file on your other device
-- The library data itself (books, covers, ratings) is already in the JSON files from your initial extraction
+- The library data itself (books, covers, ratings) is already in the JSON files from your initial import
 
 ### Mobile Sync Tips
 
@@ -239,7 +239,7 @@ This is a known Android browser limitation, not a ReaderWrangler issue. The work
 ### Collection Integration
 
 **Using Collections Data**:
-- Books fetched with the Collections Fetcher include reading status (READ/UNREAD)
+- Books imported with the Collections import include reading status (READ/UNREAD)
 - Use the built-in filter to show only READ or UNREAD books
 - Create columns like "Finished" and "In Progress" based on reading status
 
@@ -253,7 +253,7 @@ This is a known Android browser limitation, not a ReaderWrangler issue. The work
 
 **Problem: Books not appearing after loading library**
 - **Solution**: Check browser console for errors (F12)
-- Ensure JSON file is from latest fetcher version
+- Ensure JSON file is from latest version
 - Try clearing browser cache and reloading
 
 **Problem: Organization not persisting between sessions**
@@ -295,27 +295,27 @@ This is a known Android browser limitation, not a ReaderWrangler issue. The work
 ### General Questions
 
 **Q: Is my data private?**
-A: Yes! ReaderWrangler processes everything in your browser. Your library data and organization never leave your computer. No servers, no uploads, no tracking.
+A: Yes! ReaderWrangler processes everything in your browser. Your library data and organization never leave your computer.
 
 **Q: Do I need to install anything?**
 A: No installation required. Just drag the bookmarklet to your bookmarks bar and you're ready to go.
 
 **Q: Can I use ReaderWrangler on mobile?**
-A: The fetcher bookmarklet works best on desktop (Amazon's mobile site is different). However, once you've extracted your library, you can use the organizer on any device with a modern browser.
+A: The bookmarklet works best on desktop (Amazon's mobile site is different). However, once you've imported your library, you can use the organizer on any device with a modern browser.
 
 **Q: How often should I update my library?**
-A: Whenever you buy new books! The fetcher will only fetch new additions, and your organization will be preserved.
+A: Whenever you buy new books! The import will add new books, and your organization will be preserved.
 
-### Library Extraction
+### Library Import
 
-**Q: How long does the initial extraction take?**
+**Q: How long does the initial import take?**
 A: Depends on library size. Roughly ~1.5 minutes per 1000 books for library data. Collections take a bit longer.
 
-**Q: What if the extraction fails partway through?**
-A: The fetcher includes retry logic. If it fails, wait a moment and try again. Amazon's servers can be temperamental.
+**Q: What if the import fails partway through?**
+A: The bookmarklet includes retry logic. If it fails, wait a moment and try again. Amazon's servers can be temperamental.
 
-**Q: Can I extract from multiple Amazon accounts?**
-A: Yes! Extract from each account separately and you'll get separate JSON files. You can load multiple libraries into the organizer (books will be tagged by store).
+**Q: Can I import from multiple Amazon accounts?**
+A: Yes! Import from each account separately and you'll get separate JSON files. You can load multiple libraries into the organizer (books will be tagged by store).
 
 ### Organization
 
@@ -336,8 +336,8 @@ A: No hard limit, but we recommend keeping it manageable (10-20 columns max) for
 **Q: Can I use ReaderWrangler on both my desktop and laptop?**
 A: Yes! See [Using ReaderWrangler on Multiple Devices](#using-readerwrangler-on-multiple-devices) above.
 
-**Q: Do I need to re-extract my library on each device?**
-A: No. Extract once, save the JSON files to cloud storage, and access them from any device.
+**Q: Do I need to re-import my library on each device?**
+A: No. Import once, save the JSON files to cloud storage, and access them from any device.
 
 **Q: What happens if I organize on two devices simultaneously?**
 A: The organization is stored per-device (in IndexedDB). Use Backup/Restore workflow to sync changes between devices. Last restore wins.
@@ -361,17 +361,17 @@ This lets you maintain multiple "versions" of your organization without complex 
 
 **Q: How do I update my library with new purchases or changed ratings/reviews?**
 A:
-1. Re-run the library fetcher bookmarklet on amazon.com/yourbooks (gets latest data)
+1. Re-run the library import from amazon.com/yourbooks (gets latest data)
 2. Click "Load Library" in ReaderWrangler and select the new JSON file
 3. Your organization (columns, positions) is automatically preserved
 4. New books appear in the default "Unorganized" column, updated ratings/reviews display immediately
 
 **Q: What happens when I buy new books?**
-A: New purchases won't appear in ReaderWrangler until you re-fetch your library and load the new JSON. Your existing organization is preserved - new books just get added to the default column.
+A: New purchases won't appear in ReaderWrangler until you re-import your library and load the new JSON. Your existing organization is preserved - new books just get added to the default column.
 
 **Q: What happens when I finish reading a book?**
 A: Reading progress and "read status" come from Amazon Collections data. To see updated progress:
-1. Re-run the collections fetcher bookmarklet
+1. Re-run the collections import
 2. Load the new collections JSON
 3. Updated reading status will show immediately (if you're using collections features)
 
@@ -379,20 +379,20 @@ A: Reading progress and "read status" come from Amazon Collections data. To see 
 A: It depends on your needs:
 - **After book shopping sprees**: Get new purchases into your organizer
 - **Monthly/quarterly**: Keep ratings and reviews current
-- **When reading progress matters**: After finishing books (requires collections re-fetch)
+- **When reading progress matters**: After finishing books (requires collections re-import)
 
-There's no automatic sync - you control when to update by re-running the fetchers.
+There's no automatic sync - you control when to update by re-running the imports.
 
 **Q: What happens if I delete a book from my Amazon library?**
-A: The book will disappear from ReaderWrangler the next time you re-fetch and load your library. It will be removed from whatever column it was in. Your other books' organization stays intact.
+A: The book will disappear from ReaderWrangler the next time you re-import and load your library. It will be removed from whatever column it was in. Your other books' organization stays intact.
 
 **Q: What happens if Amazon removes a book I own (e.g., licensing issue)?**
 A: Same as deleting - the book disappears on your next library refresh. ReaderWrangler only shows books currently in your Amazon library.
 
-**Q: Why do I need to re-fetch? Can't ReaderWrangler auto-update?**
-A: ReaderWrangler is privacy-first and runs entirely in your browser. It has no access to Amazon servers and can't automatically sync. You control when to fetch fresh data by running the bookmarklet - your data never goes through any third-party servers.
+**Q: Why do I need to re-import? Can't ReaderWrangler auto-update?**
+A: ReaderWrangler is privacy-first and runs entirely in your browser. It has no access to Amazon servers and can't automatically sync. You control when to import fresh data by running the bookmarklet - your data never goes through any third-party servers.
 
-**Q: Will re-fetching mess up my organization?**
+**Q: Will re-importing mess up my organization?**
 A: No! Your organization (which books are in which columns, their positions, column names) is stored separately in your browser. When you load a fresh JSON file, ReaderWrangler matches books by ASIN (Amazon's unique identifier) and preserves all your organization work. Only the book metadata (ratings, reviews, covers) gets updated.
 
 **Q: Do I need to back up my organization before refreshing my library?**
@@ -404,13 +404,13 @@ A: Yes! Keep old JSON files. You can load any previous library snapshot. However
 ### Technical
 
 **Q: Where is my data stored?**
-A: Your organization is stored in your browser's IndexedDB. The library data is in JSON files you download from Amazon. Nothing is stored on external servers.
+A: Your organization is stored in your browser's IndexedDB. The library data is in JSON files you download. Nothing is stored on external servers.
 
 **Q: Can I see the JSON file format?**
 A: Yes! The JSON files are human-readable. Open them in any text editor to see the structure.
 
 **Q: Does ReaderWrangler work offline?**
-A: The organizer works offline once you've loaded your library. The fetcher requires internet connection (needs to access Amazon).
+A: The organizer works offline once you've loaded your library. The import requires an internet connection (needs to access Amazon).
 
 **Q: Is this open source?**
 A: Yes! Check out the [GitHub repository](https://github.com/Ron-L/ReaderWrangler) to see the code and contribute.
@@ -435,4 +435,4 @@ A: Yes! Check out the [GitHub repository](https://github.com/Ron-L/ReaderWrangle
 
 ---
 
-**Version**: Guide last updated 2026-01-08
+**Version**: Guide last updated 2026-01-18

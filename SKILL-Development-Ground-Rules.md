@@ -93,6 +93,8 @@ What task were you working on?
 
 ## Code/Test Cycle
 
+**INTERNALIZE THESE RULES**
+
 * **New feature**: When starting a new feature
   → Create feature branch: `git checkout -b feature-name`
   → When you first modify a file, increment the major, minor or fix number and append ".a"
@@ -106,6 +108,8 @@ What task were you working on?
 ---
 
 ## Before Release
+
+**INTERNALIZE THESE RULES**
 
 * **Release preparation**: When ready to release
   → **NEVER use `git add -A` or `git add .`** - Always explicitly add only the files you modified

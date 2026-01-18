@@ -2,6 +2,7 @@
 *-library.json
 *-collections.json
 *-backup-*.json
+readerwrangler-backup-*.json
 style.html
 
 # OS files

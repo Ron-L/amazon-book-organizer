@@ -29,22 +29,6 @@ Use Amazon's native accountId as the library identifier.
 
 ### 2. Where to Find AccountId
 
-**API Discovery (2025-11-21)** - COMPLETE ✅
-
-```
-POST https://www.amazon.com/hz/mycd/ajax
-Payload: {"param":{"GetPFMDetails":{}}}
-
-Response includes:
-  customerName: "Ron Lewis"           // Friendly display name
-  primaryEmailAddress: "user@example.com"  // Unique key
-```
-
-- Call happens automatically on BOTH pages:
-  - Collections page load (ajax call #13)
-  - Yourbooks page load (confirmed 2025-11-21)
-- Same endpoint, same response on both pages
-
 **Final Design:**
 - `primaryEmailAddress` → Internal unique key (guaranteed unique per account)
 - `customerName` → Display to user (friendly, what they expect)
@@ -104,7 +88,7 @@ For the initial "Ship Fast" release:
 
 When implementing multi-user support:
 
-1. Scrape accountId from Amazon page (DOM or API response)
+1. Get accountId from Amazon page during import
 2. Store accountId in manifest (IndexedDB)
 3. Include accountId in JSON file metadata
 4. Detect mismatched files on load

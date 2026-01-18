@@ -13,14 +13,19 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Follow recommendations in TERMINOLOGY-CLEANUP-ACTION-PLAN.md
    - Review readerwrangler-amazon-terms-strategy.md
 
+   - update README/index.html Recent Changes with Copies
+   - update Coming Soon with Column Organizer
+   - compare TODO with docs/design and id any docs not referenced.
+      - move to archive or reference them
+
 **0-G. Social media icons use old logo**
 
 **0-F. Confirm**
    - Can extract price
    - can extract book category (SF, etc)
-   - see Price and Tags.txt.  Also contains "More like this"
+   - see .private/Price and Tags.txt.  Also contains "More like this"
 
-**1. Column Arranger - Split Pane UI**
+**1. Column Organizer - Split Pane UI**
    - see docs/design/COLUMN-ARRANGER.md
 
 **2. 📝 Book Notes** - LOW/LOW (2-3 hours)

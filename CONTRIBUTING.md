@@ -10,14 +10,14 @@ ReaderWrangler is a browser-based tool for organizing your ebook library. It con
 
 1. **Landing Page** ([index.html](index.html)) - Entry point with:
    - Quick Start instructions (4 simple steps)
-   - Link to [install-bookmarklet.html](install-bookmarklet.html) - Install the data fetcher
+   - Link to [install-bookmarklet.html](install-bookmarklet.html) - Install the bookmarklet
    - Link to [readerwrangler.html](readerwrangler.html) - Launch the organizer (if bookmarklet already installed)
 
-2. **Bookmarklet Installer** ([install-bookmarklet.html](install-bookmarklet.html)) - Installs the data fetching bookmarklet
+2. **Bookmarklet Installer** ([install-bookmarklet.html](install-bookmarklet.html)) - Installs the bookmarklet for importing library data
 
 3. **Organizer Application** ([readerwrangler.html](readerwrangler.html)) - Main drag-and-drop organization interface
 
-4. **Data Fetchers** - Bookmarklet scripts that extract library data from Amazon
+4. **Import Scripts** - Bookmarklet scripts that import library data from Amazon
 
 All processing happens in your browser - your data never leaves your computer.
 
@@ -65,11 +65,11 @@ Visit the bookmarklet installer:
 
 Drag the **📚 ReaderWrangler** button to your bookmarks bar.
 
-### 2. Fetch Your Library Data
+### 2. Import Your Library Data
 
 1. Navigate to your Amazon library page: https://www.amazon.com/yourbooks
 2. Click the **📚 ReaderWrangler** bookmarklet in your toolbar
-3. Choose "Fetch Book List" or "Fetch Collections"
+3. Choose "Import Library" or "Import Collections"
 4. Wait for the download to complete (saved to your Downloads folder)
 
 ### 3. Open the Organizer
@@ -144,7 +144,7 @@ This project uses a dual-repo pattern with separate DEV and PROD remotes:
 
 **Testing your changes:**
 - Visit https://ron-l.github.io/readerwranglerdev/
-- Use the 🔧 DEV bookmarklet to test fetchers from DEV repo
+- Use the 🔧 DEV bookmarklet to test imports from DEV repo
 - Cache may be stale - use hard refresh (Ctrl+Shift+R)
 
 **Note:** GitHub Pages caching is aggressive. During development, you may need to:
@@ -227,10 +227,10 @@ The installer detects its own environment using `window.location.hostname` and g
 - `readerwrangler.css` - Application styles
 - `images/` - Status icons (busy.png, empty.png, fresh.png, stale.png, question-mark.png)
 
-**Data Fetchers:**
+**Import Scripts:**
 - `bookmarklet-nav-hub.js` - Navigation hub dialog (loaded by bookmarklet, shows menu)
-- `amazon-library-fetcher.js` - Amazon library data fetching utility
-- `amazon-collections-fetcher.js` - Amazon collections data fetching utility
+- `amazon-library-fetcher.js` - Amazon library import utility
+- `amazon-collections-fetcher.js` - Amazon collections import utility
 
 **Documentation:**
 - `CHANGELOG.md` - Detailed version history with Technical Notes

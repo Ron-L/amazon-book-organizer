@@ -10,7 +10,7 @@
 
 - User loads library → Parse JSON → Store in IndexedDB
 - UI state (columns, book positions) → localStorage
-- Collections data fetched from `amazon-collections.json` with cache-busting
+- Collections data loaded from `amazon-collections.json` with cache-busting
 
 ## Storage Architecture Rationale
 
@@ -20,20 +20,20 @@ ReaderWrangler uses **IndexedDB** for organization data and **JSON files** for b
 
 ### The Cross-Domain Problem
 
-Fetcher scripts run on Amazon.com pages, while the App runs on readerwrangler.com. Each origin has its own isolated IndexedDB instance (browser security model). Data cannot be shared directly between them.
+The bookmarklet runs on Amazon.com pages to access library data, while the App runs on readerwrangler.com. Each origin has its own isolated IndexedDB instance (browser security model). Data cannot be shared directly between them.
 
 **Initial approach (abandoned):** Store everything in IndexedDB
-**Problem:** Fetchers on amazon.com couldn't share data with App on readerwrangler.com
+**Problem:** Scripts on amazon.com couldn't share data with App on readerwrangler.com
 
 ### The Size Problem
 
-Enriched book data (descriptions, reviews) can be massive for large libraries. IndexedDB has practical size limits that were exceeded during testing.
+Book data with descriptions and reviews can be massive for large libraries. IndexedDB has practical size limits that were exceeded during testing.
 
 ### Current Solution
 
 | Data Type | Storage | Why |
 |-----------|---------|-----|
-| Book data (from fetchers) | JSON file | Cross-domain transfer, large size support |
+| Book data (from imports) | JSON file | Cross-domain transfer, large size support |
 | Organization (columns, positions, dividers) | IndexedDB | Seamless persistence, auto-save on every action |
 
 ### Why Not JSON-Only for Everything?
@@ -84,7 +84,7 @@ Project/release version is maintained in README.md badge (single source of truth
 - Prevents browser from caching collections data
 
 **Dev mode scripts:** `?v=' + Date.now()` in bookmarklet-nav-hub.js:160
-- Used for fetcher script loading in development environment
+- Used for script loading in development environment
 
 ## Terminology
 

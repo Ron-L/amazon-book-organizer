@@ -15,7 +15,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.6.0.a';
+    const FETCHER_VERSION = 'v4.6.1';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
@@ -182,7 +182,7 @@ async function fetchAmazonLibrary() {
                     line-height: 1;
                 " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'">✕</button>
                 <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
-                    📚 Library Fetcher ${FETCHER_VERSION}
+                    📚 Library Import ${FETCHER_VERSION}
                 </div>
                 <div id="progressPhase" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
                     Starting...
@@ -359,7 +359,7 @@ async function fetchAmazonLibrary() {
                 if (!overlay) create();
                 overlay.innerHTML = `
                     <div style="font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">
-                        ✅ Fetch Complete!
+                        ✅ Import Complete!
                     </div>
                     <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
                         ${bookCount.toLocaleString()} books ready to save
@@ -381,7 +381,7 @@ async function fetchAmazonLibrary() {
                     <div style="font-size: 12px; color: #999; margin-top: 10px; text-align: center;">
                         Click to choose save location
                     </div>
-                    <button id="cancelSaveBtn" title="Discard fetched data" style="
+                    <button id="cancelSaveBtn" title="Discard imported data" style="
                         background: transparent;
                         color: #999;
                         border: 1px solid #ccc;
@@ -733,7 +733,7 @@ async function fetchAmazonLibrary() {
     try {
         // Step 1: Load existing data (if any)
         console.log('[1/6] Checking for existing library data...');
-        progressUI.updatePhase('Checking Library Data', 'Select existing library file or cancel to fetch all books');
+        progressUI.updatePhase('Checking Library Data', 'Select existing library file or cancel to import all books');
         console.log('');
         console.log('   📂 A file picker dialog will open...');
         console.log('');
@@ -1236,7 +1236,7 @@ async function fetchAmazonLibrary() {
         // Step 3: Fetch new books (Pass 1)
         stats.timing.pass1Start = Date.now();
         console.log('[3/6] Fetching new books from library...');
-        progressUI.updatePhase('Fetching Titles', 'Retrieving books from your library');
+        progressUI.updatePhase('Importing Titles', 'Retrieving books from your library');
         console.log('   Will stop when we reach existing books\n');
 
         const newBooks = [];
@@ -1587,7 +1587,7 @@ async function fetchAmazonLibrary() {
             console.log('========================================');
 
             // Close progress UI with success message
-            progressUI.showComplete('Library up to date! No new books to fetch.');
+            progressUI.showComplete('Library up to date! No new books to import.');
             new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/library-fetcher-completed';
             return;
         }
@@ -1598,7 +1598,7 @@ async function fetchAmazonLibrary() {
         // Step 4: Enrich new books (Pass 2) - BATCH MODE
         stats.timing.pass2Start = Date.now();
         console.log('[4/6] Enriching new books with descriptions & reviews...');
-        progressUI.updatePhase('Enriching Data', `Fetching descriptions & reviews for ${newBooks.length} books`);
+        progressUI.updatePhase('Enriching Data', `Importing descriptions & reviews for ${newBooks.length} books`);
 
         const totalBatches = Math.ceil(newBooks.length / ENRICH_BATCH_SIZE);
         console.log(`   Batch mode: ${ENRICH_BATCH_SIZE} books per request, ${totalBatches} batches total\n`);
@@ -1976,7 +1976,7 @@ async function fetchAmazonLibrary() {
             const userChoice = await progressUI.showSaveButton(finalBooks.length);
             if (userChoice === 'cancel') {
                 console.error('   ❌ Save cancelled by user - data discarded');
-                progressUI.showError('Cancelled - your fetched data was discarded');
+                progressUI.showError('Cancelled - your imported data was discarded');
                 return;
             }
 

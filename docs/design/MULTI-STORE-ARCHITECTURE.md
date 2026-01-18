@@ -14,12 +14,12 @@ Support multiple ebook stores while maintaining clean separation between platfor
 
 ## File Naming Convention: Store-First
 
-### Fetcher Scripts (platform-specific)
+### Import Scripts (platform-specific)
 
-- `amazon-library-fetcher.js` - Fetches Amazon library data
-- `amazon-collections-fetcher.js` - Fetches Amazon collections/read status
-- `bn-library-fetcher.js` - Future: Barnes & Noble library fetcher
-- `kobo-library-fetcher.js` - Future: Kobo library fetcher
+- `amazon-library-fetcher.js` - Imports Amazon library data
+- `amazon-collections-fetcher.js` - Imports Amazon collections/read status
+- `bn-library-fetcher.js` - Future: Barnes & Noble library import
+- `kobo-library-fetcher.js` - Future: Kobo library import
 
 ### Data Files (store-specific)
 
@@ -51,23 +51,23 @@ const onCollectionsPage = currentUrl.includes('amazon.com/hz/mycd/digital-consol
 ### Future Multi-Store Implementation
 
 - Detect current store from URL (amazon.com, barnesandnoble.com, etc.)
-- **On store library page**: Offer to fetch library OR navigate to collections page
-- **On store collections page**: Offer to fetch collections OR navigate to library page
+- **On store library page**: Offer to import library OR navigate to collections page
+- **On store collections page**: Offer to import collections OR navigate to library page
 - **On non-store page**: Present menu of all supported stores to navigate to
-- Each store loads its platform-specific fetcher script
+- Each store loads its platform-specific import script
 
 ### Bookmarklet Dialog Behavior
 
 **1. On amazon.com/yourbooks:**
-- Primary: "📖 Fetch Your Amazon Books" → loads `amazon-library-fetcher.js`
+- Primary: "📖 Import Your Amazon Books" → loads `amazon-library-fetcher.js`
 - Secondary: "📚 Go to Amazon Collections Page" → navigates to collections
 
 **2. On amazon.com/hz/mycd/digital-console:**
-- Primary: "📚 Fetch Your Amazon Collections" → loads `amazon-collections-fetcher.js`
+- Primary: "📚 Import Your Amazon Collections" → loads `amazon-collections-fetcher.js`
 - Secondary: "📖 Go to Amazon Library Page" → navigates to library
 
 **3. On barnesandnoble.com/nook/library (future):**
-- Primary: "📖 Fetch Your B&N Books" → loads `bn-library-fetcher.js`
+- Primary: "📖 Import Your B&N Books" → loads `bn-library-fetcher.js`
 - Secondary: "📚 Go to B&N Collections Page" (if applicable)
 
 **4. On random page:**
@@ -132,8 +132,8 @@ const onCollectionsPage = currentUrl.includes('amazon.com/hz/mycd/digital-consol
 ## Benefits of This Architecture
 
 1. **Clean Separation**: Generic organizer code never knows about specific stores
-2. **Easy Testing**: Can develop B&N fetcher without touching organizer
-3. **Scalable**: Adding new stores = new fetcher script + URL patterns
-4. **User Flexibility**: Users can fetch/organize from multiple stores
+2. **Easy Testing**: Can develop B&N import script without touching organizer
+3. **Scalable**: Adding new stores = new import script + URL patterns
+4. **User Flexibility**: Users can import/organize from multiple stores
 5. **No Conflicts**: Store-specific filenames prevent overwrites
 6. **Future-Proof**: `store` field enables per-store filtering/features later

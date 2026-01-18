@@ -17,9 +17,9 @@ Show simple, honest data freshness status based on when the user last loaded the
 | State | Age | Icon | Tooltip | Message |
 |-------|-----|------|---------|---------|
 | **Empty** | N/A | 🛑 | Must act | "Load your library to get started. Click to select your amazon-library.json file." |
-| **Fresh** | < 7 days | ✅ | All good | "Library loaded 3 days ago. If you've made Amazon purchases/changes since then, re-fetch and reload." |
-| **Stale** | 7-30 days | ⚠️ | Should act | "Library loaded 15 days ago. If you've made Amazon purchases/changes, re-fetch and reload." |
-| **Obsolete** | > 30 days | 🛑 | Must act | "Library loaded 60 days ago. Re-fetch and reload to get current data." |
+| **Fresh** | < 7 days | ✅ | All good | "Library loaded 3 days ago. If you've made Amazon purchases/changes since then, re-import and reload." |
+| **Stale** | 7-30 days | ⚠️ | Should act | "Library loaded 15 days ago. If you've made Amazon purchases/changes, re-import and reload." |
+| **Obsolete** | > 30 days | 🛑 | Must act | "Library loaded 60 days ago. Re-import and reload to get current data." |
 
 ---
 
@@ -40,8 +40,8 @@ Library: Not loaded 🛑
 Collections: Not loaded 🛑
 
 Load your library to get started:
-1. [Fetch Library] - Opens amazon.com/yourbooks
-2. [Fetch Collections] - Opens amazon.com/hz/mycd/myx
+1. [Import Library] - Opens amazon.com/yourbooks
+2. [Import Collections] - Opens amazon.com/hz/mycd/myx
 3. [Load Library] [Load Collections] - Pick files to load into app
 ```
 
@@ -51,8 +51,8 @@ Library: Loaded 3 days ago ✅
 Collections: Loaded 5 days ago ✅
 
 If you've made Amazon purchases or collection changes since loading this data:
-1. [Fetch Library] - Opens amazon.com/yourbooks
-2. [Fetch Collections] - Opens amazon.com/hz/mycd/myx
+1. [Import Library] - Opens amazon.com/yourbooks
+2. [Import Collections] - Opens amazon.com/hz/mycd/myx
 3. [Reload Library] [Reload Collections] - Pick files to load into app
 
 Otherwise, continue organizing!
@@ -71,24 +71,24 @@ Otherwise, continue organizing!
 
 ## Why This Approach
 
-**Key insight:** Only the user knows if they've made Amazon purchases requiring a re-fetch.
+**Key insight:** Only the user knows if they've made Amazon purchases requiring a re-import.
 
 **What we don't track:**
-- When the fetcher last ran
+- When the import script last ran
 - Whether a newer file exists on disk
 
 **Why not:**
-- Fetcher runs on different domain (can't share data via IndexedDB)
+- Import script runs on different domain (can't share data via IndexedDB)
 - Browser can't poll files on disk (security)
-- Even if we knew fetcher ran, doesn't mean Amazon data changed
+- Even if we knew import ran, doesn't mean Amazon data changed
 
 **Honest messaging:** We show age of loaded data and trust the user to know their own Amazon activity.
 
 **Why reload buttons are always visible:**
-- Solves the "Fresh but just fetched new data" scenario:
+- Solves the "Fresh but just imported new data" scenario:
   1. User has Fresh library (loaded 2 days ago) ✅
   2. User buys new book on Amazon today
-  3. User fetches new library → saves to disk
+  3. User imports new library → saves to disk
   4. User opens app → sees ✅ Fresh status
   5. **User clicks status → modal has [Reload Library] button → picks fresher file**
 - No way to detect file freshness without user interaction (File Picker API security)
@@ -102,7 +102,7 @@ Otherwise, continue organizing!
 ```javascript
 {
   metadata: {
-    fetchDate: "2025-12-21T10:00:00Z",  // When fetched from Amazon
+    fetchDate: "2025-12-21T10:00:00Z",  // When imported from Amazon
     totalBooks: 2322,
     schemaVersion: "3.0.0"
   },
@@ -126,7 +126,7 @@ Otherwise, continue organizing!
 
 **Legacy JSON files (no fetchDate):**
 - Show as "Unknown" age
-- Suggest re-fetching to enable status tracking
+- Suggest re-importing to enable status tracking
 - App still works normally
 
 ---
@@ -142,11 +142,11 @@ This appendix documents the complete evolution of the data freshness tracking sy
 **User pain point:** "I don't know if my loaded library data is current with Amazon"
 
 **What we wanted to solve:**
-1. **Fetch state**: How fresh is the file on my disk?
+1. **Import state**: How fresh is the file on my disk?
 2. **Load state**: How fresh is the data in the app?
 3. **Gap detection**: "You loaded 30-day-old data but have a 1-day-old file on disk - reload it!"
 
-**The vision:** 25-state matrix (5 Fetch states × 5 Load states) showing complete freshness picture
+**The vision:** 25-state matrix (5 Import states × 5 Load states) showing complete freshness picture
 
 ---
 
@@ -199,11 +199,11 @@ const manifests = await db.getAll('manifests')  // Returns: []
 **The GUID system:**
 - Fetcher generates GUID, stores in JSON `metadata.guid` AND IndexedDB manifest
 - On load, app matches JSON's GUID to DB manifest
-- Match → use DB manifest for Fetch state
+- Match → use DB manifest for Import state
 - No match → graceful degradation to Load-state-only
 
 **The 25-state matrix:**
-- 5 Fetch states: Unknown, Empty, Fresh, Stale, Obsolete
+- 5 Import states: Unknown, Empty, Fresh, Stale, Obsolete
 - 5 Load states: Unknown, Empty, Fresh, Stale, Obsolete
 - Combined: 25 possible combinations
 - See [state-matrix.html](../../state-matrix.html) at v3.8.0 for full table
@@ -250,22 +250,22 @@ const manifests = await db.getAll('manifests')  // Returns: []
 
 **Why it was rejected (2025-12-20):**
 
-*The fatal argument:* "Even with knowledge of fetch file freshness, you are still out of sync! You don't know that the user just purchased the entire Hardy Boys collection except by running the fetcher. So looking at the fetcher date guarantees nothing."
+*The fatal argument:* "Even with knowledge of import file freshness, you are still out of sync! You don't know that the user just purchased the entire Hardy Boys collection except by running the import. So looking at the import date guarantees nothing."
 
 **Timeline example:**
-1. Day 1: User runs fetcher → saves library.json → backend records "fresh data available"
+1. Day 1: User runs import → saves library.json → backend records "fresh data available"
 2. Day 2-30: User buys 47 Hardy Boys books on Amazon
 3. Day 30: App checks backend → says "you have fresh data from Day 1!"
 4. **Reality:** That "fresh" data is 30 days stale relative to Amazon's current state
 
 **What the backend actually tells you:**
 - What we claimed: "You have the latest data available"
-- What it actually says: "You ran the fetcher X days ago"
+- What it actually says: "You ran the import X days ago"
 - **These are completely different things**
 
 **The real workflow:**
 1. Did I buy/return/organize books on Amazon recently?
-2. If yes → run fetcher → load file
+2. If yes → run import → load file
 3. If no → current data is fine
 
 **Critical insight:** The signaling backend doesn't help with step 1 at all. Only the user knows the answer to "Have I made Amazon changes?"
@@ -284,20 +284,20 @@ const manifests = await db.getAll('manifests')  // Returns: []
 **Documented in:** TODO.md Priority 5 #4
 
 **The simplification:**
-- From: 25 states (5 Fetch × 5 Load)
+- From: 25 states (5 Import × 5 Load)
 - To: 4 states (Load only)
 - Reduction: 84% simpler
 
 **What gets removed:**
 - All IndexedDB manifest read/write code
-- All Fetch state tracking logic
+- All Import state tracking logic
 - The 25-state decision tree
 - Cross-domain synchronization attempts
 - GUID matching system
 
 **What users get:**
 - Honest status: "Loaded X days ago"
-- Simple message: "If you've made Amazon changes, re-fetch"
+- Simple message: "If you've made Amazon changes, re-import"
 - Responsibility where it belongs: User knows their own Amazon activity
 
 **Estimated effort:**

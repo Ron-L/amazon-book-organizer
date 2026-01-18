@@ -16,7 +16,7 @@ Before producing/updating videos, review this list of changes since the plan was
 - [ ] **Wishlist** (v4.1.0) - Add books from Amazon product/series pages
 - [ ] **Hide books** (v4.1.0) - Right-click context menu to soft-delete
 - [ ] **Context menu** (v4.1.0) - "Open in Amazon", "Copy Title(s)" options
-- [ ] Progress bars during fetch (v4.1.0)
+- [ ] Progress bars during import (v4.1.0)
 - [ ] **Sort by Published** (v4.7.0) - Sort columns by publication date
 - [ ] **Undo/Redo** (v4.8.0) - Ctrl+Z to undo, Ctrl+Y to redo
 - [ ] **Ownership Badges** (v4.9.0) - Visual badges on book covers (Sample, Borrowed, Prime/KU/KOLL/Comixology)
@@ -86,11 +86,11 @@ When re-recording, add mentions of:
 #### 2. Installing the Bookmarklet (1-2 minutes)
 **Goal**: Show exactly how to install and what to expect
 
-#### 3. Fetching Your Library (2-3 minutes)
-**Goal**: Navigate Amazon, run fetcher, understand progress
+#### 3. Importing Your Library (2-3 minutes)
+**Goal**: Navigate Amazon, run import, understand progress
 
-#### 4. Fetching Collections (1-2 minutes)
-**Goal**: Quick walkthrough of collections fetch process
+#### 4. Importing Collections (1-2 minutes)
+**Goal**: Quick walkthrough of collections import process
 
 #### 5. Organizing Your Books (3-4 minutes)
 **Goal**: Creating columns, drag-drop, multi-select, searching
@@ -158,7 +158,7 @@ Amazon shows you all your books... but won't let you organize them.
 
 ReaderWrangler fixes that.
 
-In the next two minutes... you'll extract your entire Kindle library from Amazon... and organize it however you want.
+In the next two minutes... you'll import your entire Kindle library from Amazon... and organize it however you want.
 
 Let's get started.
 
@@ -178,23 +178,23 @@ This bookmarklet is your control panel... for everything that follows.
 
 ---
 
-**[SCENE 3: Fetch Library - 0:45-1:30]**
+**[SCENE 3: Import Library - 0:45-1:30]**
 
 Now click the bookmarklet.
 
-A menu appears. Select "Go to Library Fetcher Amazon Page."
+A menu appears. Select "Go to Library Page."
 
 You're now on Amazon's "Your Books" page.
 
-Click the bookmarklet again... and select "Fetch Library Data."
+Click the bookmarklet again... and select "Import Library."
 
-The bookmarklet starts extracting your books... covers... ratings... reviews... everything.
+The bookmarklet starts importing your books... covers... ratings... reviews... everything.
 
 The browser console shows progress as it works.
 
 For a smaller library... this goes pretty quickly.
 
-For larger libraries with hundreds or thousands of books... grab a coffee. It takes time to extract everything properly.
+For larger libraries with hundreds or thousands of books... grab a coffee. It takes time to import everything properly.
 
 When it's done... a JSON file downloads automatically to your computer.
 
@@ -202,13 +202,13 @@ That's your entire library... ready to organize.
 
 ---
 
-**[SCENE 4: Fetch Collections - 1:30-1:50]**
+**[SCENE 4: Import Collections - 1:30-1:50]**
 
 One more quick step.
 
-Click the bookmarklet... and select "Go to Collections Fetcher Amazon Page."
+Click the bookmarklet... and select "Go to Collections Page."
 
-Click the bookmarklet again... and select "Fetch Collections Data."
+Click the bookmarklet again... and select "Import Collections."
 
 This grabs your reading status... which books you've finished... which ones are in progress.
 
@@ -256,30 +256,27 @@ Start wrangling your reading chaos... today.
 
 ---
 
-### Character Count
-**Total Characters**: ~1,875 characters (updated after timing corrections)
-**Estimated Narration Time**: ~2:45 at 0.9x speed (perfect for 2-3 minute target)
-
 ### Screen Direction
 
 **[SCENE 1: Landing Page - 0:00-0:20]**
-- Start on readerwrangler.com landing page
-- Scroll slowly to show "Before/After" slider
-- Pause on hero section with sticky note
+- Open browser to ReaderWrangler.com landing page
+- Hero section visible with tagline
+- Slow pan/zoom on hero image showing organized library
 
 **[SCENE 2: Install Bookmarklet - 0:20-0:45]**
-- Click "Get Started" button (navigates to install-bookmarklet.html)
-- Mouse hovers over "ReaderWrangler Navigator" button
-- **Slow motion**: Drag button to bookmarks bar
-- Button appears in bookmarks bar (highlight with circle/arrow animation)
+- Click "Get Started" button (highlight with circle effect)
+- install-bookmarklet.html page opens
+- Zoom in on "ReaderWrangler Navigator" button
+- **Slow motion capture**: Drag button to bookmarks bar
+- Show button appearing in bookmarks bar (highlight new bookmarklet)
 
-**[SCENE 3: Fetch Library - 0:45-1:30]**
-- Click bookmarklet in bookmarks bar
-- Navigator menu appears (highlight with zoom)
-- Click "Go to Library Fetcher Amazon Page"
-- Amazon "Your Books" page loads (show recognizable book covers)
+**[SCENE 3: Import Library - 0:45-1:30]**
+- Click bookmarklet in toolbar
+- Navigator menu appears (zoom in to show options)
+- Click "Go to Library Page" in menu
+- Amazon Your Books page loads (show Amazon logo briefly for context)
 - Click bookmarklet again
-- Click "Fetch Library Data" in menu
+- Click "Import Library" in menu
 - **Show console opening** (F12 or right-click > Inspect)
 - Console shows progress messages scrolling (zoom in on console output)
 - Speed up footage with time-lapse effect (show progress messages jumping)
@@ -287,12 +284,12 @@ Start wrangling your reading chaos... today.
 - Final console message showing completion
 - Downloads folder opens showing JSON file (highlight filename)
 
-**[SCENE 4: Fetch Collections - 1:30-1:50]**
+**[SCENE 4: Import Collections - 1:30-1:50]**
 - Click bookmarklet
-- Click "Go to Collections Fetcher Amazon Page"
+- Click "Go to Collections Page"
 - Amazon Collections page loads
 - Click bookmarklet again
-- Click "Fetch Collections Data"
+- Click "Import Collections"
 - Progress indicator (faster, fewer items)
 - Second JSON file appears in Downloads folder
 
@@ -337,7 +334,7 @@ Start wrangling your reading chaos... today.
 | 0:20 | "Let's get started" | Transition to install page |
 | 0:25 | "drag it to your bookmarks bar" | Begin drag animation (slow mo) |
 | 0:45 | "Now click the bookmarklet" | Mouse moves to bookmarklet |
-| 1:00 | "starts extracting your books" | Console opens, progress messages start |
+| 1:00 | "starts importing your books" | Console opens, progress messages start |
 | 1:10 | "The browser console shows progress" | Zoom in on console output |
 | 1:15 | "grab a coffee" | Time-lapse of console messages |
 | 1:50 | "Launch App" | App opens (empty state) |
@@ -369,11 +366,11 @@ Start wrangling your reading chaos... today.
 
 **Known Limitations (Current State of App):**
 - **No visual progress indicator yet** - Script shows console output as workaround
-- **Extraction time**: Currently ~1 hour per 1,000 books (not optimized yet)
+- **Import time**: Currently ~1 hour per 1,000 books (not optimized yet)
 - Video script intentionally vague ("grab a coffee" / "takes time") to avoid locking in specific numbers
 - **TODO Items to Complete Before Final Video**:
   - Priority 2 #6: Enhanced Progress Feedback (visual progress bars, time estimates)
-  - Performance optimization to speed up extraction
+  - Performance optimization to speed up import
   - Once these are done, update script with specific timing guidance
 
 ### Follow-Up Video Ideas
@@ -403,7 +400,7 @@ TBD
 
 ---
 
-## Video 3: Fetching Your Library
+## Video 3: Importing Your Library
 
 ### Target Length
 2-3 minutes
@@ -419,7 +416,7 @@ TBD
 
 ---
 
-## Video 4: Fetching Collections
+## Video 4: Importing Collections
 
 ### Target Length
 1-2 minutes

@@ -16,7 +16,7 @@ Display Amazon collection membership and read status in the organizer UI.
 ## Implementation (Complete)
 
 **Data Merge (Complete):**
-- Collections fetcher successfully extracts collection data
+- Collections import successfully retrieves collection data
 - Data merged into organizer on load
 - Console shows: "📚 Collections data merged: 1163 books have collections"
 - Read status tracked: 642 READ, 1 UNREAD, 1700 UNKNOWN

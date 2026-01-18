@@ -75,7 +75,7 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 │  └─────────────────────────────────────────┘│
 │                                              │
 │  ┌─────────────────────────────────────────┐│
-│  │ Don't have files yet? Fetch them from   ││
+│  │ Don't have files yet? Get them from     ││
 │  │ Amazon:                                 ││
 │  ├─────────────────────────────────────────┤│
 │  │                                         ││
@@ -85,7 +85,7 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 │  │     Library            Collections      ││
 │  │  2. Click           2. Click           ││
 │  │     bookmarklet        bookmarklet     ││
-│  │  3. Choose "Fetch   3. Choose "Fetch   ││
+│  │  3. Choose "Import  3. Choose "Import  ││
 │  │     Library"           Collections"    ││
 │  │  4. Return & click  4. Return & click  ││
 │  │     Load button        Load button     ││
@@ -105,7 +105,7 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 - **Emojis for visual anchoring** - 📚 Library and 📁 Collections provide consistent visual cues
 - **Contextual proximity** - action buttons appear exactly where the problem is shown
 - **Faster for users with files** - no question to parse, buttons immediately visible
-- **Two-column fetch instructions** - Library and Collections side-by-side
+- **Two-column instructions** - Library and Collections side-by-side
 - **Simple messaging** - "Don't have files yet?" instead of Yes/No branching
 - **Pattern consistency** - State 1 now follows same layout as all other states
 
@@ -139,7 +139,7 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 │  │     Library            Collections      ││
 │  │  2. Click           2. Click           ││
 │  │     bookmarklet        bookmarklet     ││
-│  │  3. Choose "Fetch   3. Choose "Fetch   ││
+│  │  3. Choose "Import  3. Choose "Import  ││
 │  │     Library"           Collections"    ││
 │  │  4. Return & click  4. Return & click  ││
 │  │     Reload button      Reload button   ││
@@ -160,7 +160,7 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 - **Emojis for visual anchoring** - 📚 Library and 📁 Collections
 - Two-column layout prevents "step 1 OR step 1" branching confusion
 - Buttons use "Anyway" to signal override intent (data is fresh)
-- Both buttons always visible (solves "Fresh but just fetched new data" scenario)
+- Both buttons always visible (solves "Fresh but just imported new data" scenario)
 
 ---
 
@@ -191,15 +191,14 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 │                                              │
 │      ┌───────────────────────────────┐      │
 │      │ Don't have your Collections   │      │
-│      │ file yet? Fetch it from       │      │
-│      │ Amazon:                       │      │
+│      │ file yet? Get it from Amazon: │      │
 │      ├───────────────────────────────┤      │
 │      │                               │      │
 │      │ 📁 Collections                │      │
 │      │ ─────────────────────         │      │
 │      │ 1. Go to Amazon Collections   │      │
 │      │ 2. Click bookmarklet          │      │
-│      │ 3. Choose "Fetch Collections" │      │
+│      │ 3. Choose "Import Collections"│      │
 │      │ 4. Return & click Load button │      │
 │      │    above                      │      │
 │      │                               │      │
@@ -215,10 +214,10 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 **Design notes:**
 - **Buttons on same line as status** (right-aligned) - consistent with all states
 - **Emojis for visual anchoring** - 📚 Library and 📁 Collections
-- **Single-column fetch instructions** (~60% width, centered) - visual balance, pattern consistency
+- **Single-column instructions** (~60% width, centered) - visual balance, pattern consistency
 - **Simplified messaging** - "Don't have your Collections file yet?" instead of Yes/No branching
 - Reassuring tone: "Collections are optional" (Library is essential, user is fine)
-- Reload Library button still available (user might have just fetched new Library)
+- Reload Library button still available (user might have just imported new Library)
 
 ---
 
@@ -246,14 +245,14 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 │                                              │
 │      ┌───────────────────────────────┐      │
 │      │ Don't have your Library file  │      │
-│      │ yet? Fetch it from Amazon:    │      │
+│      │ yet? Get it from Amazon:      │      │
 │      ├───────────────────────────────┤      │
 │      │                               │      │
 │      │ 📚 Library                    │      │
 │      │ ──────────────────            │      │
 │      │ 1. Go to Amazon Library       │      │
 │      │ 2. Click bookmarklet          │      │
-│      │ 3. Choose "Fetch Library"     │      │
+│      │ 3. Choose "Import Library"    │      │
 │      │ 4. Return & click Load button │      │
 │      │    above                      │      │
 │      │                               │      │
@@ -270,7 +269,7 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 - **Symmetric to State 3** - same structure, swapped data types
 - **Buttons on same line as status** (right-aligned) - consistent with all states
 - **Emojis for visual anchoring** - 📚 Library and 📁 Collections
-- **Single-column fetch instructions** (~60% width, centered) - visual balance, pattern consistency
+- **Single-column instructions** (~60% width, centered) - visual balance, pattern consistency
 - **Simplified messaging** - "Don't have your Library file yet?" instead of Yes/No branching
 - Urgent tone: "Load your library to see your books!" (Library is essential)
 - Different messaging reflects different criticality (Library essential, Collections optional)
@@ -306,7 +305,7 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 │  │     Library            Collections      ││
 │  │  2. Click           2. Click           ││
 │  │     bookmarklet        bookmarklet     ││
-│  │  3. Choose "Fetch   3. Choose "Fetch   ││
+│  │  3. Choose "Import  3. Choose "Import  ││
 │  │     Library"           Collections"    ││
 │  │  4. Return & click  4. Return & click  ││
 │  │     Reload button      Reload button   ││
@@ -355,7 +354,7 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 │  │     Library            Collections      ││
 │  │  2. Click           2. Click           ││
 │  │     bookmarklet        bookmarklet     ││
-│  │  3. Choose "Fetch   3. Choose "Fetch   ││
+│  │  3. Choose "Import  3. Choose "Import  ││
 │  │     Library"           Collections"    ││
 │  │  4. Return & click  4. Return & click  ││
 │  │     Reload button      Reload button   ││
@@ -448,8 +447,8 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
 {
   metadata: {
     schemaVersion: "v3.0.0",
-    fetcherVersion: "v3.7.0",
-    fetchDate: "2025-12-20T10:30:00Z",
+    importerVersion: "v3.7.0",
+    importDate: "2025-12-20T10:30:00Z",
     ...
   },
   books: [...]
@@ -462,8 +461,8 @@ Use specific labels ("Load Library", "Reload Collections Anyway") instead of gen
   type: "collections",           // ← Detection key
   guid: "...",
   schemaVersion: "v1.0",
-  fetcherVersion: "v1.4.0",
-  fetchDate: "2025-12-20T10:30:00Z",
+  importerVersion: "v1.4.0",
+  importDate: "2025-12-20T10:30:00Z",
   books: [...]
 }
 ```
@@ -502,7 +501,7 @@ const loadDataFile = async (fileText) => {
 
 - [x] Create file type detection (v3.9.0.l - loadEnrichedData, loadCollectionsFromFile)
 - [ ] Move Load buttons to contextual position in Empty state (next to status lines)
-- [ ] Implement two-column fetch instructions layout in Empty state
+- [ ] Implement two-column instructions layout in Empty state
 - [ ] Test Empty state modal displays correctly
 - [ ] Test all file loading scenarios (see Testing Scenarios below)
 

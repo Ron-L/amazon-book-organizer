@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Problem:** Book cover images are fetched from Amazon's CDN on every page load, filter change, and refresh. With ~2,200 books, this takes ~4 seconds and creates unnecessary network traffic.
+**Problem:** Book cover images are loaded from Amazon's CDN on every page load, filter change, and refresh. With ~2,200 books, this takes ~4 seconds and creates unnecessary network traffic.
 
 **Goal:** Cache cover images locally using the browser's Cache API for faster rendering and offline capability.
 
@@ -14,35 +14,11 @@
 
 ### Background
 
-Amazon's API returns two image URLs per book:
+Amazon provides two image URLs per book:
 - `hiRes` - High resolution cover image
 - `lowRes` - Lower resolution cover image
 
 Before implementing caching, we needed to determine which image size to use.
-
-### Test Method
-
-Created a console script to query Amazon's GraphQL API (`/kindle-reader-api` with `getProducts` query) and measure actual image dimensions:
-
-```javascript
-// Fetch book data from Amazon API
-const response = await fetch('/kindle-reader-api', {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'anti-csrftoken-a2z': csrfToken  // From page meta tag
-    },
-    body: JSON.stringify({
-        query: `query getProducts($asins: [String!]!) {
-            getProducts(asins: $asins) {
-                asin
-                images { images { hiRes { physicalId extension } lowRes { physicalId extension } } }
-            }
-        }`,
-        variables: { asins: ['B0XXXXXXXX'] }
-    })
-});
-```
 
 ### Results
 
@@ -121,7 +97,7 @@ No storage concerns - browser allows hundreds of GB.
 
 ## Data Model Changes
 
-### Fetcher Output (amazon-library-fetcher.js v4.6.0)
+### Import Output (amazon-library-fetcher.js v4.6.0)
 
 **Before:**
 ```javascript
@@ -148,7 +124,7 @@ No storage concerns - browser allows hundreds of GB.
 
 ## Implementation Plan
 
-### Phase 1: Fetcher Changes (COMPLETE)
+### Phase 1: Import Changes (COMPLETE)
 
 **Branch:** `feature-cover-caching`
 **File:** `amazon-library-fetcher.js` (v4.6.0.a)
@@ -239,6 +215,6 @@ async function getCoverUrl(originalUrl) {
 
 ## Related Files
 
-- `amazon-library-fetcher.js` - Fetcher with dual URL extraction
+- `amazon-library-fetcher.js` - Import script with dual URL handling
 - `readerwrangler.js` - App with cache integration (Phase 2)
 - `TODO.md` - P1 T1: Cover Image Caching

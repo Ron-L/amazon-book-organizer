@@ -16,7 +16,7 @@ Replace the current two-file system (`amazon-library.json` + `amazon-collections
 1. **Two files to manage** - Users must load library JSON, then separately load collections JSON
 2. **Easy to mismatch** - Loading wrong collections file against a library
 3. **UX burden** - "Which file do I pick?" confusion
-4. **Orphaned data** - Fresh library fetch doesn't carry forward wishlist items
+4. **Orphaned data** - Fresh library import doesn't carry forward wishlist items
 
 ### Why Merge Now?
 
@@ -38,7 +38,7 @@ Replace the current two-file system (`amazon-library.json` + `amazon-collections
 | Fetcher naming | "Wish Fetcher" | Consistent with Library/Collections Fetcher |
 | Duplicate handling | ASIN-merge (update existing, preserve location) | Wishlist→Owned transition is seamless |
 | Default column for wishlist | Unorganized column | No special column needed |
-| Fresh fetch behavior | In-app option with warning dialog | Don't offload to file system navigation |
+| Fresh import behavior | In-app option with warning dialog | Don't offload to file system navigation |
 | Fetcher order | Order independent - all are additive | No "Library must be first" constraint |
 
 ---
@@ -124,9 +124,9 @@ Replace the current two-file system (`amazon-library.json` + `amazon-collections
 
 ### Three Fetchers
 
-1. **Library Fetcher** - Scrapes owned books from Amazon library page
-2. **Collections Fetcher** - Scrapes Amazon collection assignments
-3. **Wish Fetcher** - Scrapes current book page (single book) or wishlist page
+1. **Library Fetcher** - Imports owned books from Amazon library page
+2. **Collections Fetcher** - Imports Amazon collection assignments
+3. **Wish Fetcher** - Imports from current book page (single book) or wishlist page
 
 ### Order Independence
 
@@ -161,7 +161,7 @@ if (books.items.find(b => b.asin === newBook.asin)) {
 
 ### Wishlist → Owned Transition
 
-When user purchases a wishlist book and re-fetches library:
+When user purchases a wishlist book and re-imports library:
 
 1. Library Fetcher finds book with matching ASIN
 2. Updates `isOwned: false` → `isOwned: true`
@@ -289,7 +289,7 @@ Fetchers **reject** backup files:
 |----------|------------|
 | Separate wishlist array vs. flag in items? | Flag in items (`isOwned: false`) |
 | Special wishlist column? | No, use Unorganized column |
-| What happens to wishlist on fresh fetch? | Lost (with warning), user's choice |
+| What happens to wishlist on fresh import? | Lost (with warning), user's choice |
 | Order of fetcher execution? | Order independent |
 | User navigation to file system? | Never required - all in-app |
 

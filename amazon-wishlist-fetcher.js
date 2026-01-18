@@ -24,7 +24,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.2.0';
+    const FETCHER_VERSION = 'v1.2.1';
     const SCHEMA_VERSION = '2.0';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -33,7 +33,7 @@ async function addToWishlist() {
     const win = top.window;
 
     console.log('========================================');
-    console.log(`Amazon Wishlist Fetcher ${FETCHER_VERSION}`);
+    console.log(`Amazon Wishlist Importer ${FETCHER_VERSION}`);
     console.log('========================================\n');
 
     // ============================================================================
@@ -73,7 +73,7 @@ async function addToWishlist() {
                     line-height: 1;
                 " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'" onclick="this.parentElement.remove()">✕</button>
                 <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
-                    📚 Wishlist Fetcher ${FETCHER_VERSION}
+                    📚 Wishlist Importer ${FETCHER_VERSION}
                 </div>
                 <div id="progressPhase" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
                     Starting...
@@ -511,10 +511,10 @@ async function addToWishlist() {
             }
         }
 
-        console.log(`   ✅ Extracted ${wishlistBooks.length} wishlist books`);
+        console.log(`   ✅ Imported ${wishlistBooks.length} wishlist books`);
         console.log(`   ℹ️  Skipped ${skippedOwned} owned books`);
         if (skippedErrors > 0) {
-            console.log(`   ⚠️  Failed to extract ${skippedErrors} books`);
+            console.log(`   ⚠️  Failed to import ${skippedErrors} books`);
         }
 
         // Sort by series position descending so when we unshift, position 1 ends up first
