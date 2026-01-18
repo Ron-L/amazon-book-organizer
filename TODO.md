@@ -70,6 +70,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Impact: One-click bulk wishlist population for entire series
 
 **6. 💰 Wishlist Price Tracking** - MEDIUM/MEDIUM (6-10 hours)
+   - See [docs/design/WISHLIST-PRICE-DISPLAY.md](docs/design/WISHLIST-PRICE-DISPLAY.md) for price display spec
    - Fetch current prices for wishlist books from Amazon product pages
    - Target price field in wishlist book data
    - Filter in APP: show wishlist books with current price ≤ target price
@@ -204,7 +205,12 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
      - Wishlist auto-population workflow
      - Series column UI for gap visualization
 
-**5. ✨ UX Quick Wins** - MEDIUM/LOW (1-3 hours each)
+**5. 📚 Collections Filtering Enhancements** - LOW/LOW (1-2 hours each)
+   - **Filter by read status** - Filter by READ/UNREAD/UNKNOWN
+   - **Filter by collection name** - Dropdown to filter by specific Amazon collection
+   - **"Uncollected" pseudo-collection** - Filter for books with no collections
+
+**6. ✨ UX Quick Wins** - MEDIUM/LOW (1-3 hours each)
    - Tooltips for control buttons (Backup, Restore, Reset, Clear)
    - First-run Welcome dialog explaining what ReaderWrangler is
    - **Keyboard shortcuts help** - "?" icon or Ctrl+? to show shortcuts dialog (Undo/Redo, multi-select, etc.)
