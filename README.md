@@ -135,6 +135,11 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v4.16.0 - Cut/Copy/Paste & Book Copies** (January 2026)
+- **Clipboard operations** - Ctrl+X cuts, Ctrl+C copies, Ctrl+V pastes books between columns
+- **Book copies** - Same book can appear in multiple columns (Ctrl+C or Ctrl+Drag to copy)
+- **Delete key** - DEL removes selected books with last-copy protection
+
 **v4.14.0 - Cover Image Caching** (January 2026)
 - **Local browser cache** - Book covers cached locally for instant loading on subsequent visits
 - **~65% faster** - Subsequent loads from cache vs network
@@ -164,6 +169,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 We're constantly improving ReaderWrangler based on user feedback. Here's what's on the horizon:
 
+- **Column Arranger** - Side panel to collapse/expand and bulk-reorganize columns
 - **Book notes** - Personal notes on individual books ("Why did I buy this?")
 - **Tags** - Tag books and dividers for cross-library thematic organization
 - **Column carousel** - Infinite horizontal carousel for navigating many columns

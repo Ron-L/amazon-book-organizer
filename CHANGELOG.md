@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configure via `dev-tasks.cfg` (see `dev-tasks.cfg.example`)
   - Auto-cleans old backups in sync folder
 
+## [4.16.1] - 2026-01-18
+
+### Changed
+- Documentation cleanup and reorganization
+
 ## [4.16.0] - 2026-01-17
 
 ### Added
