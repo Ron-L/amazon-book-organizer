@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.7.0.a';
+    const FETCHER_VERSION = 'v4.7.0.b';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
@@ -1536,78 +1536,22 @@ async function fetchAmazonLibrary() {
             }
         }
         
-        if (newBooks.length === 0) {
-            console.log('✅ No new books to fetch!');
-            console.log('   Your library is up to date.\n');
-
-
-            // Calculate phase durations
-            stats.timing.pass1End = Date.now();
-            const phase0Duration = stats.timing.phase0End - stats.timing.phase0Start;
-            const phase1Duration = stats.timing.pass1End - stats.timing.pass1Start;
-            const totalDuration = Date.now() - startTime;
-
-            console.log('========================================');
-            console.log('✅ VALIDATION COMPLETE!');
-            console.log('========================================\n');
-
-            console.log('⏱️  TIMING');
-            console.log(`   Phase 0 (Validation):        ${formatTime(phase0Duration)}`);
-            console.log(`   Phase 1 (Check for new):     ${formatTime(phase1Duration)}`);
-            console.log(`   ${'─'.repeat(37)}`);
-            console.log(`   Total time:                  ${formatTime(totalDuration)}\n`);
-
-            console.log('🔄 API RELIABILITY');
-            console.log(`   Total API calls:              ${stats.apiCalls.total}`);
-            const firstTryPct = ((stats.apiCalls.firstTry / stats.apiCalls.total) * 100).toFixed(1);
-            console.log(`   Succeeded first try:          ${stats.apiCalls.firstTry} (${firstTryPct}%)`);
-            if (stats.apiCalls.retry1 > 0) {
-                const retry1Pct = ((stats.apiCalls.retry1 / stats.apiCalls.total) * 100).toFixed(1);
-                console.log(`   Needed 1 retry:               ${stats.apiCalls.retry1} (${retry1Pct}%)`);
-            }
-            if (stats.apiCalls.retry2 > 0) {
-                const retry2Pct = ((stats.apiCalls.retry2 / stats.apiCalls.total) * 100).toFixed(1);
-                console.log(`   Needed 2 retries:             ${stats.apiCalls.retry2} (${retry2Pct}%)`);
-            }
-            if (stats.apiCalls.retry3 > 0) {
-                const retry3Pct = ((stats.apiCalls.retry3 / stats.apiCalls.total) * 100).toFixed(1);
-                console.log(`   Needed 3 retries:             ${stats.apiCalls.retry3} (${retry3Pct}%)`);
-            }
-            if (stats.apiCalls.failed > 0) {
-                const failedPct = ((stats.apiCalls.failed / stats.apiCalls.total) * 100).toFixed(1);
-                console.log(`   Failed after 3 retries:       ${stats.apiCalls.failed} (${failedPct}%)`);
-            }
-            console.log('');
-
-            if (stats.nonBooksFiltered.length > 0) {
-                console.log('📊 ITEMS FILTERED');
-                console.log(`   Non-books filtered:           ${stats.nonBooksFiltered.length}`);
-                stats.nonBooksFiltered.slice(0, 3).forEach(item => {
-                    console.log(`      • ${item.title.substring(0, 50)} (${item.binding})`);
-                });
-                if (stats.nonBooksFiltered.length > 3) {
-                    console.log(`      • ... and ${stats.nonBooksFiltered.length - 3} more`);
-                }
-                console.log('');
-            }
-
-            console.log('💾 LIBRARY STATUS');
-            console.log(`   ✅ Total books in library:    ${existingBooks.length}\n`);
-
-            console.log('========================================');
-
-            // Close progress UI with success message
-            progressUI.showComplete('Library up to date! No new books to import.');
-            new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/library-fetcher-completed';
-            return;
-        }
-        
         stats.timing.pass1End = Date.now();
-        console.log(`\n✅ Phase 1 complete: Found ${newBooks.length} new books\n`);
+
+        if (newBooks.length === 0) {
+            console.log('✅ No new books to fetch - checking tags & prices...\n');
+        } else {
+            console.log(`\n✅ Phase 1 complete: Found ${newBooks.length} new books\n`);
+        }
 
         // Step 4: Enrich new books (Phase 2) - BATCH MODE
+        // Only runs if there are new books to enrich
         stats.timing.pass2Start = Date.now();
-        console.log('[4/7] Enriching new books with descriptions & reviews...');
+        if (newBooks.length === 0) {
+            console.log('[4/7] Skipping enrichment (no new books)\n');
+            stats.timing.pass2End = Date.now();
+        } else {
+            console.log('[4/7] Enriching new books with descriptions & reviews...');
         progressUI.updatePhase('Enriching Data', `Importing descriptions & reviews for ${newBooks.length} books`);
 
         const totalBatches = Math.ceil(newBooks.length / ENRICH_BATCH_SIZE);
@@ -1847,16 +1791,17 @@ async function fetchAmazonLibrary() {
             }
         }
         
-        stats.timing.pass2End = Date.now();
-        progressUI.updateProgress(newBooks.length, newBooks.length); // Show 100%
-        console.log(`\n✅ Phase 2 complete: Enriched ${enrichedCount}/${newBooks.length} books`);
-        if (errorCount > 0) {
-            console.log(`   ⚠️  ${errorCount} errors (books will have basic info only)\n`);
-        }
-        console.log('');
+            stats.timing.pass2End = Date.now();
+            progressUI.updateProgress(newBooks.length, newBooks.length); // Show 100%
+            console.log(`\n✅ Phase 2 complete: Enriched ${enrichedCount}/${newBooks.length} books`);
+            if (errorCount > 0) {
+                console.log(`   ⚠️  ${errorCount} errors (books will have basic info only)\n`);
+            }
+            console.log('');
+        } // End of Phase 2 else block (when newBooks.length > 0)
 
         // ============================================================================
-        // Phase 3: Tags/Genres (incremental - only books without genresFetchedAt)
+        // Phase 3: Tags/Genres (incremental - only books without genres array)
         // ============================================================================
         // Tags are static, so we only fetch once per book. Cap at 10 per run to limit time.
         stats.timing.phase3Start = Date.now();
@@ -1864,7 +1809,7 @@ async function fetchAmazonLibrary() {
 
         // Combine new books with existing books to find all books needing tags
         const allBooksForTags = [...newBooks, ...existingBooks];
-        const booksNeedingTags = allBooksForTags.filter(book => !book.genresFetchedAt);
+        const booksNeedingTags = allBooksForTags.filter(book => !book.genres);
         const TAGS_CAP = 10; // Cap per run to limit time (1-at-a-time API)
         const booksToFetchTags = booksNeedingTags.slice(0, TAGS_CAP);
 
@@ -1949,7 +1894,6 @@ async function fetchAmazonLibrary() {
 
                     // Update the book (find it in the appropriate array)
                     book.genres = genreNames;
-                    book.genresFetchedAt = new Date().toISOString();
                     tagsSuccessCount++;
 
                     console.log(`   ✅ ${i + 1}/${booksToFetchTags.length}: ${book.title.substring(0, 40)}... (${genreNames.length} tags)`);
