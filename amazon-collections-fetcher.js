@@ -19,7 +19,7 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v2.1.1';
+    const FETCHER_VERSION = 'v2.1.2.a';
     const SCHEMA_VERSION = '2.0';
     const PAGE_TITLE = document.title;
 
@@ -80,7 +80,7 @@ async function fetchAmazonCollections() {
                     line-height: 1;
                 " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'">✕</button>
                 <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
-                    📚 Collections Import ${FETCHER_VERSION}
+                    📚 Collections Download ${FETCHER_VERSION}
                 </div>
                 <div id="progressPhase" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
                     Starting...
@@ -255,7 +255,7 @@ async function fetchAmazonCollections() {
                 if (!overlay) create();
                 overlay.innerHTML = `
                     <div style="font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">
-                        ✅ Import Complete!
+                        ✅ Download Complete!
                     </div>
                     <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
                         ${bookCount.toLocaleString()} books' collections ready to save
@@ -277,7 +277,7 @@ async function fetchAmazonCollections() {
                     <div style="font-size: 12px; color: #999; margin-top: 10px; text-align: center;">
                         Click to save updated library
                     </div>
-                    <button id="cancelSaveBtn" title="Discard imported data" style="
+                    <button id="cancelSaveBtn" title="Discard downloaded data" style="
                         background: transparent;
                         color: #999;
                         border: 1px solid #ccc;
@@ -674,7 +674,7 @@ async function fetchAmazonCollections() {
     // Phase 1: Fetch All Books
     // ==========================================
     console.log('[Phase 1] Fetching all books with collections and read status...\n');
-    progressUI.updatePhase('Importing Collections', 'Retrieving books and collection memberships');
+    progressUI.updatePhase('Downloading Collections', 'Retrieving books and collection memberships');
 
     const activityInput = {
         contentType: 'Ebook',
@@ -904,7 +904,7 @@ async function fetchAmazonCollections() {
         const userChoice = await progressUI.showSaveButton(processedBooks.length);
         if (userChoice === 'cancel') {
             console.error('   ❌ Save cancelled by user - data discarded');
-            progressUI.showError('Cancelled - your imported data was discarded');
+            progressUI.showError('Cancelled - your downloaded data was discarded');
             return;
         }
 
