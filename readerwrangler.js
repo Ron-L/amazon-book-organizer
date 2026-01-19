@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.16.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.17.0.i";  // Build version for this file
+        const ORGANIZER_VERSION = "4.17.0.j";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -307,6 +307,7 @@
             const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
             const [ratingFilter, setRatingFilter] = useState(''); // Filter by minimum rating (NEW v3.8.0)
             const [wishlistFilter, setWishlistFilter] = useState(''); // Filter by wishlist status: '' | 'owned' | 'wishlist' (NEW v3.8.0)
+            const [dealsFilterActive, setDealsFilterActive] = useState(false); // v4.17.0.j - Deals filter toggle
             const [ownershipFilter, setOwnershipFilter] = useState(''); // Filter by ownership type (NEW v4.9.0)
             const [seriesFilter, setSeriesFilter] = useState(''); // Filter by series name or "NOT_IN_SERIES" (NEW v3.8.0.k)
             const [dateFrom, setDateFrom] = useState(''); // Filter by acquisition date from (YYYY-MM-DD) (NEW v3.8.0.k)
@@ -3937,7 +3938,7 @@
             const filteredBooks = (bookIds) => {
                 // Check if any filter is active (needed inside function scope for divider hiding)
                 const filtersActive = !!(searchTerm || readStatusFilter || collectionFilter ||
-                    ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo);
+                    ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo || dealsFilterActive);
 
                 const result = bookIds.map(item => {
                     // v3.11.0 - Handle dividers (pass through as-is)
@@ -4031,7 +4032,11 @@
                         }
                     }
 
-                    return matchesSearch && matchesReadStatus && matchesCollection && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries && matchesDateRange;
+                    // Deals filter (v4.17.0.j) - only show wishlist books at or below target price
+                    const matchesDeals = !dealsFilterActive ||
+                        (book.isWishlist && book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger);
+
+                    return matchesSearch && matchesReadStatus && matchesCollection && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries && matchesDateRange && matchesDeals;
                 });
 
                 // v4.15.3 - Post-process: hide dividers with no books under them when filters active
@@ -4166,6 +4171,20 @@
                             <div className="flex gap-2 items-center">
                                 {renderStatusIndicator()}
                                 <span className="text-gray-300 mx-1">|</span>
+                                {/* v4.17.0.j - Deals filter button */}
+                                {(() => {
+                                    const dealsCount = books.filter(b => b.isWishlist && b.priceTrigger != null && b.currentPrice != null && b.currentPrice <= b.priceTrigger).length;
+                                    return dealsCount > 0 ? (
+                                        <button
+                                            onClick={() => setDealsFilterActive(!dealsFilterActive)}
+                                            className={`px-3 py-2 rounded-lg text-sm font-medium ${dealsFilterActive
+                                                ? 'bg-green-500 text-white border border-green-600'
+                                                : 'bg-white hover:bg-gray-50 text-green-700 border border-green-300'}`}
+                                            title={dealsFilterActive ? 'Click to show all books' : 'Click to show only deals (wishlist books at or below your target price)'}>
+                                            🏷️ Deals ({dealsCount})
+                                        </button>
+                                    ) : null;
+                                })()}
                                 {/* v4.16.0.q - Subtle button styling (Option 3) */}
                                 <button onClick={importLibrary}
                                         className="px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg text-sm font-medium"
