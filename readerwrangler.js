@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.16.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.17.0.f";  // Build version for this file
+        const ORGANIZER_VERSION = "4.17.0.g";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -282,6 +282,8 @@
             // v4.16.0.aq - State for "last copy" delete warning dialog
             const [lastCopyDialogData, setLastCopyDialogData] = useState(null); // {lastCopyEntries: [...], deletableEntries: [...], deletedCount: number}
             const [showAllReviews, setShowAllReviews] = useState(false);
+            const [customPriceInput, setCustomPriceInput] = useState(''); // v4.17.0 - custom price trigger input
+            const [showCustomPriceInput, setShowCustomPriceInput] = useState(false); // v4.17.0
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -5231,6 +5233,48 @@
                                                                 ${price.toFixed(2)}
                                                             </button>
                                                         ))}
+                                                        {!showCustomPriceInput ? (
+                                                            <button
+                                                                onClick={() => setShowCustomPriceInput(true)}
+                                                                className={`px-2 py-1 text-sm rounded ${modalBook.priceTrigger && ![0.99, 1.99, 2.99, 3.99, 4.99].includes(modalBook.priceTrigger) ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                                                            >
+                                                                Custom...
+                                                            </button>
+                                                        ) : (
+                                                            <form
+                                                                onSubmit={(e) => {
+                                                                    e.preventDefault();
+                                                                    const price = parseFloat(customPriceInput);
+                                                                    if (!isNaN(price) && price > 0) {
+                                                                        setBooks(prev => {
+                                                                            const updated = prev.map(b =>
+                                                                                b.id === modalBook.id ? { ...b, priceTrigger: price } : b
+                                                                            );
+                                                                            saveBooksToIndexedDB(updated);
+                                                                            return updated;
+                                                                        });
+                                                                        setModalBook(prev => ({ ...prev, priceTrigger: price }));
+                                                                    }
+                                                                    setShowCustomPriceInput(false);
+                                                                    setCustomPriceInput('');
+                                                                }}
+                                                                className="flex items-center gap-1"
+                                                            >
+                                                                <span className="text-sm text-gray-600">$</span>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    min="0.01"
+                                                                    value={customPriceInput}
+                                                                    onChange={(e) => setCustomPriceInput(e.target.value)}
+                                                                    className="w-16 px-1 py-1 text-sm border rounded"
+                                                                    placeholder="0.00"
+                                                                    autoFocus
+                                                                />
+                                                                <button type="submit" className="px-2 py-1 text-sm bg-blue-600 text-white rounded">Set</button>
+                                                                <button type="button" onClick={() => { setShowCustomPriceInput(false); setCustomPriceInput(''); }} className="px-1 py-1 text-sm text-gray-500">×</button>
+                                                            </form>
+                                                        )}
                                                         {modalBook.priceTrigger && (
                                                             <button
                                                                 onClick={() => {
