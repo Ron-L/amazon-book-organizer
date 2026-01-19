@@ -8,11 +8,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**0-F. Confirm**
-   - Can extract price
-   - can extract book category (SF, etc)
-   - see .private/Price and Tags.txt.  Also contains "More like this"
-
 **1. Column Organizer - Split Pane UI**
    - see docs/design/COLUMN-ARRANGER.md
 
@@ -57,17 +52,12 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Adding 100+ books from a series requires visiting each product page individually
    - Impact: One-click bulk wishlist population for entire series
 
-**6. 💰 Wishlist Price Tracking** - MEDIUM/MEDIUM (6-10 hours)
+**6. ✅ ~~Wishlist Price Tracking~~** - DONE (v4.17.0)
    - See [docs/design/WISHLIST-PRICE-DISPLAY.md](docs/design/WISHLIST-PRICE-DISPLAY.md) for price display spec
-   - Fetch current prices for wishlist books from Amazon product pages
-   - Target price field in wishlist book data
-   - Filter in APP: show wishlist books with current price ≤ target price
-   - Implementation options:
-     - Add to Library Fetcher (scrape prices during existing fetch)
-     - Separate bookmarklet option with dedicated price lookup script
-   - Replaces manual eReaderIQ workflow for price monitoring
-   - Problem: Jumping between ReaderWrangler and eReaderIQ for price tracking
-   - Impact: Streamlined wishlist-to-purchase workflow
+   - Price tag badge on wishlist book covers (gray/green based on goal)
+   - Set price goals with preset buttons or custom amount
+   - "Deals (n)" filter shows books at or below target price
+   - Fetcher reads current prices for all books during library refresh
 
 **7. Launch**
    - COMMUNITY-SHARING-PLAN.md
@@ -101,6 +91,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 **4. 🔄 Phase 3 Retry Logic + Recovery + Pause/Resume** - MEDIUM/HIGH (12-16 hours, optional)
    - See [docs/design/PHASE-3-RETRY-LOGIC.md](docs/design/PHASE-3-RETRY-LOGIC.md) for full spec
    - Retry logic for failed enrichments (~1.3% failure rate)
+      - ensure all book copies are updated
    - Pause/Resume capability with global flag + button UI
    - Recovery: Save extraction state to localStorage, resume from interruption
    - State persistence: Track progress, allow resumption after browser close/refresh

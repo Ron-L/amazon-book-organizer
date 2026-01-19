@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.7.0.g';
+    const FETCHER_VERSION = 'v4.7.0';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
@@ -1921,23 +1921,22 @@ async function fetchAmazonLibrary() {
         stats.timing.phase3End = Date.now();
 
         // ============================================================================
-        // Phase 4: Prices (all wishlist books every run - prices change frequently)
+        // Phase 4: Prices (all books every run - prices change frequently)
         // ============================================================================
         stats.timing.phase4Start = Date.now();
-        console.log('[6/7] Fetching prices for wishlist books...');
+        console.log('[6/7] Fetching prices for all books...');
 
-        // Combine new books with existing to get all wishlist books
+        // Combine new books with existing to get all books
         const allBooksForPrices = [...newBooks, ...existingBooks];
-        const wishlistBooks = allBooksForPrices.filter(book => book.isOwned === false);
         const PRICE_BATCH_SIZE = 30; // Same as enrichment batch size
 
-        if (wishlistBooks.length === 0) {
-            console.log('   ✅ No wishlist books to price\n');
+        if (allBooksForPrices.length === 0) {
+            console.log('   ✅ No books to price\n');
         } else {
-            console.log(`   Found ${wishlistBooks.length} wishlist books`);
-            progressUI.updatePhase('Fetching Prices', `Processing ${wishlistBooks.length} wishlist books`);
+            console.log(`   Found ${allBooksForPrices.length} books`);
+            progressUI.updatePhase('Fetching Prices', `Processing ${allBooksForPrices.length} books`);
 
-            const priceBatches = Math.ceil(wishlistBooks.length / PRICE_BATCH_SIZE);
+            const priceBatches = Math.ceil(allBooksForPrices.length / PRICE_BATCH_SIZE);
             let pricesSuccessCount = 0;
             let pricesErrorCount = 0;
 
@@ -1949,10 +1948,10 @@ async function fetchAmazonLibrary() {
                 }
 
                 const batchStart = batchNum * PRICE_BATCH_SIZE;
-                const batchEnd = Math.min(batchStart + PRICE_BATCH_SIZE, wishlistBooks.length);
-                const batchBooks = wishlistBooks.slice(batchStart, batchEnd);
+                const batchEnd = Math.min(batchStart + PRICE_BATCH_SIZE, allBooksForPrices.length);
+                const batchBooks = allBooksForPrices.slice(batchStart, batchEnd);
 
-                progressUI.updateProgress(batchStart, wishlistBooks.length);
+                progressUI.updateProgress(batchStart, allBooksForPrices.length);
 
                 try {
                     // Build GraphQL-compatible input
@@ -2054,8 +2053,8 @@ async function fetchAmazonLibrary() {
                 }
             }
 
-            progressUI.updateProgress(wishlistBooks.length, wishlistBooks.length);
-            console.log(`\n✅ Phase 4 complete: ${pricesSuccessCount}/${wishlistBooks.length} prices updated`);
+            progressUI.updateProgress(allBooksForPrices.length, allBooksForPrices.length);
+            console.log(`\n✅ Phase 4 complete: ${pricesSuccessCount}/${allBooksForPrices.length} prices updated`);
             console.log('');
         }
         stats.timing.phase4End = Date.now();

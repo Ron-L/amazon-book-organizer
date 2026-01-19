@@ -2,7 +2,7 @@
 
 ## Content Update Tracker
 
-**Last Updated**: 2026-01-13
+**Last Updated**: 2026-01-19
 
 Before producing/updating videos, review this list of changes since the plan was written:
 
@@ -24,6 +24,7 @@ Before producing/updating videos, review this list of changes since the plan was
 - [ ] **Cut/Copy/Paste** (v4.16.0) - Ctrl+X/C/V for books, Ctrl+Drag to copy, book copies in multiple columns
 - [ ] **Delete key** (v4.16.0) - DEL removes selected books with last-copy protection
 - [ ] **Enhanced context menu** (v4.16.0) - Move to/Copy to submenus, Cut/Copy/Paste with shortcuts
+- [ ] **Wishlist Price Display** (v4.17.0) - Price tags on covers, price goals, Deals filter, green View on Amazon button
 
 ### Quick Start Script Updates Needed
 When re-recording, add mentions of:
