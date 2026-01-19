@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.2.1';
+    const NAV_HUB_VERSION = 'v1.2.2.a';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
@@ -124,14 +124,14 @@
     if (onLibraryPage) {
         dialogContent += `
             <button id="runLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;"
-                title="Import your Kindle library titles and metadata">
-                📖 Import Library
+                title="Download your Kindle library titles and metadata">
+                📖 Download Library
             </button>
         `;
     } else {
         dialogContent += `
             <button id="goLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;"
-                title="Navigate to your Amazon library page to import">
+                title="Navigate to your Amazon library page to download">
                 📖 Go to Library Page
             </button>
         `;
@@ -140,14 +140,14 @@
     if (onCollectionsPage) {
         dialogContent += `
             <button id="runCollections" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;"
-                title="Import your collection assignments and read status">
-                📚 Import Collections
+                title="Download your collection assignments and read status">
+                📚 Download Collections
             </button>
         `;
     } else {
         dialogContent += `
             <button id="goCollections" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;"
-                title="Navigate to the 'Manage Your Content' page to import">
+                title="Navigate to the 'Manage Your Content' page to download">
                 📚 Go to Collections Page
             </button>
         `;
@@ -232,7 +232,7 @@
             dialog.remove();
             // Show reminder before navigation
             setTimeout(() => {
-                alert('📚 Navigating to your library page...\n\nOnce the page loads, click the bookmarklet in your toolbar to import your books.');
+                alert('📚 Navigating to your library page...\n\nOnce the page loads, click the bookmarklet in your toolbar to download your books.');
             }, 100);
             setTimeout(() => {
                 window.location.href = 'https://www.amazon.com/yourbooks';
@@ -246,7 +246,7 @@
             dialog.remove();
             // Show reminder before navigation
             setTimeout(() => {
-                alert('📚 Navigating to collections page...\n\nOnce the page loads, click the bookmarklet in your toolbar to import your collections.');
+                alert('📚 Navigating to collections page...\n\nOnce the page loads, click the bookmarklet in your toolbar to download your collections.');
             }, 100);
             setTimeout(() => {
                 window.location.href = 'https://www.amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/';
