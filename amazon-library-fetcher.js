@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.7.0.c';
+    const FETCHER_VERSION = 'v4.7.0.d';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
@@ -2064,23 +2064,15 @@ async function fetchAmazonLibrary() {
         console.log('[7/7] Merging with existing data and saving library...');
         progressUI.updatePhase('Saving Library', 'Merging and downloading library file');
 
-        // Check if there are new books to save
-        if (newBooks.length === 0) {
-            console.log('\n========================================');
-            console.log('✅ LIBRARY IS UP TO DATE!');
-            console.log('========================================');
-            console.log('   No new books found since last fetch.');
-            console.log('   Your library file is already current.\n');
-            progressUI.showComplete('Library is up to date - no new books found');
-            new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/library-fetcher-completed';
-            stats.timing.mergeEnd = Date.now();
-            return;
-        }
-
-        console.log(`   📚 Found ${newBooks.length} new book${newBooks.length === 1 ? '' : 's'} to add`);
-
-        // Prepend new books (most recent first)
+        // Prepend new books (most recent first), keeping existing books with their updates
         const finalBooks = [...newBooks, ...existingBooks];
+
+        // Summary of what changed
+        if (newBooks.length > 0) {
+            console.log(`   📚 Found ${newBooks.length} new book${newBooks.length === 1 ? '' : 's'} to add`);
+        } else {
+            console.log('   📚 No new books (existing library updated with tags/prices/enrichment)');
+        }
 
         // Create output in Schema v2.0 unified format
         // Library Fetcher owns: schemaVersion, books
