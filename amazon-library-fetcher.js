@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.7.0.f';
+    const FETCHER_VERSION = 'v4.7.0.g';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
@@ -2084,7 +2084,6 @@ async function fetchAmazonLibrary() {
                 fetchDate: new Date().toISOString(),
                 fetcherVersion: FETCHER_VERSION,
                 totalBooks: finalBooks.length,
-                booksWithoutDescriptions: booksWithoutDescriptions.length,
                 booksWithoutDescriptionsDetails: booksWithoutDescriptions,
                 items: finalBooks
             }
