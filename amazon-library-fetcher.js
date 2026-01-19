@@ -1,5 +1,11 @@
 // Amazon Library Fetcher
-// Fetches library books and enriches them with descriptions & reviews
+// Fetches library books and enriches them with descriptions, reviews, tags, and prices
+//
+// Phases:
+// - Phase 1: Fetch book titles/metadata (incremental - stops at overlap)
+// - Phase 2: Enrich with descriptions & reviews (new books only)
+// - Phase 3: Fetch tags/genres (incremental - 10 books per run)
+// - Phase 4: Fetch prices for wishlist books (all wishlist every run)
 //
 // Instructions:
 // 1. Go to https://www.amazon.com/yourbooks (must be logged in)
@@ -7,7 +13,7 @@
 // 3. Paste this ENTIRE script and press Enter
 // 4. If you have existing data, select amazon-library.json when prompted
 //    (If no existing file, just cancel the dialog - will fetch ALL books)
-// 5. Wait for completion (~1 minute for full library)
+// 5. Wait for completion
 // 6. Downloads amazon-library.json
 // 7. Upload library file to organizer!
 //
@@ -15,13 +21,13 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.6.1';
+    const FETCHER_VERSION = 'v4.7.0.a';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
     console.log(`Amazon Library Fetcher ${FETCHER_VERSION}`);
     console.log(`📄 Page: ${PAGE_TITLE}`);
-    console.log('Pass 1 (titles) + Pass 2 (enrichment)');
+    console.log('Phase 1 (titles) + Phase 2 (enrichment) + Phase 3 (tags) + Phase 4 (prices)');
     console.log('========================================\n');
 
     // Verify we're on the right page
@@ -66,6 +72,10 @@ async function fetchAmazonLibrary() {
             pass1End: 0,
             pass2Start: 0,
             pass2End: 0,
+            phase3Start: 0,
+            phase3End: 0,
+            phase4Start: 0,
+            phase4End: 0,
             mergeStart: 0,
             mergeEnd: 0
         },
@@ -732,7 +742,7 @@ async function fetchAmazonLibrary() {
 
     try {
         // Step 1: Load existing data (if any)
-        console.log('[1/6] Checking for existing library data...');
+        console.log('[1/7] Checking for existing library data...');
         progressUI.updatePhase('Checking Library Data', 'Select existing library file or cancel to import all books');
         console.log('');
         console.log('   📂 A file picker dialog will open...');
@@ -862,7 +872,7 @@ async function fetchAmazonLibrary() {
         console.log('');
 
         // Step 2: Find CSRF token
-        console.log('[2/6] Getting CSRF token...');
+        console.log('[2/7] Getting CSRF token...');
         progressUI.updatePhase('Getting CSRF Token', 'Authenticating with Amazon API');
         const csrfMeta = document.querySelector('meta[name="anti-csrftoken-a2z"]');
 
@@ -1233,9 +1243,9 @@ async function fetchAmazonLibrary() {
             console.log('⚠️  Continuing without enrichment validation...\n');
         }
 
-        // Step 3: Fetch new books (Pass 1)
+        // Step 3: Fetch new books (Phase 1)
         stats.timing.pass1Start = Date.now();
-        console.log('[3/6] Fetching new books from library...');
+        console.log('[3/7] Fetching new books from library...');
         progressUI.updatePhase('Importing Titles', 'Retrieving books from your library');
         console.log('   Will stop when we reach existing books\n');
 
@@ -1534,7 +1544,7 @@ async function fetchAmazonLibrary() {
             // Calculate phase durations
             stats.timing.pass1End = Date.now();
             const phase0Duration = stats.timing.phase0End - stats.timing.phase0Start;
-            const pass1Duration = stats.timing.pass1End - stats.timing.pass1Start;
+            const phase1Duration = stats.timing.pass1End - stats.timing.pass1Start;
             const totalDuration = Date.now() - startTime;
 
             console.log('========================================');
@@ -1543,9 +1553,9 @@ async function fetchAmazonLibrary() {
 
             console.log('⏱️  TIMING');
             console.log(`   Phase 0 (Validation):        ${formatTime(phase0Duration)}`);
-            console.log(`   Pass 1 (Check for new):       ${formatTime(pass1Duration)}`);
+            console.log(`   Phase 1 (Check for new):     ${formatTime(phase1Duration)}`);
             console.log(`   ${'─'.repeat(37)}`);
-            console.log(`   Total time:                   ${formatTime(totalDuration)}\n`);
+            console.log(`   Total time:                  ${formatTime(totalDuration)}\n`);
 
             console.log('🔄 API RELIABILITY');
             console.log(`   Total API calls:              ${stats.apiCalls.total}`);
@@ -1593,11 +1603,11 @@ async function fetchAmazonLibrary() {
         }
         
         stats.timing.pass1End = Date.now();
-        console.log(`\n✅ Pass 1 complete: Found ${newBooks.length} new books\n`);
+        console.log(`\n✅ Phase 1 complete: Found ${newBooks.length} new books\n`);
 
-        // Step 4: Enrich new books (Pass 2) - BATCH MODE
+        // Step 4: Enrich new books (Phase 2) - BATCH MODE
         stats.timing.pass2Start = Date.now();
-        console.log('[4/6] Enriching new books with descriptions & reviews...');
+        console.log('[4/7] Enriching new books with descriptions & reviews...');
         progressUI.updatePhase('Enriching Data', `Importing descriptions & reviews for ${newBooks.length} books`);
 
         const totalBatches = Math.ceil(newBooks.length / ENRICH_BATCH_SIZE);
@@ -1839,15 +1849,269 @@ async function fetchAmazonLibrary() {
         
         stats.timing.pass2End = Date.now();
         progressUI.updateProgress(newBooks.length, newBooks.length); // Show 100%
-        console.log(`\n✅ Pass 2 complete: Enriched ${enrichedCount}/${newBooks.length} books`);
+        console.log(`\n✅ Phase 2 complete: Enriched ${enrichedCount}/${newBooks.length} books`);
         if (errorCount > 0) {
             console.log(`   ⚠️  ${errorCount} errors (books will have basic info only)\n`);
         }
         console.log('');
-        
-        // Step 5: Merge and save library
+
+        // ============================================================================
+        // Phase 3: Tags/Genres (incremental - only books without genresFetchedAt)
+        // ============================================================================
+        // Tags are static, so we only fetch once per book. Cap at 10 per run to limit time.
+        stats.timing.phase3Start = Date.now();
+        console.log('[5/7] Fetching tags/genres for books...');
+
+        // Combine new books with existing books to find all books needing tags
+        const allBooksForTags = [...newBooks, ...existingBooks];
+        const booksNeedingTags = allBooksForTags.filter(book => !book.genresFetchedAt);
+        const TAGS_CAP = 10; // Cap per run to limit time (1-at-a-time API)
+        const booksToFetchTags = booksNeedingTags.slice(0, TAGS_CAP);
+
+        if (booksToFetchTags.length === 0) {
+            console.log('   ✅ All books already have tags\n');
+        } else {
+            console.log(`   Found ${booksNeedingTags.length} books needing tags (processing ${booksToFetchTags.length} this run)`);
+            progressUI.updatePhase('Fetching Tags', `Processing ${booksToFetchTags.length} books`);
+
+            let tagsSuccessCount = 0;
+            let tagsErrorCount = 0;
+
+            for (let i = 0; i < booksToFetchTags.length; i++) {
+                // Check for user abort
+                if (progressUI.isAborted()) {
+                    console.log('⚠️ Fetch aborted by user during Phase 3 (tags)');
+                    return;
+                }
+
+                const book = booksToFetchTags[i];
+                progressUI.updateProgress(i, booksToFetchTags.length);
+                progressUI.updateDetail(`${book.title.substring(0, 40)}...`);
+
+                try {
+                    const tagsQuery = `query qvGetSingleItemRecommendation {
+                        getCustomerLibrary {
+                            bookRecommendations(
+                                after: ""
+                                first: 10
+                                asin: "${book.asin}"
+                                selectionCriteria: {tags: []}
+                                libraryType: OWNED
+                            ) {
+                                tags {
+                                    tag {
+                                        id
+                                        name
+                                        rank
+                                    }
+                                }
+                            }
+                        }
+                    }`;
+
+                    const result = await fetchWithRetry(async () => {
+                        const response = await fetch('https://www.amazon.com/kindle-reader-api', {
+                            method: 'POST',
+                            headers: {
+                                'accept': 'application/json, text/plain, */*',
+                                'content-type': 'application/json',
+                                'anti-csrftoken-a2z': csrfToken,
+                                'x-client-id': 'your-books'
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                query: tagsQuery,
+                                operationName: 'qvGetSingleItemRecommendation'
+                            })
+                        });
+
+                        if (!response.ok) {
+                            return { httpError: true, httpStatus: response.status };
+                        }
+
+                        const data = await response.json();
+
+                        if (data.errors) {
+                            return { apiError: true, errorMessage: data.errors[0]?.message || 'API error' };
+                        }
+
+                        const recommendations = data?.data?.getCustomerLibrary?.bookRecommendations;
+                        if (!recommendations) {
+                            return { noData: true };
+                        }
+
+                        return { recommendations };
+                    }, `Tags for ${book.asin}`);
+
+                    // Extract tag names
+                    const tags = result.recommendations?.tags || [];
+                    const genreNames = tags.map(t => t.tag?.name).filter(Boolean);
+
+                    // Update the book (find it in the appropriate array)
+                    book.genres = genreNames;
+                    book.genresFetchedAt = new Date().toISOString();
+                    tagsSuccessCount++;
+
+                    console.log(`   ✅ ${i + 1}/${booksToFetchTags.length}: ${book.title.substring(0, 40)}... (${genreNames.length} tags)`);
+
+                } catch (error) {
+                    console.log(`   ❌ ${i + 1}/${booksToFetchTags.length}: ${book.title.substring(0, 40)}... - ${error.message}`);
+                    tagsErrorCount++;
+                }
+            }
+
+            progressUI.updateProgress(booksToFetchTags.length, booksToFetchTags.length);
+            console.log(`\n✅ Phase 3 complete: ${tagsSuccessCount}/${booksToFetchTags.length} books tagged`);
+            if (booksNeedingTags.length > TAGS_CAP) {
+                console.log(`   ℹ️  ${booksNeedingTags.length - TAGS_CAP} more books need tags (will process next run)`);
+            }
+            console.log('');
+        }
+        stats.timing.phase3End = Date.now();
+
+        // ============================================================================
+        // Phase 4: Prices (all wishlist books every run - prices change frequently)
+        // ============================================================================
+        stats.timing.phase4Start = Date.now();
+        console.log('[6/7] Fetching prices for wishlist books...');
+
+        // Combine new books with existing to get all wishlist books
+        const allBooksForPrices = [...newBooks, ...existingBooks];
+        const wishlistBooks = allBooksForPrices.filter(book => book.isOwned === false);
+        const PRICE_BATCH_SIZE = 30; // Same as enrichment batch size
+
+        if (wishlistBooks.length === 0) {
+            console.log('   ✅ No wishlist books to price\n');
+        } else {
+            console.log(`   Found ${wishlistBooks.length} wishlist books`);
+            progressUI.updatePhase('Fetching Prices', `Processing ${wishlistBooks.length} wishlist books`);
+
+            const priceBatches = Math.ceil(wishlistBooks.length / PRICE_BATCH_SIZE);
+            let pricesSuccessCount = 0;
+            let pricesErrorCount = 0;
+
+            for (let batchNum = 0; batchNum < priceBatches; batchNum++) {
+                // Check for user abort
+                if (progressUI.isAborted()) {
+                    console.log('⚠️ Fetch aborted by user during Phase 4 (prices)');
+                    return;
+                }
+
+                const batchStart = batchNum * PRICE_BATCH_SIZE;
+                const batchEnd = Math.min(batchStart + PRICE_BATCH_SIZE, wishlistBooks.length);
+                const batchBooks = wishlistBooks.slice(batchStart, batchEnd);
+
+                progressUI.updateProgress(batchStart, wishlistBooks.length);
+
+                try {
+                    // Build GraphQL-compatible input
+                    const inputStr = '[' + batchBooks.map(book => `{asin: "${book.asin}"}`).join(', ') + ']';
+
+                    const priceQuery = `query qvGetMediaMatrixProductsQuickView {
+                        getProducts(input: ${inputStr}) {
+                            asin
+                            buyingOptions {
+                                options {
+                                    type
+                                    price {
+                                        basisPrice {
+                                            moneyValueOrRange {
+                                                value {
+                                                    amount
+                                                }
+                                            }
+                                        }
+                                        priceToPay {
+                                            moneyValueOrRange {
+                                                value {
+                                                    amount
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }`;
+
+                    const result = await fetchWithRetry(async () => {
+                        const response = await fetch('https://www.amazon.com/kindle-reader-api', {
+                            method: 'POST',
+                            headers: {
+                                'accept': 'application/json, text/plain, */*',
+                                'content-type': 'application/json',
+                                'anti-csrftoken-a2z': csrfToken,
+                                'x-client-id': 'your-books'
+                            },
+                            credentials: 'include',
+                            body: JSON.stringify({
+                                query: priceQuery,
+                                operationName: 'qvGetMediaMatrixProductsQuickView'
+                            })
+                        });
+
+                        if (!response.ok) {
+                            return { httpError: true, httpStatus: response.status };
+                        }
+
+                        const data = await response.json();
+
+                        if (data.errors && !data.data?.getProducts?.length) {
+                            return { apiError: true, errorMessage: data.errors[0]?.message || 'API error' };
+                        }
+
+                        const products = data?.data?.getProducts || [];
+                        if (products.length === 0) {
+                            return { noData: true };
+                        }
+
+                        return { products };
+                    }, `Prices batch ${batchNum + 1}`);
+
+                    // Create ASIN lookup map
+                    const productMap = new Map();
+                    for (const product of result.products) {
+                        if (product.asin) {
+                            productMap.set(product.asin, product);
+                        }
+                    }
+
+                    // Update each book with price data
+                    const now = new Date().toISOString();
+                    for (const book of batchBooks) {
+                        const product = productMap.get(book.asin);
+                        if (product) {
+                            // Find Kindle buying option
+                            const kindleOption = product.buyingOptions?.options?.find(
+                                opt => opt.type === 'KINDLE_ALC' || opt.type === 'KINDLE'
+                            ) || product.buyingOptions?.options?.[0];
+
+                            if (kindleOption?.price) {
+                                book.currentPrice = kindleOption.price.priceToPay?.moneyValueOrRange?.value?.amount ?? null;
+                                book.listPrice = kindleOption.price.basisPrice?.moneyValueOrRange?.value?.amount ?? null;
+                                book.priceFetchedAt = now;
+                                pricesSuccessCount++;
+                            }
+                        }
+                    }
+
+                    console.log(`   ✅ Batch ${batchNum + 1}/${priceBatches}: ${result.products.length} prices fetched`);
+
+                } catch (error) {
+                    console.log(`   ❌ Batch ${batchNum + 1}/${priceBatches}: ${error.message}`);
+                    pricesErrorCount += batchBooks.length;
+                }
+            }
+
+            progressUI.updateProgress(wishlistBooks.length, wishlistBooks.length);
+            console.log(`\n✅ Phase 4 complete: ${pricesSuccessCount}/${wishlistBooks.length} prices updated`);
+            console.log('');
+        }
+        stats.timing.phase4End = Date.now();
+
+        // Step 7: Merge and save library
         stats.timing.mergeStart = Date.now();
-        console.log('[5/6] Merging with existing data and saving library...');
+        console.log('[7/7] Merging with existing data and saving library...');
         progressUI.updatePhase('Saving Library', 'Merging and downloading library file');
 
         // Check if there are new books to save
@@ -1894,8 +2158,10 @@ async function fetchAmazonLibrary() {
 
         // Calculate and print timing summary BEFORE save (so devs can see it even if they cancel)
         const phase0Duration = stats.timing.phase0End - stats.timing.phase0Start;
-        const pass1Duration = stats.timing.pass1End - stats.timing.pass1Start;
-        const pass2Duration = stats.timing.pass2End - stats.timing.pass2Start;
+        const phase1Duration = stats.timing.pass1End - stats.timing.pass1Start;
+        const phase2Duration = stats.timing.pass2End - stats.timing.pass2Start;
+        const phase3Duration = stats.timing.phase3End - stats.timing.phase3Start;
+        const phase4Duration = stats.timing.phase4End - stats.timing.phase4Start;
         const mergeDuration = stats.timing.mergeEnd - stats.timing.mergeStart;
         const totalDuration = Date.now() - startTime;
 
@@ -1905,11 +2171,13 @@ async function fetchAmazonLibrary() {
 
         console.log('⏱️  TIMING');
         console.log(`   Phase 0 (Validation):        ${formatTime(phase0Duration)}`);
-        console.log(`   Pass 1 (Fetch titles):        ${formatTime(pass1Duration)}`);
-        console.log(`   Pass 2 (Enrich):              ${formatTime(pass2Duration)}`);
-        console.log(`   Pass 3 (Merge):               ${formatTime(mergeDuration)}`);
+        console.log(`   Phase 1 (Fetch titles):      ${formatTime(phase1Duration)}`);
+        console.log(`   Phase 2 (Enrich):            ${formatTime(phase2Duration)}`);
+        console.log(`   Phase 3 (Tags):              ${formatTime(phase3Duration)}`);
+        console.log(`   Phase 4 (Prices):            ${formatTime(phase4Duration)}`);
+        console.log(`   Merge & Save:                ${formatTime(mergeDuration)}`);
         console.log(`   ${'─'.repeat(37)}`);
-        console.log(`   Total time:                   ${formatTime(totalDuration)}\n`);
+        console.log(`   Total time:                  ${formatTime(totalDuration)}\n`);
 
         // Ownership type summary (for new books only) - shown before save so user sees it even if cancelled
         console.log('🏷️  OWNERSHIP TYPES (new books)');
