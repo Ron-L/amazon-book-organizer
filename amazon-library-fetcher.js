@@ -3,7 +3,7 @@
 //
 // Phases:
 // - Phase 1: Fetch book titles/metadata (incremental - stops at overlap)
-// - Phase 2: Enrich with descriptions & reviews (new books only)
+// - Phase 2: Enrich with descriptions & reviews (new books + gap-fill)
 // - Phase 3: Fetch tags/genres (incremental - 10 books per run)
 // - Phase 4: Fetch prices for wishlist books (all wishlist every run)
 //
@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.7.0.b';
+    const FETCHER_VERSION = 'v4.7.0.c';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
@@ -1544,17 +1544,25 @@ async function fetchAmazonLibrary() {
             console.log(`\n✅ Phase 1 complete: Found ${newBooks.length} new books\n`);
         }
 
-        // Step 4: Enrich new books (Phase 2) - BATCH MODE
-        // Only runs if there are new books to enrich
+        // Step 4: Enrich books (Phase 2) - BATCH MODE
+        // Enriches: new books + existing books missing descriptions (gap-fill)
         stats.timing.pass2Start = Date.now();
-        if (newBooks.length === 0) {
-            console.log('[4/7] Skipping enrichment (no new books)\n');
+
+        // Find existing books needing enrichment (gap-fill for past glitches)
+        const existingBooksNeedingEnrichment = existingBooks.filter(b => !b.description);
+        const booksToEnrich = [...newBooks, ...existingBooksNeedingEnrichment];
+
+        if (booksToEnrich.length === 0) {
+            console.log('[4/7] Skipping enrichment (no books need enrichment)\n');
             stats.timing.pass2End = Date.now();
         } else {
-            console.log('[4/7] Enriching new books with descriptions & reviews...');
-        progressUI.updatePhase('Enriching Data', `Importing descriptions & reviews for ${newBooks.length} books`);
+            const newCount = newBooks.length;
+            const gapFillCount = existingBooksNeedingEnrichment.length;
+            console.log(`[4/7] Enriching books with descriptions & reviews...`);
+            console.log(`   ${newCount} new books + ${gapFillCount} existing books needing gap-fill`);
+        progressUI.updatePhase('Enriching Data', `Importing descriptions & reviews for ${booksToEnrich.length} books`);
 
-        const totalBatches = Math.ceil(newBooks.length / ENRICH_BATCH_SIZE);
+        const totalBatches = Math.ceil(booksToEnrich.length / ENRICH_BATCH_SIZE);
         console.log(`   Batch mode: ${ENRICH_BATCH_SIZE} books per request, ${totalBatches} batches total\n`);
 
         let enrichedCount = 0;
@@ -1570,15 +1578,15 @@ async function fetchAmazonLibrary() {
             }
 
             const batchStart = batchNum * ENRICH_BATCH_SIZE;
-            const batchEnd = Math.min(batchStart + ENRICH_BATCH_SIZE, newBooks.length);
-            const batchBooks = newBooks.slice(batchStart, batchEnd);
-            const percent = Math.round((batchStart / newBooks.length) * 100);
+            const batchEnd = Math.min(batchStart + ENRICH_BATCH_SIZE, booksToEnrich.length);
+            const batchBooks = booksToEnrich.slice(batchStart, batchEnd);
+            const percent = Math.round((batchStart / booksToEnrich.length) * 100);
             const progressBar = '█'.repeat(Math.floor(percent / 2)) + '░'.repeat(50 - Math.floor(percent / 2));
 
             console.log(`[Batch ${batchNum + 1}/${totalBatches}] [${progressBar}] ${percent}% - ${batchBooks.length} books...`);
 
             // Update visual progress bar
-            progressUI.updateProgress(batchStart, newBooks.length);
+            progressUI.updateProgress(batchStart, booksToEnrich.length);
 
             try {
                 // Build GraphQL-compatible input: [{asin: "X"}, {asin: "Y"}, ...]
@@ -1725,9 +1733,7 @@ async function fetchAmazonLibrary() {
 
                 // Match products back to books and extract data
                 let batchEnriched = 0;
-                for (let i = 0; i < batchBooks.length; i++) {
-                    const bookIndex = batchStart + i;
-                    const book = batchBooks[i];
+                for (const book of batchBooks) {
                     const product = productMap.get(book.asin);
 
                     if (!product) {
@@ -1759,15 +1765,15 @@ async function fetchAmazonLibrary() {
                         });
                     }
 
-                    // Update book
-                    newBooks[bookIndex].description = description;
-                    newBooks[bookIndex].topReviews = topReviews;
-                    newBooks[bookIndex].publicationDate = publicationDate;
+                    // Update book directly (batchBooks contains references to actual objects)
+                    book.description = description;
+                    book.topReviews = topReviews;
+                    book.publicationDate = publicationDate;
 
                     // Update rating if fresher
                     if (product.customerReviewsSummary?.rating?.value) {
-                        newBooks[bookIndex].rating = product.customerReviewsSummary.rating.value;
-                        newBooks[bookIndex].reviewCount = product.customerReviewsSummary.count?.displayString || null;
+                        book.rating = product.customerReviewsSummary.rating.value;
+                        book.reviewCount = product.customerReviewsSummary.count?.displayString || null;
                     }
 
                     batchEnriched++;
@@ -1792,13 +1798,13 @@ async function fetchAmazonLibrary() {
         }
         
             stats.timing.pass2End = Date.now();
-            progressUI.updateProgress(newBooks.length, newBooks.length); // Show 100%
-            console.log(`\n✅ Phase 2 complete: Enriched ${enrichedCount}/${newBooks.length} books`);
+            progressUI.updateProgress(booksToEnrich.length, booksToEnrich.length); // Show 100%
+            console.log(`\n✅ Phase 2 complete: Enriched ${enrichedCount}/${booksToEnrich.length} books`);
             if (errorCount > 0) {
                 console.log(`   ⚠️  ${errorCount} errors (books will have basic info only)\n`);
             }
             console.log('');
-        } // End of Phase 2 else block (when newBooks.length > 0)
+        } // End of Phase 2 else block (when booksToEnrich.length > 0)
 
         // ============================================================================
         // Phase 3: Tags/Genres (incremental - only books without genres array)
