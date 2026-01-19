@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.16.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.17.0.h";  // Build version for this file
+        const ORGANIZER_VERSION = "4.17.0.i";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -5297,7 +5297,7 @@
 
                                                     {modalBook.priceTrigger && (
                                                         <p className="mt-2 text-sm text-green-600">
-                                                            ✓ Goal: $${modalBook.priceTrigger.toFixed(2)} or less
+                                                            ✓ Goal: {'$'}{modalBook.priceTrigger.toFixed(2)} or less
                                                         </p>
                                                     )}
                                                 </div>
