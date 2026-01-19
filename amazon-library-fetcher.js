@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.7.0.d';
+    const FETCHER_VERSION = 'v4.7.0.e';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
@@ -1552,6 +1552,9 @@ async function fetchAmazonLibrary() {
         const existingBooksNeedingEnrichment = existingBooks.filter(b => !b.description);
         const booksToEnrich = [...newBooks, ...existingBooksNeedingEnrichment];
 
+        // Track books where description extraction failed (used in output file)
+        const booksWithoutDescriptions = [];
+
         if (booksToEnrich.length === 0) {
             console.log('[4/7] Skipping enrichment (no books need enrichment)\n');
             stats.timing.pass2End = Date.now();
@@ -1567,7 +1570,6 @@ async function fetchAmazonLibrary() {
 
         let enrichedCount = 0;
         let errorCount = 0;
-        const booksWithoutDescriptions = []; // Track books where description extraction failed
 
         // Process books in batches
         for (let batchNum = 0; batchNum < totalBatches; batchNum++) {
