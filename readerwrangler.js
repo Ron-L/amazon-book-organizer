@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.16.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.17.0.g";  // Build version for this file
+        const ORGANIZER_VERSION = "4.17.0.h";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -5214,7 +5214,7 @@
                                                     </div>
 
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="text-sm text-gray-600">Alert me below:</span>
+                                                        <span className="text-sm text-gray-600">Buy at:</span>
                                                         {[0.99, 1.99, 2.99, 3.99, 4.99].map(price => (
                                                             <button
                                                                 key={price}
@@ -5297,7 +5297,7 @@
 
                                                     {modalBook.priceTrigger && (
                                                         <p className="mt-2 text-sm text-green-600">
-                                                            ✓ Watching for ${modalBook.priceTrigger.toFixed(2)} or less
+                                                            ✓ Goal: $${modalBook.priceTrigger.toFixed(2)} or less
                                                         </p>
                                                     )}
                                                 </div>
@@ -5760,7 +5760,7 @@
                                                                             clipPath: 'polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%)',
                                                                             padding: '3px 14px 3px 6px'
                                                                         }}
-                                                                        title={book.priceTrigger ? `Watching for $${book.priceTrigger.toFixed(2)} or less` : 'Current price'}
+                                                                        title={book.priceTrigger ? `Goal: $${book.priceTrigger.toFixed(2)} or less` : 'Current price'}
                                                                     >
                                                                         ${book.currentPrice.toFixed(2)}
                                                                     </div>
