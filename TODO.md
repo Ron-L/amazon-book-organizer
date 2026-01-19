@@ -8,16 +8,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**0-H Cleanup**
-   - Remove PRODUCTHUNT-LAUNCH-CHECKLIST.md
-   - Follow recommendations in TERMINOLOGY-CLEANUP-ACTION-PLAN.md
-   - Review readerwrangler-amazon-terms-strategy.md
-
-   - update README/index.html Recent Changes with Copies
-   - update Coming Soon with Column Organizer
-   - compare TODO with docs/design and id any docs not referenced.
-      - move to archive or reference them
-
 **0-G. Social media icons use old logo**
 
 **0-F. Confirm**
