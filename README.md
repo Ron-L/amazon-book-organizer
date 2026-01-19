@@ -135,6 +135,9 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v4.17.0 - Wishlist Price Goals** (January 2026)
+- Set price goals on wishlist books and see at a glance which ones are ready to buy
+
 **v4.16.0 - Cut/Copy/Paste & Book Copies** (January 2026)
 - **Clipboard operations** - Ctrl+X cuts, Ctrl+C copies, Ctrl+V pastes books between columns
 - **Book copies** - Same book can appear in multiple columns (Ctrl+C or Ctrl+Drag to copy)

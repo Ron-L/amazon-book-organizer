@@ -48,18 +48,10 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Single request with pageSize=200 returns all available books
    - Creates wishlist entries (isOwned: false) for books not already owned
    - **Known limitation:** Amazon data gaps (e.g., 155-book series missing books 101-149 from Kindle catalog)
-   - Related to P1 T6 Wishlist Price Tracking for full workflow
    - Problem: Adding 100+ books from a series requires visiting each product page individually
    - Impact: One-click bulk wishlist population for entire series
 
-**6. ✅ ~~Wishlist Price Tracking~~** - DONE (v4.17.0)
-   - See [docs/design/WISHLIST-PRICE-DISPLAY.md](docs/design/WISHLIST-PRICE-DISPLAY.md) for price display spec
-   - Price tag badge on wishlist book covers (gray/green based on goal)
-   - Set price goals with preset buttons or custom amount
-   - "Deals (n)" filter shows books at or below target price
-   - Fetcher reads current prices for all books during library refresh
-
-**7. Launch**
+**6. Launch**
    - COMMUNITY-SHARING-PLAN.md
 ---
 

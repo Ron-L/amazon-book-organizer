@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.17.0] - 2026-01-19
+
+### Added
+- **Wishlist Price Display** - Set price goals and find deals on wishlist books
+  - File version: readerwrangler.js v4.17.0
+  - Price tag badge on wishlist book covers (gray normally, green when at/below goal)
+  - Set price goals with preset buttons ($0.99-$4.99) or custom amount
+  - "Deals (n)" filter button shows only books at or below your target price
+  - Current price and savings displayed in book detail modal
+  - "View on Amazon" button turns green with price when book is at goal
+
 ### Changed
 - **Icons updated to new lasso logo** - All favicons, social cards, and touch icons now use lasso-around-book design
   - og-image.png (1200x630 social card with text)
@@ -18,17 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Directory sync feature for backing up folders (e.g., .private/)
   - Configure via `dev-tasks.cfg` (see `dev-tasks.cfg.example`)
   - Auto-cleans old backups in sync folder
-
-## [4.17.0] - 2026-01-19
-
-### Added
-- **Wishlist Price Display** - Track prices and find deals on wishlist books
-  - File version: readerwrangler.js v4.17.0
-  - Price tag badge on wishlist book covers (gray normally, green when at/below goal)
-  - Set price goals with preset buttons ($0.99-$4.99) or custom amount
-  - "Deals (n)" filter button shows only books at or below your target price
-  - Current price and savings displayed in book detail modal
-  - "View on Amazon" button turns green with price when book is at goal
 
 ## [4.16.1] - 2026-01-18
 
