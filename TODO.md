@@ -8,8 +8,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**0-G. Social media icons use old logo**
-
 **0-F. Confirm**
    - Can extract price
    - can extract book category (SF, etc)

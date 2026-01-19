@@ -8,9 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **Icons updated to new lasso logo** - All favicons, social cards, and touch icons now use lasso-around-book design
+  - og-image.png (1200x630 social card with text)
+  - favicon.ico, apple-touch-icon.png, ReaderWrangler180.png, ReaderWrangler192.png
+  - Deleted obsolete files: og-image.pptx, favicon-full-size.png, favicon.png, favicon.svg
 - **Dev tasks script** - Renamed `update-timestamp.py` to `dev-tasks.py` with backup sync feature
-  - File version: dev-tasks.py v1.0.0
+  - File version: dev-tasks.py v1.1.0
   - Optional backup sync to cloud folder (Dropbox, Google Drive, etc.)
+  - Directory sync feature for backing up folders (e.g., .private/)
   - Configure via `dev-tasks.cfg` (see `dev-tasks.cfg.example`)
   - Auto-cleans old backups in sync folder
 
