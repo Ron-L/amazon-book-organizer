@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.16.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.16.1";  // Build version for this file
+        const ORGANIZER_VERSION = "4.17.0.b";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -1505,12 +1505,12 @@
                         fetchDate: parsedData.books.fetchDate,
                         fetcherVersion: parsedData.books.fetcherVersion,
                         totalBooks: parsedData.books.totalBooks || data.length,
-                        booksWithoutDescriptions: parsedData.books.booksWithoutDescriptions || 0
+                        booksWithoutDescriptions: (parsedData.books.booksWithoutDescriptionsDetails || []).length
                     };
 
                     console.log(`📋 Loaded schema v2.0 unified file`);
                     console.log(`   Total books: ${metadata.totalBooks}`);
-                    console.log(`   Books without descriptions: ${metadata.booksWithoutDescriptions}`);
+                    console.log(`   Books without descriptions: ${(metadata.booksWithoutDescriptionsDetails || []).length}`);
                     console.log(`   Fetched: ${new Date(metadata.fetchDate).toLocaleString()}`);
                     console.log(`   Fetcher version: ${metadata.fetcherVersion}`);
 
@@ -1550,7 +1550,7 @@
 
                     console.log(`📋 Loaded legacy schema ${metadata.schemaVersion}`);
                     console.log(`   Total books: ${metadata.totalBooks}`);
-                    console.log(`   Books without descriptions: ${metadata.booksWithoutDescriptions}`);
+                    console.log(`   Books without descriptions: ${(metadata.booksWithoutDescriptionsDetails || []).length}`);
                     console.log(`   Fetched: ${new Date(metadata.fetchDate).toLocaleString()}`);
                     console.log(`   Fetcher version: ${metadata.fetcherVersion}`);
                     console.log(`   ⚠️  Note: Re-run fetchers to upgrade to v2.0 format`);
@@ -1635,7 +1635,14 @@
                             ownershipType: item.ownershipType || 'purchased',
                             // Collections data
                             readStatus: bookCollections.readStatus,
-                            collections: bookCollections.collections
+                            collections: bookCollections.collections,
+                            // Price data (v4.17.0.a)
+                            currentPrice: item.currentPrice ?? null,
+                            listPrice: item.listPrice ?? null,
+                            priceFetchedAt: item.priceFetchedAt || null,
+                            priceTrigger: item.priceTrigger ?? null,
+                            // Genre data (v4.17.0.a)
+                            genres: item.genres || []
                         };
                     } else {
                         const amazonData = item.amazonData?.data?.getProduct;
@@ -1677,7 +1684,14 @@
                             ownershipType: item.ownershipType || 'purchased',
                             // Collections data
                             readStatus: bookCollections.readStatus,
-                            collections: bookCollections.collections
+                            collections: bookCollections.collections,
+                            // Price data (v4.17.0.a) - legacy format unlikely to have these
+                            currentPrice: item.currentPrice ?? null,
+                            listPrice: item.listPrice ?? null,
+                            priceFetchedAt: item.priceFetchedAt || null,
+                            priceTrigger: item.priceTrigger ?? null,
+                            // Genre data (v4.17.0.a)
+                            genres: item.genres || []
                         };
                     }
                 });
@@ -5630,8 +5644,19 @@
                                                                         </svg>
                                                                     </div>
                                                                 )}
-                                                                {/* Bottom-left: Ownership badge (non-purchased only) */}
-                                                                {book.ownershipType && book.ownershipType !== 'purchased' && (() => {
+                                                                {/* Bottom-left: Price tag (wishlist) or Ownership badge (non-purchased owned) */}
+                                                                {book.isWishlist && book.currentPrice != null ? (
+                                                                    <div
+                                                                        className={`absolute bottom-1 left-1 ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'bg-green-500' : 'bg-gray-500'} bg-opacity-90 text-xs font-bold text-white`}
+                                                                        style={{
+                                                                            clipPath: 'polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%)',
+                                                                            padding: '3px 14px 3px 6px'
+                                                                        }}
+                                                                        title={book.priceTrigger ? `Watching for $${book.priceTrigger.toFixed(2)} or less` : 'Current price'}
+                                                                    >
+                                                                        ${book.currentPrice.toFixed(2)}
+                                                                    </div>
+                                                                ) : book.ownershipType && book.ownershipType !== 'purchased' && (() => {
                                                                     const badgeConfig = {
                                                                         sample: { bg: 'bg-amber-500', text: 'SAMPLE' },
                                                                         borrowed: { bg: 'bg-teal-500', text: 'BORROWED' },
