@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.16.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.17.0.b";  // Build version for this file
+        const ORGANIZER_VERSION = "4.17.0.c";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -5645,6 +5645,7 @@
                                                                     </div>
                                                                 )}
                                                                 {/* Bottom-left: Price tag (wishlist) or Ownership badge (non-purchased owned) */}
+                                                                {/* DEBUG: Price badge */ console.log('Price badge check:', book.title?.substring(0,20), 'isWishlist:', book.isWishlist, 'currentPrice:', book.currentPrice)}
                                                                 {book.isWishlist && book.currentPrice != null ? (
                                                                     <div
                                                                         className={`absolute bottom-1 left-1 ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'bg-green-500' : 'bg-gray-500'} bg-opacity-90 text-xs font-bold text-white`}
