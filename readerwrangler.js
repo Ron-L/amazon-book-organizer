@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.16.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.17.0.j";  // Build version for this file
+        const ORGANIZER_VERSION = "4.17.0.k";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -5137,12 +5137,18 @@
                                                     <span className="inline-flex items-center bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
                                                         ⭐ Wishlist Item
                                                     </span>
-                                                    <button
-                                                        onClick={() => window.open(getAmazonUrl(modalBook.asin), '_blank')}
-                                                        className="px-3 py-1 bg-orange-500 hover:bg-orange-600 text-white rounded text-sm font-medium"
-                                                        title="Opens Amazon with affiliate link">
-                                                        View on Amazon →
-                                                    </button>
+                                                    {/* v4.17.0.k - Green styling when at goal price */}
+                                                    {(() => {
+                                                        const atGoal = modalBook.priceTrigger != null && modalBook.currentPrice != null && modalBook.currentPrice <= modalBook.priceTrigger;
+                                                        return (
+                                                            <button
+                                                                onClick={() => window.open(getAmazonUrl(modalBook.asin), '_blank')}
+                                                                className={`px-3 py-1 ${atGoal ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'} text-white rounded text-sm font-medium`}
+                                                                title="Opens Amazon with affiliate link">
+                                                                View on Amazon {atGoal ? `— $${modalBook.currentPrice.toFixed(2)}` : '→'}
+                                                            </button>
+                                                        );
+                                                    })()}
                                                 </div>
                                             )}
                                             <p className="text-xl text-gray-700 mb-4">by {modalBook.author}</p>
