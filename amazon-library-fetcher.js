@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.7.0';
+    const FETCHER_VERSION = 'v4.7.1.a';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
@@ -192,7 +192,7 @@ async function fetchAmazonLibrary() {
                     line-height: 1;
                 " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'">✕</button>
                 <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
-                    📚 Library Import ${FETCHER_VERSION}
+                    📚 Library Download ${FETCHER_VERSION}
                 </div>
                 <div id="progressPhase" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
                     Starting...
@@ -369,7 +369,7 @@ async function fetchAmazonLibrary() {
                 if (!overlay) create();
                 overlay.innerHTML = `
                     <div style="font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">
-                        ✅ Import Complete!
+                        ✅ Download Complete!
                     </div>
                     <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
                         ${bookCount.toLocaleString()} books ready to save
@@ -391,7 +391,7 @@ async function fetchAmazonLibrary() {
                     <div style="font-size: 12px; color: #999; margin-top: 10px; text-align: center;">
                         Click to choose save location
                     </div>
-                    <button id="cancelSaveBtn" title="Discard imported data" style="
+                    <button id="cancelSaveBtn" title="Discard downloaded data" style="
                         background: transparent;
                         color: #999;
                         border: 1px solid #ccc;
@@ -743,7 +743,7 @@ async function fetchAmazonLibrary() {
     try {
         // Step 1: Load existing data (if any)
         console.log('[1/7] Checking for existing library data...');
-        progressUI.updatePhase('Checking Library Data', 'Select existing library file or cancel to import all books');
+        progressUI.updatePhase('Checking Library Data', 'Select existing library file or cancel to download all books');
         console.log('');
         console.log('   📂 A file picker dialog will open...');
         console.log('');
@@ -1246,7 +1246,7 @@ async function fetchAmazonLibrary() {
         // Step 3: Fetch new books (Phase 1)
         stats.timing.pass1Start = Date.now();
         console.log('[3/7] Fetching new books from library...');
-        progressUI.updatePhase('Importing Titles', 'Retrieving books from your library');
+        progressUI.updatePhase('Downloading Titles', 'Retrieving books from your library');
         console.log('   Will stop when we reach existing books\n');
 
         const newBooks = [];
@@ -1565,7 +1565,7 @@ async function fetchAmazonLibrary() {
             const gapFillCount = existingBooksNeedingEnrichment.length;
             console.log(`[4/7] Enriching books with descriptions & reviews...`);
             console.log(`   ${newCount} new books + ${gapFillCount} existing books needing gap-fill`);
-        progressUI.updatePhase('Enriching Data', `Importing descriptions & reviews for ${booksToEnrich.length} books`);
+        progressUI.updatePhase('Enriching Data', `Downloading descriptions & reviews for ${booksToEnrich.length} books`);
 
         const totalBatches = Math.ceil(booksToEnrich.length / ENRICH_BATCH_SIZE);
         console.log(`   Batch mode: ${ENRICH_BATCH_SIZE} books per request, ${totalBatches} batches total\n`);
@@ -2185,7 +2185,7 @@ async function fetchAmazonLibrary() {
             const userChoice = await progressUI.showSaveButton(finalBooks.length);
             if (userChoice === 'cancel') {
                 console.error('   ❌ Save cancelled by user - data discarded');
-                progressUI.showError('Cancelled - your imported data was discarded');
+                progressUI.showError('Cancelled - your downloaded data was discarded');
                 return;
             }
 
