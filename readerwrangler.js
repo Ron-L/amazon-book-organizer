@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.16.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.17.0.e";  // Build version for this file
+        const ORGANIZER_VERSION = "4.17.0.f";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -5194,6 +5194,70 @@
                                                     </div>
                                                 )}
                                             </div>
+
+                                            {/* Price section for wishlist books (v4.17.0) */}
+                                            {modalBook.isWishlist && modalBook.currentPrice != null && (
+                                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className="font-semibold text-gray-700">Current Price:</span>
+                                                        <span className={`text-lg font-bold ${modalBook.priceTrigger && modalBook.currentPrice <= modalBook.priceTrigger ? 'text-green-600' : 'text-gray-900'}`}>
+                                                            ${modalBook.currentPrice.toFixed(2)}
+                                                        </span>
+                                                        {modalBook.listPrice && modalBook.listPrice > modalBook.currentPrice && (
+                                                            <span className="text-sm text-gray-500">
+                                                                <span className="line-through">${modalBook.listPrice.toFixed(2)}</span>
+                                                                {' '}(Save ${(modalBook.listPrice - modalBook.currentPrice).toFixed(2)})
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="text-sm text-gray-600">Alert me below:</span>
+                                                        {[0.99, 1.99, 2.99, 3.99, 4.99].map(price => (
+                                                            <button
+                                                                key={price}
+                                                                onClick={() => {
+                                                                    setBooks(prev => {
+                                                                        const updated = prev.map(b =>
+                                                                            b.id === modalBook.id ? { ...b, priceTrigger: price } : b
+                                                                        );
+                                                                        saveBooksToIndexedDB(updated);
+                                                                        return updated;
+                                                                    });
+                                                                    setModalBook(prev => ({ ...prev, priceTrigger: price }));
+                                                                }}
+                                                                className={`px-2 py-1 text-sm rounded ${modalBook.priceTrigger === price ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
+                                                            >
+                                                                ${price.toFixed(2)}
+                                                            </button>
+                                                        ))}
+                                                        {modalBook.priceTrigger && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setBooks(prev => {
+                                                                        const updated = prev.map(b =>
+                                                                            b.id === modalBook.id ? { ...b, priceTrigger: null } : b
+                                                                        );
+                                                                        saveBooksToIndexedDB(updated);
+                                                                        return updated;
+                                                                    });
+                                                                    setModalBook(prev => ({ ...prev, priceTrigger: null }));
+                                                                }}
+                                                                className="px-2 py-1 text-sm text-red-600 hover:text-red-800"
+                                                                title="Clear trigger"
+                                                            >
+                                                                ×
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    {modalBook.priceTrigger && (
+                                                        <p className="mt-2 text-sm text-green-600">
+                                                            ✓ Watching for ${modalBook.priceTrigger.toFixed(2)} or less
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
