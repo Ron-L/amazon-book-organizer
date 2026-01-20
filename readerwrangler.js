@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.18.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.17.0";  // Build version for this file
+        const ORGANIZER_VERSION = "4.17.1.a";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -36,25 +36,66 @@
             });
         };
         
+        // v4.17.1.a - Merge logic: preserve orphan wishlist items on import
         const saveBooksToIndexedDB = async (books) => {
             try {
                 console.log(`🔄 Saving ${books.length} books to IndexedDB...`);
 
-                // Deduplicate by ASIN (owned books take priority over wishlist)
+                const db = await openDB();
+
+                // Step 1: Load existing books BEFORE clearing (to preserve orphan wishlists)
+                const existingBooks = await new Promise((resolve, reject) => {
+                    const readTxn = db.transaction([BOOKS_STORE], 'readonly');
+                    const readStore = readTxn.objectStore(BOOKS_STORE);
+                    const request = readStore.getAll();
+                    request.onsuccess = () => resolve(request.result || []);
+                    request.onerror = () => reject(request.error);
+                });
+
+                // Build map of existing books by ASIN
+                const existingByAsin = new Map();
+                for (const book of existingBooks) {
+                    existingByAsin.set(book.asin, book);
+                }
+
+                // Build set of ASINs in the new import
+                const newAsins = new Set(books.map(b => b.asin));
+
+                // Step 2: Find orphan wishlist items (in existing but not in new import)
+                const orphanWishlists = [];
+                for (const [asin, existingBook] of existingByAsin) {
+                    if (!newAsins.has(asin) && existingBook.isWishlist) {
+                        orphanWishlists.push(existingBook);
+                    }
+                }
+
+                if (orphanWishlists.length > 0) {
+                    console.log(`📋 Preserving ${orphanWishlists.length} orphan wishlist items`);
+                }
+
+                // Step 3: Combine new books with orphan wishlists
+                const allBooks = [...books, ...orphanWishlists];
+
+                // Step 4: Deduplicate by ASIN (owned books take priority, preserve user metadata)
                 const booksByAsin = new Map();
                 const duplicates = [];
+                const wishlistToOwned = [];
 
-                for (const book of books) {
+                for (const book of allBooks) {
                     const existing = booksByAsin.get(book.asin);
                     if (existing) {
                         duplicates.push(book.asin);
                         // Owned books (isWishlist falsy) take priority over wishlist
                         if (existing.isWishlist && !book.isWishlist) {
                             // New book is owned, replace wishlist entry
-                            // Preserve addedToWishlist from the wishlist entry
+                            // Preserve user metadata from wishlist entry (column assignment preserved via localStorage)
+                            wishlistToOwned.push(book.asin);
                             booksByAsin.set(book.asin, {
                                 ...book,
-                                addedToWishlist: existing.addedToWishlist
+                                addedToWishlist: existing.addedToWishlist,
+                                // Clear price goal since book is now owned
+                                priceTrigger: null,
+                                targetPrice: null
                             });
                         } else if (!existing.isWishlist && book.isWishlist) {
                             // Existing is owned, new is wishlist - keep existing
@@ -69,7 +110,20 @@
                         }
                         // If both same ownership status, keep first occurrence (existing)
                     } else {
-                        booksByAsin.set(book.asin, book);
+                        // Check if this ASIN existed before and was a wishlist item now becoming owned
+                        const previousBook = existingByAsin.get(book.asin);
+                        if (previousBook && previousBook.isWishlist && !book.isWishlist) {
+                            wishlistToOwned.push(book.asin);
+                            booksByAsin.set(book.asin, {
+                                ...book,
+                                addedToWishlist: previousBook.addedToWishlist,
+                                // Clear price goal since book is now owned
+                                priceTrigger: null,
+                                targetPrice: null
+                            });
+                        } else {
+                            booksByAsin.set(book.asin, book);
+                        }
                     }
                 }
 
@@ -80,9 +134,11 @@
                     console.warn(`   Sample duplicates:`, duplicates.slice(0, 5));
                 }
 
-                const db = await openDB();
+                if (wishlistToOwned.length > 0) {
+                    console.log(`🎉 ${wishlistToOwned.length} wishlist items now owned (price goals cleared)`);
+                }
 
-                // First transaction: Clear existing books
+                // Step 5: Clear and save
                 await new Promise((resolve, reject) => {
                     const clearTxn = db.transaction([BOOKS_STORE], 'readwrite');
                     const clearStore = clearTxn.objectStore(BOOKS_STORE);
@@ -94,7 +150,7 @@
                     clearTxn.onerror = () => reject(clearTxn.error || new Error('Failed to clear IndexedDB'));
                 });
 
-                // Second transaction: Add all unique books
+                // Step 6: Add all unique books
                 return new Promise((resolve, reject) => {
                     const addTxn = db.transaction([BOOKS_STORE], 'readwrite');
                     const addStore = addTxn.objectStore(BOOKS_STORE);
