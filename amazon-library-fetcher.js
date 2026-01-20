@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.8.0.a';
+    const FETCHER_VERSION = 'v4.8.0.b';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
@@ -1803,7 +1803,14 @@ async function fetchAmazonLibrary() {
             progressUI.updateProgress(booksToEnrich.length, booksToEnrich.length); // Show 100%
             console.log(`\n✅ Phase 2 complete: Enriched ${enrichedCount}/${booksToEnrich.length} books`);
             if (errorCount > 0) {
-                console.log(`   ⚠️  ${errorCount} errors (books will have basic info only)\n`);
+                console.log(`   ⚠️  ${errorCount} errors (books will have basic info only)`);
+            }
+            // v4.8.0.b - Log books without descriptions to console (moved from JSON output)
+            if (booksWithoutDescriptions.length > 0) {
+                console.log(`   📋 Books without descriptions (${booksWithoutDescriptions.length}):`);
+                booksWithoutDescriptions.forEach(b => {
+                    console.log(`      - ${b.asin}: ${b.title} by ${b.authors}`);
+                });
             }
             console.log('');
         } // End of Phase 2 else block (when booksToEnrich.length > 0)
@@ -2078,13 +2085,13 @@ async function fetchAmazonLibrary() {
         // Create output in Schema v2.0 unified format
         // Library Fetcher owns: schemaVersion, books
         // Preserves any existing collections section from input file
+        // v4.8.0.b - Removed booksWithoutDescriptionsDetails from JSON (now console-only)
         const outputData = {
             schemaVersion: SCHEMA_VERSION,
             books: {
                 fetchDate: new Date().toISOString(),
                 fetcherVersion: FETCHER_VERSION,
                 totalBooks: finalBooks.length,
-                booksWithoutDescriptionsDetails: booksWithoutDescriptions,
                 items: finalBooks
             }
         };

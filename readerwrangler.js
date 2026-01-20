@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.18.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.18.0.b";  // Build version for this file
+        const ORGANIZER_VERSION = "4.18.0.d";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -1364,6 +1364,7 @@
 
                     // Convert app book format back to fetcher format for books.items
                     // v4.18.0.a - Export uses onWishlist + ownershipType (new format)
+                    // v4.18.0.d - Export includes price data, genres, targetPrice (user metadata)
                     const bookItems = allBooks.map(book => ({
                         asin: book.asin,
                         onWishlist: book.onWishlist || false,
@@ -1380,7 +1381,14 @@
                         acquisitionDate: book.acquired,
                         description: book.description,
                         topReviews: book.topReviews,
-                        binding: book.binding
+                        binding: book.binding,
+                        // v4.18.0.d - Price data and user metadata
+                        currentPrice: book.currentPrice,
+                        listPrice: book.listPrice,
+                        priceAsOf: book.priceAsOf,
+                        targetPrice: book.targetPrice,
+                        genres: book.genres,
+                        genresAsOf: book.genresAsOf
                     }));
 
                     // Build collections.items from books that have collection data
@@ -1601,13 +1609,11 @@
                         schemaVersion: parsedData.schemaVersion,
                         fetchDate: parsedData.books.fetchDate,
                         fetcherVersion: parsedData.books.fetcherVersion,
-                        totalBooks: parsedData.books.totalBooks || data.length,
-                        booksWithoutDescriptions: (parsedData.books.booksWithoutDescriptionsDetails || []).length
+                        totalBooks: parsedData.books.totalBooks || data.length
                     };
 
                     console.log(`📋 Loaded schema v2.0 unified file`);
                     console.log(`   Total books: ${metadata.totalBooks}`);
-                    console.log(`   Books without descriptions: ${(metadata.booksWithoutDescriptionsDetails || []).length}`);
                     console.log(`   Fetched: ${new Date(metadata.fetchDate).toLocaleString()}`);
                     console.log(`   Fetcher version: ${metadata.fetcherVersion}`);
 
@@ -1647,7 +1653,6 @@
 
                     console.log(`📋 Loaded legacy schema ${metadata.schemaVersion}`);
                     console.log(`   Total books: ${metadata.totalBooks}`);
-                    console.log(`   Books without descriptions: ${(metadata.booksWithoutDescriptionsDetails || []).length}`);
                     console.log(`   Fetched: ${new Date(metadata.fetchDate).toLocaleString()}`);
                     console.log(`   Fetcher version: ${metadata.fetcherVersion}`);
                     console.log(`   ⚠️  Note: Re-run fetchers to upgrade to v2.0 format`);
