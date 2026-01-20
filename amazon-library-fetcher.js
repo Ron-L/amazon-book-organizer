@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.7.1.a';
+    const FETCHER_VERSION = 'v4.8.0.a';
     const SCHEMA_VERSION = '2.0';
 
     console.log('========================================');
@@ -1497,7 +1497,8 @@ async function fetchAmazonLibrary() {
                     seenASINs.set(product.asin, newBooks.length);
                     newBooks.push({
                         asin: product.asin,
-                        isOwned: true, // Schema v2.0: distinguishes owned books from wishlist
+                        // v4.8.0.a - onWishlist replaces isOwned (false = owned library book)
+                        onWishlist: false,
                         ownershipType, // 'purchased', 'sample', 'borrowed', or 'unknown'
                         title,
                         authors,

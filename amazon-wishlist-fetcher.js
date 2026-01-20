@@ -8,7 +8,7 @@
 // Flow:
 // 1. Detect page type (product vs series)
 // 2. Scrape book metadata from page DOM
-// 3. Build book object(s) (isOwned: false, addedToWishlist: today)
+// 3. Build book object(s) (onWishlist: true, ownershipType: 'wishlist', addedToWishlist: today)
 // 4. Read existing amazon-library.json
 // 5. Prepend book(s) to books.items (no duplicate check - App Loader handles)
 // 6. Write file back
@@ -24,7 +24,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.2.1';
+    const FETCHER_VERSION = 'v1.3.0.a';
     const SCHEMA_VERSION = '2.0';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -355,7 +355,9 @@ async function addToWishlist() {
 
         return {
             asin,
-            isOwned: false,
+            // v1.3.0.a - onWishlist replaces isOwned
+            onWishlist: true,
+            ownershipType: 'wishlist',
             addedToWishlist: getTodayDate(),
             title,
             authors: author,
@@ -431,7 +433,9 @@ async function addToWishlist() {
 
         return {
             asin,
-            isOwned: false,
+            // v1.3.0.a - onWishlist replaces isOwned
+            onWishlist: true,
+            ownershipType: 'wishlist',
             addedToWishlist: getTodayDate(),
             title,
             authors: author,

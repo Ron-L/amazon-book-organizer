@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.18.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.17.1.a";  // Build version for this file
+        const ORGANIZER_VERSION = "4.18.0.a";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -15,6 +15,38 @@
 
         // Amazon Associates affiliate tag (v4.4.0)
         const AMAZON_AFFILIATE_TAG = 'rclewent-20';
+
+        // TODO: DEPRECATION 2026-07-20 - Remove legacy isOwned/isWishlist field handling after 6 months
+        // Legacy format: isOwned: true/false (from fetcher), isWishlist: 0/1 (internal derived)
+        // New format: onWishlist: true/false, ownershipType includes 'wishlist' for wishlist-only items
+        const normalizeBook = (book) => {
+            const normalized = { ...book };
+
+            // Handle legacy isOwned field from JSON files
+            if ('isOwned' in book) {
+                if (book.isOwned === false) {
+                    // Legacy wishlist item
+                    normalized.onWishlist = true;
+                    normalized.ownershipType = normalized.ownershipType || 'wishlist';
+                } else {
+                    // Legacy owned item
+                    normalized.onWishlist = book.onWishlist ?? false;
+                }
+                delete normalized.isOwned;
+            }
+
+            // Handle legacy isWishlist field (internal format)
+            if ('isWishlist' in book) {
+                normalized.onWishlist = !!book.isWishlist;
+                delete normalized.isWishlist;
+            }
+
+            // Ensure defaults
+            normalized.onWishlist = normalized.onWishlist ?? false;
+            normalized.ownershipType = normalized.ownershipType || 'purchased';
+
+            return normalized;
+        };
 
         // Build Amazon URL with affiliate tag (v4.4.0)
         const getAmazonUrl = (asin) => `https://www.amazon.com/dp/${asin}?tag=${AMAZON_AFFILIATE_TAG}`;
@@ -36,7 +68,8 @@
             });
         };
         
-        // v4.17.1.a - Merge logic: preserve orphan wishlist items on import
+        // v4.18.0.a - Merge logic: preserve orphan wishlist items on import
+        // Uses onWishlist field (normalized from legacy isWishlist/isOwned)
         const saveBooksToIndexedDB = async (books) => {
             try {
                 console.log(`🔄 Saving ${books.length} books to IndexedDB...`);
@@ -64,7 +97,7 @@
                 // Step 2: Find orphan wishlist items (in existing but not in new import)
                 const orphanWishlists = [];
                 for (const [asin, existingBook] of existingByAsin) {
-                    if (!newAsins.has(asin) && existingBook.isWishlist) {
+                    if (!newAsins.has(asin) && existingBook.onWishlist) {
                         orphanWishlists.push(existingBook);
                     }
                 }
@@ -85,8 +118,8 @@
                     const existing = booksByAsin.get(book.asin);
                     if (existing) {
                         duplicates.push(book.asin);
-                        // Owned books (isWishlist falsy) take priority over wishlist
-                        if (existing.isWishlist && !book.isWishlist) {
+                        // Owned books (onWishlist falsy) take priority over wishlist
+                        if (existing.onWishlist && !book.onWishlist) {
                             // New book is owned, replace wishlist entry
                             // Preserve user metadata from wishlist entry (column assignment preserved via localStorage)
                             wishlistToOwned.push(book.asin);
@@ -97,7 +130,7 @@
                                 priceTrigger: null,
                                 targetPrice: null
                             });
-                        } else if (!existing.isWishlist && book.isWishlist) {
+                        } else if (!existing.onWishlist && book.onWishlist) {
                             // Existing is owned, new is wishlist - keep existing
                             // but preserve addedToWishlist if new book has it
                             if (book.addedToWishlist && !existing.addedToWishlist) {
@@ -112,7 +145,7 @@
                     } else {
                         // Check if this ASIN existed before and was a wishlist item now becoming owned
                         const previousBook = existingByAsin.get(book.asin);
-                        if (previousBook && previousBook.isWishlist && !book.isWishlist) {
+                        if (previousBook && previousBook.onWishlist && !book.onWishlist) {
                             wishlistToOwned.push(book.asin);
                             booksByAsin.set(book.asin, {
                                 ...book,
@@ -176,16 +209,19 @@
             }
         };
         
+        // v4.18.0.a - Apply normalizeBook to handle legacy isWishlist/isOwned fields
         const loadBooksFromIndexedDB = async () => {
             const db = await openDB();
             const transaction = db.transaction([BOOKS_STORE], 'readonly');
             const store = transaction.objectStore(BOOKS_STORE);
             const request = store.getAll();
-            
+
             return new Promise((resolve, reject) => {
                 request.onsuccess = () => {
-                    console.log('✅ Loaded', request.result.length, 'books from IndexedDB');
-                    resolve(request.result);
+                    // Normalize all books to handle any legacy field formats
+                    const books = (request.result || []).map(normalizeBook);
+                    console.log('✅ Loaded', books.length, 'books from IndexedDB');
+                    resolve(books);
                 };
                 request.onerror = () => reject(request.error);
             });
@@ -1327,9 +1363,11 @@
                     const allBooks = await loadBooksFromIndexedDB();
 
                     // Convert app book format back to fetcher format for books.items
+                    // v4.18.0.a - Export uses onWishlist + ownershipType (new format)
                     const bookItems = allBooks.map(book => ({
                         asin: book.asin,
-                        isOwned: book.isWishlist ? false : true,
+                        onWishlist: book.onWishlist || false,
+                        ownershipType: book.ownershipType || 'purchased',
                         isHidden: book.isHidden || false,
                         addedToWishlist: book.addedToWishlist || '',
                         title: book.title,
@@ -1668,6 +1706,8 @@
                     const bookCollections = collections?.get(item.asin) || { readStatus: 'UNKNOWN', collections: [] };
 
                     if (isNewFormat) {
+                        // v4.18.0.a - Use normalizeBook to handle legacy isOwned/isWishlist fields
+                        const normalized = normalizeBook(item);
                         return {
                             id: item.asin,  // Use ASIN as stable ID instead of sequential number
                             asin: item.asin,
@@ -1686,12 +1726,12 @@
                             publicationDate: item.publicationDate || '',
                             hasEnrichedData: true,
                             store: "Amazon",
-                            // Wishlist: isOwned=false means wishlist, default to owned (isWishlist=0)
-                            isWishlist: item.isOwned === false ? 1 : 0,
+                            // v4.18.0.a - onWishlist replaces isWishlist (normalized handles legacy)
+                            onWishlist: normalized.onWishlist,
                             isHidden: item.isHidden || false,
                             addedToWishlist: item.addedToWishlist || '',
-                            // Ownership type (v4.9.0)
-                            ownershipType: item.ownershipType || 'purchased',
+                            // Ownership type (v4.9.0, v4.18.0.a - normalized handles 'wishlist' type)
+                            ownershipType: normalized.ownershipType,
                             // Collections data
                             readStatus: bookCollections.readStatus,
                             collections: bookCollections.collections,
@@ -1704,19 +1744,23 @@
                             genres: item.genres || []
                         };
                     } else {
+                        // Legacy format with amazonData (v1.x format)
                         const amazonData = item.amazonData?.data?.getProduct;
                         const imageData = amazonData?.images?.images?.[0]?.hiRes;
-                        
+
                         let asin = item.asin;
                         if (asin && asin.length < 10 && /^[0-9]+$/.test(asin)) {
                             asin = asin.padStart(10, '0');
                         }
-                        
+
                         let coverUrl = `https://images-na.ssl-images-amazon.com/images/P/${asin}.01.LZZZZZZZ.jpg`;
                         if (imageData?.physicalId) {
                             coverUrl = `https://images-na.ssl-images-amazon.com/images/I/${imageData.physicalId}.${imageData.extension}`;
                         }
-                        
+
+                        // v4.18.0.a - Use normalizeBook to handle legacy isOwned/isWishlist fields
+                        const normalized = normalizeBook(item);
+
                         return {
                             id: asin,  // Use ASIN as stable ID instead of sequential number
                             asin: asin,
@@ -1735,12 +1779,12 @@
                             publicationDate: '', // Legacy format doesn't have publication date
                             hasEnrichedData: true,
                             store: "Amazon",
-                            // Wishlist: isOwned=false means wishlist, default to owned (isWishlist=0)
-                            isWishlist: item.isOwned === false ? 1 : 0,
+                            // v4.18.0.a - onWishlist replaces isWishlist (normalized handles legacy)
+                            onWishlist: normalized.onWishlist,
                             isHidden: item.isHidden || false,
                             addedToWishlist: item.addedToWishlist || '',
-                            // Ownership type (v4.9.0)
-                            ownershipType: item.ownershipType || 'purchased',
+                            // Ownership type (v4.9.0, v4.18.0.a - normalized handles 'wishlist' type)
+                            ownershipType: normalized.ownershipType,
                             // Collections data
                             readStatus: bookCollections.readStatus,
                             collections: bookCollections.collections,
@@ -4038,10 +4082,10 @@
                     // Rating filter (NEW v3.8.0)
                     const matchesRating = !ratingFilter || (book.rating >= parseFloat(ratingFilter));
 
-                    // Wishlist filter (NEW v3.8.0)
+                    // Wishlist filter (NEW v3.8.0, v4.18.0.a - onWishlist replaces isWishlist)
                     const matchesWishlist = !wishlistFilter ||
-                        (wishlistFilter === 'wishlist' && book.isWishlist) ||
-                        (wishlistFilter === 'owned' && !book.isWishlist);
+                        (wishlistFilter === 'wishlist' && book.onWishlist) ||
+                        (wishlistFilter === 'owned' && !book.onWishlist);
 
                     // Ownership type filter (NEW v4.9.0)
                     const matchesOwnership = !ownershipFilter ||
@@ -4088,9 +4132,9 @@
                         }
                     }
 
-                    // Deals filter (v4.17.0.j) - only show wishlist books at or below target price
+                    // Deals filter (v4.17.0.j, v4.18.0.a - onWishlist replaces isWishlist)
                     const matchesDeals = !dealsFilterActive ||
-                        (book.isWishlist && book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger);
+                        (book.onWishlist && book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger);
 
                     return matchesSearch && matchesReadStatus && matchesCollection && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries && matchesDateRange && matchesDeals;
                 });
@@ -4229,7 +4273,7 @@
                                 <span className="text-gray-300 mx-1">|</span>
                                 {/* v4.17.0.j - Deals filter button */}
                                 {(() => {
-                                    const dealsCount = books.filter(b => b.isWishlist && b.priceTrigger != null && b.currentPrice != null && b.currentPrice <= b.priceTrigger).length;
+                                    const dealsCount = books.filter(b => b.onWishlist && b.priceTrigger != null && b.currentPrice != null && b.currentPrice <= b.priceTrigger).length;
                                     return dealsCount > 0 ? (
                                         <button
                                             onClick={() => setDealsFilterActive(!dealsFilterActive)}
@@ -5188,7 +5232,7 @@
                                         )}
                                         <div className="flex-1">
                                             <h2 className="text-3xl font-bold text-gray-900 mb-3">{modalBook.title}</h2>
-                                            {modalBook.isWishlist && (
+                                            {modalBook.onWishlist && (
                                                 <div className="mb-3 flex items-center gap-3">
                                                     <span className="inline-flex items-center bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
                                                         ⭐ Wishlist Item
@@ -5278,8 +5322,8 @@
                                                 )}
                                             </div>
 
-                                            {/* Price section for wishlist books (v4.17.0) */}
-                                            {modalBook.isWishlist && modalBook.currentPrice != null && (
+                                            {/* Price section for wishlist books (v4.17.0, v4.18.0.a - onWishlist) */}
+                                            {modalBook.onWishlist && modalBook.currentPrice != null && (
                                                 <div className="mt-4 pt-4 border-t border-gray-200">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <span className="font-semibold text-gray-700">Current Price:</span>
@@ -5735,7 +5779,7 @@
                                                         {/* v4.16.0.f - Check clipboard sourcePositions for instance-specific visual */}
                                                         {/* v4.16.0.x - Use isInstanceHidden for per-instance opacity */}
                                                         {/* v4.16.0.ag - Dragging visual now instance-specific using column+index */}
-                                                        <div className={`book-clickable ${selectedBooks.has(`${column.id}:${book.id}:${actualIndex}`) ? 'selected' : ''} ${draggedBook?.id === book.id && isDragging && draggedFromColumn === column.id && draggedBookIndex === actualIndex ? 'dragging' : ''} ${book.isWishlist || isInstanceHidden ? 'opacity-40' : ''} ${clipboard?.sourcePositions?.some(pos => pos.columnId === column.id && pos.index === actualIndex && pos.bookId === book.id) ? (clipboard.type === 'cut' ? 'cut-pending' : 'copy-pending') : ''}`}
+                                                        <div className={`book-clickable ${selectedBooks.has(`${column.id}:${book.id}:${actualIndex}`) ? 'selected' : ''} ${draggedBook?.id === book.id && isDragging && draggedFromColumn === column.id && draggedBookIndex === actualIndex ? 'dragging' : ''} ${book.onWishlist || isInstanceHidden ? 'opacity-40' : ''} ${clipboard?.sourcePositions?.some(pos => pos.columnId === column.id && pos.index === actualIndex && pos.bookId === book.id) ? (clipboard.type === 'cut' ? 'cut-pending' : 'copy-pending') : ''}`}
                                                              onMouseDown={(e) => handleMouseDown(e, book, column.id, actualIndex)}
                                                              onClick={(e) => {
                                                                  e.stopPropagation();
@@ -5834,7 +5878,7 @@
                                                                     </div>
                                                                 )}
                                                                 {/* Bottom-left: Price tag (wishlist) or Ownership badge (non-purchased owned) */}
-                                                                {book.isWishlist && book.currentPrice != null ? (
+                                                                {book.onWishlist && book.currentPrice != null ? (
                                                                     <div
                                                                         className={`absolute bottom-1 left-1 ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'bg-green-500' : 'bg-gray-500'} bg-opacity-90 text-xs font-bold text-white`}
                                                                         style={{
