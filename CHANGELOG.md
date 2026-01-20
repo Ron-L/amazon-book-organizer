@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.19.0] - 2026-01-20
+
+### Added
+- **Wishlist Persistence** - Wishlist books are preserved when importing fresh library data
+  - File versions: readerwrangler.js v4.18.0, amazon-library-fetcher.js v4.8.0, amazon-wishlist-fetcher.js v1.3.0
+  - Import merges new library with existing wishlist items (no more data loss)
+  - Wishlist books get enriched (descriptions, reviews) during library fetch
+  - Export/backup includes all metadata: price goals, genres, price data
+
+### Changed
+- **Data model cleanup** - Unified ownership flags for cleaner code
+  - `onWishlist` + `ownershipType` replace legacy `isOwned`/`isWishlist` fields
+  - Legacy formats auto-converted on import (6-month deprecation: 2026-07-20)
+  - Diagnostic `booksWithoutDescriptionsDetails` moved from JSON to console-only
+
+## [4.18.0] - 2026-01-19
+
+### Changed
+- **Terminology update** - "Import" renamed to "Download" across all components
+  - File versions: bookmarklet-nav-hub.js v1.2.2, amazon-library-fetcher.js v4.7.1, amazon-collections-fetcher.js v2.1.2, install-bookmarklet.html v1.0.7
+  - Clearer language: users download data from Amazon, not import it
+- **Installer page logo** - Added ReaderWrangler logo to install-bookmarklet.html header
+
 ## [4.17.0] - 2026-01-19
 
 ### Added
