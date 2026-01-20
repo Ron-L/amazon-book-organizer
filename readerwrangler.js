@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.18.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.18.0.a";  // Build version for this file
+        const ORGANIZER_VERSION = "4.18.0.b";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -5322,19 +5322,25 @@
                                                 )}
                                             </div>
 
-                                            {/* Price section for wishlist books (v4.17.0, v4.18.0.a - onWishlist) */}
-                                            {modalBook.onWishlist && modalBook.currentPrice != null && (
+                                            {/* Price section for wishlist books (v4.17.0, v4.18.0.b - show for all wishlist, not just those with price) */}
+                                            {modalBook.onWishlist && (
                                                 <div className="mt-4 pt-4 border-t border-gray-200">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <span className="font-semibold text-gray-700">Current Price:</span>
-                                                        <span className={`text-lg font-bold ${modalBook.priceTrigger && modalBook.currentPrice <= modalBook.priceTrigger ? 'text-green-600' : 'text-gray-900'}`}>
-                                                            ${modalBook.currentPrice.toFixed(2)}
-                                                        </span>
-                                                        {modalBook.listPrice && modalBook.listPrice > modalBook.currentPrice && (
-                                                            <span className="text-sm text-gray-500">
-                                                                <span className="line-through">${modalBook.listPrice.toFixed(2)}</span>
-                                                                {' '}(Save ${(modalBook.listPrice - modalBook.currentPrice).toFixed(2)})
-                                                            </span>
+                                                        {modalBook.currentPrice != null ? (
+                                                            <>
+                                                                <span className={`text-lg font-bold ${modalBook.priceTrigger && modalBook.currentPrice <= modalBook.priceTrigger ? 'text-green-600' : 'text-gray-900'}`}>
+                                                                    ${modalBook.currentPrice.toFixed(2)}
+                                                                </span>
+                                                                {modalBook.listPrice && modalBook.listPrice > modalBook.currentPrice && (
+                                                                    <span className="text-sm text-gray-500">
+                                                                        <span className="line-through">${modalBook.listPrice.toFixed(2)}</span>
+                                                                        {' '}(Save ${(modalBook.listPrice - modalBook.currentPrice).toFixed(2)})
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <span className="text-gray-400 italic">Unknown (run library fetch to get prices)</span>
                                                         )}
                                                     </div>
 
