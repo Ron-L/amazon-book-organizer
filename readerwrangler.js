@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.19.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.18.0.a";  // Build version for this file
+        const ORGANIZER_VERSION = "4.18.0.c";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -85,10 +85,10 @@
                     request.onerror = () => reject(request.error);
                 });
 
-                // Build map of existing books by ASIN
+                // Build map of existing books by ASIN (normalize to handle legacy isWishlist field)
                 const existingByAsin = new Map();
                 for (const book of existingBooks) {
-                    existingByAsin.set(book.asin, book);
+                    existingByAsin.set(book.asin, normalizeBook(book));
                 }
 
                 // Build set of ASINs in the new import
@@ -195,7 +195,7 @@
 
                     addTxn.oncomplete = () => {
                         console.log('✅ Saved', uniqueBooks.length, 'unique books to IndexedDB');
-                        resolve();
+                        resolve(uniqueBooks);  // Return merged books for UI state
                     };
                     addTxn.onerror = () => {
                         const error = addTxn.error || new Error('IndexedDB transaction failed with no error details');
@@ -1844,9 +1844,9 @@
                     console.log(`   - ${readBooks} READ, ${unreadBooks} UNREAD, ${processedBooks.length - readBooks - unreadBooks} UNKNOWN`);
                 }
 
-                // Save to IndexedDB
-                await saveBooksToIndexedDB(processedBooks);
-                setBooks(processedBooks);
+                // Save to IndexedDB (returns merged books including preserved orphan wishlists)
+                const mergedBooks = await saveBooksToIndexedDB(processedBooks);
+                setBooks(mergedBooks);
 
                 // Reset all filters when loading new library (v3.8.0.g, updated v3.8.0.k)
                 setSearchTerm('');
