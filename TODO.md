@@ -8,39 +8,25 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**1. Column Organizer - Split Pane UI**
-   - see docs/design/COLUMN-ARRANGER.md
 
-**2. 📝 Book Notes** - LOW/LOW (2-3 hours)
-   - Personal notes on individual books ("Why did I buy this?", "Who recommended it?")
-   - See [docs/design/BOOK-NOTES.md](docs/design/BOOK-NOTES.md) for full spec
-   - Sticky note styling in detail modal (matches landing page brand element)
-   - Entry points: "Add Note" button in modal, right-click context menu
-   - Auto-save on blur/escape, no explicit save button
-   - Problem: Book descriptions don't always capture why you bought or want to read a book
-   - Impact: Personal context preserved with each book
+**1. 🐛 Navigator Multiple Modal Bug** - LOW/LOW (15 min)
+   - Bug: Clicking bookmarklet multiple times opens stacked modals
+   - Fix: Check DOM for existing modal by ID before creating new one
+   - If exists, bring to front (increase z-index) instead of creating duplicate
+   - Use `document.getElementById('readerwrangler-nav-dialog')` - no orphan-prone flags
+   - Problem: Slow computer + impatient clicks = multiple stacked dialogs
+   - Impact: Clean single-modal behavior
 
-**3. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
-   - Tags for books (explicit) and divs (positional inheritance)
-   - See [docs/design/TAGS.md](docs/design/TAGS.md) for full spec
-   - Books inherit div tags while under that div; lost when moved out
-   - Tag filter with autocomplete; hide empty columns/divs when filtering
-   - Display: explicit tags (bold) first, inherited (faded) second, alphabetical
-   - Problem: Can't find thematically related books (Time Travel, Military SF) across 100+ columns
-   - Impact: Cross-library thematic organization, reduced scrolling through empty columns
+**2. 🔄 Extend Gap-Fill to Include Reviews** - LOW/LOW (1 hour)
+   - File: `amazon-library-fetcher.js`
+   - Current gap-fill only targets books missing descriptions
+   - Extend filter: `!description || (reviewCount > 0 && !topReviews?.length)`
+   - When enrichBook returns data, update ALL fields (not just the missing one)
+   - Same `enrichBook` API returns both description and reviews in one call
+   - Problem: ~1.3% of books missing reviews despite having review count
+   - Impact: Progressive data completeness improvement
 
-**4. 🎠 Column Carousel** - MEDIUM/MEDIUM (8-12 hours)
-   - Infinite horizontal carousel for columns (excludes pinned columns)
-   - See [docs/design/COLUMN-CAROUSEL.md](docs/design/COLUMN-CAROUSEL.md) for full spec
-   - Click-to-pin columns to left side; pinned columns exit carousel
-   - Momentum-based spinning with mouse wheel, edge hover zones, keyboard arrows
-   - 3D perspective: edge columns at 85% scale/opacity, center at 100%
-   - Mobile: swipe to spin, carousel locks during book drag
-   - Problem: 7+ columns becomes unwieldy with linear horizontal scroll
-   - Impact: Scalable navigation for large column counts (20+)
-   - filtering would apply to carousel
-
-**5. 📚 Series Page Bulk Import** - MEDIUM/MEDIUM (6-10 hours)
+**3. 📚 Series Page Bulk Import** - MEDIUM/MEDIUM (6-10 hours)
    - See [docs/design/SERIES-PAGE-BULK-IMPORT.md](docs/design/SERIES-PAGE-BULK-IMPORT.md) for full spec
    - Bulk import all books from an Amazon series page as wishlist entries
    - Destroyer series Reference URL: https://www.amazon.com/dp/B0D775V4W9?binding=kindle_edition
@@ -51,20 +37,114 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Adding 100+ books from a series requires visiting each product page individually
    - Impact: One-click bulk wishlist population for entire series
 
-**6. Launch**
-   - COMMUNITY-SHARING-PLAN.md
+**4. 📚 Author Bibliography Import** - MEDIUM/MEDIUM (4-6 hours)
+   - File: `bookmarklet-nav-hub.js` (navigator modal)
+   - Detect author pages: `/stores/.../author/` URL pattern
+   - Enable wishlist button on author pages (currently only series/product pages)
+   - Context-aware button text:
+     - Series page: "Add Series to Wishlist"
+     - Author page: "Add Bibliography to Wishlist"
+   - Scrape author page HTML for all books (no API endpoint - server-rendered)
+   - Example URL: https://www.amazon.com/stores/John-Scalzi/author/B001IGJOCA/allbooks
+   - Problem: Can't bulk-add all books by a favorite author
+   - Impact: One-click wishlist population for author's complete catalog
+
+**5. 💰 Bulk Set Price Goal** - LOW/LOW (1-2 hours)
+   - Multi-select books (Ctrl+click, Shift+click, Ctrl+A, filter then select)
+   - Right-click context menu → "Set Price Goal" submenu
+   - Presets: $0.99 | $1.99 | $2.99 | $3.99 | $4.99 | Custom | Clear
+   - Also add "Clear" option to single-book modal for consistency
+   - Works on any book (wishlist or owned - for gift tracking)
+   - Toast feedback: "Price goal set to $2.99 for 50 books"
+   - Problem: Setting price goals one book at a time is tedious for large wishlists
+   - Impact: Efficient bulk price goal management
+
+**6. 🔄 Wishlist Deduplication** - LOW/LOW (2-3 hours)
+   - See [docs/design/WISHLIST-DEDUP.md](docs/design/WISHLIST-DEDUP.md) for full spec
+   - Prevent duplicate wishlist entries (dedupe on save by ASIN)
+   - Toast notifications for user feedback (non-blocking, auto-dismiss)
+   - Single add: "Added to wishlist" / "Already on wishlist" / "Already in library"
+   - Series add: Summary toast "Added 15. Skipped: 3 owned, 2 on wishlist"
+   - One-time cleanup utility in Data Status for existing duplicates
+   - Problem: Easy to add same book multiple times; no feedback; bloats JSON
+   - Impact: Cleaner data, user awareness without workflow interruption
+
+**7. 📝 Book Notes** - LOW/LOW (2-3 hours)
+   - Personal notes on individual books ("Why did I buy this?", "Who recommended it?")
+   - See [docs/design/BOOK-NOTES.md](docs/design/BOOK-NOTES.md) for full spec
+   - Sticky note styling in detail modal (matches landing page brand element)
+   - Entry points: "Add Note" button in modal, right-click context menu
+   - Auto-save on blur/escape, no explicit save button
+   - Problem: Book descriptions don't always capture why you bought or want to read a book
+   - Impact: Personal context preserved with each book
+
+**8. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
+   - TAGS.md says Unorganized column cannot have dividers. This is NOT true!
+   - Adding tags to books or divs: Typing a unrecognizied tag should offer the option to create the tag. Discuss this.
+   - Tags for books (explicit) and divs (positional inheritance)
+   - See [docs/design/TAGS.md](docs/design/TAGS.md) for full spec
+   - Books inherit div tags while under that div; lost when moved out
+   - Tag filter with autocomplete; hide empty columns/divs when filtering
+   - Display: explicit tags (bold) first, inherited (faded) second, alphabetical
+   - Problem: Can't find thematically related books (Time Travel, Military SF) across 100+ columns
+   - Impact: Cross-library thematic organization, reduced scrolling through empty columns
+
+**9. Column Organizer - Split Pane UI**
+   - see docs/design/COLUMN-ARRANGER.md
+
+**10. 🎠 Column Carousel** - MEDIUM/MEDIUM (8-12 hours)
+   - Infinite horizontal carousel for columns (excludes pinned columns)
+   - See [docs/design/COLUMN-CAROUSEL.md](docs/design/COLUMN-CAROUSEL.md) for full spec
+   - Click-to-pin columns to left side; pinned columns exit carousel
+   - Momentum-based spinning with mouse wheel, edge hover zones, keyboard arrows
+   - 3D perspective: edge columns at 85% scale/opacity, center at 100%
+   - Mobile: swipe to spin, carousel locks during book drag
+   - Problem: 7+ columns becomes unwieldy with linear horizontal scroll
+   - Impact: Scalable navigation for large column counts (20+)
+   - filtering would apply to carousel
+
 ---
 
-### ✨ Priority 2: High Priority Features
+### 📖 Priority 2: Polish & Documentation (Before Public Launch)
 
-**1. 👨‍👩‍👧 Family Sharing Info** - LOW/LOW (2-4 hours)
-   - See [docs/design/FAMILY-SHARING.md](docs/design/FAMILY-SHARING.md) for full spec
-   - Fetch which books user has shared with family members
-   - Display "Shared with: Name" in book detail modal
-   - API tested: supports batch of 1000+ ASINs in single call (~200ms)
-   - Implementation: Add to collections fetcher, display in organizer
-   - Problem: No visibility into which books are shared with family
-   - Impact: Better awareness of Family Library sharing status
+**1. 📖 Quick Start Video & Written Guide** - HIGH/LOW (2-4 hours) - See [docs/design/VIDEO-PRODUCTION-PLAN.md](docs/design/VIDEO-PRODUCTION-PLAN.md)
+
+**2. 📚 Comprehensive Documentation Hub** - HIGH/MEDIUM (8-12 hours)
+   - Troubleshooting guide (What if scrape fails partway? How to recover?)
+   - FAQ (Multiple Amazon accounts? Kindle Unlimited books? Mobile support?)
+   - Keyboard shortcuts reference
+   - Data management guide (backup, export, import, JSON format)
+   - Technical details (How bookmarklet handles anti-scraping)
+   - Problem: Users get stuck, have questions, can't find answers
+   - Impact: Reduces support burden, improves user confidence
+
+**3. 📱 Mobile Support Clarity** - HIGH/LOW (1 hour)
+   - Document whether app works on mobile devices
+   - Add to FAQ and main page
+   - Problem: Major omission for users who browse libraries on phones/tablets
+   - Impact: Sets correct expectations
+
+**4. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
+   - Link version display (e.g., "v3.6.0") to CHANGELOG.md
+   - Problem: Users see version numbers but no context
+   - Impact: Transparency about what changed
+
+**5. Fill in Missing Sections in USER-GUIDE.md** - MEDIUM/LOW (2-3 hours)
+   - Complete placeholder sections
+   - Add screenshots/examples
+   - Problem: Partial documentation confuses users
+   - Impact: Complete feature documentation
+
+**6. Enhanced Getting Started UX** #Architecture - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
+   - Status: Planned (post-rename enhancement)
+   - Help menu links, enhanced empty library state
+
+**7. Launch**
+   - COMMUNITY-SHARING-PLAN.md
+
+---
+
+### ✨ Priority 3: High Priority Features
 
 **2. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
    - Show reading progress percentage/position for each book
@@ -80,21 +160,16 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Orphaned books (samples replaced by purchase, returns, expired subscriptions) clutter library
    - Impact: Clean library management, safe deletion with restore capability
 
-**4. 🔄 Phase 3 Retry Logic + Recovery + Pause/Resume** - MEDIUM/HIGH (12-16 hours, optional)
-   - See [docs/design/PHASE-3-RETRY-LOGIC.md](docs/design/PHASE-3-RETRY-LOGIC.md) for full spec
-   - Retry logic for failed enrichments (~1.3% failure rate)
-      - ensure all book copies are updated
-   - Pause/Resume capability with global flag + button UI
-   - Recovery: Save extraction state to localStorage, resume from interruption
-   - State persistence: Track progress, allow resumption after browser close/refresh
-   - **Enriches wishlist items**: Wishlist Fetcher only has access to basic fields (title,
-     author, cover, rating, series) from product pages; Pass 3 adds descriptions and reviews
-     when user runs Library Fetcher
-   - Problem: Random enrichment failures, long extractions without pause, lost progress on interruption
-   - Impact: Data quality improvement (99.8%+ expected), better UX for long extractions, prevents data loss
-   - Note: This consolidates former P2 "Extraction Error Recovery" feature
+**1. 👨‍👩‍👧 Family Sharing Info** - LOW/LOW (2-4 hours)
+   - See [docs/design/FAMILY-SHARING.md](docs/design/FAMILY-SHARING.md) for full spec
+   - Fetch which books user has shared with family members
+   - Display "Shared with: Name" in book detail modal
+   - API tested: supports batch of 1000+ ASINs in single call (~200ms)
+   - Implementation: Add to collections fetcher, display in organizer
+   - Problem: No visibility into which books are shared with family
+   - Impact: Better awareness of Family Library sharing status
 
-**5. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
+**4. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
    - Current state: 3,862-line monolithic file with 50+ state variables, 80+ functions
    - **Recommended: Minimal Split (4 modules)**
 
@@ -131,7 +206,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 📚 Priority 3: Nice-to-Have Features
+### 📚 Priority 4: Nice-to-Have Features
 
 **1. 📖 Enhanced Series Management** - MEDIUM/MEDIUM (6-10 hours)
    - Expand current "Group Series Books" button
@@ -189,42 +264,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Make status dialog draggable/movable (modal → draggable)
    - **Drag Divider by Title Area** - Click-drag on divider title text (not just ⋮ handle) to reposition. Must not conflict with double-click to rename.
    - **More Auto-Divide Helpers** - Auto-Divide by Author, by Acquisition Date (Year groups), by Page Count (Short/Medium/Long). All use same divider infrastructure.
-
----
-
-### 📖 Priority 4: Polish & Documentation (Before Public Launch)
-
-**1. 📖 Quick Start Video & Written Guide** - HIGH/LOW (2-4 hours) - See [docs/design/VIDEO-PRODUCTION-PLAN.md](docs/design/VIDEO-PRODUCTION-PLAN.md)
-
-**2. 📚 Comprehensive Documentation Hub** - HIGH/MEDIUM (8-12 hours)
-   - Troubleshooting guide (What if scrape fails partway? How to recover?)
-   - FAQ (Multiple Amazon accounts? Kindle Unlimited books? Mobile support?)
-   - Keyboard shortcuts reference
-   - Data management guide (backup, export, import, JSON format)
-   - Technical details (How bookmarklet handles anti-scraping)
-   - Problem: Users get stuck, have questions, can't find answers
-   - Impact: Reduces support burden, improves user confidence
-
-**3. 📱 Mobile Support Clarity** - HIGH/LOW (1 hour)
-   - Document whether app works on mobile devices
-   - Add to FAQ and main page
-   - Problem: Major omission for users who browse libraries on phones/tablets
-   - Impact: Sets correct expectations
-
-**4. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
-   - Link version display (e.g., "v3.6.0") to CHANGELOG.md
-   - Problem: Users see version numbers but no context
-   - Impact: Transparency about what changed
-
-**5. Fill in Missing Sections in USER-GUIDE.md** - MEDIUM/LOW (2-3 hours)
-   - Complete placeholder sections
-   - Add screenshots/examples
-   - Problem: Partial documentation confuses users
-   - Impact: Complete feature documentation
-
-**6. Enhanced Getting Started UX** #Architecture - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
-   - Status: Planned (post-rename enhancement)
-   - Help menu links, enhanced empty library state
 
 ---
 
