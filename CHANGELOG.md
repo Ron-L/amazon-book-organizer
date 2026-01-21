@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.20.0] - 2026-01-21
+
+### Fixed
+- **Wishlist preservation bug** - Wishlist books now display immediately after library import
+  - File versions: readerwrangler.js v4.18.0, fetchers v4.8.0/v2.1.2/v1.3.0
+  - Fixed: Legacy `isWishlist` field not normalized during orphan detection
+  - Fixed: UI state not updated with merged books (required page refresh)
+
+### Changed
+- **Schema v2.1** - Updated schema version for new data model
+  - All fetchers now output schema v2.1
+  - Loaders accept any `2.x` version (forward compatible)
+
 ## [4.19.0] - 2026-01-20
 
 ### Added
