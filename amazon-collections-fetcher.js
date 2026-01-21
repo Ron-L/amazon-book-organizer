@@ -19,8 +19,8 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v2.1.2.a';
-    const SCHEMA_VERSION = '2.0';
+    const FETCHER_VERSION = 'v2.1.2.b';
+    const SCHEMA_VERSION = '2.1';
     const PAGE_TITLE = document.title;
 
     console.log('========================================');
@@ -623,15 +623,15 @@ async function fetchAmazonCollections() {
             return;
         }
 
-        // Schema v2.0 format: { schemaVersion: "2.0", books: { items: [...] }, ... }
-        if (parsedData.schemaVersion === "2.0") {
+        // Schema v2.x format: { schemaVersion: "2.x", books: { items: [...] }, ... }
+        if (parsedData.schemaVersion?.startsWith('2.')) {
             if (!parsedData.books) {
-                console.error('   ❌ Invalid v2.0 file - Missing books section');
+                console.error('   ❌ Invalid v2.x file - Missing books section');
                 console.error('   Received:', Object.keys(parsedData));
-                throw new Error('Invalid v2.0 file - Missing books section');
+                throw new Error('Invalid v2.x file - Missing books section');
             }
             existingBooks = parsedData.books;
-            console.log(`   📋 Loaded v2.0 unified file (${existingBooks.items?.length || 0} books)`);
+            console.log(`   📋 Loaded ${parsedData.schemaVersion} unified file (${existingBooks.items?.length || 0} books)`);
             // Preserve organization section if present
             if (parsedData.organization) {
                 existingOrganization = parsedData.organization;

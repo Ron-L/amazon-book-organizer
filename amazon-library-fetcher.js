@@ -21,8 +21,8 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.8.0';
-    const SCHEMA_VERSION = '2.0';
+    const FETCHER_VERSION = 'v4.8.0.a';
+    const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
     console.log(`Amazon Library Fetcher ${FETCHER_VERSION}`);
@@ -808,15 +808,15 @@ async function fetchAmazonLibrary() {
                 throw new Error('Backup file selected - fetchers require a library file');
             }
 
-            // Schema v2.0 format: { schemaVersion: "2.0", books: { items: [...] }, ... }
-            if (parsedData.schemaVersion === "2.0") {
+            // Schema v2.x format: { schemaVersion: "2.x", books: { items: [...] }, ... }
+            if (parsedData.schemaVersion?.startsWith('2.')) {
                 if (!parsedData.books || !parsedData.books.items) {
-                    console.error('   ❌ Invalid v2.0 file - Missing books.items');
+                    console.error('   ❌ Invalid v2.x file - Missing books.items');
                     console.error('   Received:', Object.keys(parsedData));
-                    throw new Error('Invalid v2.0 file - Missing books.items');
+                    throw new Error('Invalid v2.x file - Missing books.items');
                 }
                 existingBooks = parsedData.books.items;
-                console.log(`   📋 Loaded v2.0 unified file (${existingBooks.length} books)`);
+                console.log(`   📋 Loaded ${parsedData.schemaVersion} unified file (${existingBooks.length} books)`);
                 // Preserve collections section if present
                 if (parsedData.collections) {
                     existingCollections = parsedData.collections;

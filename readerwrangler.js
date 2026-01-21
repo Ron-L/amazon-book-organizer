@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.19.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.18.0";  // Build version for this file
+        const ORGANIZER_VERSION = "4.18.0.a";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -1400,11 +1400,11 @@
                             collections: book.collections || []
                         }));
 
-                    // v4.0.0.b: Build v2.0 backup format with isBackup flag
+                    // v4.0.0.b: Build v2.x backup format with isBackup flag
                     // v4.15.1.b: Only include collections section if we have real collections data
                     const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
                     const exportData = {
-                        schemaVersion: "2.0",
+                        schemaVersion: "2.1",
                         isBackup: true,
                         books: {
                             fetchDate: libraryStatus.loadDate || new Date().toISOString(),
@@ -1595,13 +1595,13 @@
                 let metadata;       // Books metadata (fetchDate, fetcherVersion, etc.)
                 let collections;    // Collections map (ASIN -> {readStatus, collections})
 
-                // Schema v2.0 - unified format with books.items and collections.items
-                if (parsedData.schemaVersion === "2.0") {
+                // Schema v2.x - unified format with books.items and collections.items
+                if (parsedData.schemaVersion?.startsWith('2.')) {
                     if (!parsedData.books || !parsedData.books.items) {
-                        console.error('❌ Invalid v2.0 library format');
-                        console.error('   Expected: {schemaVersion: "2.0", books: {items: [...]}}');
+                        console.error('❌ Invalid v2.x library format');
+                        console.error('   Expected: {schemaVersion: "2.x", books: {items: [...]}}');
                         console.error('   Received:', Object.keys(parsedData));
-                        throw new Error('Invalid v2.0 library format - please re-fetch your library using the latest fetcher');
+                        throw new Error('Invalid v2.x library format - please re-fetch your library using the latest fetcher');
                     }
 
                     data = parsedData.books.items;
@@ -1612,7 +1612,7 @@
                         totalBooks: parsedData.books.totalBooks || data.length
                     };
 
-                    console.log(`📋 Loaded schema v2.0 unified file`);
+                    console.log(`📋 Loaded schema ${parsedData.schemaVersion} unified file`);
                     console.log(`   Total books: ${metadata.totalBooks}`);
                     console.log(`   Fetched: ${new Date(metadata.fetchDate).toLocaleString()}`);
                     console.log(`   Fetcher version: ${metadata.fetcherVersion}`);

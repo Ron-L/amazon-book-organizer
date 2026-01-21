@@ -24,8 +24,8 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.3.0';
-    const SCHEMA_VERSION = '2.0';
+    const FETCHER_VERSION = 'v1.3.0.a';
+    const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
     // Use top-level document/window to handle iframe context (e.g., if user clicked an ad)
@@ -584,8 +584,8 @@ async function addToWishlist() {
             throw new Error('This is a backup file. Please select amazon-library.json instead.');
         }
 
-        if (existingData.schemaVersion !== '2.0') {
-            throw new Error(`Unsupported schema version: ${existingData.schemaVersion || 'unknown'}. Expected 2.0.`);
+        if (!existingData.schemaVersion?.startsWith('2.')) {
+            throw new Error(`Unsupported schema version: ${existingData.schemaVersion || 'unknown'}. Expected 2.x.`);
         }
 
         if (!existingData.books || !existingData.books.items) {

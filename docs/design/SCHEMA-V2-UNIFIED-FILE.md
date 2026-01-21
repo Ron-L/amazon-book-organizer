@@ -1,11 +1,21 @@
-# Schema v2.0: Unified File Format
+# Schema v2.x: Unified File Format
 
 **Date:** 2025-12-24
-**Status:** Design Complete, Implementation Pending
+**Updated:** 2026-01-20 (v4.19.0 data model changes, v2.1 schema)
+**Status:** Implemented
 
 ## Summary
 
-Replace the current two-file system (`amazon-library.json` + `amazon-collections.json`) with a single unified file. Also adds wishlist support with books distinguished by an `isOwned` flag.
+Replace the current two-file system (`amazon-library.json` + `amazon-collections.json`) with a single unified file. Also adds wishlist support with ownership tracking.
+
+## Schema Versioning
+
+| Version | Changes | Compatibility |
+|---------|---------|---------------|
+| v2.0 | Initial unified format with `isOwned` field | Loader accepts, normalizes to v2.1 fields |
+| v2.1 | New data model: `onWishlist`, `ownershipType` | Current version |
+
+**Version check:** Loaders accept any `schemaVersion` starting with `"2."`. Breaking changes would require v3.x.
 
 ---
 
@@ -47,16 +57,17 @@ Replace the current two-file system (`amazon-library.json` + `amazon-collections
 
 ```json
 {
-  "schemaVersion": "2.0",
+  "schemaVersion": "2.1",
   "books": {
     "fetchDate": "2025-12-24T10:30:00Z",
     "fetcherVersion": "1.2.0",
     "items": [
       {
         "asin": "B08XYZ1234",
-        "isOwned": true,
+        "onWishlist": false,
+        "ownershipType": "owned",
         "title": "Example Book",
-        "author": "Author Name",
+        "authors": "Author Name",
         "acquiredDate": "2024-06-15",
         "coverUrl": "https://...",
         "rating": 4.5,
@@ -65,12 +76,14 @@ Replace the current two-file system (`amazon-library.json` + `amazon-collections
       },
       {
         "asin": "B09ABC5678",
-        "isOwned": false,
+        "onWishlist": true,
+        "ownershipType": "wishlist",
         "title": "Wishlist Book",
-        "author": "Another Author",
+        "authors": "Another Author",
         "addedToWishlist": "2025-12-24",
         "coverUrl": "https://...",
-        "rating": 4.8
+        "rating": 4.8,
+        "targetPrice": 2.99
       }
     ]
   },
@@ -105,18 +118,39 @@ Replace the current two-file system (`amazon-library.json` + `amazon-collections
 
 ### Book Item Fields
 
-| Field | Type | Owned Books | Wishlist Books |
-|-------|------|-------------|----------------|
-| `asin` | string | ✅ Required | ✅ Required |
-| `isOwned` | boolean | `true` | `false` |
-| `title` | string | ✅ | ✅ |
-| `author` | string | ✅ | ✅ |
-| `coverUrl` | string | ✅ | ✅ |
-| `rating` | number | ✅ | ✅ |
-| `acquiredDate` | string | ✅ | ❌ |
-| `addedToWishlist` | string | ❌ | ✅ |
-| `pageCount` | number | ✅ | Optional |
-| `description` | string | ✅ | Optional |
+#### Current Data Model (v4.19.0+)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `asin` | string | Required - Amazon identifier |
+| `onWishlist` | boolean | `true` if on wishlist (can be combined with owned) |
+| `ownershipType` | enum | `'owned'` \| `'sample'` \| `'ku'` \| `'wishlist'` |
+| `title` | string | Book title |
+| `authors` | string | Author name(s) |
+| `coverUrl` | string | Cover image URL |
+| `rating` | number | Amazon rating |
+| `acquiredDate` | string | When acquired (owned books) |
+| `addedToWishlist` | string | When added to wishlist |
+| `pageCount` | number | Page count |
+| `description` | string | Book description |
+| `targetPrice` | number | User's price goal |
+| `currentPrice` | number | Current Amazon price |
+| `listPrice` | number | List price |
+| `priceAsOf` | string | When price was fetched |
+
+#### Legacy Data Model (deprecated - remove after 2026-07-20)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `isOwned` | boolean | `true` = owned, `false` = wishlist only |
+| `isWishlist` | boolean | `true` if on wishlist |
+
+**Migration:** The `normalizeBook()` function in readerwrangler.js converts legacy fields:
+- `isOwned: true` → `ownershipType: 'owned'`
+- `isOwned: false` → `ownershipType: 'wishlist'`
+- `isWishlist: true` → `onWishlist: true`
+
+Legacy fields are supported for backward compatibility until 2026-07-20.
 
 ---
 
@@ -164,10 +198,11 @@ if (books.items.find(b => b.asin === newBook.asin)) {
 When user purchases a wishlist book and re-imports library:
 
 1. Library Fetcher finds book with matching ASIN
-2. Updates `isOwned: false` → `isOwned: true`
-3. Adds `acquiredDate` field
-4. Book **stays in current column** (doesn't move to Unorganized)
-5. Visual effect: "ungrays" in place
+2. Updates `ownershipType: 'wishlist'` → `ownershipType: 'owned'`
+3. `onWishlist` remains `true` (user can clear if desired)
+4. Adds `acquiredDate` field
+5. Book **stays in current column** (doesn't move to Unorganized)
+6. Visual effect: "ungrays" in place
 
 ---
 
@@ -205,7 +240,7 @@ Work is never lost - IndexedDB auto-saves. Export/Import are for moving data in/
 
 ### Wishlist Display
 
-- Wishlist books (`isOwned: false`) appear in Unorganized column initially
+- Wishlist books (`ownershipType: 'wishlist'`) appear in Unorganized column initially
 - User can drag to any column
 - Visual distinction:
   - Gray-out effect on cover/title
@@ -263,23 +298,25 @@ Fetchers **reject** backup files:
 
 ## Implementation Phases
 
-### Phase 1: Fetchers (v2.0 output)
-- [ ] Update Library Fetcher → output v2.0 format
-- [ ] Update Collections Fetcher → merge into existing unified file
+### Phase 1: Fetchers (v2.0 output) ✅ Complete
+- [x] Update Library Fetcher → output v2.0 format
+- [x] Update Collections Fetcher → merge into existing unified file
 
-### Phase 2: App (v2.0 support)
-- [ ] Update app to read v2.0 format (`books.items`, `collections.items`)
-- [ ] Update app to export v2.0 format (with `organization` section)
-- [ ] Update Data Status to read from `books.fetchDate`, `collections.fetchDate`
-- [ ] Rename buttons: Backup→Export, Restore→Import
-- [ ] Remove Load buttons from Data Status dialog
+### Phase 2: App (v2.0 support) ✅ Complete
+- [x] Update app to read v2.0 format (`books.items`, `collections.items`)
+- [x] Update app to export v2.0 format (with `organization` section)
+- [x] Update Data Status to read from `books.fetchDate`, `collections.fetchDate`
+- [x] Rename buttons: Backup→Export, Restore→Import
+- [x] Remove Load buttons from Data Status dialog
 
-### Phase 3: Wishlist Feature (T1, separate work)
-- [ ] Create Wish Fetcher bookmarklet
-- [ ] Add `isOwned` field handling
-- [ ] Add wishlist visual styling (gray-out, badge)
-- [ ] Add Amazon purchase link behavior
-- [ ] Implement ASIN-merge logic for wishlist→owned transitions
+### Phase 3: Wishlist Feature ✅ Complete (v4.19.0)
+- [x] Create Wishlist Fetcher bookmarklet
+- [x] Add `onWishlist` / `ownershipType` field handling
+- [x] Add wishlist visual styling (gray-out, badge)
+- [x] Add Amazon purchase link behavior
+- [x] Implement ASIN-merge logic for wishlist→owned transitions
+- [x] Import preserves existing wishlist items
+- [x] Gap-fill enrichment includes wishlist books
 
 ---
 
