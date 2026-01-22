@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.2.3';
+    const NAV_HUB_VERSION = 'v1.3.0';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
@@ -231,7 +231,11 @@
 
     const runWishlistBtn = dialog.querySelector('#runWishlist');
     if (runWishlistBtn && onWishlistPage) {
-        runWishlistBtn.onclick = () => loadScript('amazon-wishlist-fetcher.js', 'wishlist fetcher');
+        if (onSeriesPage) {
+            runWishlistBtn.onclick = () => loadScript('series-page-fetcher.js', 'series fetcher');
+        } else {
+            runWishlistBtn.onclick = () => loadScript('amazon-wishlist-fetcher.js', 'wishlist fetcher');
+        }
     }
 
     const goLibraryBtn = dialog.querySelector('#goLibrary');
