@@ -8,7 +8,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-
 **1. 🐛 Navigator Multiple Modal Bug** - LOW/LOW (15 min)
    - Bug: Clicking bookmarklet multiple times opens stacked modals
    - Fix: Check DOM for existing modal by ID before creating new one
@@ -17,16 +16,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Slow computer + impatient clicks = multiple stacked dialogs
    - Impact: Clean single-modal behavior
 
-**2. 🔄 Extend Gap-Fill to Include Reviews** - LOW/LOW (1 hour)
-   - File: `amazon-library-fetcher.js`
-   - Current gap-fill only targets books missing descriptions
-   - Extend filter: `!description || (reviewCount > 0 && !topReviews?.length)`
-   - When enrichBook returns data, update ALL fields (not just the missing one)
-   - Same `enrichBook` API returns both description and reviews in one call
-   - Problem: ~1.3% of books missing reviews despite having review count
-   - Impact: Progressive data completeness improvement
-
-**3. 📚 Series Page Bulk Import** - MEDIUM/MEDIUM (6-10 hours)
+**2. 📚 Series Page Bulk Import** - MEDIUM/MEDIUM (6-10 hours)
    - See [docs/design/SERIES-PAGE-BULK-IMPORT.md](docs/design/SERIES-PAGE-BULK-IMPORT.md) for full spec
    - Bulk import all books from an Amazon series page as wishlist entries
    - Destroyer series Reference URL: https://www.amazon.com/dp/B0D775V4W9?binding=kindle_edition
@@ -37,7 +27,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Adding 100+ books from a series requires visiting each product page individually
    - Impact: One-click bulk wishlist population for entire series
 
-**4. 📚 Author Bibliography Import** - MEDIUM/MEDIUM (4-6 hours)
+**3. 📚 Author Bibliography Import** - MEDIUM/MEDIUM (4-6 hours)
    - File: `bookmarklet-nav-hub.js` (navigator modal)
    - Detect author pages: `/stores/.../author/` URL pattern
    - Enable wishlist button on author pages (currently only series/product pages)
@@ -49,7 +39,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Can't bulk-add all books by a favorite author
    - Impact: One-click wishlist population for author's complete catalog
 
-**5. 💰 Bulk Set Price Goal** - LOW/LOW (1-2 hours)
+**4. 💰 Bulk Set Price Goal** - LOW/LOW (1-2 hours)
    - Multi-select books (Ctrl+click, Shift+click, Ctrl+A, filter then select)
    - Right-click context menu → "Set Price Goal" submenu
    - Presets: $0.99 | $1.99 | $2.99 | $3.99 | $4.99 | Custom | Clear
@@ -59,17 +49,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Setting price goals one book at a time is tedious for large wishlists
    - Impact: Efficient bulk price goal management
 
-**6. 🔄 Wishlist Deduplication** - LOW/LOW (2-3 hours)
-   - See [docs/design/WISHLIST-DEDUP.md](docs/design/WISHLIST-DEDUP.md) for full spec
-   - Prevent duplicate wishlist entries (dedupe on save by ASIN)
-   - Toast notifications for user feedback (non-blocking, auto-dismiss)
-   - Single add: "Added to wishlist" / "Already on wishlist" / "Already in library"
-   - Series add: Summary toast "Added 15. Skipped: 3 owned, 2 on wishlist"
-   - One-time cleanup utility in Data Status for existing duplicates
-   - Problem: Easy to add same book multiple times; no feedback; bloats JSON
-   - Impact: Cleaner data, user awareness without workflow interruption
-
-**7. 📝 Book Notes** - LOW/LOW (2-3 hours)
+**5. 📝 Book Notes** - LOW/LOW (2-3 hours)
    - Personal notes on individual books ("Why did I buy this?", "Who recommended it?")
    - See [docs/design/BOOK-NOTES.md](docs/design/BOOK-NOTES.md) for full spec
    - Sticky note styling in detail modal (matches landing page brand element)
@@ -78,7 +58,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Book descriptions don't always capture why you bought or want to read a book
    - Impact: Personal context preserved with each book
 
-**8. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
+**6. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
    - TAGS.md says Unorganized column cannot have dividers. This is NOT true!
    - Adding tags to books or divs: Typing a unrecognizied tag should offer the option to create the tag. Discuss this.
    - Tags for books (explicit) and divs (positional inheritance)
@@ -89,10 +69,11 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Can't find thematically related books (Time Travel, Military SF) across 100+ columns
    - Impact: Cross-library thematic organization, reduced scrolling through empty columns
 
-**9. Column Organizer - Split Pane UI**
+**7. Column Organizer - Split Pane UI**
    - see docs/design/COLUMN-ARRANGER.md
 
-**10. 🎠 Column Carousel** - MEDIUM/MEDIUM (8-12 hours)
+**8. 🎠 Column Carousel** - MEDIUM/MEDIUM (8-12 hours)
+   - This may not be needed if the Column Organizer serves.
    - Infinite horizontal carousel for columns (excludes pinned columns)
    - See [docs/design/COLUMN-CAROUSEL.md](docs/design/COLUMN-CAROUSEL.md) for full spec
    - Click-to-pin columns to left side; pinned columns exit carousel
@@ -103,9 +84,54 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Impact: Scalable navigation for large column counts (20+)
    - filtering would apply to carousel
 
+
+### 📖 Priority 2: Optimizations & Polish (Before Public Launch)
+
+**1. 📚 Book Recommendations** - LOW/LOW (2-3 hours)
+   - See [docs/design/BOOK-RECOMMENDATIONS.md](docs/design/BOOK-RECOMMENDATIONS.md) for full spec
+   - Display "Similar Books" in book detail modal (collapsible, hidden by default)
+   - Data already fetched in Phase 3 (tags API) but currently discarded
+   - Store: `recommendations: [{asin, title, coverUrl}]` per book (~1KB/book)
+   - Click opens Amazon product page; "Owned" badge if book is in library
+   - Problem: No discovery of related books from within the app
+   - Impact: Book discovery without leaving ReaderWrangler
+
+**2. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
+   - Show reading progress percentage/position for each book
+   - Implementation guidance: [Amazon Organizer Reading Progress conversation](https://claude.ai/chat/6e6f23c8-b84e-4900-8c64-fecb6a6e0bd1)
+   - Note: Collections data already merged (line 452 LOG.md), this adds progress visualization
+   - Problem: Users can't see reading progress in organizer
+   - Impact: Better tracking of currently-reading books
+
+**3. 🔄 Extend Gap-Fill to Include Reviews** - LOW/LOW (1 hour)
+   - File: `amazon-library-fetcher.js`
+   - Current gap-fill only targets books missing descriptions
+   - Extend filter: `!description || (reviewCount > 0 && !topReviews?.length)`
+   - When enrichBook returns data, update ALL fields (not just the missing one)
+   - Same `enrichBook` API returns both description and reviews in one call
+   - Problem: ~1.3% of books missing reviews despite having review count
+   - Impact: Progressive data completeness improvement
+
+**4. 🔄 Wishlist Deduplication** - LOW/LOW (2-3 hours)
+   - See [docs/design/WISHLIST-DEDUP.md](docs/design/WISHLIST-DEDUP.md) for full spec
+   - Prevent duplicate wishlist entries (dedupe on save by ASIN)
+   - Toast notifications for user feedback (non-blocking, auto-dismiss)
+   - Single add: "Added to wishlist" / "Already on wishlist" / "Already in library"
+   - Series add: Summary toast "Added 15. Skipped: 3 owned, 2 on wishlist"
+   - One-time cleanup utility in Data Status for existing duplicates
+   - Problem: Easy to add same book multiple times; no feedback; bloats JSON
+   - Impact: Cleaner data, user awareness without workflow interruption
+
+**5. 🗑️ Orphan Detection & Recycle Bin** - MEDIUM/MEDIUM (9-13 hours)
+   - Detect books no longer in Amazon library after re-import
+   - Recycle Bin virtual column for soft-deleted books
+   - See [docs/design/ORPHAN-DETECTION-RECYCLE-BIN.md](docs/design/ORPHAN-DETECTION-RECYCLE-BIN.md) for full spec
+   - Problem: Orphaned books (samples replaced by purchase, returns, expired subscriptions) clutter library
+   - Impact: Clean library management, safe deletion with restore capability
+
 ---
 
-### 📖 Priority 2: Polish & Documentation (Before Public Launch)
+### 📖 Priority 3: Polish & Documentation (Before Public Launch)
 
 **1. 📖 Quick Start Video & Written Guide** - HIGH/LOW (2-4 hours) - See [docs/design/VIDEO-PRODUCTION-PLAN.md](docs/design/VIDEO-PRODUCTION-PLAN.md)
 
@@ -144,21 +170,8 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### ✨ Priority 3: High Priority Features
+### ✨ Priority 4: High Priority Features
 
-**2. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
-   - Show reading progress percentage/position for each book
-   - Implementation guidance: [Amazon Organizer Reading Progress conversation](https://claude.ai/chat/6e6f23c8-b84e-4900-8c64-fecb6a6e0bd1)
-   - Note: Collections data already merged (line 452 LOG.md), this adds progress visualization
-   - Problem: Users can't see reading progress in organizer
-   - Impact: Better tracking of currently-reading books
-
-**3. 🗑️ Orphan Detection & Recycle Bin** - MEDIUM/MEDIUM (9-13 hours)
-   - Detect books no longer in Amazon library after re-import
-   - Recycle Bin virtual column for soft-deleted books
-   - See [docs/design/ORPHAN-DETECTION-RECYCLE-BIN.md](docs/design/ORPHAN-DETECTION-RECYCLE-BIN.md) for full spec
-   - Problem: Orphaned books (samples replaced by purchase, returns, expired subscriptions) clutter library
-   - Impact: Clean library management, safe deletion with restore capability
 
 **1. 👨‍👩‍👧 Family Sharing Info** - LOW/LOW (2-4 hours)
    - See [docs/design/FAMILY-SHARING.md](docs/design/FAMILY-SHARING.md) for full spec
@@ -206,7 +219,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 📚 Priority 4: Nice-to-Have Features
+### 📚 Priority 5: Nice-to-Have Features
 
 **1. 📖 Enhanced Series Management** - MEDIUM/MEDIUM (6-10 hours)
    - Expand current "Group Series Books" button
@@ -267,7 +280,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 📊 Priority 5: Analytics & Export (MEDIUM Priority, LOW-MEDIUM Complexity)
+### 📊 Priority 6: Analytics & Export (MEDIUM Priority, LOW-MEDIUM Complexity)
 
 **1. 📈 Reading Stats Dashboard** - MEDIUM/MEDIUM (8-12 hours)
    - Books acquired by month/year
@@ -286,7 +299,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 🔧 Priority 6: Technical Improvements (MEDIUM-LOW Priority, MEDIUM-HIGH Complexity)
+### 🔧 Priority 7: Technical Improvements (MEDIUM-LOW Priority, MEDIUM-HIGH Complexity)
 
 **1. Phase 3: UI Error Handling** #FetcherImprovements - MEDIUM/LOW (2-3 hours)
    - Warning banners for missing descriptions
@@ -296,7 +309,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 🌐 Priority 7: Integrations & Advanced Features (LOW Priority, HIGH-VERY HIGH Complexity)
+### 🌐 Priority 8: Integrations & Advanced Features (LOW Priority, HIGH-VERY HIGH Complexity)
 
 **1. 🔗 Third-Party Integrations** - LOW/HIGH (20-30 hours)
    - Goodreads sync (import ratings, mark as read)
@@ -318,6 +331,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Impact: Polish and visual appeal
 
 **4. Multi-User Support** #Architecture - LOW/VERY HIGH (40-60 hours)
+   - Not really needed with Export and Import
    - See [docs/design/MULTI-USER-DESIGN.md](docs/design/MULTI-USER-DESIGN.md) for full spec
    - Status: Low priority - workaround sufficient for most users
    - Covers: AccountId identification, storage architecture, mismatch handling
