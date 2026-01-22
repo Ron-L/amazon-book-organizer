@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.21.0] - 2026-01-22
+
+### Added
+- **Series Page Bulk Import** - One-click import of entire book series to wishlist
+  - File versions: series-page-fetcher.js v1.0.0, bookmarklet-nav-hub.js v1.3.0
+  - Uses Amazon's seriesAsinList API to fetch all books (up to 200) in a single request
+  - Automatically skips books you already own
+  - Gap detection reports missing books in series numbering (e.g., "49 books missing: #101-149")
+  - Navigator automatically loads series fetcher when on a series page
+
 ## [4.20.1] - 2026-01-22
 
 ### Fixed

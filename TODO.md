@@ -8,18 +8,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**1. 📚 Series Page Bulk Import** - MEDIUM/MEDIUM (6-10 hours)
-   - See [docs/design/SERIES-PAGE-BULK-IMPORT.md](docs/design/SERIES-PAGE-BULK-IMPORT.md) for full spec
-   - Bulk import all books from an Amazon series page as wishlist entries
-   - Destroyer series Reference URL: https://www.amazon.com/dp/B0D775V4W9?binding=kindle_edition
-   - API: `/kindle-dbs/productPage/ajax/seriesAsinList?asin=X&pageNumber=1&pageSize=200`
-   - Single request with pageSize=200 returns all available books
-   - Creates wishlist entries (isOwned: false) for books not already owned
-   - **Known limitation:** Amazon data gaps (e.g., 155-book series missing books 101-149 from Kindle catalog)
-   - Problem: Adding 100+ books from a series requires visiting each product page individually
-   - Impact: One-click bulk wishlist population for entire series
-
-**3. 📚 Author Bibliography Import** - MEDIUM/MEDIUM (4-6 hours)
+**1. 📚 Author Bibliography Import** - MEDIUM/MEDIUM (4-6 hours)
    - File: `bookmarklet-nav-hub.js` (navigator modal)
    - Detect author pages: `/stores/.../author/` URL pattern
    - Enable wishlist button on author pages (currently only series/product pages)

@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.3.0.a';
+    const NAV_HUB_VERSION = 'v1.3.0';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
