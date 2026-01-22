@@ -8,15 +8,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**1. 🐛 Navigator Multiple Modal Bug** - LOW/LOW (15 min)
-   - Bug: Clicking bookmarklet multiple times opens stacked modals
-   - Fix: Check DOM for existing modal by ID before creating new one
-   - If exists, bring to front (increase z-index) instead of creating duplicate
-   - Use `document.getElementById('readerwrangler-nav-dialog')` - no orphan-prone flags
-   - Problem: Slow computer + impatient clicks = multiple stacked dialogs
-   - Impact: Clean single-modal behavior
-
-**2. 📚 Series Page Bulk Import** - MEDIUM/MEDIUM (6-10 hours)
+**1. 📚 Series Page Bulk Import** - MEDIUM/MEDIUM (6-10 hours)
    - See [docs/design/SERIES-PAGE-BULK-IMPORT.md](docs/design/SERIES-PAGE-BULK-IMPORT.md) for full spec
    - Bulk import all books from an Amazon series page as wishlist entries
    - Destroyer series Reference URL: https://www.amazon.com/dp/B0D775V4W9?binding=kindle_edition
