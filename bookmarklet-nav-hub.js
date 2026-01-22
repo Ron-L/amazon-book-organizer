@@ -15,11 +15,18 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.2.2.a';
+    const NAV_HUB_VERSION = 'v1.2.3';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
     const TARGET_ENV = window._READERWRANGLER_TARGET_ENV || 'PROD';
+
+    // Prevent duplicate modals from rapid clicks on slow machines
+    const DIALOG_ID = 'readerwrangler-nav-dialog';
+    if (document.getElementById(DIALOG_ID)) {
+        console.log('📚 ReaderWrangler: Navigator dialog already open');
+        return;
+    }
 
     const currentUrl = window.location.href;
 
@@ -54,6 +61,7 @@
 
     // Create intro dialog
     const dialog = document.createElement('div');
+    dialog.id = DIALOG_ID;
     dialog.style.cssText = `
         position: fixed;
         top: 50%;
