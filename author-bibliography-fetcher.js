@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.0.h';
+    const FETCHER_VERSION = 'v1.0.0.i';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -407,6 +407,11 @@ async function importBibliography() {
                 }
             }
             if (!asin) continue;
+
+            // Skip navigation/footer items (not real book products)
+            // These are bare <li> elements or contain nav_a class links
+            if (item.tagName === 'LI' && !item.className) continue;
+            if (item.querySelector('a.nav_a')) continue;
 
             // Check if this is a Kindle edition
             // Look for "Kindle Edition" or "Kindle" text in the binding info
