@@ -24,7 +24,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.4.0.b';
+    const FETCHER_VERSION = 'v1.4.0.c';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -365,12 +365,13 @@ async function addToWishlist() {
         // Extract price (try multiple selectors)
         let currentPrice = null;
         const priceEl = doc.querySelector('#kindle-price') ||
+                        doc.querySelector('.ebook-price-value') ||  // Kindle price in newer product pages
                         doc.querySelector('.kindle-price .a-color-price') ||
                         doc.querySelector('#price') ||
                         doc.querySelector('.a-price .a-offscreen') ||
                         doc.querySelector('#tmmSwatches .a-color-price') ||
                         doc.querySelector('.swatchElement.selected .a-color-price') ||
-                        doc.querySelector('.aok-offscreen');  // Kindle price in newer layouts
+                        doc.querySelector('.aok-offscreen');
         if (priceEl) {
             currentPrice = priceEl.textContent.trim();
             // Ensure price starts with $
