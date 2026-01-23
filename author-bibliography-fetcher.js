@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.0.f';
+    const FETCHER_VERSION = 'v1.0.0.g';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -436,9 +436,9 @@ async function importBibliography() {
             const pageAuthor = getAuthorName();
             let authors = pageAuthor || 'Unknown Author';
 
-            // Extract cover URL
+            // Extract cover URL (media-amazon for author pages, images-amazon for fallback)
             let coverUrl = null;
-            const img = item.querySelector('img[src*="images-amazon"], img[data-src*="images-amazon"]');
+            const img = item.querySelector('img[src*="media-amazon"], img[src*="images-amazon"], img[data-src*="media-amazon"], img[data-src*="images-amazon"]');
             if (img) {
                 coverUrl = img.src || img.getAttribute('data-src');
                 // Try to get higher resolution by modifying the URL
@@ -925,9 +925,11 @@ async function importBibliography() {
         if (completeness.total > 0) {
             const missingPrice = completeness.total - completeness.withPrice;
             const missingRating = completeness.total - completeness.withRating;
+            const missingCover = completeness.total - completeness.withCover;
 
-            if (missingPrice > 0) {
+            if (missingPrice > 0 || missingCover > 0) {
                 console.log(`   ℹ️  Data completeness:`);
+                console.log(`      - Cover: ${completeness.withCover}/${completeness.total} (${missingCover} missing)`);
                 console.log(`      - Price: ${completeness.withPrice}/${completeness.total} (${missingPrice} missing)`);
                 console.log(`      - Rating: ${completeness.withRating}/${completeness.total} (${missingRating} missing)`);
                 console.log(`      Note: Missing data can be filled by running Library Fetcher`);
