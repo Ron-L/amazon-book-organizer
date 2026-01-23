@@ -19,7 +19,7 @@
 async function importSeries() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.0';
+    const FETCHER_VERSION = 'v1.1.0.a';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -292,6 +292,15 @@ async function importSeries() {
         const books = [];
         const skippedOwned = [];
 
+        // Track data completeness
+        const completeness = {
+            total: 0,
+            withPrice: 0,
+            withDescription: 0,
+            withRating: 0,
+            withCover: 0
+        };
+
         doc.querySelectorAll('.series-childAsin-item').forEach(item => {
             // Check if owned
             if (item.classList.contains('hasOwnership')) {
@@ -360,18 +369,32 @@ async function importSeries() {
                 }
             }
 
-            // Extract Kindle price (optional)
+            // Extract Kindle price (try multiple selectors)
             let kindlePrice = null;
+            // Try format twister first
             const priceEl = item.querySelector('.formatTwister a[href*="storeType=ebooks"]')
                 ?.closest('.formatTwister')?.querySelector('.a-text-bold');
             if (priceEl) {
                 kindlePrice = priceEl.textContent.trim();
             }
+            // Fallback: look for price in item details
+            if (!kindlePrice) {
+                const altPriceEl = item.querySelector('.a-price .a-offscreen') ||
+                                   item.querySelector('.a-color-price') ||
+                                   item.querySelector('[data-a-color="price"]');
+                if (altPriceEl) {
+                    kindlePrice = altPriceEl.textContent.trim();
+                }
+            }
+            // Ensure price starts with $
+            if (kindlePrice && !kindlePrice.startsWith('$')) {
+                kindlePrice = '$' + kindlePrice;
+            }
 
             // Extract description (optional)
             const description = item.querySelector('.collectionDescription span')?.textContent?.trim() || '';
 
-            books.push({
+            const book = {
                 asin,
                 onWishlist: true,
                 ownershipType: 'wishlist',
@@ -386,10 +409,19 @@ async function importSeries() {
                 description,
                 // Store price if available (for future price tracking)
                 ...(kindlePrice && { currentPrice: kindlePrice, priceAsOf: getTodayDate() })
-            });
+            };
+
+            books.push(book);
+
+            // Track completeness
+            completeness.total++;
+            if (kindlePrice) completeness.withPrice++;
+            if (description) completeness.withDescription++;
+            if (rating) completeness.withRating++;
+            if (coverUrl) completeness.withCover++;
         });
 
-        return { books, skippedOwned };
+        return { books, skippedOwned, completeness };
     }
 
     // ============================================================================
@@ -572,9 +604,25 @@ async function importSeries() {
         progressUI.updatePhase('Parsing Books', 'Extracting book data...');
         console.log('[3] Parsing book data...');
 
-        const { books, skippedOwned } = parseSeriesBooks(html, seriesName);
+        const { books, skippedOwned, completeness } = parseSeriesBooks(html, seriesName);
         console.log(`   ✅ Parsed ${books.length} wishlist candidates`);
-        console.log(`   ℹ️  Skipped ${skippedOwned.length} owned books\n`);
+        console.log(`   ℹ️  Skipped ${skippedOwned.length} owned books`);
+
+        // Log data completeness
+        if (completeness.total > 0) {
+            const missingPrice = completeness.total - completeness.withPrice;
+            const missingDesc = completeness.total - completeness.withDescription;
+            const missingRating = completeness.total - completeness.withRating;
+
+            if (missingPrice > 0 || missingDesc > 0) {
+                console.log(`   ℹ️  Data completeness:`);
+                console.log(`      - Price: ${completeness.withPrice}/${completeness.total} (${missingPrice} missing)`);
+                console.log(`      - Description: ${completeness.withDescription}/${completeness.total} (${missingDesc} missing)`);
+                console.log(`      - Rating: ${completeness.withRating}/${completeness.total} (${missingRating} missing)`);
+                console.log(`      Note: Missing data can be filled by running Library Fetcher`);
+            }
+        }
+        console.log('');
 
         // Step 4: Detect gaps
         progressUI.updatePhase('Analyzing Series', 'Checking for gaps...');
@@ -657,6 +705,15 @@ async function importSeries() {
             console.log(`   ⚠️  Gap: ${gapInfo.missing.length} books missing from Amazon's series list`);
             console.log(`      Missing: ${formatGapRanges(gapInfo.missing)}`);
         }
+        // Data completeness in final summary
+        const missingPrice = completeness.total - completeness.withPrice;
+        const missingDesc = completeness.total - completeness.withDescription;
+        if (missingPrice > 0 || missingDesc > 0) {
+            console.log(`   ℹ️  Data completeness:`);
+            if (missingPrice > 0) console.log(`      - ${missingPrice} books missing price`);
+            if (missingDesc > 0) console.log(`      - ${missingDesc} books missing description`);
+            console.log(`      Run Library Fetcher to fill missing data`);
+        }
         console.log(`   Total books in library: ${existingData.books.items.length}`);
         console.log('========================================\n');
 
@@ -675,6 +732,13 @@ async function importSeries() {
             summaryMessage += `<br><span style="color: #f57c00; font-size: 12px;">`;
             summaryMessage += `⚠️ ${gapInfo.missing.length} books missing from Amazon's series list<br>`;
             summaryMessage += `(${formatGapRanges(gapInfo.missing)})</span>`;
+        }
+
+        // Note about missing data if applicable
+        const missingPriceCount = completeness.total - completeness.withPrice;
+        if (missingPriceCount > 0) {
+            summaryMessage += `<br><span style="color: #1976d2; font-size: 11px;">`;
+            summaryMessage += `ℹ️ ${missingPriceCount} books missing price - run Library Fetcher to complete</span>`;
         }
 
         progressUI.showComplete(summaryMessage, 20000);
