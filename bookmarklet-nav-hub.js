@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.3.0';
+    const NAV_HUB_VERSION = 'v1.4.0.a';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
@@ -57,6 +57,7 @@
     const onCollectionsPage = currentUrl.includes('amazon.com/hz/mycd/digital-console');
     const onProductPage = /\/dp\/|\/gp\/product\//.test(currentUrl);
     const onSeriesPage = document.querySelectorAll('.series-childAsin-item').length > 0;
+    const onAuthorPage = /\/stores\/[^/]+\/author\/[A-Z0-9]{10}/i.test(currentUrl);
     const onWishlistPage = onProductPage || onSeriesPage;
 
     // Create intro dialog
@@ -183,6 +184,19 @@
         </button>
     `;
 
+    // Add bibliography button - enabled only on author pages
+    const bibliographyButtonStyle = onAuthorPage ? primaryButtonStyle : disabledButtonStyle;
+    const bibliographyTooltip = onAuthorPage
+        ? 'Add all Kindle books by this author to your wishlist'
+        : 'Navigate to an Amazon author page to add their bibliography';
+
+    dialogContent += `
+        <button id="runBibliography" style="${bibliographyButtonStyle} width: 100%; margin-bottom: 10px;"
+            title="${bibliographyTooltip}" ${onAuthorPage ? '' : 'disabled'}>
+            ✍️ Add Bibliography to Wishlist
+        </button>
+    `;
+
     // Add universal navigation buttons
     dialogContent += `
         <button id="launchApp" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;"
@@ -236,6 +250,11 @@
         } else {
             runWishlistBtn.onclick = () => loadScript('amazon-wishlist-fetcher.js', 'wishlist fetcher');
         }
+    }
+
+    const runBibliographyBtn = dialog.querySelector('#runBibliography');
+    if (runBibliographyBtn && onAuthorPage) {
+        runBibliographyBtn.onclick = () => loadScript('author-bibliography-fetcher.js', 'bibliography fetcher');
     }
 
     const goLibraryBtn = dialog.querySelector('#goLibrary');
