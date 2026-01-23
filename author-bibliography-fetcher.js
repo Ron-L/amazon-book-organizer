@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.0.a';
+    const FETCHER_VERSION = 'v1.0.0.b';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -348,7 +348,171 @@ async function importBibliography() {
     }
 
     // ============================================================================
-    // Parse Products from Embedded Data
+    // Parse Products from DOM (preferred - includes dynamically loaded items)
+    // ============================================================================
+
+    function parseProductsFromDOM() {
+        const books = [];
+        const completeness = {
+            total: 0,
+            withPrice: 0,
+            withRating: 0,
+            withCover: 0
+        };
+
+        // Find all product cards in the author's product grid
+        // The grid items are typically LI elements within the author product grid
+        const gridContainers = doc.querySelectorAll('[class*="author-productgrid"] ul, [data-component-type="author-productgrid"] ul');
+        let productItems = [];
+
+        // Try multiple possible selectors for product items
+        if (gridContainers.length > 0) {
+            for (const container of gridContainers) {
+                const items = container.querySelectorAll('li[data-asin], li[class*="product"]');
+                productItems = [...productItems, ...items];
+            }
+        }
+
+        // Alternative: find items by their structure (link to product page)
+        if (productItems.length === 0) {
+            // Look for product cards that have ASIN links
+            const allLinks = doc.querySelectorAll('a[href*="/dp/"]');
+            const seenParents = new Set();
+
+            for (const link of allLinks) {
+                // Find the parent product card (usually an li or div containing the whole product)
+                let parent = link.closest('li') || link.closest('[class*="product"]');
+                if (parent && !seenParents.has(parent)) {
+                    seenParents.add(parent);
+                    productItems.push(parent);
+                }
+            }
+        }
+
+        console.log(`   Found ${productItems.length} product items in DOM`);
+
+        for (const item of productItems) {
+            // Extract ASIN from data attribute or from link
+            let asin = item.getAttribute('data-asin');
+            if (!asin) {
+                const link = item.querySelector('a[href*="/dp/"]');
+                if (link) {
+                    const match = link.href.match(/\/dp\/([A-Z0-9]{10})/i);
+                    if (match) asin = match[1].toUpperCase();
+                }
+            }
+            if (!asin) continue;
+
+            // Check if this is a Kindle edition
+            // Look for "Kindle Edition" or "Kindle" text in the binding info
+            const bindingText = item.textContent || '';
+            const isKindle = /kindle\s*edition|kindle\s*ebook/i.test(bindingText);
+
+            // If we can't determine binding, include it (we'll check later)
+            // Many items just show "Kindle" somewhere in the text
+
+            // Extract title
+            let title = '';
+            const titleEl = item.querySelector('[class*="title"] a, h2 a, [class*="Title"] a, a[class*="title"]');
+            if (titleEl) {
+                title = titleEl.textContent?.trim() || '';
+            }
+            if (!title) {
+                // Try finding any link to the product
+                const link = item.querySelector('a[href*="/dp/"]');
+                if (link && link.textContent?.trim()) {
+                    title = link.textContent.trim();
+                }
+            }
+            if (!title) continue;
+
+            // Extract author(s) - usually shown as "by Author Name"
+            let authors = '';
+            const authorEl = item.querySelector('[class*="author"], [class*="byline"], [class*="contributor"]');
+            if (authorEl) {
+                authors = authorEl.textContent?.replace(/^by\s*/i, '').trim() || '';
+            }
+            if (!authors) {
+                // Use the page author as fallback
+                authors = getAuthorName() || 'Unknown Author';
+            }
+
+            // Extract cover URL
+            let coverUrl = null;
+            const img = item.querySelector('img[src*="images-amazon"], img[data-src*="images-amazon"]');
+            if (img) {
+                coverUrl = img.src || img.getAttribute('data-src');
+                // Try to get higher resolution by modifying the URL
+                if (coverUrl && coverUrl.includes('._')) {
+                    // Replace common size suffixes with larger ones
+                    coverUrl = coverUrl.replace(/\._[^.]+_\./, '._SL500_.');
+                }
+            }
+
+            // Extract rating
+            let rating = null;
+            const ratingEl = item.querySelector('[class*="rating"], [aria-label*="star"], .a-icon-star');
+            if (ratingEl) {
+                const ratingText = ratingEl.getAttribute('aria-label') || ratingEl.textContent || '';
+                const ratingMatch = ratingText.match(/([\d.]+)\s*(?:out of|stars?)/i);
+                if (ratingMatch) {
+                    rating = parseFloat(ratingMatch[1]);
+                }
+            }
+
+            // Extract review count
+            let reviewCount = null;
+            const reviewEl = item.querySelector('[class*="review"], [aria-label*="rating"]');
+            if (reviewEl) {
+                const reviewText = reviewEl.textContent || '';
+                const countMatch = reviewText.match(/([\d,]+)\s*(?:ratings?|reviews?)/i);
+                if (countMatch) {
+                    reviewCount = parseInt(countMatch[1].replace(/,/g, ''), 10);
+                }
+            }
+
+            // Extract price
+            let currentPrice = null;
+            const priceEl = item.querySelector('[class*="price"], .a-price .a-offscreen, [data-price]');
+            if (priceEl) {
+                const priceText = priceEl.textContent?.trim() || priceEl.getAttribute('data-price') || '';
+                if (priceText.includes('$')) {
+                    // Parse the price value
+                    const priceMatch = priceText.match(/\$[\d.,]+/);
+                    if (priceMatch) {
+                        currentPrice = parseFloat(priceMatch[0].replace(/[$,]/g, ''));
+                    }
+                }
+            }
+
+            const book = {
+                asin,
+                onWishlist: true,
+                ownershipType: 'wishlist',
+                addedToWishlist: getTodayDate(),
+                title,
+                authors,
+                coverUrl,
+                rating,
+                reviewCount,
+                // Include price if available (as number, not string)
+                ...(currentPrice && { currentPrice, priceAsOf: getTodayDate() })
+            };
+
+            books.push(book);
+
+            // Track completeness
+            completeness.total++;
+            if (currentPrice) completeness.withPrice++;
+            if (rating) completeness.withRating++;
+            if (coverUrl) completeness.withCover++;
+        }
+
+        return { books, completeness };
+    }
+
+    // ============================================================================
+    // Parse Products from Embedded Config (fallback)
     // ============================================================================
 
     function parseProductsFromConfig(config) {
@@ -402,7 +566,7 @@ async function importBibliography() {
                 if (option.type === 'KINDLE_ALC' || option.type === 'NEW') {
                     const priceValue = option.price?.priceToPay?.moneyValueOrRange?.value;
                     if (priceValue?.amount !== undefined) {
-                        currentPrice = priceValue.displayString || `$${priceValue.amount.toFixed(2)}`;
+                        currentPrice = priceValue.amount; // Store as number, not string
                         break;
                     }
                 }
@@ -588,25 +752,42 @@ async function importBibliography() {
         console.log(`   Author: "${authorName}"`);
         console.log(`   ID: ${authorId}\n`);
 
-        // Step 2: Extract embedded config
+        // Step 2: Extract embedded config for metadata
         progressUI.updatePhase('Extracting Data', 'Parsing page data...');
-        console.log('[2] Extracting embedded book data...');
+        console.log('[2] Extracting page data...');
 
         const config = extractAuthorConfig();
-        if (!config) {
-            throw new Error('Could not find book data on this page. Make sure you are on the author\'s "All Books" page.');
-        }
-
         const totalCount = config?.content?.totalCount || 0;
         const pageSize = config?.content?.authorSearch?.pageSize || 0;
-        console.log(`   Found config with ${totalCount} total books (page size: ${pageSize})\n`);
 
-        // Step 3: Parse books from config
-        progressUI.updatePhase('Parsing Books', 'Extracting Kindle editions...');
-        console.log('[3] Parsing book data...');
+        if (config) {
+            console.log(`   Found config with ${totalCount} total books (page size: ${pageSize})`);
+        } else {
+            console.log(`   No embedded config found - will parse DOM directly`);
+        }
+        console.log('');
 
-        const { books, completeness } = parseProductsFromConfig(config);
-        console.log(`   ✅ Found ${books.length} Kindle editions`);
+        // Step 3: Parse books - try DOM first (includes dynamically loaded items), fall back to config
+        progressUI.updatePhase('Parsing Books', 'Extracting Kindle editions from page...');
+        console.log('[3] Parsing book data from DOM...');
+
+        let books, completeness;
+        const domResult = parseProductsFromDOM();
+
+        if (domResult.books.length > 0) {
+            books = domResult.books;
+            completeness = domResult.completeness;
+            console.log(`   ✅ Found ${books.length} books from DOM`);
+        } else if (config) {
+            // Fallback to config parsing if DOM parsing failed
+            console.log(`   DOM parsing found no items, falling back to embedded config...`);
+            const configResult = parseProductsFromConfig(config);
+            books = configResult.books;
+            completeness = configResult.completeness;
+            console.log(`   ✅ Found ${books.length} Kindle editions from config`);
+        } else {
+            throw new Error('Could not find book data on this page. Make sure you are on the author\'s "All Books" page and that products are visible.');
+        }
 
         // Log data completeness
         if (completeness.total > 0) {
@@ -696,10 +877,10 @@ async function importBibliography() {
             summaryMessage += `ℹ️ ${missingPrice} books missing price - run Library Fetcher to complete</span>`;
         }
 
-        // Note if pagination was needed
-        if (totalCount > books.length) {
+        // Note if more books might exist
+        if (totalCount > 0 && totalCount > books.length) {
             summaryMessage += `<br><span style="color: #f57c00; font-size: 11px;">`;
-            summaryMessage += `⚠️ Only ${books.length} of ${totalCount} books loaded. Scroll down on page to load more.</span>`;
+            summaryMessage += `⚠️ Found ${books.length} of ${totalCount} total books. Scroll down and click "Show More" to load all, then run again.</span>`;
         }
 
         progressUI.showComplete(summaryMessage, 20000);

@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.4.0.a';
+    const NAV_HUB_VERSION = 'v1.4.0.b';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
@@ -58,7 +58,7 @@
     const onProductPage = /\/dp\/|\/gp\/product\//.test(currentUrl);
     const onSeriesPage = document.querySelectorAll('.series-childAsin-item').length > 0;
     const onAuthorPage = /\/stores\/[^/]+\/author\/[A-Z0-9]{10}/i.test(currentUrl);
-    const onWishlistPage = onProductPage || onSeriesPage;
+    const onWishlistPage = onProductPage || onSeriesPage || onAuthorPage;
 
     // Create intro dialog
     const dialog = document.createElement('div');
@@ -162,18 +162,22 @@
         `;
     }
 
-    // Add wishlist button - always visible, enabled only on product/series pages
-    const wishlistButtonText = onSeriesPage
-        ? '⭐ Add Series to Wishlist'
-        : onProductPage
-            ? '⭐ Add Book to Wishlist'
-            : '⭐ Add Book/Series to Wishlist';
+    // Add wishlist button - enabled on product/series/author pages
+    const wishlistButtonText = onAuthorPage
+        ? '⭐ Add Bibliography to Wishlist'
+        : onSeriesPage
+            ? '⭐ Add Series to Wishlist'
+            : onProductPage
+                ? '⭐ Add Book to Wishlist'
+                : '⭐ Add Book/Series/Bibliography to Wishlist';
 
-    const wishlistTooltip = onSeriesPage
-        ? 'Add all unowned books from this series to your wishlist'
-        : onProductPage
-            ? 'Add this book to your wishlist'
-            : 'Navigate to an Amazon book page to add a single book, or a series page to add all unowned books in the series';
+    const wishlistTooltip = onAuthorPage
+        ? 'Add all Kindle books by this author to your wishlist'
+        : onSeriesPage
+            ? 'Add all unowned books from this series to your wishlist'
+            : onProductPage
+                ? 'Add this book to your wishlist'
+                : 'Navigate to an Amazon book, series, or author page to add to wishlist';
 
     const wishlistButtonStyle = onWishlistPage ? primaryButtonStyle : disabledButtonStyle;
 
@@ -181,19 +185,6 @@
         <button id="runWishlist" style="${wishlistButtonStyle} width: 100%; margin-bottom: 10px;"
             title="${wishlistTooltip}" ${onWishlistPage ? '' : 'disabled'}>
             ${wishlistButtonText}
-        </button>
-    `;
-
-    // Add bibliography button - enabled only on author pages
-    const bibliographyButtonStyle = onAuthorPage ? primaryButtonStyle : disabledButtonStyle;
-    const bibliographyTooltip = onAuthorPage
-        ? 'Add all Kindle books by this author to your wishlist'
-        : 'Navigate to an Amazon author page to add their bibliography';
-
-    dialogContent += `
-        <button id="runBibliography" style="${bibliographyButtonStyle} width: 100%; margin-bottom: 10px;"
-            title="${bibliographyTooltip}" ${onAuthorPage ? '' : 'disabled'}>
-            ✍️ Add Bibliography to Wishlist
         </button>
     `;
 
@@ -245,16 +236,13 @@
 
     const runWishlistBtn = dialog.querySelector('#runWishlist');
     if (runWishlistBtn && onWishlistPage) {
-        if (onSeriesPage) {
+        if (onAuthorPage) {
+            runWishlistBtn.onclick = () => loadScript('author-bibliography-fetcher.js', 'bibliography fetcher');
+        } else if (onSeriesPage) {
             runWishlistBtn.onclick = () => loadScript('series-page-fetcher.js', 'series fetcher');
         } else {
             runWishlistBtn.onclick = () => loadScript('amazon-wishlist-fetcher.js', 'wishlist fetcher');
         }
-    }
-
-    const runBibliographyBtn = dialog.querySelector('#runBibliography');
-    if (runBibliographyBtn && onAuthorPage) {
-        runBibliographyBtn.onclick = () => loadScript('author-bibliography-fetcher.js', 'bibliography fetcher');
     }
 
     const goLibraryBtn = dialog.querySelector('#goLibrary');
