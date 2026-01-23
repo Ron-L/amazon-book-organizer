@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.0.e';
+    const FETCHER_VERSION = 'v1.0.0.f';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -206,7 +206,12 @@ async function importBibliography() {
             `;
         }
 
-        return { create, updatePhase, showProgressBar, updateProgress, remove, showComplete, showError };
+        function getOverlay() {
+            if (!overlay) create();
+            return overlay;
+        }
+
+        return { create, updatePhase, showProgressBar, updateProgress, remove, showComplete, showError, getOverlay };
     })();
 
     // Initialize progress UI
@@ -720,8 +725,7 @@ async function importBibliography() {
     // user gesture immediately before calling showOpenFilePicker.
     function promptForFileSelection(bookCount) {
         return new Promise((resolve) => {
-            if (!progressUI.overlay) progressUI.create();
-            const overlay = progressUI.overlay;
+            const overlay = progressUI.getOverlay();
 
             overlay.innerHTML = `
                 <button style="
