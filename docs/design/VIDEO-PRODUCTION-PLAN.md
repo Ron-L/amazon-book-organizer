@@ -25,6 +25,7 @@ Before producing/updating videos, review this list of changes since the plan was
 - [ ] **Delete key** (v4.16.0) - DEL removes selected books with last-copy protection
 - [ ] **Enhanced context menu** (v4.16.0) - Move to/Copy to submenus, Cut/Copy/Paste with shortcuts
 - [ ] **Wishlist Price Display** (v4.17.0) - Price tags on covers, price goals, Deals filter, green View on Amazon button
+- [ ] **Series Page Bulk Import** (v4.21.0) - One-click import of entire book series to wishlist with gap detection
 
 ### Quick Start Script Updates Needed
 When re-recording, add mentions of:

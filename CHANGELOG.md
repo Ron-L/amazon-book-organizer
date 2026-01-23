@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.22.0] - 2026-01-23
+
+### Fixed
+- **Wishlist price parsing** - Price data now loads correctly from JSON files
+  - File versions: readerwrangler.js v4.19.0, amazon-wishlist-fetcher.js v1.4.0, series-page-fetcher.js v1.1.0
+  - Fixed: Loader crashed with "toFixed is not a function" when price was string like "$5.99"
+  - Added `parsePrice()` helper to convert string prices to numbers during load
+  - Wishlist fetchers now capture price and description from Amazon product pages
+  - Series fetcher improved price extraction with `.ebook-price-value` selector
+  - Data completeness summary shows which books are missing price data
+
 ## [4.21.0] - 2026-01-22
 
 ### Added
