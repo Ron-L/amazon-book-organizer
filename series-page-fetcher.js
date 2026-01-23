@@ -19,7 +19,7 @@
 async function importSeries() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.1.0';
+    const FETCHER_VERSION = 'v1.1.0.a';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -371,11 +371,18 @@ async function importSeries() {
 
             // Extract Kindle price (try multiple selectors)
             let kindlePrice = null;
-            // Try format twister first
-            const priceEl = item.querySelector('.formatTwister a[href*="storeType=ebooks"]')
-                ?.closest('.formatTwister')?.querySelector('.a-text-bold');
-            if (priceEl) {
-                kindlePrice = priceEl.textContent.trim();
+            // Try .ebook-price-value first (newer Amazon layout)
+            const ebookPriceEl = item.querySelector('.ebook-price-value');
+            if (ebookPriceEl) {
+                kindlePrice = ebookPriceEl.textContent.trim();
+            }
+            // Try format twister
+            if (!kindlePrice) {
+                const priceEl = item.querySelector('.formatTwister a[href*="storeType=ebooks"]')
+                    ?.closest('.formatTwister')?.querySelector('.a-text-bold');
+                if (priceEl) {
+                    kindlePrice = priceEl.textContent.trim();
+                }
             }
             // Fallback: look for price in item details
             if (!kindlePrice) {
