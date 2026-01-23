@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.0.b';
+    const FETCHER_VERSION = 'v1.0.0.c';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -426,16 +426,10 @@ async function importBibliography() {
             }
             if (!title) continue;
 
-            // Extract author(s) - usually shown as "by Author Name"
-            let authors = '';
-            const authorEl = item.querySelector('[class*="author"], [class*="byline"], [class*="contributor"]');
-            if (authorEl) {
-                authors = authorEl.textContent?.replace(/^by\s*/i, '').trim() || '';
-            }
-            if (!authors) {
-                // Use the page author as fallback
-                authors = getAuthorName() || 'Unknown Author';
-            }
+            // Extract author(s) - on author pages, use the page author as primary source
+            // DOM selectors often match wrong elements like "Quick look" buttons
+            const pageAuthor = getAuthorName();
+            let authors = pageAuthor || 'Unknown Author';
 
             // Extract cover URL
             let coverUrl = null;
@@ -877,11 +871,8 @@ async function importBibliography() {
             summaryMessage += `ℹ️ ${missingPrice} books missing price - run Library Fetcher to complete</span>`;
         }
 
-        // Note if more books might exist
-        if (totalCount > 0 && totalCount > books.length) {
-            summaryMessage += `<br><span style="color: #f57c00; font-size: 11px;">`;
-            summaryMessage += `⚠️ Found ${books.length} of ${totalCount} total books. Scroll down and click "Show More" to load all, then run again.</span>`;
-        }
+        // Note: Removed misleading "scroll down" message - totalCount from embedded config
+        // is for ALL languages, not filtered results. Auto-scroll feature planned for future.
 
         progressUI.showComplete(summaryMessage, 20000);
 
