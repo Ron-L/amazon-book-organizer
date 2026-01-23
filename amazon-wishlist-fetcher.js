@@ -367,7 +367,9 @@ async function addToWishlist() {
         const priceEl = doc.querySelector('#kindle-price') ||
                         doc.querySelector('.kindle-price .a-color-price') ||
                         doc.querySelector('#price') ||
-                        doc.querySelector('.a-price .a-offscreen');
+                        doc.querySelector('.a-price .a-offscreen') ||
+                        doc.querySelector('#tmmSwatches .a-color-price') ||
+                        doc.querySelector('.swatchElement.selected .a-color-price');
         if (priceEl) {
             currentPrice = priceEl.textContent.trim();
             // Ensure price starts with $
@@ -375,6 +377,9 @@ async function addToWishlist() {
                 currentPrice = '$' + currentPrice;
             }
         }
+        // Debug: log what we found
+        console.log(`   Price found: ${currentPrice || 'NONE'}`);
+        console.log(`   Description found: ${description ? 'YES (' + description.substring(0, 50) + '...)' : 'NONE'}`);
 
         return {
             asin,
