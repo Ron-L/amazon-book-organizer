@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.0.g';
+    const FETCHER_VERSION = 'v1.0.0.h';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -497,6 +497,17 @@ async function importBibliography() {
                 // Include price if available (as number, not string)
                 ...(currentPrice && { currentPrice, priceAsOf: getTodayDate() })
             };
+
+            // Debug: Log suspicious entries (no cover AND no rating = likely not a book)
+            if (!coverUrl && !rating) {
+                console.warn(`   ⚠️ SUSPICIOUS ENTRY:`);
+                console.warn(`      ASIN: ${asin}`);
+                console.warn(`      Title: "${title}"`);
+                console.warn(`      Element classes: ${item.className}`);
+                console.warn(`      Parent tagName: ${item.tagName}`);
+                console.warn(`      Element HTML (first 500 chars):`);
+                console.warn(`      ${item.outerHTML.substring(0, 500)}...`);
+            }
 
             books.push(book);
 
