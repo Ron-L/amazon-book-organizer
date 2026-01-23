@@ -19,7 +19,7 @@
 async function importSeries() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.1.0.b';
+    const FETCHER_VERSION = 'v1.1.0.c';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -398,10 +398,14 @@ async function importSeries() {
                 kindlePrice = '$' + kindlePrice;
             }
 
-            // Debug: log items missing price
+            // Debug: log items missing price (only first one with full HTML)
             if (!kindlePrice) {
                 console.log(`[DEBUG] No price for "${title}" (${asin})`);
-                console.log(`   .slot-price HTML:`, item.querySelector('.slot-price')?.innerHTML || 'NOT FOUND');
+                if (!window._debugFirstMissingPriceLogged) {
+                    console.log(`[DEBUG] Full item HTML for first missing price:`);
+                    console.log(item.outerHTML);
+                    window._debugFirstMissingPriceLogged = true;
+                }
             }
 
             // Extract description (optional)
