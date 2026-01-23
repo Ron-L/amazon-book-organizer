@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.0.c';
+    const FETCHER_VERSION = 'v1.0.0.d';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -601,38 +601,114 @@ async function importBibliography() {
     }
 
     // ============================================================================
-    // Fetch Additional Pages via /juvec API (if needed)
+    // Auto-Load All Books (scroll and click "Show More")
     // ============================================================================
 
-    async function fetchAdditionalBooks(config, existingAsins) {
-        const totalCount = config?.content?.totalCount || 0;
-        const currentProducts = config?.content?.products || [];
-        const pageSize = config?.content?.authorSearch?.pageSize || 112;
+    async function loadAllBooks() {
+        const MAX_ITERATIONS = 50;  // Safety limit
+        const SCROLL_DELAY = 500;   // ms between scrolls
+        const LOAD_DELAY = 1000;    // ms to wait for content to load after clicking
 
-        // If we have all books, no need for additional fetches
-        if (currentProducts.length >= totalCount) {
-            return [];
+        let iteration = 0;
+        let lastProductCount = 0;
+
+        // Count current products in DOM
+        function countProducts() {
+            const links = doc.querySelectorAll('a[href*="/dp/"]');
+            const seen = new Set();
+            for (const link of links) {
+                const match = link.href.match(/\/dp\/([A-Z0-9]{10})/i);
+                if (match) seen.add(match[1]);
+            }
+            return seen.size;
         }
 
-        console.log(`   ℹ️  Page has ${currentProducts.length} of ${totalCount} total books`);
-        console.log(`   Fetching additional books via API...`);
+        // Find and click "Show More" button
+        function findShowMoreButton() {
+            // Try various selectors Amazon uses for "Show More" buttons
+            const selectors = [
+                'button[data-action="show-more"]',
+                '[class*="show-more"] button',
+                '[class*="showMore"] button',
+                'button:contains("Show More")',
+                'span.a-button:has(input[aria-label*="Show"])',
+                '.a-button-input[aria-label*="more"]'
+            ];
 
-        // Get the ASINs we don't have yet
-        const loadedAsins = new Set(currentProducts.map(p => p.asin));
-        const allAsins = config?.content?.ASINList || [];
-        const remainingAsins = allAsins.filter(asin => !loadedAsins.has(asin));
+            for (const selector of selectors) {
+                try {
+                    const btn = doc.querySelector(selector);
+                    if (btn && btn.offsetParent !== null) return btn;
+                } catch (e) {
+                    // :contains and :has may not be supported, ignore
+                }
+            }
 
-        if (remainingAsins.length === 0) {
-            console.log(`   All ASINs already loaded`);
-            return [];
+            // Fallback: find by text content
+            const buttons = doc.querySelectorAll('button, input[type="submit"], .a-button-input');
+            for (const btn of buttons) {
+                const text = btn.textContent || btn.value || btn.getAttribute('aria-label') || '';
+                if (/show\s*more/i.test(text) && btn.offsetParent !== null) {
+                    return btn;
+                }
+            }
+
+            // Also check for span.a-button elements (Amazon's button style)
+            const spanButtons = doc.querySelectorAll('span.a-button');
+            for (const span of spanButtons) {
+                const text = span.textContent || '';
+                if (/show\s*more/i.test(text) && span.offsetParent !== null) {
+                    const input = span.querySelector('input, button');
+                    if (input) return input;
+                    return span;
+                }
+            }
+
+            return null;
         }
 
-        // For now, we'll just note the limitation
-        // The /juvec API requires complex request context that's hard to replicate
-        console.log(`   ⚠️  ${remainingAsins.length} additional ASINs exist but pagination API is complex`);
-        console.log(`   Consider scrolling/clicking "Show More" on the page first to load all books`);
+        console.log('[2] Auto-loading all books...');
+        progressUI.updatePhase('Loading Books', 'Scrolling to load all books...');
 
-        return [];
+        while (iteration < MAX_ITERATIONS) {
+            iteration++;
+            const currentCount = countProducts();
+
+            progressUI.updatePhase('Loading Books', `Found ${currentCount} books so far...`);
+            console.log(`   Iteration ${iteration}: ${currentCount} products visible`);
+
+            // Scroll to bottom to trigger lazy loading
+            win.scrollTo(0, doc.body.scrollHeight);
+            await new Promise(r => setTimeout(r, SCROLL_DELAY));
+
+            // Check for "Show More" button and click it
+            const showMoreBtn = findShowMoreButton();
+            if (showMoreBtn) {
+                console.log(`   Found "Show More" button, clicking...`);
+                showMoreBtn.click();
+                await new Promise(r => setTimeout(r, LOAD_DELAY));
+            }
+
+            // Check if we got more products
+            const newCount = countProducts();
+            if (newCount === lastProductCount && !showMoreBtn) {
+                // No new products and no Show More button - we're done
+                console.log(`   No more products to load (${newCount} total)`);
+                break;
+            }
+
+            lastProductCount = newCount;
+
+            // Small delay between iterations
+            await new Promise(r => setTimeout(r, 300));
+        }
+
+        // Scroll back to top for user convenience
+        win.scrollTo(0, 0);
+
+        const finalCount = countProducts();
+        console.log(`   ✅ Finished loading: ${finalCount} products in DOM\n`);
+        return finalCount;
     }
 
     // ============================================================================
@@ -746,23 +822,14 @@ async function importBibliography() {
         console.log(`   Author: "${authorName}"`);
         console.log(`   ID: ${authorId}\n`);
 
-        // Step 2: Extract embedded config for metadata
-        progressUI.updatePhase('Extracting Data', 'Parsing page data...');
-        console.log('[2] Extracting page data...');
+        // Step 2: Auto-load all books (scroll and click "Show More")
+        await loadAllBooks();
 
+        // Step 3: Extract embedded config for metadata (optional, for reference)
         const config = extractAuthorConfig();
-        const totalCount = config?.content?.totalCount || 0;
-        const pageSize = config?.content?.authorSearch?.pageSize || 0;
 
-        if (config) {
-            console.log(`   Found config with ${totalCount} total books (page size: ${pageSize})`);
-        } else {
-            console.log(`   No embedded config found - will parse DOM directly`);
-        }
-        console.log('');
-
-        // Step 3: Parse books - try DOM first (includes dynamically loaded items), fall back to config
-        progressUI.updatePhase('Parsing Books', 'Extracting Kindle editions from page...');
+        // Step 4: Parse books from DOM
+        progressUI.updatePhase('Parsing Books', 'Extracting book data...');
         console.log('[3] Parsing book data from DOM...');
 
         let books, completeness;
