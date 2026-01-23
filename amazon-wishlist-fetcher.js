@@ -24,7 +24,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.4.0.a';
+    const FETCHER_VERSION = 'v1.4.0.b';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -369,7 +369,8 @@ async function addToWishlist() {
                         doc.querySelector('#price') ||
                         doc.querySelector('.a-price .a-offscreen') ||
                         doc.querySelector('#tmmSwatches .a-color-price') ||
-                        doc.querySelector('.swatchElement.selected .a-color-price');
+                        doc.querySelector('.swatchElement.selected .a-color-price') ||
+                        doc.querySelector('.aok-offscreen');  // Kindle price in newer layouts
         if (priceEl) {
             currentPrice = priceEl.textContent.trim();
             // Ensure price starts with $
