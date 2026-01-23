@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.21.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.18.0";  // Build version for this file
+        const ORGANIZER_VERSION = "4.18.0.a";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -15,6 +15,18 @@
 
         // Amazon Associates affiliate tag (v4.4.0)
         const AMAZON_AFFILIATE_TAG = 'rclewent-20';
+
+        // Parse price string (e.g., "$5.99") to number, returns null if invalid
+        const parsePrice = (price) => {
+            if (price == null) return null;
+            if (typeof price === 'number') return price;
+            if (typeof price === 'string') {
+                const cleaned = price.replace(/[$,\s]/g, '');
+                const num = parseFloat(cleaned);
+                return isNaN(num) ? null : num;
+            }
+            return null;
+        };
 
         // TODO: DEPRECATION 2026-07-20 - Remove legacy isOwned/isWishlist field handling after 6 months
         // Legacy format: isOwned: true/false (from fetcher), isWishlist: 0/1 (internal derived)
@@ -1740,9 +1752,9 @@
                             // Collections data
                             readStatus: bookCollections.readStatus,
                             collections: bookCollections.collections,
-                            // Price data (v4.17.0.a)
-                            currentPrice: item.currentPrice ?? null,
-                            listPrice: item.listPrice ?? null,
+                            // Price data (v4.17.0.a, v4.18.0.a - parse string prices to numbers)
+                            currentPrice: parsePrice(item.currentPrice),
+                            listPrice: parsePrice(item.listPrice),
                             priceFetchedAt: item.priceFetchedAt || null,
                             priceTrigger: item.priceTrigger ?? null,
                             // Genre data (v4.17.0.a)
@@ -1793,9 +1805,9 @@
                             // Collections data
                             readStatus: bookCollections.readStatus,
                             collections: bookCollections.collections,
-                            // Price data (v4.17.0.a) - legacy format unlikely to have these
-                            currentPrice: item.currentPrice ?? null,
-                            listPrice: item.listPrice ?? null,
+                            // Price data (v4.17.0.a, v4.18.0.a - parse string prices to numbers)
+                            currentPrice: parsePrice(item.currentPrice),
+                            listPrice: parsePrice(item.listPrice),
                             priceFetchedAt: item.priceFetchedAt || null,
                             priceTrigger: item.priceTrigger ?? null,
                             // Genre data (v4.17.0.a)
