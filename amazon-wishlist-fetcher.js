@@ -24,7 +24,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.3.0';
+    const FETCHER_VERSION = 'v1.4.0.a';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -353,9 +353,31 @@ async function addToWishlist() {
             }
         }
 
+        // Extract description (try multiple selectors)
+        let description = null;
+        const descEl = doc.querySelector('#bookDescription_feature_div .a-expander-content') ||
+                       doc.querySelector('#bookDescription_feature_div span:not(.a-expander-prompt)') ||
+                       doc.querySelector('#productDescription p');
+        if (descEl) {
+            description = descEl.textContent.trim();
+        }
+
+        // Extract price (try multiple selectors)
+        let currentPrice = null;
+        const priceEl = doc.querySelector('#kindle-price') ||
+                        doc.querySelector('.kindle-price .a-color-price') ||
+                        doc.querySelector('#price') ||
+                        doc.querySelector('.a-price .a-offscreen');
+        if (priceEl) {
+            currentPrice = priceEl.textContent.trim();
+            // Ensure price starts with $
+            if (currentPrice && !currentPrice.startsWith('$')) {
+                currentPrice = '$' + currentPrice;
+            }
+        }
+
         return {
             asin,
-            // v1.3.0.a - onWishlist replaces isOwned
             onWishlist: true,
             ownershipType: 'wishlist',
             addedToWishlist: getTodayDate(),
@@ -365,7 +387,10 @@ async function addToWishlist() {
             rating,
             reviewCount,
             series,
-            seriesPosition
+            seriesPosition,
+            description,
+            // Include price fields if price was found
+            ...(currentPrice && { currentPrice, priceAsOf: getTodayDate() })
         };
     }
 
