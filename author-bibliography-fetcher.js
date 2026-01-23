@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.0.d';
+    const FETCHER_VERSION = 'v1.0.0.e';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -715,7 +715,74 @@ async function importBibliography() {
     // File I/O
     // ============================================================================
 
-    async function loadLibraryFile() {
+    // WHY THIS EXISTS: showOpenFilePicker() requires an active "user gesture" (click/keypress).
+    // After auto-scrolling, the original gesture has expired. This button provides a fresh
+    // user gesture immediately before calling showOpenFilePicker.
+    function promptForFileSelection(bookCount) {
+        return new Promise((resolve) => {
+            if (!progressUI.overlay) progressUI.create();
+            const overlay = progressUI.overlay;
+
+            overlay.innerHTML = `
+                <button style="
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    background: none;
+                    border: none;
+                    font-size: 20px;
+                    color: #999;
+                    cursor: pointer;
+                    padding: 4px 8px;
+                    line-height: 1;
+                " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'" id="cancelBtn">✕</button>
+                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 15px;">
+                    📚 Found ${bookCount} Books
+                </div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 20px;">
+                    Click below to select your library file and add these books to your wishlist.
+                </div>
+                <button id="selectFileBtn" style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    width: 100%;
+                    margin-bottom: 10px;
+                ">
+                    Select amazon-library.json
+                </button>
+                <button id="cancelImportBtn" style="
+                    background: #f8f9fa;
+                    color: #333;
+                    border: 1px solid #ddd;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    cursor: pointer;
+                    width: 100%;
+                ">
+                    Cancel
+                </button>
+            `;
+
+            overlay.querySelector('#selectFileBtn').onclick = () => resolve('select');
+            overlay.querySelector('#cancelImportBtn').onclick = () => resolve('cancel');
+            overlay.querySelector('#cancelBtn').onclick = () => resolve('cancel');
+        });
+    }
+
+    async function loadLibraryFile(bookCount) {
+        // Prompt user to click button - provides fresh user gesture for file picker
+        const userChoice = await promptForFileSelection(bookCount);
+        if (userChoice === 'cancel') {
+            throw new Error('Import cancelled by user.');
+        }
+
         progressUI.updatePhase('Loading Library', 'Select your amazon-library.json file...');
         console.log('[File] Loading existing library file...');
         console.log('   📂 Please select your amazon-library.json file\n');
@@ -873,9 +940,9 @@ async function importBibliography() {
             return;
         }
 
-        // Step 5: Load library file
+        // Step 5: Load library file (with button prompt for fresh user gesture)
         console.log('[4] Loading library file...');
-        const { existingData, fileHandle, hasFileSystemAccess } = await loadLibraryFile();
+        const { existingData, fileHandle, hasFileSystemAccess } = await loadLibraryFile(books.length);
 
         // Step 6: Check for duplicates and add books
         progressUI.updatePhase('Adding to Wishlist', `Processing ${books.length} books...`);
