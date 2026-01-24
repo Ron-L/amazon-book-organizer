@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.24.0] - 2026-01-24
+
+### Added
+- **Bulk Set Price Goal** - Set price goals for multiple books at once via context menu
+  - File versions: readerwrangler.js v4.20.0
+  - Right-click selected books → "Set Price Goal" → choose preset ($0.99-$4.99), Custom, or Clear
+  - Custom option opens modal for entering any price
+  - Toast feedback confirms action: "Price goal set to $X.XX for N books"
+  - Clear button in single-book modal now styled consistently with presets
+
 ## [4.19.1] - 2026-01-23
 
 ### Fixed

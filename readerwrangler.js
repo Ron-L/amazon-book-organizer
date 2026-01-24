@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.23.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.20.0.a";  // Build version for this file
+        const APP_VERSION = "4.24.0";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.20.0";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";

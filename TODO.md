@@ -8,17 +8,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**4. 💰 Bulk Set Price Goal** - LOW/LOW (1-2 hours)
-   - Multi-select books (Ctrl+click, Shift+click, Ctrl+A, filter then select)
-   - Right-click context menu → "Set Price Goal" submenu
-   - Presets: $0.99 | $1.99 | $2.99 | $3.99 | $4.99 | Custom | Clear
-   - Also add "Clear" option to single-book modal for consistency
-   - Works on any book (wishlist or owned - for gift tracking)
-   - Toast feedback: "Price goal set to $2.99 for 50 books"
-   - Problem: Setting price goals one book at a time is tedious for large wishlists
-   - Impact: Efficient bulk price goal management
-
-**5. 📝 Book Notes** - LOW/LOW (2-3 hours)
+**4. 📝 Book Notes** - LOW/LOW (2-3 hours)
    - Personal notes on individual books ("Why did I buy this?", "Who recommended it?")
    - See [docs/design/BOOK-NOTES.md](docs/design/BOOK-NOTES.md) for full spec
    - Sticky note styling in detail modal (matches landing page brand element)
@@ -27,7 +17,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Book descriptions don't always capture why you bought or want to read a book
    - Impact: Personal context preserved with each book
 
-**6. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
+**5. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
    - TAGS.md says Unorganized column cannot have dividers. This is NOT true!
    - Adding tags to books or divs: Typing a unrecognizied tag should offer the option to create the tag. Discuss this.
    - Tags for books (explicit) and divs (positional inheritance)
@@ -38,7 +28,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Can't find thematically related books (Time Travel, Military SF) across 100+ columns
    - Impact: Cross-library thematic organization, reduced scrolling through empty columns
 
-**7. 🖥️ Desktop & Folders UI** - MEDIUM/HIGH (40-60 hours)
+**6. 🖥️ Desktop & Folders UI** - MEDIUM/HIGH (40-60 hours)
    - See [docs/design/DESKTOP-FOLDERS.md](docs/design/DESKTOP-FOLDERS.md) for full spec
    - Replaces Column Organizer (COLUMN-ARRANGER.md) and Column Carousel (COLUMN-CAROUSEL.md)
    - Virtual zoomable desktop with folder icons; folders open as resizable/movable windows
