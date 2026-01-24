@@ -24,7 +24,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.4.0';
+    const FETCHER_VERSION = 'v1.4.1.a';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -210,7 +210,66 @@ async function addToWishlist() {
             `;
         }
 
-        return { create, updatePhase, showProgressBar, updateProgress, remove, showComplete, showError };
+        // Show save button and return Promise that resolves with 'save' or 'cancel'.
+        // WHY THIS EXISTS: createWritable() requires an active "user gesture" (click/keypress).
+        // After fetching, the original gesture from file selection has expired.
+        // This button provides a fresh user gesture immediately before calling createWritable.
+        function showSaveButton(bookCount) {
+            return new Promise((resolve) => {
+                if (!overlay) create();
+                overlay.innerHTML = `
+                    <div style="font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">
+                        ✅ Fetch Complete!
+                    </div>
+                    <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                        ${bookCount.toLocaleString()} books ready to save
+                    </div>
+                    <button id="saveLibraryBtn" style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border: none;
+                        padding: 12px 20px;
+                        border-radius: 8px;
+                        font-size: 16px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        width: 100%;
+                        transition: transform 0.1s;
+                    ">
+                        💾 Save Library File
+                    </button>
+                    <div style="font-size: 12px; color: #999; margin-top: 10px; text-align: center;">
+                        Click to save updated library
+                    </div>
+                    <button id="cancelSaveBtn" title="Discard downloaded data" style="
+                        background: transparent;
+                        color: #999;
+                        border: 1px solid #ccc;
+                        padding: 6px 16px;
+                        border-radius: 4px;
+                        font-size: 12px;
+                        cursor: pointer;
+                        margin-top: 15px;
+                    ">
+                        Cancel
+                    </button>
+                `;
+                const saveBtn = overlay.querySelector('#saveLibraryBtn');
+                saveBtn.onmouseover = () => saveBtn.style.transform = 'scale(1.02)';
+                saveBtn.onmouseout = () => saveBtn.style.transform = 'scale(1)';
+                saveBtn.onclick = () => {
+                    resolve('save');
+                };
+                const cancelBtn = overlay.querySelector('#cancelSaveBtn');
+                cancelBtn.onmouseover = () => { cancelBtn.style.borderColor = '#999'; cancelBtn.style.color = '#666'; };
+                cancelBtn.onmouseout = () => { cancelBtn.style.borderColor = '#ccc'; cancelBtn.style.color = '#999'; };
+                cancelBtn.onclick = () => {
+                    resolve('cancel');
+                };
+            });
+        }
+
+        return { create, updatePhase, showProgressBar, updateProgress, remove, showComplete, showError, showSaveButton };
     })();
 
     // Initialize progress UI
@@ -636,10 +695,27 @@ async function addToWishlist() {
         const jsonData = JSON.stringify(existingData, null, 2);
 
         if (fileHandle) {
-            const writable = await fileHandle.createWritable();
-            await writable.write(jsonData);
-            await writable.close();
-            console.log('   ✅ Updated library file in place\n');
+            // Show save button to get fresh user gesture before writing
+            // Chrome requires an active "user gesture" for createWritable() - the original
+            // gesture from file selection has expired after fetching data
+            const userChoice = await progressUI.showSaveButton(existingData.books.length);
+            if (userChoice === 'cancel') {
+                console.error('   ❌ Save cancelled by user - data discarded');
+                progressUI.showError('Cancelled - your downloaded data was discarded');
+                return;
+            }
+
+            // Now we have a fresh user gesture from the button click
+            try {
+                const writable = await fileHandle.createWritable();
+                await writable.write(jsonData);
+                await writable.close();
+                console.log('   ✅ Updated library file in place\n');
+            } catch (e) {
+                console.error('   ❌ Failed to save file:', e.message);
+                progressUI.showError(`Failed to save: ${e.message}`);
+                return;
+            }
         } else {
             console.log('   ⚠️  IMPORTANT: Save this file as "amazon-library.json", replacing your existing file!\n');
 
