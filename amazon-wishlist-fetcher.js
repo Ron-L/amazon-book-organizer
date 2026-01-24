@@ -24,7 +24,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.4.1.a';
+    const FETCHER_VERSION = 'v1.4.1.b';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -698,7 +698,7 @@ async function addToWishlist() {
             // Show save button to get fresh user gesture before writing
             // Chrome requires an active "user gesture" for createWritable() - the original
             // gesture from file selection has expired after fetching data
-            const userChoice = await progressUI.showSaveButton(existingData.books.length);
+            const userChoice = await progressUI.showSaveButton(existingData.books.items.length);
             if (userChoice === 'cancel') {
                 console.error('   ❌ Save cancelled by user - data discarded');
                 progressUI.showError('Cancelled - your downloaded data was discarded');
