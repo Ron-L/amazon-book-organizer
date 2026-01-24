@@ -26,6 +26,7 @@ Before producing/updating videos, review this list of changes since the plan was
 - [ ] **Enhanced context menu** (v4.16.0) - Move to/Copy to submenus, Cut/Copy/Paste with shortcuts
 - [ ] **Wishlist Price Display** (v4.17.0) - Price tags on covers, price goals, Deals filter, green View on Amazon button
 - [ ] **Series Page Bulk Import** (v4.21.0) - One-click import of entire book series to wishlist with gap detection
+- [ ] **Author Bibliography Import** (v4.23.0) - One-click import of all Kindle books by an author to wishlist. **Tip**: Set page filters to "English" and "Kindle" before importing.
 
 ### Quick Start Script Updates Needed
 When re-recording, add mentions of:

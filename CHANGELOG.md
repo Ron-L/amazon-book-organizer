@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.23.0] - 2026-01-23
+
+### Added
+- **Author Bibliography Import** - One-click import of all Kindle books by an author to wishlist
+  - File versions: author-bibliography-fetcher.js v1.0.0, bookmarklet-nav-hub.js v1.4.0
+  - Navigate to any Amazon author "All Books" page and click "Add Bibliography to Wishlist"
+  - Auto-loads all books (clicks "Show More" until complete)
+  - Extracts covers, prices, ratings from page DOM
+  - Skips books you already own or have on wishlist
+  - Data completeness summary shows cover/price/rating stats
+  - **Tip**: Set page filters to "English" and "Kindle" before importing for best results
+  - Filters out Amazon navigation/footer items that could be mistakenly captured
+
 ## [4.22.0] - 2026-01-23
 
 ### Fixed
