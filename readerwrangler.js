@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.23.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.19.0";  // Build version for this file
+        const ORGANIZER_VERSION = "4.19.1.a";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -817,34 +817,32 @@
                         redo();
                     }
 
-                    // Ctrl+A: Select all books in active column (v4.0.1 - use ref to get current filtered view)
+                    // Ctrl+A: Select all items in active column (v4.0.1 - use ref to get current filtered view)
+                    // v4.19.1.a - Now includes dividers in selection
                     if ((e.ctrlKey || e.metaKey) && e.key === 'a' && activeColumnId) {
                         e.preventDefault(); // Prevent browser's select-all
                         const column = columns.find(col => col.id === activeColumnId);
-                        if (column && filteredBooksRef.current) {
-                            const visibleBooks = filteredBooksRef.current(column.books);
-                            // Filter out dividers - only select actual books
-                            // v4.16.0.d - Use composite keys with indices for selection
+                        if (column) {
+                            // Select ALL items including dividers (use raw column.books for simplicity)
                             const compositeKeys = [];
-                            visibleBooks.forEach((item, filteredIndex) => {
-                                if (!item || (typeof item === 'object' && item.type === 'divider')) return;
-                                const book = item;
-                                // Find actual index in column.books
-                                const filteredBooksBeforeThis = visibleBooks.slice(0, filteredIndex);
-                                const sameBookCountBefore = filteredBooksBeforeThis.filter(b => b && b.id === book.id).length;
-                                let occurrenceCount = 0;
-                                for (let i = 0; i < column.books.length; i++) {
-                                    // v4.16.0.ah - Use getBookIdFromEntry to handle GUID entries
-                                    if (getBookIdFromEntry(column.books[i]) === book.id) {
-                                        if (occurrenceCount === sameBookCountBefore) {
-                                            compositeKeys.push(`${activeColumnId}:${book.id}:${i}`);
-                                            break;
-                                        }
-                                        occurrenceCount++;
-                                    }
+                            let firstDividerId = null;
+                            column.books.forEach((item, index) => {
+                                if (!item) return;
+                                if (typeof item === 'object' && item.type === 'divider') {
+                                    // Divider: use special key format
+                                    compositeKeys.push(`${activeColumnId}:divider:${item.id}:${index}`);
+                                    if (!firstDividerId) firstDividerId = item.id;
+                                } else {
+                                    // Book: use standard composite key
+                                    const bookId = getBookIdFromEntry(item);
+                                    if (bookId) compositeKeys.push(`${activeColumnId}:${bookId}:${index}`);
                                 }
                             });
                             setSelectedBooks(new Set(compositeKeys));
+                            // Set selectedDivider for visual consistency if any dividers selected
+                            if (firstDividerId) {
+                                setSelectedDivider({ columnId: activeColumnId, dividerId: firstDividerId });
+                            }
                         }
                     }
 
@@ -2427,63 +2425,40 @@
                 });
             };
 
+            // v4.19.1.a - Now includes dividers in range selection
             const selectBookRange = (startBookId, endBookId, columnId, startIndex, endIndex) => {
                 // Only select within the same column
                 const column = columns.find(col => col.id === columnId);
                 if (!column) return;
 
-                const visibleBooks = filteredBooks(column.books);
+                // Use raw indices directly - simpler and works with dividers
+                const [min, max] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
 
-                // Find the filtered positions of start and end books
-                let startFilteredIdx = -1;
-                let endFilteredIdx = -1;
-                // v4.16.0.ai - Use getBookIdFromEntry to handle GUID entries
-                for (let i = 0; i < visibleBooks.length; i++) {
-                    const book = visibleBooks[i];
-                    if (!book || book.type === 'divider') continue;
-                    // Find actual index in column.books
-                    const filteredBooksBeforeThis = visibleBooks.slice(0, i);
-                    const sameBookCountBefore = filteredBooksBeforeThis.filter(b => b && b.id === book.id).length;
-                    let occurrenceCount = 0;
-                    for (let j = 0; j < column.books.length; j++) {
-                        if (getBookIdFromEntry(column.books[j]) === book.id) {
-                            if (occurrenceCount === sameBookCountBefore) {
-                                if (j === startIndex) startFilteredIdx = i;
-                                if (j === endIndex) endFilteredIdx = i;
-                                break;
-                            }
-                            occurrenceCount++;
-                        }
-                    }
-                }
-
-                if (startFilteredIdx === -1 || endFilteredIdx === -1) return;
-
-                const [min, max] = [Math.min(startFilteredIdx, endFilteredIdx), Math.max(startFilteredIdx, endFilteredIdx)];
-                const rangeBooks = visibleBooks.slice(min, max + 1);
-
-                // v4.16.0.d - Use composite keys with indices for range selection
-                // v4.16.0.ai - Use getBookIdFromEntry to handle GUID entries
+                // Build composite keys for all items in range (books AND dividers)
                 const rangeKeys = [];
-                for (let i = 0; i < rangeBooks.length; i++) {
-                    const book = rangeBooks[i];
-                    if (!book || book.type === 'divider') continue;
-                    // Calculate actualIndex for this book
-                    const filteredBooksBeforeThis = visibleBooks.slice(0, min + i);
-                    const sameBookCountBefore = filteredBooksBeforeThis.filter(b => b && b.id === book.id).length;
-                    let occurrenceCount = 0;
-                    for (let j = 0; j < column.books.length; j++) {
-                        if (getBookIdFromEntry(column.books[j]) === book.id) {
-                            if (occurrenceCount === sameBookCountBefore) {
-                                rangeKeys.push(`${columnId}:${book.id}:${j}`);
-                                break;
-                            }
-                            occurrenceCount++;
-                        }
+                for (let i = min; i <= max; i++) {
+                    const item = column.books[i];
+                    if (!item) continue;
+
+                    if (typeof item === 'object' && item.type === 'divider') {
+                        // Divider: use special key format
+                        rangeKeys.push(`${columnId}:divider:${item.id}:${i}`);
+                    } else {
+                        // Book: use standard composite key
+                        const bookId = getBookIdFromEntry(item);
+                        if (bookId) rangeKeys.push(`${columnId}:${bookId}:${i}`);
                     }
                 }
 
                 setSelectedBooks(new Set(rangeKeys));
+
+                // Also set selectedDivider if any dividers are in range (for visual consistency)
+                const firstDividerInRange = column.books.slice(min, max + 1).find(
+                    item => typeof item === 'object' && item.type === 'divider'
+                );
+                if (firstDividerInRange) {
+                    setSelectedDivider({ columnId, dividerId: firstDividerInRange.id });
+                }
             };
 
             const clearSelection = () => {
@@ -2960,6 +2935,7 @@
             };
 
             // v3.13.0 - Select divider and all books in its group
+            // v4.19.1.a - Fixed to use composite keys for books, include divider in selection
             const selectDividerGroup = (columnId, dividerId) => {
                 const column = columns.find(col => col.id === columnId);
                 if (!column) return;
@@ -2970,20 +2946,36 @@
                 );
                 if (dividerIndex === -1) return;
 
-                // Find all books from this divider until next divider (or end of column)
-                const booksInGroup = [];
+                // Build composite keys for divider + all books until next divider
+                const selectionKeys = [];
+
+                // Add the divider itself (special key format: columnId:divider:dividerId:index)
+                selectionKeys.push(`${columnId}:divider:${dividerId}:${dividerIndex}`);
+
+                // Add books from this divider until next divider (or end of column)
                 for (let i = dividerIndex + 1; i < column.books.length; i++) {
                     const item = column.books[i];
                     // Stop at next divider
                     if (typeof item === 'object' && item.type === 'divider') break;
-                    // Add book ID to group
-                    if (typeof item === 'string') booksInGroup.push(item);
+                    // Add book with composite key (columnId:bookId:index)
+                    const bookId = getBookIdFromEntry(item);
+                    if (bookId) selectionKeys.push(`${columnId}:${bookId}:${i}`);
                 }
 
-                // Select the books in this group
-                setSelectedBooks(new Set(booksInGroup));
+                // Select all items in this group
+                setSelectedBooks(new Set(selectionKeys));
                 setSelectedDivider({ columnId, dividerId });
                 setActiveColumnId(columnId);
+
+                // Set anchor for shift+click (use first book after divider, or divider position if no books)
+                if (selectionKeys.length > 1) {
+                    const firstBookKey = selectionKeys[1]; // Skip divider key
+                    const [, bookId, indexStr] = firstBookKey.split(':');
+                    setLastClickedBook({ id: bookId, columnId, index: parseInt(indexStr, 10) });
+                } else {
+                    // No books under divider - set anchor at divider position
+                    setLastClickedBook({ id: dividerId, columnId, index: dividerIndex, isDivider: true });
+                }
             };
 
             const navigateBook = (direction) => {
@@ -5700,7 +5692,11 @@
                                                 if (typeof item === 'object' && item.type === 'divider') {
                                                     const isHovering = hoveringDivider && hoveringDivider.columnId === column.id && hoveringDivider.dividerId === item.id;
                                                     const isEditing = editingDivider && editingDivider.columnId === column.id && editingDivider.dividerId === item.id;
-                                                    const isSelected = selectedDivider && selectedDivider.columnId === column.id && selectedDivider.dividerId === item.id; // v3.13.0
+                                                    // v4.19.1.a - Check both selectedDivider AND selectedBooks for divider selection
+                                                    const dividerActualIndex = column.books.findIndex(b => b && b.type === 'divider' && b.id === item.id);
+                                                    const dividerKey = `${column.id}:divider:${item.id}:${dividerActualIndex}`;
+                                                    const isSelected = (selectedDivider && selectedDivider.columnId === column.id && selectedDivider.dividerId === item.id) ||
+                                                                       selectedBooks.has(dividerKey);
 
                                                     // v3.14.0.v - Old divider indicator code removed; overlay handles it
 
