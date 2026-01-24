@@ -8,18 +8,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**1. 📚 Author Bibliography Import** - MEDIUM/MEDIUM (4-6 hours)
-   - File: `bookmarklet-nav-hub.js` (navigator modal)
-   - Detect author pages: `/stores/.../author/` URL pattern
-   - Enable wishlist button on author pages (currently only series/product pages)
-   - Context-aware button text:
-     - Series page: "Add Series to Wishlist"
-     - Author page: "Add Bibliography to Wishlist"
-   - Scrape author page HTML for all books (no API endpoint - server-rendered)
-   - Example URL: https://www.amazon.com/stores/John-Scalzi/author/B001IGJOCA/allbooks
-   - Problem: Can't bulk-add all books by a favorite author
-   - Impact: One-click wishlist population for author's complete catalog
-
 **4. 💰 Bulk Set Price Goal** - LOW/LOW (1-2 hours)
    - Multi-select books (Ctrl+click, Shift+click, Ctrl+A, filter then select)
    - Right-click context menu → "Set Price Goal" submenu
@@ -50,20 +38,14 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Can't find thematically related books (Time Travel, Military SF) across 100+ columns
    - Impact: Cross-library thematic organization, reduced scrolling through empty columns
 
-**7. Column Organizer - Split Pane UI**
-   - see docs/design/COLUMN-ARRANGER.md
-
-**8. 🎠 Column Carousel** - MEDIUM/MEDIUM (8-12 hours)
-   - This may not be needed if the Column Organizer serves.
-   - Infinite horizontal carousel for columns (excludes pinned columns)
-   - See [docs/design/COLUMN-CAROUSEL.md](docs/design/COLUMN-CAROUSEL.md) for full spec
-   - Click-to-pin columns to left side; pinned columns exit carousel
-   - Momentum-based spinning with mouse wheel, edge hover zones, keyboard arrows
-   - 3D perspective: edge columns at 85% scale/opacity, center at 100%
-   - Mobile: swipe to spin, carousel locks during book drag
-   - Problem: 7+ columns becomes unwieldy with linear horizontal scroll
-   - Impact: Scalable navigation for large column counts (20+)
-   - filtering would apply to carousel
+**7. 🖥️ Desktop & Folders UI** - MEDIUM/HIGH (40-60 hours)
+   - See [docs/design/DESKTOP-FOLDERS.md](docs/design/DESKTOP-FOLDERS.md) for full spec
+   - Replaces Column Organizer (COLUMN-ARRANGER.md) and Column Carousel (COLUMN-CAROUSEL.md)
+   - Virtual zoomable desktop with folder icons; folders open as resizable/movable windows
+   - Collapsible dividers within folders; books reflow to window width
+   - Drag books to closed folder icons; zoom in/out to see all or focus on work
+   - Problem: 20+ columns overwhelm the workspace; no good overview or navigation
+   - Impact: Scalable, intuitive organization using familiar desktop metaphor
 
 
 ### 📖 Priority 2: Optimizations & Polish (Before Public Launch)

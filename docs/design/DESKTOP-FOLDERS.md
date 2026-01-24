@@ -71,15 +71,45 @@ Desktop (virtual, zoomable, scrollable)
 
 ## Folder Icons (Closed State)
 
-### Appearance
+### Icon Style
+Use a **stylized geometric folder shape** (not skeuomorphic, not a plain rectangle):
 ```
-┌─────────────┐
-│     📁      │
-│ Fantasy     │
-│   (47)      │
-└─────────────┘
+    ┌──┐
+┌───┴──┴───┐
+│          │  ← Folder body (colorizable)
+│ Fantasy  │
+│   (47)   │
+└──────────┘
 ```
 
+**Rationale:**
+- Reinforces the desktop/folder metaphor strongly
+- Universally recognized shape
+- Natural area for color customization (folder body)
+- Clearly signals "new paradigm" vs. current column headers
+- Clean geometric style fits modern UI aesthetic
+
+### Folder Coloring
+Users can assign colors to folders for visual grouping and quick recognition.
+
+**Color Palette:** 8-12 colors
+- Slate (default)
+- Red, Orange, Yellow, Green, Teal, Blue, Purple, Pink
+- Optional: Brown, Gray
+
+**Benefits:**
+- Visual grouping at a glance ("blue = fiction, green = non-fiction")
+- Quick recognition at low zoom when names become tiny
+- Personal organization layer beyond naming
+- Reduces cognitive load scanning many folders
+
+**Implementation:**
+- Set via: Right-click context menu → "Color" submenu
+- Default: Slate/neutral gray
+- Window title bar inherits folder color when open (consistency)
+- Persisted to localStorage with other folder state
+
+### Appearance
 - Small, consistent size
 - Folder name (truncated if long)
 - Book count badge
@@ -91,7 +121,7 @@ Desktop (virtual, zoomable, scrollable)
 | Double-click | Open folder window |
 | Drag | Reposition on desktop |
 | Drop book onto | Add book to top of folder |
-| Right-click | Context menu (Rename, Delete, etc.) |
+| Right-click | Context menu (Rename, Delete, Color, etc.) |
 
 ---
 
@@ -220,6 +250,7 @@ Folders are the user's organizational structure. Hiding them during filtering wo
 | State | Persisted? | Notes |
 |-------|------------|-------|
 | Folder positions on desktop | Yes | Restore on reload |
+| Folder colors | Yes | Per-folder |
 | Zoom level | Yes | Restore last zoom |
 | Divider collapse states | Yes | Per-folder |
 | Which windows are open | Optional | User preference: restore or start fresh |
@@ -246,12 +277,14 @@ Folders are the user's organizational structure. Hiding them during filtering wo
 - Distinct from window chrome
 
 ### Folder Icons
-- Consistent folder icon style
-- Name below icon
+- Geometric folder shape with tab (see "Icon Style" above)
+- User-customizable color (see "Folder Coloring" above)
+- Name below/inside icon
 - Count badge (pill shape)
 
 ### Windows
 - Standard window chrome (title bar, borders)
+- Title bar inherits folder color for visual consistency
 - Slightly rounded corners
 - Drop shadow for depth
 - Semi-transparent when dragging (optional)
