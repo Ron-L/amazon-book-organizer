@@ -2,7 +2,7 @@
 
 ## Content Update Tracker
 
-**Last Updated**: 2026-01-19
+**Last Updated**: 2026-01-24
 
 Before producing/updating videos, review this list of changes since the plan was written:
 
@@ -27,6 +27,7 @@ Before producing/updating videos, review this list of changes since the plan was
 - [ ] **Wishlist Price Display** (v4.17.0) - Price tags on covers, price goals, Deals filter, green View on Amazon button
 - [ ] **Series Page Bulk Import** (v4.21.0) - One-click import of entire book series to wishlist with gap detection
 - [ ] **Author Bibliography Import** (v4.23.0) - One-click import of all Kindle books by an author to wishlist. **Tip**: Set page filters to "English" and "Kindle" before importing.
+- [ ] **Bulk Set Price Goal** (v4.24.0) - Right-click selected books → "Set Price Goal" submenu with presets ($0.99-$4.99), Custom, or Clear
 
 ### Quick Start Script Updates Needed
 When re-recording, add mentions of:
