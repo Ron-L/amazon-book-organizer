@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.19.1] - 2026-01-23
+
+### Fixed
+- **Divider selection** - Fixed selection of dividers and books under dividers
+  - File versions: readerwrangler.js v4.19.1
+  - Clicking a divider now properly selects the divider and all books under it (visual highlight + operations work)
+  - Shift+click after selecting a divider now works for range selection
+  - Shift+click range selection now includes dividers in the range
+  - Ctrl+A now selects all items in column including dividers
+  - Root cause: v4.16.0 changed to composite keys for book selection but `selectDividerGroup` was not updated
+
 ## [4.23.0] - 2026-01-23
 
 ### Added

@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.23.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.19.1.a";  // Build version for this file
+        const ORGANIZER_VERSION = "4.19.1";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -818,7 +818,7 @@
                     }
 
                     // Ctrl+A: Select all items in active column (v4.0.1 - use ref to get current filtered view)
-                    // v4.19.1.a - Now includes dividers in selection
+                    // v4.19.1 - Now includes dividers in selection
                     if ((e.ctrlKey || e.metaKey) && e.key === 'a' && activeColumnId) {
                         e.preventDefault(); // Prevent browser's select-all
                         const column = columns.find(col => col.id === activeColumnId);
@@ -2425,7 +2425,7 @@
                 });
             };
 
-            // v4.19.1.a - Now includes dividers in range selection
+            // v4.19.1 - Now includes dividers in range selection
             const selectBookRange = (startBookId, endBookId, columnId, startIndex, endIndex) => {
                 // Only select within the same column
                 const column = columns.find(col => col.id === columnId);
@@ -2935,7 +2935,7 @@
             };
 
             // v3.13.0 - Select divider and all books in its group
-            // v4.19.1.a - Fixed to use composite keys for books, include divider in selection
+            // v4.19.1 - Fixed to use composite keys for books, include divider in selection
             const selectDividerGroup = (columnId, dividerId) => {
                 const column = columns.find(col => col.id === columnId);
                 if (!column) return;
@@ -5692,7 +5692,7 @@
                                                 if (typeof item === 'object' && item.type === 'divider') {
                                                     const isHovering = hoveringDivider && hoveringDivider.columnId === column.id && hoveringDivider.dividerId === item.id;
                                                     const isEditing = editingDivider && editingDivider.columnId === column.id && editingDivider.dividerId === item.id;
-                                                    // v4.19.1.a - Check both selectedDivider AND selectedBooks for divider selection
+                                                    // v4.19.1 - Check both selectedDivider AND selectedBooks for divider selection
                                                     const dividerActualIndex = column.books.findIndex(b => b && b.type === 'divider' && b.id === item.id);
                                                     const dividerKey = `${column.id}:divider:${item.id}:${dividerActualIndex}`;
                                                     const isSelected = (selectedDivider && selectedDivider.columnId === column.id && selectedDivider.dividerId === item.id) ||
