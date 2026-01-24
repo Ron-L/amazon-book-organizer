@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.24.1] - 2026-01-24
+
+### Fixed
+- **Library Fetcher save error** - Fixed "User activation is required" error when saving after long fetch
+  - File versions: amazon-library-fetcher.js v4.8.1
+  - Chrome requires fresh user gesture for file writes; original gesture expires during fetch
+  - Now shows "Save Library File" button after fetch completes to provide fresh gesture
+  - Prevents data loss when user navigates away during fetch
+
 ## [4.24.0] - 2026-01-24
 
 ### Added
