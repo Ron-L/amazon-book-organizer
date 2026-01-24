@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.24.3] - 2026-01-24
+
+### Fixed
+- **Wishlist duplicate detection** - Wishlist fetcher now checks if book already exists before adding
+  - File versions: amazon-wishlist-fetcher.js v1.4.2
+  - Previously added duplicates to JSON file (App Loader deduplicated on load, but file grew)
+  - Now shows "already in your library" warning if ASIN already exists
+
 ## [4.24.2] - 2026-01-24
 
 ### Fixed
