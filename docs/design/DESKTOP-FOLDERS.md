@@ -23,7 +23,8 @@ The familiar OS desktop:
 - **Desktop surface**: Virtual space larger than viewport, zoomable
 - **Folder icons**: Closed columns shown as small icons with name + count
 - **Folder windows**: Open columns shown as resizable, movable windows
-- **Books**: Displayed inside windows, reflow to fill window width
+- **Books inside windows**: Displayed in windows, reflow to fill window width
+- **Books on desktop**: Can exist directly on desktop as staging area or "currently reading"
 
 ---
 
@@ -31,6 +32,7 @@ The familiar OS desktop:
 
 ```
 Desktop (virtual, zoomable, scrollable)
+  ├── Books (directly on desktop - staging area)
   └── Folder icons (closed) or Folder windows (open)
         └── Collapsible dividers
               └── Books (reflow to window width)
@@ -185,6 +187,52 @@ Same as current column behavior:
 
 ---
 
+## Books on Desktop
+
+Books can exist directly on the desktop, outside of any folder. This serves as a **staging area** and **workspace**.
+
+### Use Cases
+
+1. **Staging area**: Select books from a folder, drag to desktop, then sort into multiple destinations
+2. **Currently reading**: Keep active book(s) visible on desktop for quick access
+3. **Intermediate transfer**: Park books when destination folder isn't visible
+
+### Appearance
+- Mini book covers, same as inside folders
+- Snap to grid like folder icons
+- Scale proportionally with zoom
+
+### Interactions
+| Action | Result |
+|--------|--------|
+| Drag from folder to desktop | Book moves to desktop |
+| Drag from desktop to folder | Book moves to folder |
+| Drag from desktop to closed folder icon | Book added to top of folder |
+| Double-click | Open detail modal |
+| Right-click | Same context menu as in-folder books |
+| Lasso/marquee select | Select multiple desktop books |
+
+### Desktop Books Indicator
+When zoomed out, show a subtle indicator if books exist on desktop:
+```
+┌─────────┐
+│ 📚 3    │  ← "3 books on desktop"
+└─────────┘
+```
+Clicking zooms/pans to show the books.
+
+### Persistence
+- Desktop books persist across sessions (if user leaves a book there, respect that)
+- Position on desktop persists
+
+### Clutter Guard (Optional)
+If 20+ books accumulate on desktop, show gentle nudge:
+> "You have 25 books on your desktop. Move to a folder?"
+
+With options: "Move to Unorganized" | "Dismiss" | "Don't ask again"
+
+---
+
 ## Dividers (Collapsible)
 
 ### Appearance
@@ -221,6 +269,11 @@ Same as current column behavior:
 - Drop adds book to **top** of folder
 - Feedback: Brief highlight or toast
 
+### Book to Desktop
+- Drag book from folder window to empty desktop space
+- Book snaps to grid on desktop
+- Use as staging area for multi-destination moves
+
 ### Folder Icon Repositioning
 - Drag icon to new desktop position
 - Snaps to grid
@@ -238,6 +291,7 @@ Same as current column behavior:
 - **Nothing hides**: Folder icons always visible on desktop
 - **Counts update**: Folder shows filtered count (e.g., "Fantasy (12/47)")
 - **Inside windows**: Non-matching books hide; matching books remain
+- **Desktop books**: Respect filters (hide if no match)
 - **Empty folders**: Show "0" count, remain visible
 
 ### Rationale
@@ -251,6 +305,7 @@ Folders are the user's organizational structure. Hiding them during filtering wo
 |-------|------------|-------|
 | Folder positions on desktop | Yes | Restore on reload |
 | Folder colors | Yes | Per-folder |
+| Desktop books | Yes | Which books + positions |
 | Zoom level | Yes | Restore last zoom |
 | Divider collapse states | Yes | Per-folder |
 | Which windows are open | Optional | User preference: restore or start fresh |
