@@ -380,16 +380,108 @@ Folders are the user's organizational structure. Hiding them during filtering wo
 
 ## Migration from Columns
 
-Existing column data maps directly:
-- Each column → one folder
-- Column order → initial folder arrangement (left-to-right, top-to-bottom grid)
-- Dividers → preserved inside folders
-- Book positions → preserved inside folders
+### Data Transformation
 
-First launch after migration:
-- Auto-arrange folders in grid
-- All folders start closed
-- Zoom at 100%
+Existing column data maps directly with minimal additions:
+
+| Current Field | New Field | Transformation |
+|---------------|-----------|----------------|
+| `columns[]` | `folders[]` | Rename only |
+| column.`id`, `name`, `books` | Same | Unchanged |
+| (none) | folder.`position` | Add `{ x: 0, y: index * FOLDER_HEIGHT }` |
+| (none) | folder.`color` | Add `'slate'` (default) |
+| divider.`id`, `name` | Same | Unchanged |
+| (none) | divider.`collapsed` | Add `false` (expanded) |
+| (none) | `desktopBooks` | Add `[]` (empty) |
+
+**Detection**: Old format lacks `position` field on folders. If missing, trigger migration.
+
+### First Launch Dialog
+
+On first launch after update (when old format detected):
+
+```
+┌─────────────────────────────────────────────────────┐
+│  New Interface Available                            │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  ReaderWrangler has a new Desktop & Folders         │
+│  interface. Your columns will become folders,       │
+│  arranged vertically on your new desktop.           │
+│                                                     │
+│  Your books, dividers, and organization are         │
+│  preserved - only the visual layout changes.        │
+│                                                     │
+│            [Continue]  [Keep Classic Version]       │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+- **Continue**: Migrate data, save in new format, proceed to new UI
+- **Keep Classic Version**: Redirect to `readerwrangler.com/v4/`
+
+### Importing Old Backups
+
+When user imports a JSON backup:
+1. Detect format (check for `position` field)
+2. If old format, show dialog:
+   > "This backup is from the classic version. It will be converted to the new folder layout."
+   > [Import & Convert] [Cancel]
+3. Transform during load
+4. Save in new format
+
+### Initial Folder Arrangement
+
+After migration, folders arranged vertically in original column order:
+```
+📁 Unorganized (150)     ← position: { x: 0, y: 0 }
+📁 Fantasy (47)          ← position: { x: 0, y: 80 }
+📁 Sci-Fi (89)           ← position: { x: 0, y: 160 }
+📁 Mystery (23)          ← position: { x: 0, y: 240 }
+...
+```
+
+User can rearrange immediately after migration.
+
+---
+
+## Classic Version Support (v4)
+
+Maintain frozen v4 at `/v4/` subfolder for users who prefer classic column UI.
+
+### Repository Structure
+
+```
+/                         ← v5+ (Desktop & Folders)
+  index.html
+  readerwrangler.js
+  ...
+/v4/                      ← Frozen classic version
+  index.html
+  readerwrangler.js
+  ...
+```
+
+### URLs
+
+- `readerwrangler.com/` → Latest (v5+)
+- `readerwrangler.com/v4/` → Classic frozen version
+
+### Setup Steps (at v5 release)
+
+1. Create `/v4/` folder in repo
+2. Copy all current v4.x files into `/v4/`
+3. Update paths in v4 files to be relative (if any absolute paths exist)
+4. Commit `/v4/` folder
+5. Release v5 at root
+6. `/v4/` remains frozen; root receives updates
+
+### Data Compatibility
+
+- v4 and v5 use same IndexedDB database
+- If user switches from v5 back to v4, v4 ignores new fields (`position`, `color`, etc.)
+- If user switches from v4 to v5, migration dialog appears
+- **Backup files** are version-agnostic (migration handles format differences)
 
 ---
 
