@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.23.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.19.1";  // Build version for this file
+        const ORGANIZER_VERSION = "4.20.0.a";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -388,6 +388,8 @@
             const [showAllReviews, setShowAllReviews] = useState(false);
             const [customPriceInput, setCustomPriceInput] = useState(''); // v4.17.0 - custom price trigger input
             const [showCustomPriceInput, setShowCustomPriceInput] = useState(false); // v4.17.0
+            const [showBulkPriceModal, setShowBulkPriceModal] = useState(false); // v4.20.0.a - bulk price goal modal
+            const [bulkPriceInput, setBulkPriceInput] = useState(''); // v4.20.0.a - bulk price goal input
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -407,7 +409,7 @@
             const [selectedDivider, setSelectedDivider] = useState(null); // v3.13.0 - Selected divider {columnId, dividerId}
             const [activeColumnId, setActiveColumnId] = useState(null); // Track which column has focus for Ctrl+A
             const [contextMenu, setContextMenu] = useState(null); // {x, y, bookId, columnId}
-            const [contextSubmenu, setContextSubmenu] = useState(null); // v4.16.0.ba - 'move' | 'copy' | null for submenu hover
+            const [contextSubmenu, setContextSubmenu] = useState(null); // v4.16.0.ba - 'move' | 'copyTo' | 'priceGoal' | null for submenu hover
             const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
             const [ratingFilter, setRatingFilter] = useState(''); // Filter by minimum rating (NEW v3.8.0)
             const [wishlistFilter, setWishlistFilter] = useState(''); // Filter by wishlist status: '' | 'owned' | 'wishlist' (NEW v3.8.0)
@@ -4999,6 +5001,81 @@
                         </div>
                     )}
 
+                    {/* v4.20.0.a - Bulk price goal modal */}
+                    {showBulkPriceModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                             onClick={() => { setShowBulkPriceModal(false); setBulkPriceInput(''); }}>
+                            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm" onClick={(e) => e.stopPropagation()}>
+                                <h2 className="text-lg font-bold text-gray-900 mb-4">Set Custom Price Goal</h2>
+                                <p className="text-sm text-gray-600 mb-4">
+                                    Set price goal for {selectedBooks.size} selected book{selectedBooks.size !== 1 ? 's' : ''}
+                                </p>
+                                <form
+                                    onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const price = parseFloat(bulkPriceInput);
+                                        if (!isNaN(price) && price > 0) {
+                                            const selectedBookIds = getSelectedBookIds();
+                                            const count = selectedBookIds.length;
+                                            setBooks(prev => {
+                                                const updated = prev.map(b =>
+                                                    selectedBookIds.includes(b.id) ? { ...b, priceTrigger: price } : b
+                                                );
+                                                saveBooksToIndexedDB(updated);
+                                                return updated;
+                                            });
+                                            // Toast feedback
+                                            setClipboardMessage(`Price goal set to $${price.toFixed(2)} for ${count} book${count !== 1 ? 's' : ''}`);
+                                            setFooterClipboardVisible(false);
+                                            setToastVisible(true);
+                                            setToastAnimating(false);
+                                            setTimeout(() => {
+                                                setToastAnimating(true);
+                                                setTimeout(() => {
+                                                    setToastVisible(false);
+                                                    setToastAnimating(false);
+                                                    setFooterClipboardVisible(true);
+                                                }, 1000);
+                                            }, 1500);
+                                        }
+                                        setShowBulkPriceModal(false);
+                                        setBulkPriceInput('');
+                                    }}
+                                    className="flex flex-col gap-4"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg text-gray-700">$</span>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0.01"
+                                            value={bulkPriceInput}
+                                            onChange={(e) => setBulkPriceInput(e.target.value)}
+                                            className="flex-1 px-3 py-2 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                            placeholder="0.00"
+                                            autoFocus
+                                        />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setShowBulkPriceModal(false); setBulkPriceInput(''); }}
+                                            className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
+                                        >
+                                            Set Goal
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
                     {/* v4.16.0.aq - Last copy warning dialog */}
                     {/* v4.16.0.ar - Handle already-hidden entries separately */}
                     {lastCopyDialogData && (() => {
@@ -5415,6 +5492,7 @@
                                                                 <button type="button" onClick={() => { setShowCustomPriceInput(false); setCustomPriceInput(''); }} className="px-1 py-1 text-sm text-gray-500">×</button>
                                                             </form>
                                                         )}
+                                                        {/* v4.20.0.a - More visible Clear button for consistency with bulk menu */}
                                                         {modalBook.priceTrigger && (
                                                             <button
                                                                 onClick={() => {
@@ -5427,10 +5505,10 @@
                                                                     });
                                                                     setModalBook(prev => ({ ...prev, priceTrigger: null }));
                                                                 }}
-                                                                className="px-2 py-1 text-sm text-red-600 hover:text-red-800"
-                                                                title="Clear trigger"
+                                                                className="px-2 py-1 text-sm rounded bg-red-100 hover:bg-red-200 text-red-700"
+                                                                title="Clear price goal"
                                                             >
-                                                                ×
+                                                                Clear
                                                             </button>
                                                         )}
                                                     </div>
@@ -6356,6 +6434,98 @@
                                 }}>
                                 📝 Copy Title{selectedBooks.size !== 1 ? 's' : ''}
                             </button>
+
+                            {/* v4.20.0.a - Set Price Goal submenu */}
+                            <div className="relative"
+                                 onMouseEnter={() => setContextSubmenu('priceGoal')}
+                                 onMouseLeave={() => setContextSubmenu(null)}>
+                                <button className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center justify-between">
+                                    <span className="flex items-center gap-2">💰 Set Price Goal</span>
+                                    <span className="text-gray-400">▶</span>
+                                </button>
+                                {/* Price Goal submenu */}
+                                {contextSubmenu === 'priceGoal' && (
+                                    <div className="absolute bg-white border border-gray-300 rounded-lg shadow-xl py-1 min-w-[140px]"
+                                         style={{
+                                             top: 0,
+                                             [submenuOnLeft ? 'right' : 'left']: '100%'
+                                         }}>
+                                        {[0.99, 1.99, 2.99, 3.99, 4.99].map(price => (
+                                            <button
+                                                key={price}
+                                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700"
+                                                onClick={async () => {
+                                                    const selectedBookIds = getSelectedBookIds();
+                                                    const count = selectedBookIds.length;
+                                                    setBooks(prev => {
+                                                        const updated = prev.map(b =>
+                                                            selectedBookIds.includes(b.id) ? { ...b, priceTrigger: price } : b
+                                                        );
+                                                        saveBooksToIndexedDB(updated);
+                                                        return updated;
+                                                    });
+                                                    // Toast feedback
+                                                    setClipboardMessage(`Price goal set to $${price.toFixed(2)} for ${count} book${count !== 1 ? 's' : ''}`);
+                                                    setFooterClipboardVisible(false);
+                                                    setToastVisible(true);
+                                                    setToastAnimating(false);
+                                                    setTimeout(() => {
+                                                        setToastAnimating(true);
+                                                        setTimeout(() => {
+                                                            setToastVisible(false);
+                                                            setToastAnimating(false);
+                                                            setFooterClipboardVisible(true);
+                                                        }, 1000);
+                                                    }, 1500);
+                                                    setContextMenu(null);
+                                                    setContextSubmenu(null);
+                                                }}>
+                                                ${price.toFixed(2)}
+                                            </button>
+                                        ))}
+                                        <button
+                                            className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700"
+                                            onClick={() => {
+                                                setShowBulkPriceModal(true);
+                                                setContextMenu(null);
+                                                setContextSubmenu(null);
+                                            }}>
+                                            Custom...
+                                        </button>
+                                        <div className="border-t border-gray-200 my-1"></div>
+                                        <button
+                                            className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-red-600"
+                                            onClick={async () => {
+                                                const selectedBookIds = getSelectedBookIds();
+                                                const count = selectedBookIds.length;
+                                                setBooks(prev => {
+                                                    const updated = prev.map(b =>
+                                                        selectedBookIds.includes(b.id) ? { ...b, priceTrigger: null } : b
+                                                    );
+                                                    saveBooksToIndexedDB(updated);
+                                                    return updated;
+                                                });
+                                                // Toast feedback
+                                                setClipboardMessage(`Price goal cleared for ${count} book${count !== 1 ? 's' : ''}`);
+                                                setFooterClipboardVisible(false);
+                                                setToastVisible(true);
+                                                setToastAnimating(false);
+                                                setTimeout(() => {
+                                                    setToastAnimating(true);
+                                                    setTimeout(() => {
+                                                        setToastVisible(false);
+                                                        setToastAnimating(false);
+                                                        setFooterClipboardVisible(true);
+                                                    }, 1000);
+                                                }, 1500);
+                                                setContextMenu(null);
+                                                setContextSubmenu(null);
+                                            }}>
+                                            Clear
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="border-t border-gray-200 my-1"></div>
 
