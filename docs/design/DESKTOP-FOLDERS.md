@@ -285,6 +285,34 @@ With options: "Move to Unorganized" | "Dismiss" | "Don't ask again"
 
 ---
 
+## Marquee/Lasso Selection
+
+Click and drag on empty space to draw a selection rectangle. Items touching the rectangle become selected.
+
+### On Desktop
+- Click+drag on empty desktop space draws selection box
+- **Selects**: Books on desktop AND folder icons (whatever the box touches)
+- Useful for: Selecting multiple folders to move/recolor, selecting scattered desktop books
+
+### Inside Folder Windows
+- Click+drag on empty space within a window draws selection box
+- **Selects**: Books within that window only
+- Does not select dividers (use Shift+click for range including dividers)
+
+### Modifier Keys
+| Modifier | Behavior |
+|----------|----------|
+| Plain drag | Replace current selection with marquee selection |
+| Ctrl+drag | Add marquee selection to existing selection |
+| Shift+drag | Add marquee selection to existing selection (same as Ctrl) |
+
+### Visual Feedback
+- Semi-transparent rectangle with border while dragging
+- Items highlight as they enter the selection area
+- Final selection shown with standard selection highlight
+
+---
+
 ## Filtering
 
 ### Behavior
