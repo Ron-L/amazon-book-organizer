@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.8.0';
+    const FETCHER_VERSION = 'v4.8.1.a';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -2180,13 +2180,29 @@ async function fetchAmazonLibrary() {
         // Save using File System Access API if we have a file handle, otherwise prompt user
         let saveSucceeded = false;
         if (fileHandle) {
-            // Re-run case: Write back to the same file location
-            console.log(`   💾 Saving to original file location...`);
-            const writable = await fileHandle.createWritable();
-            await writable.write(jsonData);
-            await writable.close();
-            console.log(`✅ Updated library file in place`);
-            saveSucceeded = true;
+            // Re-run case: Show save button to get fresh user gesture before writing
+            // Chrome requires an active "user gesture" for createWritable() - the original
+            // gesture from file selection has expired after fetching library data
+            const userChoice = await progressUI.showSaveButton(finalBooks.length);
+            if (userChoice === 'cancel') {
+                console.error('   ❌ Save cancelled by user - data discarded');
+                progressUI.showError('Cancelled - your downloaded data was discarded');
+                return;
+            }
+
+            // Now we have a fresh user gesture from the button click
+            try {
+                console.log(`   💾 Saving to original file location...`);
+                const writable = await fileHandle.createWritable();
+                await writable.write(jsonData);
+                await writable.close();
+                console.log(`✅ Updated library file in place`);
+                saveSucceeded = true;
+            } catch (e) {
+                console.error('   ❌ Failed to save file:', e.message);
+                progressUI.showError(`Failed to save: ${e.message}`);
+                return;
+            }
         } else if (hasFileSystemAccess) {
             // Full fetch case: Need user click for fresh gesture before showSaveFilePicker
             // Show save button and wait for user choice (provides fresh user gesture)
