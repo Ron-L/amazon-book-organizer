@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.24.3";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.20.0";  // Build version for this file
+        const APP_VERSION = "4.25.0";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.21.0";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -390,6 +390,8 @@
             const [showCustomPriceInput, setShowCustomPriceInput] = useState(false); // v4.17.0
             const [showBulkPriceModal, setShowBulkPriceModal] = useState(false); // v4.20.0.a - bulk price goal modal
             const [bulkPriceInput, setBulkPriceInput] = useState(''); // v4.20.0.a - bulk price goal input
+            const [isEditingNote, setIsEditingNote] = useState(false); // v4.21.0.a - book note edit mode
+            const [noteEditContent, setNoteEditContent] = useState(''); // v4.21.0.a - book note editor content
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -406,6 +408,7 @@
             const [redoStack, setRedoStack] = useState([]); // Array of action records
             const undoStackRef = useRef(undoStack); // Ref to avoid stale closure in keyboard handler
             const redoStackRef = useRef(redoStack);
+            const modalBookRef = useRef(modalBook); // v4.21.0.g - Ref to check modal state in keyboard handler
             const [selectedDivider, setSelectedDivider] = useState(null); // v3.13.0 - Selected divider {columnId, dividerId}
             const [activeColumnId, setActiveColumnId] = useState(null); // Track which column has focus for Ctrl+A
             const [contextMenu, setContextMenu] = useState(null); // {x, y, bookId, columnId}
@@ -808,15 +811,15 @@
                         setFooterClipboardVisible(false);
                     }
 
-                    // v4.8.0 - Ctrl+Z: Undo
+                    // v4.8.0 - Ctrl+Z: Undo (v4.21.0.g - use ref to check modal state, consume keystroke)
                     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
                         e.preventDefault();
-                        undo();
+                        if (!modalBookRef.current) undo();
                     }
-                    // v4.8.0 - Ctrl+Y or Ctrl+Shift+Z: Redo
+                    // v4.8.0 - Ctrl+Y or Ctrl+Shift+Z: Redo (v4.21.0.g - use ref to check modal state, consume keystroke)
                     if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
                         e.preventDefault();
-                        redo();
+                        if (!modalBookRef.current) redo();
                     }
 
                     // Ctrl+A: Select all items in active column (v4.0.1 - use ref to get current filtered view)
@@ -2409,6 +2412,8 @@
             const closeBookModal = () => {
                 setModalBook(null);
                 setModalColumnId(null);
+                setIsEditingNote(false); // v4.21.0.a - reset note editor state
+                setNoteEditContent(''); // v4.21.0.a
             };
 
             // Multi-select helper functions
@@ -2509,6 +2514,9 @@
             useEffect(() => {
                 redoStackRef.current = redoStack;
             }, [redoStack]);
+            useEffect(() => {
+                modalBookRef.current = modalBook;
+            }, [modalBook]);
 
             const recordAction = (action) => {
                 setUndoStack(prev => {
@@ -5523,6 +5531,94 @@
                                         </div>
                                     </div>
 
+                                    {/* v4.21.0.a - Book Notes section */}
+                                    <div className="mb-6 pb-6 border-b border-gray-200">
+                                        {isEditingNote ? (
+                                            // Edit mode - show textarea
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Note</h3>
+                                                <textarea
+                                                    className="book-note-editor"
+                                                    value={noteEditContent}
+                                                    onChange={(e) => setNoteEditContent(e.target.value)}
+                                                    placeholder="Add a personal note about this book..."
+                                                    autoFocus
+                                                    onKeyDown={(e) => {
+                                                        // Stop all key events from propagating to prevent
+                                                        // DEL from deleting books, etc.
+                                                        e.stopPropagation();
+                                                        if (e.key === 'Escape') {
+                                                            setIsEditingNote(false);
+                                                            setNoteEditContent('');
+                                                        }
+                                                    }}
+                                                />
+                                                <div className="flex gap-2 mt-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            const trimmedNote = noteEditContent.trim();
+                                                            const newNote = trimmedNote || undefined;
+                                                            // Save note (or clear if empty) - no undo support for notes
+                                                            setBooks(prev => {
+                                                                const updated = prev.map(b =>
+                                                                    b.id === modalBook.id
+                                                                        ? { ...b, userNote: newNote }
+                                                                        : b
+                                                                );
+                                                                saveBooksToIndexedDB(updated);
+                                                                return updated;
+                                                            });
+                                                            setModalBook(prev => ({
+                                                                ...prev,
+                                                                userNote: newNote
+                                                            }));
+                                                            setIsEditingNote(false);
+                                                            setNoteEditContent('');
+                                                        }}
+                                                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setIsEditingNote(false);
+                                                            setNoteEditContent('');
+                                                        }}
+                                                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : modalBook.userNote ? (
+                                            // Display mode - show sticky note
+                                            <div className="book-note">
+                                                <div className="book-note-text">{modalBook.userNote}</div>
+                                                <button
+                                                    className="book-note-edit-btn"
+                                                    onClick={() => {
+                                                        setNoteEditContent(modalBook.userNote);
+                                                        setIsEditingNote(true);
+                                                    }}
+                                                    title="Edit note"
+                                                >
+                                                    ✏️
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            // No note - show Add Note button
+                                            <button
+                                                onClick={() => {
+                                                    setNoteEditContent('');
+                                                    setIsEditingNote(true);
+                                                }}
+                                                className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 hover:border-gray-400"
+                                            >
+                                                + Add Note
+                                            </button>
+                                        )}
+                                    </div>
+
                                     {!modalBook.description && (
                                         <div className="mb-6 pb-6 border-b border-gray-200">
                                             <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
@@ -6434,6 +6530,29 @@
                                 }}>
                                 📝 Copy Title{selectedBooks.size !== 1 ? 's' : ''}
                             </button>
+
+                            {/* v4.21.0.a - Add/Edit Note (single book only) */}
+                            {selectedBooks.size === 1 && (() => {
+                                const selectedBooksList = getSelectedBooksList();
+                                const book = selectedBooksList[0];
+                                const hasNote = book?.userNote;
+                                return (
+                                    <button
+                                        className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
+                                        onClick={() => {
+                                            // Open modal with note editor
+                                            const [colId] = [...selectedBooks][0].split(':');
+                                            openBookModal(book, colId);
+                                            // Set up note editing
+                                            setNoteEditContent(book.userNote || '');
+                                            setIsEditingNote(true);
+                                            setContextMenu(null);
+                                            setContextSubmenu(null);
+                                        }}>
+                                        {hasNote ? '✏️ Edit Note' : '📝 Add Note'}
+                                    </button>
+                                );
+                            })()}
 
                             {/* v4.20.0.a - Set Price Goal submenu */}
                             <div className="relative"

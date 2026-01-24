@@ -245,3 +245,83 @@ body { margin: 0; padding: 0; overflow: hidden; }
     scrollbar-color: #94a3b8 #e2e8f0;   /* Standard: thumb and track colors */
     scrollbar-gutter: stable;           /* Reserve space for scrollbar */
 }
+
+/* v4.21.0.a - Book Notes sticky note styling */
+.book-note {
+    position: relative;
+    background: linear-gradient(135deg, #fff9c4 0%, #fffde7 100%);
+    color: #5d4037;
+    padding: 24px 16px 16px 16px;
+    border-radius: 2px;
+    box-shadow:
+        3px 3px 0px rgba(0,0,0,0.1),
+        6px 6px 0px rgba(0,0,0,0.08),
+        0 4px 8px rgba(0,0,0,0.15);
+    margin-bottom: 1rem;
+}
+
+/* Red thumbtack at top */
+.book-note::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 16px;
+    background: radial-gradient(circle, #dc143c 0%, #8b0000 100%);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Pin shadow/attachment point for 3D effect */
+.book-note::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: rgba(0,0,0,0.15);
+    border-radius: 50%;
+}
+
+.book-note-text {
+    white-space: pre-wrap;
+    line-height: 1.5;
+}
+
+.book-note-edit-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #8d6e63;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.15s;
+}
+
+.book-note-edit-btn:hover {
+    background-color: rgba(0,0,0,0.1);
+}
+
+.book-note-editor {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    border: 2px solid #c9a227;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+    background: #fffef5;
+}
+
+.book-note-editor:focus {
+    outline: none;
+    border-color: #2563eb;
+}

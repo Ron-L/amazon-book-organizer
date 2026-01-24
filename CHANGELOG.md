@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.25.0] - 2026-01-24
+
+### Added
+- **Book Notes** - Add personal notes to any book in your library
+  - File versions: readerwrangler.js v4.21.0, readerwrangler.css (new styles)
+  - Double-click book → click "Add Note" → type note → Save
+  - Notes display as sticky notes with yellow background and thumbtack
+  - Right-click single book → "Add Note" or "Edit Note"
+  - Notes persist in IndexedDB and are included in JSON export
+
+### Changed
+- **Undo/Redo disabled when modal open** - Prevents confusing undo of invisible actions
+
 ## [4.24.3] - 2026-01-24
 
 ### Fixed

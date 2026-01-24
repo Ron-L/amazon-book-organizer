@@ -8,16 +8,9 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**4. 📝 Book Notes** - LOW/LOW (2-3 hours)
-   - Personal notes on individual books ("Why did I buy this?", "Who recommended it?")
-   - See [docs/design/BOOK-NOTES.md](docs/design/BOOK-NOTES.md) for full spec
-   - Sticky note styling in detail modal (matches landing page brand element)
-   - Entry points: "Add Note" button in modal, right-click context menu
-   - Auto-save on blur/escape, no explicit save button
-   - Problem: Book descriptions don't always capture why you bought or want to read a book
-   - Impact: Personal context preserved with each book
+**3 CTL C and CTL A should work in modals.**
 
-**5. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
+**4. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
    - TAGS.md says Unorganized column cannot have dividers. This is NOT true!
    - Adding tags to books or divs: Typing a unrecognizied tag should offer the option to create the tag. Discuss this.
    - Tags for books (explicit) and divs (positional inheritance)
@@ -28,7 +21,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Can't find thematically related books (Time Travel, Military SF) across 100+ columns
    - Impact: Cross-library thematic organization, reduced scrolling through empty columns
 
-**6. 🖥️ Desktop & Folders UI** - MEDIUM/HIGH (40-60 hours)
+**5. 🖥️ Desktop & Folders UI** - MEDIUM/HIGH (40-60 hours)
    - See [docs/design/DESKTOP-FOLDERS.md](docs/design/DESKTOP-FOLDERS.md) for full spec
    - Replaces Column Organizer (COLUMN-ARRANGER.md) and Column Carousel (COLUMN-CAROUSEL.md)
    - Virtual zoomable desktop with folder icons; folders open as resizable/movable windows

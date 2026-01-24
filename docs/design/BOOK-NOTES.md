@@ -194,16 +194,16 @@ Based on index.html sticky note implementation:
 ## Implementation Notes
 
 ### Undo/Redo
-- Note edits should be undoable
-- Add to existing undo/redo infrastructure (v4.8.0)
-- Action type: `EDIT_NOTE` with before/after text
+- **Decision: No undo/redo for notes** (v4.21.0.e)
+- Notes are like form entries - commit on Save, edit again if needed
+- Simpler UX, avoids complexity with modal open/closed states
 
 ### Right-Click Menu Update
 Add to existing context menu:
-- "Add Note" (when `!book.userNote`)
-- "Edit Note" (when `book.userNote`)
+- "📝 Add Note" (when `!book.userNote`)
+- "✏️ Edit Note" (when `book.userNote`)
 
-Position in menu: After "Hide" / "Unhide", before separator
+Position in menu: After "Copy Title(s)", before "Set Price Goal" (single selection only)
 
 ---
 
