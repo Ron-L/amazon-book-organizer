@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.24.2] - 2026-01-24
+
+### Fixed
+- **Fetcher save errors** - Fixed same user gesture error in 3 additional fetchers
+  - File versions: amazon-wishlist-fetcher.js v1.4.1, series-page-fetcher.js v1.1.1, author-bibliography-fetcher.js v1.0.1
+  - Same fix as v4.24.1 applied to wishlist, series page, and author bibliography fetchers
+
 ## [4.24.1] - 2026-01-24
 
 ### Fixed
