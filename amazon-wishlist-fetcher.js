@@ -10,9 +10,10 @@
 // 2. Scrape book metadata from page DOM
 // 3. Build book object(s) (onWishlist: true, ownershipType: 'wishlist', addedToWishlist: today)
 // 4. Read existing amazon-library.json
-// 5. Prepend book(s) to books.items (no duplicate check - App Loader handles)
-// 6. Write file back
-// 7. Show success toast
+// 5. Check for duplicates by ASIN, skip if already in library
+// 6. Prepend book(s) to books.items
+// 7. Write file back
+// 8. Show success toast
 //
 // Note: Description and reviews NOT available via DOM scraping.
 // These fields can be enriched later via Library Fetcher Pass 3.
@@ -24,7 +25,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.4.1';
+    const FETCHER_VERSION = 'v1.4.2.a';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -818,16 +819,37 @@ async function addToWishlist() {
             console.log('[3] Loading library file...');
             const { existingData, fileHandle, hasFileSystemAccess } = await loadLibraryFile();
 
+            // Check for duplicate
+            console.log('[4] Checking for duplicates...');
+            const existingBook = existingData.books.items.find(b => b.asin === book.asin);
+
+            if (existingBook) {
+                // Book already in library
+                console.log(`   ⚠️ Book already in library: "${book.title}" (ASIN: ${book.asin})\n`);
+
+                console.log('========================================');
+                console.log('⚠️ ALREADY IN LIBRARY');
+                console.log('========================================');
+                console.log(`   "${book.title}"`);
+                console.log(`   By: ${book.authors}`);
+                console.log(`   ASIN: ${book.asin}`);
+                console.log('========================================\n');
+
+                progressUI.showError(`<strong>${book.title}</strong><br>is already in your library`);
+                new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/wishlist-duplicate-skipped';
+                return;
+            }
+
             // Add book to library
             progressUI.updatePhase('Adding to Wishlist', 'Updating library...');
-            console.log('[4] Adding book to library...');
+            console.log('[5] Adding book to library...');
 
             existingData.books.items.unshift(book);
             new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/wishlist-item-added';
             console.log(`   ✅ Added "${book.title}"\n`);
 
             // Save library file
-            console.log('[5] Saving library file...');
+            console.log('[6] Saving library file...');
             await saveLibraryFile(existingData, fileHandle, hasFileSystemAccess);
 
             // Success!
