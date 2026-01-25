@@ -393,6 +393,8 @@
             const [isEditingNote, setIsEditingNote] = useState(false); // v4.21.0.a - book note edit mode
             const [noteEditContent, setNoteEditContent] = useState(''); // v4.21.0.a - book note editor content
             const [tagInputValue, setTagInputValue] = useState(''); // v4.27.0 - tag input autocomplete value
+            const [dividerContextMenu, setDividerContextMenu] = useState(null); // v4.27.0 - {x, y, columnId, dividerId, divider}
+            const [dividerTagEditorOpen, setDividerTagEditorOpen] = useState(null); // v4.27.0 - {columnId, dividerId} for editing div tags
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -468,6 +470,26 @@
             // v4.16.0.s - Helper to check if a column contains a specific bookId
             const columnHasBook = (columnBooks, bookId) => {
                 return columnBooks.some(entry => getBookIdFromEntry(entry) === bookId);
+            };
+
+            // v4.27.0 - Get inherited tags for a book based on its position in columns
+            // Books inherit tags from the divider above them (until next divider)
+            const getInheritedTags = (bookId, columnId) => {
+                const column = columns.find(c => c.id === columnId);
+                if (!column) return [];
+
+                let currentDivTags = [];
+                for (const entry of column.books) {
+                    if (entry && entry.type === 'divider') {
+                        currentDivTags = entry.tags || [];
+                    } else {
+                        const entryBookId = getBookIdFromEntry(entry);
+                        if (entryBookId === bookId) {
+                            return currentDivTags;
+                        }
+                    }
+                }
+                return [];
             };
 
             // v4.16.0.s - Helper to find index of bookId in column (first occurrence)
@@ -1175,6 +1197,15 @@
                     return () => window.removeEventListener('click', handleClick);
                 }
             }, [contextMenu]);
+
+            // v4.27.0 - Close divider context menu on click
+            useEffect(() => {
+                const handleClick = () => setDividerContextMenu(null);
+                if (dividerContextMenu) {
+                    window.addEventListener('click', handleClick);
+                    return () => window.removeEventListener('click', handleClick);
+                }
+            }, [dividerContextMenu]);
 
             // v3.11.0.d - Close column menu and sort submenu on ESC key
             useEffect(() => {
@@ -4091,9 +4122,12 @@
                     ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo || dealsFilterActive ||
                     (tagFilter && tagFilter.length > 0));
 
+                // v4.27.0 - Track current divider tags for inheritance during map
+                let currentDivTags = [];
                 const result = bookIds.map(item => {
-                    // v3.11.0 - Handle dividers (pass through as-is)
+                    // v3.11.0 - Handle dividers (pass through as-is, but track their tags)
                     if (typeof item === 'object' && item.type === 'divider') {
+                        currentDivTags = item.tags || [];  // v4.27.0 - track for inheritance
                         return item;
                     }
                     // v4.16.0.s - Handle both legacy string and new {instanceId, bookId} format
@@ -4101,8 +4135,9 @@
                     const instanceId = getInstanceId(item);
                     const book = books.find(b => b.id === bookId);
                     // Attach instanceId to book for per-instance hidden check
-                    if (book && instanceId) {
-                        return { ...book, _instanceId: instanceId };
+                    // v4.27.0 - Also attach inherited tags from current divider
+                    if (book) {
+                        return { ...book, _instanceId: instanceId, _inheritedTags: currentDivTags };
                     }
                     return book;
                 }).filter(book => {
@@ -4188,8 +4223,10 @@
                         (book.onWishlist && book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger);
 
                     // Tag filter (v4.27.0 - OR logic: book matches if it has ANY of the selected tags)
-                    const matchesTags = !tagFilter || tagFilter.length === 0 ||
-                        (book.tags && book.tags.some(tag => tagFilter.includes(tag)));
+                    // Check both explicit tags and inherited tags from dividers
+                    const explicitMatch = book.tags && book.tags.some(tag => tagFilter.includes(tag));
+                    const inheritedMatch = book._inheritedTags && book._inheritedTags.some(tag => tagFilter.includes(tag));
+                    const matchesTags = !tagFilter || tagFilter.length === 0 || explicitMatch || inheritedMatch;
 
                     return matchesSearch && matchesReadStatus && matchesCollection && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries && matchesDateRange && matchesDeals && matchesTags;
                 });
@@ -5515,39 +5552,60 @@
                                                 <div className="flex items-start gap-2">
                                                     <span className="font-semibold text-gray-700">Tags:</span>
                                                     <div className="flex-1 flex flex-wrap items-center gap-1">
-                                                        {modalBook.tags && modalBook.tags.length > 0 ? (
-                                                            modalBook.tags.map(tagId => (
-                                                                <span key={tagId}
-                                                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                                                                    {tagRegistry[tagId]?.label || tagId}
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            // Remove tag from book
-                                                                            const newTags = modalBook.tags.filter(t => t !== tagId);
-                                                                            setBooks(prev => {
-                                                                                const updated = prev.map(b =>
-                                                                                    b.id === modalBook.id ? { ...b, tags: newTags } : b
-                                                                                );
-                                                                                saveBooksToIndexedDB(updated);
-                                                                                return updated;
-                                                                            });
-                                                                            setModalBook(prev => ({ ...prev, tags: newTags }));
-                                                                            // Update tag registry count
-                                                                            setTagRegistry(prev => {
-                                                                                const updated = { ...prev };
-                                                                                if (updated[tagId]) {
-                                                                                    updated[tagId] = { ...updated[tagId], count: Math.max(0, updated[tagId].count - 1) };
-                                                                                }
-                                                                                return updated;
-                                                                            });
-                                                                        }}
-                                                                        className="text-blue-600 hover:text-blue-800 font-bold"
-                                                                        title="Remove tag">×</button>
-                                                                </span>
-                                                            ))
-                                                        ) : (
-                                                            <span className="text-gray-400 italic text-sm">No tags</span>
-                                                        )}
+                                                        {(() => {
+                                                            // v4.27.0 Phase 2 - Show explicit (bold) and inherited (faded) tags
+                                                            const explicitTags = modalBook.tags || [];
+                                                            const inheritedTags = modalColumnId ? getInheritedTags(modalBook.id, modalColumnId) : [];
+                                                            // Filter out inherited tags that are also explicit (to avoid duplicates)
+                                                            const uniqueInheritedTags = inheritedTags.filter(t => !explicitTags.includes(t));
+                                                            const hasAnyTags = explicitTags.length > 0 || uniqueInheritedTags.length > 0;
+
+                                                            if (!hasAnyTags) {
+                                                                return <span className="text-gray-400 italic text-sm">No tags</span>;
+                                                            }
+
+                                                            return (
+                                                                <>
+                                                                    {/* Explicit tags - bold, with remove button */}
+                                                                    {explicitTags.map(tagId => (
+                                                                        <span key={`explicit-${tagId}`}
+                                                                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-bold"
+                                                                            title="Explicit tag (assigned to this book)">
+                                                                            {tagRegistry[tagId]?.label || tagId}
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    const newTags = modalBook.tags.filter(t => t !== tagId);
+                                                                                    setBooks(prev => {
+                                                                                        const updated = prev.map(b =>
+                                                                                            b.id === modalBook.id ? { ...b, tags: newTags } : b
+                                                                                        );
+                                                                                        saveBooksToIndexedDB(updated);
+                                                                                        return updated;
+                                                                                    });
+                                                                                    setModalBook(prev => ({ ...prev, tags: newTags }));
+                                                                                    setTagRegistry(prev => {
+                                                                                        const updated = { ...prev };
+                                                                                        if (updated[tagId]) {
+                                                                                            updated[tagId] = { ...updated[tagId], count: Math.max(0, updated[tagId].count - 1) };
+                                                                                        }
+                                                                                        return updated;
+                                                                                    });
+                                                                                }}
+                                                                                className="text-blue-600 hover:text-blue-800 font-bold"
+                                                                                title="Remove tag">×</button>
+                                                                        </span>
+                                                                    ))}
+                                                                    {/* Inherited tags - faded, no remove button */}
+                                                                    {uniqueInheritedTags.map(tagId => (
+                                                                        <span key={`inherited-${tagId}`}
+                                                                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs"
+                                                                            title="Inherited from divider (move book to remove)">
+                                                                            {tagRegistry[tagId]?.label || tagId}
+                                                                        </span>
+                                                                    ))}
+                                                                </>
+                                                            );
+                                                        })()}
                                                         <div className="relative inline-block">
                                                             <button
                                                                 onClick={() => {
@@ -6148,6 +6206,17 @@
                                                                          e.stopPropagation();
                                                                          selectDividerGroup(column.id, item.id);
                                                                      }
+                                                                 }}
+                                                                 onContextMenu={(e) => {
+                                                                     e.preventDefault();
+                                                                     e.stopPropagation();
+                                                                     setDividerContextMenu({
+                                                                         x: e.clientX,
+                                                                         y: e.clientY,
+                                                                         columnId: column.id,
+                                                                         dividerId: item.id,
+                                                                         divider: item
+                                                                     });
                                                                  }}
                                                                  onMouseEnter={() => setHoveringDivider({ columnId: column.id, dividerId: item.id })}
                                                                  onMouseLeave={() => setHoveringDivider(null)}>
@@ -7080,6 +7149,240 @@
                                 🗑️ Delete Book{selectedBooks.size !== 1 ? 's' : ''}
                             </button>
                         </div>
+                        );
+                    })()}
+
+                    {/* v4.27.0 - Divider context menu for tag operations */}
+                    {dividerContextMenu && (
+                        <div
+                            className="fixed bg-white border border-gray-300 rounded-lg shadow-xl py-1 z-50"
+                            style={{ left: dividerContextMenu.x, top: dividerContextMenu.y, minWidth: '180px' }}
+                            onClick={(e) => e.stopPropagation()}>
+                            <button
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
+                                onClick={() => {
+                                    startEditingDivider(dividerContextMenu.columnId, dividerContextMenu.dividerId, dividerContextMenu.divider.label);
+                                    setDividerContextMenu(null);
+                                }}>
+                                ✏️ Rename
+                            </button>
+                            <button
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
+                                onClick={() => {
+                                    setDividerTagEditorOpen({
+                                        columnId: dividerContextMenu.columnId,
+                                        dividerId: dividerContextMenu.dividerId
+                                    });
+                                    setTagInputValue('');
+                                    setDividerContextMenu(null);
+                                }}>
+                                🏷️ Edit Tags {dividerContextMenu.divider.tags?.length > 0 && `(${dividerContextMenu.divider.tags.length})`}
+                            </button>
+                            <button
+                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
+                                onClick={() => {
+                                    // Add divider's tags to all books under this divider
+                                    const column = columns.find(c => c.id === dividerContextMenu.columnId);
+                                    if (!column) return;
+                                    const divTags = dividerContextMenu.divider.tags || [];
+                                    if (divTags.length === 0) {
+                                        alert('This divider has no tags to add.');
+                                        setDividerContextMenu(null);
+                                        return;
+                                    }
+                                    // Find books under this divider (until next divider)
+                                    let foundDivider = false;
+                                    const booksToTag = [];
+                                    for (const entry of column.books) {
+                                        if (entry && entry.type === 'divider') {
+                                            if (entry.id === dividerContextMenu.dividerId) {
+                                                foundDivider = true;
+                                            } else if (foundDivider) {
+                                                break; // Next divider reached
+                                            }
+                                        } else if (foundDivider) {
+                                            const bookId = getBookIdFromEntry(entry);
+                                            if (bookId) booksToTag.push(bookId);
+                                        }
+                                    }
+                                    if (booksToTag.length === 0) {
+                                        alert('No books under this divider.');
+                                        setDividerContextMenu(null);
+                                        return;
+                                    }
+                                    // Add tags to books
+                                    setBooks(prev => {
+                                        const updated = prev.map(book => {
+                                            if (booksToTag.includes(book.id)) {
+                                                const existingTags = book.tags || [];
+                                                const newTags = [...new Set([...existingTags, ...divTags])];
+                                                return { ...book, tags: newTags };
+                                            }
+                                            return book;
+                                        });
+                                        saveBooksToIndexedDB(updated);
+                                        return updated;
+                                    });
+                                    // Update tag registry counts
+                                    setTagRegistry(prev => {
+                                        const updated = { ...prev };
+                                        divTags.forEach(tagId => {
+                                            if (updated[tagId]) {
+                                                updated[tagId] = { ...updated[tagId], count: updated[tagId].count + booksToTag.length };
+                                            }
+                                        });
+                                        return updated;
+                                    });
+                                    alert(`Added ${divTags.length} tag(s) to ${booksToTag.length} book(s).`);
+                                    setDividerContextMenu(null);
+                                }}>
+                                📚 Add Tags to All Books
+                            </button>
+                            <div className="border-t border-gray-200 my-1"></div>
+                            <button
+                                className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-red-600 flex items-center gap-2"
+                                onClick={() => {
+                                    deleteDivider(dividerContextMenu.columnId, dividerContextMenu.dividerId);
+                                    setDividerContextMenu(null);
+                                }}>
+                                🗑️ Delete Divider
+                            </button>
+                        </div>
+                    )}
+
+                    {/* v4.27.0 - Divider tag editor modal */}
+                    {dividerTagEditorOpen && (() => {
+                        const column = columns.find(c => c.id === dividerTagEditorOpen.columnId);
+                        const divider = column?.books.find(b => b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId);
+                        if (!divider) return null;
+                        const divTags = divider.tags || [];
+
+                        return (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                                 onClick={() => { setDividerTagEditorOpen(null); setTagInputValue(''); }}>
+                                <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
+                                     onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-lg font-semibold">Edit Tags for "{divider.label}"</h3>
+                                        <button onClick={() => { setDividerTagEditorOpen(null); setTagInputValue(''); }}
+                                                className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+                                    </div>
+                                    <div className="mb-4">
+                                        <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
+                                            {divTags.length > 0 ? divTags.map(tagId => (
+                                                <span key={tagId}
+                                                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                                                    {tagRegistry[tagId]?.label || tagId}
+                                                    <button onClick={() => {
+                                                        // Remove tag from divider
+                                                        setColumns(prev => prev.map(col => {
+                                                            if (col.id !== dividerTagEditorOpen.columnId) return col;
+                                                            return {
+                                                                ...col,
+                                                                books: col.books.map(b => {
+                                                                    if (b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId) {
+                                                                        return { ...b, tags: (b.tags || []).filter(t => t !== tagId) };
+                                                                    }
+                                                                    return b;
+                                                                })
+                                                            };
+                                                        }));
+                                                    }}
+                                                            className="text-blue-600 hover:text-blue-800 font-bold">×</button>
+                                                </span>
+                                            )) : <span className="text-gray-400 italic">No tags</span>}
+                                        </div>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={tagInputValue}
+                                                onChange={(e) => setTagInputValue(e.target.value)}
+                                                placeholder="Type to add tag..."
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                                autoFocus
+                                            />
+                                            {tagInputValue && (
+                                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-[200px] overflow-y-auto z-10">
+                                                    {(() => {
+                                                        const input = tagInputValue.toLowerCase().trim();
+                                                        const allTagsExactMatch = Object.entries(tagRegistry)
+                                                            .find(([id, data]) => data.label.toLowerCase() === input);
+                                                        const existingTags = Object.entries(tagRegistry)
+                                                            .filter(([id, data]) =>
+                                                                data.label.toLowerCase().includes(input) && !divTags.includes(id)
+                                                            )
+                                                            .sort((a, b) => a[1].label.localeCompare(b[1].label));
+                                                        const showCreate = input && !allTagsExactMatch;
+                                                        const tagAlreadyOnDiv = allTagsExactMatch && divTags.includes(allTagsExactMatch[0]);
+
+                                                        return (
+                                                            <>
+                                                                {showCreate && (
+                                                                    <button
+                                                                        className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 text-blue-600"
+                                                                        onClick={() => {
+                                                                            const newTagId = input.replace(/\s+/g, '-');
+                                                                            const newTagLabel = tagInputValue.trim();
+                                                                            setTagRegistry(prev => ({
+                                                                                ...prev,
+                                                                                [newTagId]: { label: newTagLabel, count: 0 }
+                                                                            }));
+                                                                            setColumns(prev => prev.map(col => {
+                                                                                if (col.id !== dividerTagEditorOpen.columnId) return col;
+                                                                                return {
+                                                                                    ...col,
+                                                                                    books: col.books.map(b => {
+                                                                                        if (b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId) {
+                                                                                            return { ...b, tags: [...(b.tags || []), newTagId] };
+                                                                                        }
+                                                                                        return b;
+                                                                                    })
+                                                                                };
+                                                                            }));
+                                                                            setTagInputValue('');
+                                                                        }}>
+                                                                        ➕ Create "{tagInputValue.trim()}"
+                                                                    </button>
+                                                                )}
+                                                                {existingTags.map(([tagId, tagData]) => (
+                                                                    <button
+                                                                        key={tagId}
+                                                                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                                                                        onClick={() => {
+                                                                            setColumns(prev => prev.map(col => {
+                                                                                if (col.id !== dividerTagEditorOpen.columnId) return col;
+                                                                                return {
+                                                                                    ...col,
+                                                                                    books: col.books.map(b => {
+                                                                                        if (b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId) {
+                                                                                            return { ...b, tags: [...(b.tags || []), tagId] };
+                                                                                        }
+                                                                                        return b;
+                                                                                    })
+                                                                                };
+                                                                            }));
+                                                                            setTagInputValue('');
+                                                                        }}>
+                                                                        {tagData.label} ({tagData.count})
+                                                                    </button>
+                                                                ))}
+                                                                {existingTags.length === 0 && !showCreate && (
+                                                                    <div className="px-3 py-2 text-sm text-gray-400">
+                                                                        {tagAlreadyOnDiv ? `"${allTagsExactMatch[1].label}" already added` : 'No matching tags'}
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-gray-500">
+                                        Books under this divider will inherit these tags when filtering.
+                                    </p>
+                                </div>
+                            </div>
                         );
                     })()}
 
