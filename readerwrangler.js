@@ -5632,6 +5632,58 @@
                                                                                 if (e.key === 'Escape') {
                                                                                     setContextSubmenu(null);
                                                                                     setTagInputValue('');
+                                                                                } else if (e.key === 'Enter') {
+                                                                                    // v4.27.0-alpha.5 - Enter selects top match or creates new tag
+                                                                                    const inputValue = tagInputValue.toLowerCase().trim();
+                                                                                    if (!inputValue) return;
+                                                                                    const allTagsExactMatch = Object.entries(tagRegistry)
+                                                                                        .find(([id, data]) => data.label.toLowerCase() === inputValue);
+                                                                                    const existingTags = Object.entries(tagRegistry)
+                                                                                        .filter(([id, data]) =>
+                                                                                            data.label.toLowerCase().includes(inputValue) &&
+                                                                                            !(modalBook.tags || []).includes(id)
+                                                                                        )
+                                                                                        .sort((a, b) => a[1].label.localeCompare(b[1].label));
+
+                                                                                    if (existingTags.length > 0) {
+                                                                                        // Select top match
+                                                                                        const [tagId, tagData] = existingTags[0];
+                                                                                        const newTags = [...(modalBook.tags || []), tagId];
+                                                                                        setBooks(prev => {
+                                                                                            const updated = prev.map(b =>
+                                                                                                b.id === modalBook.id ? { ...b, tags: newTags } : b
+                                                                                            );
+                                                                                            saveBooksToIndexedDB(updated);
+                                                                                            return updated;
+                                                                                        });
+                                                                                        setModalBook(prev => ({ ...prev, tags: newTags }));
+                                                                                        setTagRegistry(prev => ({
+                                                                                            ...prev,
+                                                                                            [tagId]: { ...prev[tagId], count: prev[tagId].count + 1 }
+                                                                                        }));
+                                                                                        setContextSubmenu(null);
+                                                                                        setTagInputValue('');
+                                                                                    } else if (!allTagsExactMatch) {
+                                                                                        // Create new tag
+                                                                                        const newTagId = inputValue.replace(/\s+/g, '-');
+                                                                                        const newTagLabel = tagInputValue.trim();
+                                                                                        setTagRegistry(prev => ({
+                                                                                            ...prev,
+                                                                                            [newTagId]: { label: newTagLabel, count: 1 }
+                                                                                        }));
+                                                                                        const newTags = [...(modalBook.tags || []), newTagId];
+                                                                                        setBooks(prev => {
+                                                                                            const updated = prev.map(b =>
+                                                                                                b.id === modalBook.id ? { ...b, tags: newTags } : b
+                                                                                            );
+                                                                                            saveBooksToIndexedDB(updated);
+                                                                                            return updated;
+                                                                                        });
+                                                                                        setModalBook(prev => ({ ...prev, tags: newTags }));
+                                                                                        setContextSubmenu(null);
+                                                                                        setTagInputValue('');
+                                                                                    }
+                                                                                    // If tag already on book, do nothing
                                                                                 }
                                                                             }}
                                                                             onChange={(e) => setTagInputValue(e.target.value)}
@@ -7297,6 +7349,63 @@
                                                 type="text"
                                                 value={tagInputValue}
                                                 onChange={(e) => setTagInputValue(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Escape') {
+                                                        setDividerTagEditorOpen(null);
+                                                        setTagInputValue('');
+                                                    } else if (e.key === 'Enter') {
+                                                        // v4.27.0-alpha.5 - Enter selects top match or creates new tag
+                                                        const input = tagInputValue.toLowerCase().trim();
+                                                        if (!input) return;
+                                                        const allTagsExactMatch = Object.entries(tagRegistry)
+                                                            .find(([id, data]) => data.label.toLowerCase() === input);
+                                                        const existingTags = Object.entries(tagRegistry)
+                                                            .filter(([id, data]) =>
+                                                                data.label.toLowerCase().includes(input) && !divTags.includes(id)
+                                                            )
+                                                            .sort((a, b) => a[1].label.localeCompare(b[1].label));
+
+                                                        if (existingTags.length > 0) {
+                                                            // Select top match
+                                                            const [tagId] = existingTags[0];
+                                                            setColumns(prev => prev.map(col => {
+                                                                if (col.id !== dividerTagEditorOpen.columnId) return col;
+                                                                return {
+                                                                    ...col,
+                                                                    books: col.books.map(b => {
+                                                                        if (b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId) {
+                                                                            return { ...b, tags: [...(b.tags || []), tagId] };
+                                                                        }
+                                                                        return b;
+                                                                    })
+                                                                };
+                                                            }));
+                                                            setTagInputValue('');
+                                                        } else if (!allTagsExactMatch) {
+                                                            // Create new tag
+                                                            const newTagId = input.replace(/\s+/g, '-');
+                                                            const newTagLabel = tagInputValue.trim();
+                                                            setTagRegistry(prev => ({
+                                                                ...prev,
+                                                                [newTagId]: { label: newTagLabel, count: 0 }
+                                                            }));
+                                                            setColumns(prev => prev.map(col => {
+                                                                if (col.id !== dividerTagEditorOpen.columnId) return col;
+                                                                return {
+                                                                    ...col,
+                                                                    books: col.books.map(b => {
+                                                                        if (b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId) {
+                                                                            return { ...b, tags: [...(b.tags || []), newTagId] };
+                                                                        }
+                                                                        return b;
+                                                                    })
+                                                                };
+                                                            }));
+                                                            setTagInputValue('');
+                                                        }
+                                                        // If tag already on divider, do nothing
+                                                    }
+                                                }}
                                                 placeholder="Type to add tag..."
                                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                                                 autoFocus
