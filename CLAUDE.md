@@ -35,6 +35,8 @@ Standard semver with pre-release suffix for test iterations:
 
 **APP_VERSION** (readerwrangler.js): Updated at release for user-facing changes.
 
+**ORGANIZER_VERSION** (readerwrangler.js): Updated with each alpha/test iteration.
+
 ---
 
 ## Release Checklist
