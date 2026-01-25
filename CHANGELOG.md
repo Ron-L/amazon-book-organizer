@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.27.0] - 2026-01-25
+
+### Added
+- **Tags** - Add tags to books and dividers for cross-library thematic organization
+  - File versions: readerwrangler.js v4.27.0
+  - **Explicit tags**: Assigned directly to books, persist when moved
+  - **Inherited tags**: Books under tagged dividers inherit those tags positionally
+  - Tag filter in filter panel (OR logic - matches any selected tag)
+  - Visual distinction: explicit tags (bold blue), inherited (faded gray)
+  - Autocomplete with existing tags, Enter key selects top match
+  - Right-click divider → Edit Tags, Add Tags to All Books
+  - Manage Tags modal: rename, delete, orphan cleanup
+  - Tags persist in IndexedDB and JSON export
+
 ## [4.26.1] - 2026-01-24
 
 ### Fixed

@@ -8,18 +8,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**3. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
-   - TAGS.md says Unorganized column cannot have dividers. This is NOT true!
-   - Adding tags to books or divs: Typing a unrecognizied tag should offer the option to create the tag. Discuss this.
-   - Tags for books (explicit) and divs (positional inheritance)
-   - See [docs/design/TAGS.md](docs/design/TAGS.md) for full spec
-   - Books inherit div tags while under that div; lost when moved out
-   - Tag filter with autocomplete; hide empty columns/divs when filtering
-   - Display: explicit tags (bold) first, inherited (faded) second, alphabetical
-   - Problem: Can't find thematically related books (Time Travel, Military SF) across 100+ columns
-   - Impact: Cross-library thematic organization, reduced scrolling through empty columns
-
-**4. 📁 Book Explorer UI** - MEDIUM/HIGH (40-60 hours)
+**3. 📁 Book Explorer UI** - MEDIUM/HIGH (40-60 hours)
    - See [docs/design/BOOK-EXPLORER.md](docs/design/BOOK-EXPLORER.md) for full spec
    - Replaces Column Organizer (COLUMN-ARRANGER.md), Column Carousel (COLUMN-CAROUSEL.md), Desktop & Folders (DESKTOP-FOLDERS.md)
    - Windows File Explorer paradigm: folder tree sidebar + detail/preview pane
