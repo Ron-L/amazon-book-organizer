@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.26.1] - 2026-01-24
+
+### Fixed
+- **Mobile URL format detection** - Navigator bookmarklet now recognizes Amazon mobile web URLs
+  - File versions: bookmarklet-nav-hub.js v1.4.1
+  - Added support for `/gp/aw/d/` URL pattern (mobile web product pages)
+  - "Add to Wishlist" now works on links from Amazon mobile site
+
 ## [4.26.0] - 2026-01-24
 
 ### Improved

@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.4.0';
+    const NAV_HUB_VERSION = 'v1.4.1';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
@@ -55,7 +55,7 @@
     const onLibraryPage = currentUrl.includes('amazon.com/yourbooks') ||
                           currentUrl.includes('amazon.com/kindle/library');
     const onCollectionsPage = currentUrl.includes('amazon.com/hz/mycd/digital-console');
-    const onProductPage = /\/dp\/|\/gp\/product\//.test(currentUrl);
+    const onProductPage = /\/dp\/|\/gp\/product\/|\/gp\/aw\/d\//.test(currentUrl);
     const onSeriesPage = document.querySelectorAll('.series-childAsin-item').length > 0;
     const onAuthorPage = /\/stores\/[^/]+\/author\/[A-Z0-9]{10}/i.test(currentUrl);
     const onWishlistPage = onProductPage || onSeriesPage || onAuthorPage;
