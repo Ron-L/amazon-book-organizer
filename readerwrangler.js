@@ -395,6 +395,8 @@
             const [tagInputValue, setTagInputValue] = useState(''); // v4.27.0 - tag input autocomplete value
             const [dividerContextMenu, setDividerContextMenu] = useState(null); // v4.27.0 - {x, y, columnId, dividerId, divider}
             const [dividerTagEditorOpen, setDividerTagEditorOpen] = useState(null); // v4.27.0 - {columnId, dividerId} for editing div tags
+            const [tagManagementOpen, setTagManagementOpen] = useState(false); // v4.27.0 Phase 3 - Tag management modal
+            const [editingTagId, setEditingTagId] = useState(null); // v4.27.0 Phase 3 - Currently renaming tag
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -4579,6 +4581,12 @@
                                                                             </button>
                                                                         </>
                                                                     )}
+                                                                    <div className="border-t border-gray-200 my-1"></div>
+                                                                    <button
+                                                                        onClick={() => { setTagManagementOpen(true); setContextSubmenu(null); }}
+                                                                        className="w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 text-left flex items-center gap-2">
+                                                                        ⚙️ Manage Tags...
+                                                                    </button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -7494,6 +7502,173 @@
                             </div>
                         );
                     })()}
+
+                    {/* v4.27.0 Phase 3 - Tag Management Modal */}
+                    {tagManagementOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                             onClick={() => { setTagManagementOpen(false); setEditingTagId(null); }}>
+                            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col"
+                                 onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                                    <h2 className="text-xl font-semibold">Manage Tags</h2>
+                                    <button onClick={() => { setTagManagementOpen(false); setEditingTagId(null); }}
+                                            className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4">
+                                    {Object.keys(tagRegistry).length === 0 ? (
+                                        <p className="text-gray-500 text-center py-8">No tags created yet.</p>
+                                    ) : (() => {
+                                        const sortedTags = Object.entries(tagRegistry).sort((a, b) => a[1].label.localeCompare(b[1].label));
+                                        const activeTags = sortedTags.filter(([, data]) => data.count > 0);
+                                        const orphanedTags = sortedTags.filter(([, data]) => data.count === 0);
+
+                                        return (
+                                            <>
+                                                <table className="w-full text-sm">
+                                                    <thead>
+                                                        <tr className="text-left border-b border-gray-200">
+                                                            <th className="py-2 font-semibold">Tag</th>
+                                                            <th className="py-2 font-semibold text-center w-20">Books</th>
+                                                            <th className="py-2 font-semibold text-right w-32">Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {activeTags.map(([tagId, tagData]) => (
+                                                            <tr key={tagId} className="border-b border-gray-100 hover:bg-gray-50">
+                                                                <td className="py-2">
+                                                                    {editingTagId === tagId ? (
+                                                                        <input
+                                                                            type="text"
+                                                                            defaultValue={tagData.label}
+                                                                            autoFocus
+                                                                            className="px-2 py-1 border border-blue-500 rounded text-sm w-full"
+                                                                            onKeyDown={(e) => {
+                                                                                if (e.key === 'Escape') {
+                                                                                    setEditingTagId(null);
+                                                                                } else if (e.key === 'Enter') {
+                                                                                    const newLabel = e.target.value.trim();
+                                                                                    if (newLabel && newLabel !== tagData.label) {
+                                                                                        // Rename tag - update registry label only (ID stays the same)
+                                                                                        setTagRegistry(prev => ({
+                                                                                            ...prev,
+                                                                                            [tagId]: { ...prev[tagId], label: newLabel }
+                                                                                        }));
+                                                                                    }
+                                                                                    setEditingTagId(null);
+                                                                                }
+                                                                            }}
+                                                                            onBlur={(e) => {
+                                                                                const newLabel = e.target.value.trim();
+                                                                                if (newLabel && newLabel !== tagData.label) {
+                                                                                    setTagRegistry(prev => ({
+                                                                                        ...prev,
+                                                                                        [tagId]: { ...prev[tagId], label: newLabel }
+                                                                                    }));
+                                                                                }
+                                                                                setEditingTagId(null);
+                                                                            }}
+                                                                        />
+                                                                    ) : (
+                                                                        <span>{tagData.label}</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="py-2 text-center text-gray-500">{tagData.count}</td>
+                                                                <td className="py-2 text-right">
+                                                                    <button
+                                                                        onClick={() => setEditingTagId(tagId)}
+                                                                        className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded mr-1">
+                                                                        Rename
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            if (confirm(`Delete tag "${tagData.label}"? This will remove it from ${tagData.count} book${tagData.count !== 1 ? 's' : ''}.`)) {
+                                                                                // Remove tag from all books
+                                                                                setBooks(prev => {
+                                                                                    const updated = prev.map(b => {
+                                                                                        if (b.tags && b.tags.includes(tagId)) {
+                                                                                            return { ...b, tags: b.tags.filter(t => t !== tagId) };
+                                                                                        }
+                                                                                        return b;
+                                                                                    });
+                                                                                    saveBooksToIndexedDB(updated);
+                                                                                    return updated;
+                                                                                });
+                                                                                // Remove tag from all dividers
+                                                                                setColumns(prev => prev.map(col => ({
+                                                                                    ...col,
+                                                                                    books: col.books.map(b => {
+                                                                                        if (b && b.type === 'divider' && b.tags?.includes(tagId)) {
+                                                                                            return { ...b, tags: b.tags.filter(t => t !== tagId) };
+                                                                                        }
+                                                                                        return b;
+                                                                                    })
+                                                                                })));
+                                                                                // Remove from registry
+                                                                                setTagRegistry(prev => {
+                                                                                    const updated = { ...prev };
+                                                                                    delete updated[tagId];
+                                                                                    return updated;
+                                                                                });
+                                                                                // Remove from active filter if present
+                                                                                setTagFilter(prev => prev.filter(t => t !== tagId));
+                                                                            }
+                                                                        }}
+                                                                        className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded">
+                                                                        Delete
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                                {orphanedTags.length > 0 && (
+                                                    <>
+                                                        <div className="mt-4 pt-4 border-t border-gray-200">
+                                                            <h3 className="text-sm font-semibold text-gray-500 mb-2">Orphaned tags (0 books)</h3>
+                                                            <table className="w-full text-sm">
+                                                                <tbody>
+                                                                    {orphanedTags.map(([tagId, tagData]) => (
+                                                                        <tr key={tagId} className="border-b border-gray-100 hover:bg-gray-50">
+                                                                            <td className="py-2 text-gray-400">{tagData.label}</td>
+                                                                            <td className="py-2 text-center text-gray-400 w-20">0</td>
+                                                                            <td className="py-2 text-right w-32">
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setTagRegistry(prev => {
+                                                                                            const updated = { ...prev };
+                                                                                            delete updated[tagId];
+                                                                                            return updated;
+                                                                                        });
+                                                                                    }}
+                                                                                    className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded">
+                                                                                    Delete
+                                                                                </button>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => {
+                                                                setTagRegistry(prev => {
+                                                                    const updated = { ...prev };
+                                                                    orphanedTags.forEach(([tagId]) => delete updated[tagId]);
+                                                                    return updated;
+                                                                });
+                                                            }}
+                                                            className="mt-2 px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded border border-red-200">
+                                                            Delete all orphaned tags
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* v3.14.0.x - Ghost position controlled via ref in updateGhostPosition */}
                     {isDragging && draggedBook && (
