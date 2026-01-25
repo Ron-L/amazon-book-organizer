@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.2";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -104,6 +104,19 @@
             // v4.16.0.s - Per-instance hidden state (Set of instanceIds)
             const [hiddenInstances, setHiddenInstances] = useState(new Set());
 
+            // v5.0.0 - Book Explorer state
+            const [viewMode, setViewMode] = useState('columns'); // 'columns' | 'explorer'
+            const [folders, setFolders] = useState([]); // User-created folders
+            const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
+            const [explorerSort, setExplorerSort] = useState({ column: 'title', direction: 'asc' });
+            const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
+            const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed
+            const [editingFolderName, setEditingFolderName] = useState(''); // Folder rename input
+
+            // v5.0.0 - Special folders (virtual, computed)
+            const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
+            const FOLDER_UNORGANIZED = { id: '__unorganized__', name: 'Unorganized', virtual: true, icon: '📥' };
+
             // v4.16.0.s - Helper to extract bookId from column entry (handles legacy string and new object format)
             // Entry types: string (legacy bookId), {type:'divider',...}, {instanceId, bookId} (new format)
             const getBookIdFromEntry = (entry) => {
@@ -153,6 +166,42 @@
             // v4.16.0.s - Helper to find index of bookId in column (first occurrence)
             const findBookIndexInColumn = (columnBooks, bookId) => {
                 return columnBooks.findIndex(entry => getBookIdFromEntry(entry) === bookId);
+            };
+
+            // v5.0.0 - Book Explorer folder helpers
+            // Get all book IDs that are in any folder
+            const getBooksInFolders = () => {
+                const inFolders = new Set();
+                folders.forEach(folder => {
+                    (folder.bookIds || []).forEach(id => inFolders.add(id));
+                });
+                return inFolders;
+            };
+
+            // Get books not in any folder (for Unorganized)
+            const getUnorganizedBookIds = () => {
+                const inFolders = getBooksInFolders();
+                return books.map(b => b.id).filter(id => !inFolders.has(id));
+            };
+
+            // Get books for a folder (handles virtual folders)
+            const getFolderBookIds = (folderId) => {
+                if (folderId === '__all__') return books.map(b => b.id);
+                if (folderId === '__unorganized__') return getUnorganizedBookIds();
+                const folder = folders.find(f => f.id === folderId);
+                return folder?.bookIds || [];
+            };
+
+            // Get folder by ID (handles virtual folders)
+            const getFolderById = (folderId) => {
+                if (folderId === '__all__') return FOLDER_ALL_BOOKS;
+                if (folderId === '__unorganized__') return FOLDER_UNORGANIZED;
+                return folders.find(f => f.id === folderId);
+            };
+
+            // Get child folders of a parent (null = root level)
+            const getChildFolders = (parentId) => {
+                return folders.filter(f => f.parentId === parentId);
             };
 
             // v3.11.0.d - Ref for column menu click-outside detection
@@ -408,6 +457,7 @@
                                     setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
                                     setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
                                     setTagRegistry(state.organization.tagRegistry || {}); // v4.27.0
+                                    setFolders(state.organization.folders || []); // v5.0.0
                                     setDataSource(state.organization.dataSource || 'enriched');
                                     effectiveLastSync = state.lastSyncTime || Date.now();
                                     setLastSyncTime(effectiveLastSync);
@@ -454,6 +504,7 @@
                                     name: col.name,
                                     bookIds: col.books
                                 })),
+                                folders,  // v5.0.0 - Book Explorer folders
                                 dataSource,
                                 blankImageBooks: Array.from(blankImageBooks),
                                 hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
@@ -467,7 +518,7 @@
                         console.warn('Could not auto-save organization:', e);
                     }
                 }
-            }, [syncStatus, columns, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
+            }, [syncStatus, columns, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
 
             useEffect(() => {
                 localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -4036,6 +4087,15 @@
                                         </button>
                                     ) : null;
                                 })()}
+                                {/* v5.0.0 - View mode toggle */}
+                                <button
+                                    onClick={() => setViewMode(viewMode === 'columns' ? 'explorer' : 'columns')}
+                                    className={`px-3 py-2 rounded-lg text-sm font-medium ${viewMode === 'explorer'
+                                        ? 'bg-blue-500 text-white border border-blue-600'
+                                        : 'bg-white hover:bg-gray-50 text-blue-700 border border-blue-300'}`}
+                                    title={viewMode === 'columns' ? 'Switch to Explorer view (folder tree)' : 'Switch to Columns view'}>
+                                    {viewMode === 'columns' ? '📁 Explorer' : '📊 Columns'}
+                                </button>
                                 {/* v4.16.0.q - Subtle button styling (Option 3) */}
                                 <button onClick={importLibrary}
                                         className="px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg text-sm font-medium"
@@ -5726,6 +5786,8 @@
                         </div>
                     )}
 
+                    {/* v5.0.0 - Conditional rendering: Columns view or Explorer view */}
+                    {viewMode === 'columns' && (
                     <div className="flex-1 min-h-0 overflow-x-scroll overflow-y-hidden mb-6 columns-scroll-container" onClick={(e) => {
                         // Clear selection if clicking on empty space (not on books or columns)
                         if (e.target === e.currentTarget || e.target.classList.contains('columns-container')) {
@@ -6191,6 +6253,148 @@
                             {/* v4.12.0.b - Floating Add Column button removed; use column dropdown menu instead */}
                         </div>
                     </div>
+                    )}
+
+                    {/* v5.0.0 - Book Explorer view */}
+                    {viewMode === 'explorer' && (
+                        <div className="flex-1 min-h-0 flex mb-6">
+                            {/* Left pane: Folder tree */}
+                            <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0">
+                                <div className="p-3 border-b border-gray-200 font-medium text-gray-700">
+                                    Folders
+                                </div>
+                                <div className="p-2">
+                                    {/* All Books (virtual) */}
+                                    <div
+                                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        onClick={() => setSelectedFolderId('__all__')}>
+                                        <span>{FOLDER_ALL_BOOKS.icon}</span>
+                                        <span className="flex-1">{FOLDER_ALL_BOOKS.name}</span>
+                                        <span className="text-xs text-gray-500">({books.length})</span>
+                                    </div>
+                                    {/* Unorganized (virtual) */}
+                                    <div
+                                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__unorganized__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        onClick={() => setSelectedFolderId('__unorganized__')}>
+                                        <span>{FOLDER_UNORGANIZED.icon}</span>
+                                        <span className="flex-1">{FOLDER_UNORGANIZED.name}</span>
+                                        <span className="text-xs text-gray-500">({getUnorganizedBookIds().length})</span>
+                                    </div>
+                                    {/* User folders */}
+                                    {getChildFolders(null).map(folder => (
+                                        <div
+                                            key={folder.id}
+                                            className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                            onClick={() => setSelectedFolderId(folder.id)}>
+                                            <span>📁</span>
+                                            <span className="flex-1">{folder.name}</span>
+                                            <span className="text-xs text-gray-500">({(folder.bookIds || []).length})</span>
+                                        </div>
+                                    ))}
+                                    {/* New folder button */}
+                                    <button
+                                        onClick={() => {
+                                            const newFolder = {
+                                                id: `folder-${Date.now()}`,
+                                                name: 'New Folder',
+                                                parentId: null,
+                                                bookIds: [],
+                                                childFolderIds: [],
+                                                collapsed: false
+                                            };
+                                            setFolders(prev => [...prev, newFolder]);
+                                            setSelectedFolderId(newFolder.id);
+                                            setEditingFolderId(newFolder.id);
+                                            setEditingFolderName('New Folder');
+                                        }}
+                                        className="flex items-center gap-2 px-2 py-1.5 mt-2 text-blue-600 hover:bg-blue-50 rounded w-full text-left">
+                                        <span>➕</span>
+                                        <span>New Folder</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Right pane: Book list */}
+                            <div className="flex-1 bg-white overflow-hidden flex flex-col">
+                                <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+                                    <div className="font-medium text-gray-700">
+                                        {getFolderById(selectedFolderId)?.name || 'Books'}
+                                        <span className="text-sm text-gray-500 ml-2">
+                                            ({getFolderBookIds(selectedFolderId).length} books)
+                                        </span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setExplorerView('list')}
+                                            className={`px-2 py-1 text-sm rounded ${explorerView === 'list' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                            List
+                                        </button>
+                                        <button
+                                            onClick={() => setExplorerView('covers')}
+                                            className={`px-2 py-1 text-sm rounded ${explorerView === 'covers' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                            Covers
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-auto p-4">
+                                    {explorerView === 'list' ? (
+                                        <table className="w-full text-sm">
+                                            <thead className="sticky top-0 bg-gray-50">
+                                                <tr className="text-left text-gray-600">
+                                                    <th className="p-2 w-12"></th>
+                                                    <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                        Title {explorerSort.column === 'title' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                    </th>
+                                                    <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'author', direction: prev.column === 'author' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                        Author {explorerSort.column === 'author' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                    </th>
+                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 w-24" onClick={() => setExplorerSort(prev => ({ column: 'rating', direction: prev.column === 'rating' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                        Rating {explorerSort.column === 'rating' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {getFolderBookIds(selectedFolderId)
+                                                    .map(id => books.find(b => b.id === id))
+                                                    .filter(Boolean)
+                                                    .sort((a, b) => {
+                                                        const dir = explorerSort.direction === 'asc' ? 1 : -1;
+                                                        if (explorerSort.column === 'title') return dir * (a.title || '').localeCompare(b.title || '');
+                                                        if (explorerSort.column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
+                                                        if (explorerSort.column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
+                                                        return 0;
+                                                    })
+                                                    .map(book => (
+                                                        <tr key={book.id} className="hover:bg-gray-50 cursor-pointer border-b border-gray-100" onClick={() => openBookModal(book, null)}>
+                                                            <td className="p-2">
+                                                                <img src={book.coverUrl} alt="" className="w-8 h-12 object-cover rounded" />
+                                                            </td>
+                                                            <td className="p-2 font-medium">{book.title}</td>
+                                                            <td className="p-2 text-gray-600">{book.author}</td>
+                                                            <td className="p-2">
+                                                                {book.rating ? `${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5 - Math.floor(book.rating))}` : '-'}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                            </tbody>
+                                        </table>
+                                    ) : (
+                                        <div className="grid grid-cols-6 gap-4">
+                                            {getFolderBookIds(selectedFolderId)
+                                                .map(id => books.find(b => b.id === id))
+                                                .filter(Boolean)
+                                                .map(book => (
+                                                    <div key={book.id} className="cursor-pointer hover:opacity-80" onClick={() => openBookModal(book, null)}>
+                                                        <img src={book.coverUrl} alt={book.title} className="w-full h-auto rounded shadow" />
+                                                        <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* v4.16.0.n - Removed floating selection box, now shown in footer */}
 
