@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.26.0] - 2026-01-24
+
+### Improved
+- **Show Hidden always visible** - "Show Hidden" checkbox now visible even when filter panel is collapsed
+  - File versions: readerwrangler.js v4.22.0
+  - Shows "Showing: X of Y" count alongside checkbox in collapsed state
+  - No longer need to expand filters just to toggle hidden book visibility
+
 ## [4.25.1] - 2026-01-24
 
 ### Fixed

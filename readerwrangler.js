@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.25.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.21.1";  // Build version for this file
+        const APP_VERSION = "4.26.0";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.22.0";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -4382,22 +4382,30 @@
                                     ` (${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, datePreset].filter(Boolean).length})`}
                             </button>
 
-                            {/* Book count - only when panel closed (v4.15.5.b) */}
-                            {/* v4.16.0.bi - Include copy count in collapsed view */}
+                            {/* Book count + Show Hidden - always visible when panel closed (v4.22.0.a) */}
                             {books.length > 0 && !filterPanelOpen && (
-                                <span className="text-base text-gray-500 py-2">
-                                    {(() => {
-                                        const allEntries = columns.flatMap(col =>
-                                            col.books.filter(item => !(item && item.type === 'divider'))
-                                        );
-                                        const allBookIds = new Set(allEntries.map(entry => getBookIdFromEntry(entry)));
-                                        const totalCopyCount = allEntries.length - allBookIds.size;
-                                        const copyText = totalCopyCount > 0
-                                            ? ` (+${totalCopyCount} ${totalCopyCount === 1 ? 'copy' : 'copies'})`
-                                            : '';
-                                        return `${books.length}${copyText} books`;
-                                    })()}
-                                </span>
+                                <div className="flex items-center gap-4 py-2">
+                                    <span className="text-sm text-gray-600">
+                                        {(() => {
+                                            // Calculate filtered count (same logic as expanded view)
+                                            const filteredResults = columns.flatMap(col =>
+                                                filteredBooks(col.books).filter(item => !(item && item.type === 'divider'))
+                                            );
+                                            const filteredBookIds = new Set(filteredResults.map(book => book.id));
+                                            const filteredUniqueCount = filteredBookIds.size;
+                                            return `Showing: ${filteredUniqueCount} of ${books.length}`;
+                                        })()}
+                                    </span>
+                                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                                        <input
+                                            type="checkbox"
+                                            checked={showHidden}
+                                            onChange={(e) => setShowHidden(e.target.checked)}
+                                            className="w-4 h-4 rounded border-gray-300 text-blue-700 focus:ring-blue-500"
+                                        />
+                                        <span className="text-gray-600">Show Hidden</span>
+                                    </label>
+                                </div>
                             )}
 
                             {/* FILTER TABLE - v4.15.5.j - HTML table with tuned column widths */}
