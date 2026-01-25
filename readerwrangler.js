@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.9";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -108,8 +108,9 @@
             const [viewMode, setViewMode] = useState('columns'); // 'columns' | 'explorer'
             const [folders, setFolders] = useState([]); // User-created folders
             const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
-            const [explorerSort, setExplorerSort] = useState({ column: 'title', direction: 'asc' });
+            const [explorerSort, setExplorerSort] = useState({ column: 'custom', direction: 'asc' }); // 'custom' | 'title' | 'author' | 'rating'
             const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
+            const [explorerCoverSize, setExplorerCoverSize] = useState('medium'); // 'small' | 'medium' | 'large'
             const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed
             const [editingFolderName, setEditingFolderName] = useState(''); // Folder rename input
             const [explorerDragBookId, setExplorerDragBookId] = useState(null); // Book being dragged in Explorer
@@ -6443,17 +6444,63 @@
                                             ({getFolderBookIds(selectedFolderId).length} books)
                                         </span>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => setExplorerView('list')}
-                                            className={`px-2 py-1 text-sm rounded ${explorerView === 'list' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-                                            List
-                                        </button>
-                                        <button
-                                            onClick={() => setExplorerView('covers')}
-                                            className={`px-2 py-1 text-sm rounded ${explorerView === 'covers' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
-                                            Covers
-                                        </button>
+                                    <div className="flex gap-4 items-center">
+                                        {/* View toggle */}
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => setExplorerView('list')}
+                                                className={`px-2 py-1 text-sm rounded ${explorerView === 'list' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                                List
+                                            </button>
+                                            <button
+                                                onClick={() => setExplorerView('covers')}
+                                                className={`px-2 py-1 text-sm rounded ${explorerView === 'covers' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                                Covers
+                                            </button>
+                                        </div>
+                                        {/* Cover size selector (only in cover view) */}
+                                        {explorerView === 'covers' && (
+                                            <div className="flex gap-1 border-l pl-4">
+                                                <button
+                                                    onClick={() => setExplorerCoverSize('small')}
+                                                    className={`px-2 py-1 text-xs rounded ${explorerCoverSize === 'small' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
+                                                    title="Small covers">
+                                                    S
+                                                </button>
+                                                <button
+                                                    onClick={() => setExplorerCoverSize('medium')}
+                                                    className={`px-2 py-1 text-xs rounded ${explorerCoverSize === 'medium' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
+                                                    title="Medium covers">
+                                                    M
+                                                </button>
+                                                <button
+                                                    onClick={() => setExplorerCoverSize('large')}
+                                                    className={`px-2 py-1 text-xs rounded ${explorerCoverSize === 'large' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
+                                                    title="Large covers">
+                                                    L
+                                                </button>
+                                            </div>
+                                        )}
+                                        {/* Sort selector (in both views) */}
+                                        <div className="flex gap-1 border-l pl-4 text-sm">
+                                            <span className="text-gray-500">Sort:</span>
+                                            <select
+                                                value={explorerSort.column}
+                                                onChange={(e) => setExplorerSort({ column: e.target.value, direction: 'asc' })}
+                                                className="border-none bg-transparent text-gray-700 cursor-pointer focus:outline-none">
+                                                <option value="custom">Custom</option>
+                                                <option value="title">Title</option>
+                                                <option value="author">Author</option>
+                                                <option value="rating">Rating</option>
+                                            </select>
+                                            {explorerSort.column !== 'custom' && (
+                                                <button
+                                                    onClick={() => setExplorerSort(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
+                                                    className="text-gray-500 hover:text-gray-700">
+                                                    {explorerSort.direction === 'asc' ? '↑' : '↓'}
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex-1 overflow-auto p-4">
@@ -6478,6 +6525,8 @@
                                                     .map(id => books.find(b => b.id === id))
                                                     .filter(Boolean)
                                                     .sort((a, b) => {
+                                                        // Custom sort = no sorting, use bookIds order
+                                                        if (explorerSort.column === 'custom') return 0;
                                                         const dir = explorerSort.direction === 'asc' ? 1 : -1;
                                                         if (explorerSort.column === 'title') return dir * (a.title || '').localeCompare(b.title || '');
                                                         if (explorerSort.column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
@@ -6540,13 +6589,25 @@
                                             </tbody>
                                         </table>
                                     ) : (
-                                        <div className="grid grid-cols-6 gap-4">
-                                            {getFolderBookIds(selectedFolderId)
-                                                .map(id => books.find(b => b.id === id))
-                                                .filter(Boolean)
-                                                .map(book => (
+                                        <div className={`grid gap-4 ${explorerCoverSize === 'small' ? 'grid-cols-10' : explorerCoverSize === 'large' ? 'grid-cols-4' : 'grid-cols-6'}`}>
+                                            {(() => {
+                                                const bookList = getFolderBookIds(selectedFolderId)
+                                                    .map(id => books.find(b => b.id === id))
+                                                    .filter(Boolean);
+                                                // Apply sort (custom = no sort, use bookIds order)
+                                                if (explorerSort.column !== 'custom') {
+                                                    const dir = explorerSort.direction === 'asc' ? 1 : -1;
+                                                    bookList.sort((a, b) => {
+                                                        if (explorerSort.column === 'title') return dir * (a.title || '').localeCompare(b.title || '');
+                                                        if (explorerSort.column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
+                                                        if (explorerSort.column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
+                                                        return 0;
+                                                    });
+                                                }
+                                                return bookList;
+                                            })().map(book => (
                                                     <div key={book.id} className="cursor-pointer hover:opacity-80" onClick={() => openBookModal(book, null)}>
-                                                        <img src={book.coverUrl} alt={book.title} className="w-full h-auto rounded shadow" />
+                                                        <img src={book.coverUrl} alt={book.title} className={`w-full h-auto rounded shadow ${explorerCoverSize === 'small' ? 'max-w-[80px]' : ''}`} />
                                                         <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
                                                     </div>
                                                 ))}
