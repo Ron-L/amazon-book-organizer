@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.7";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6487,7 +6487,7 @@
                                                     .map(book => (
                                                         <tr
                                                             key={book.id}
-                                                            className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-100' : 'hover:bg-gray-50'}`}
+                                                            className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
                                                             draggable="true"
                                                             onDragStart={(e) => {
                                                                 e.dataTransfer.effectAllowed = 'move';
