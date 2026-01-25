@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.3";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6284,11 +6284,83 @@
                                     {getChildFolders(null).map(folder => (
                                         <div
                                             key={folder.id}
-                                            className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
-                                            onClick={() => setSelectedFolderId(folder.id)}>
+                                            className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                            onClick={() => setSelectedFolderId(folder.id)}
+                                            onDoubleClick={() => {
+                                                setEditingFolderId(folder.id);
+                                                setEditingFolderName(folder.name);
+                                            }}
+                                            onContextMenu={(e) => {
+                                                e.preventDefault();
+                                                setSelectedFolderId(folder.id);
+                                                // Simple context menu using window.confirm for now
+                                                const action = window.prompt('Enter action: rename or delete', 'rename');
+                                                if (action === 'rename') {
+                                                    setEditingFolderId(folder.id);
+                                                    setEditingFolderName(folder.name);
+                                                } else if (action === 'delete') {
+                                                    if (window.confirm(`Delete folder "${folder.name}"? Books will be moved to Unorganized.`)) {
+                                                        setFolders(prev => prev.filter(f => f.id !== folder.id));
+                                                        if (selectedFolderId === folder.id) {
+                                                            setSelectedFolderId('__all__');
+                                                        }
+                                                    }
+                                                }
+                                            }}>
                                             <span>📁</span>
-                                            <span className="flex-1">{folder.name}</span>
-                                            <span className="text-xs text-gray-500">({(folder.bookIds || []).length})</span>
+                                            {editingFolderId === folder.id ? (
+                                                <input
+                                                    type="text"
+                                                    value={editingFolderName}
+                                                    onChange={(e) => setEditingFolderName(e.target.value)}
+                                                    onBlur={() => {
+                                                        if (editingFolderName.trim()) {
+                                                            setFolders(prev => prev.map(f =>
+                                                                f.id === folder.id ? { ...f, name: editingFolderName.trim() } : f
+                                                            ));
+                                                        }
+                                                        setEditingFolderId(null);
+                                                        setEditingFolderName('');
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') {
+                                                            if (editingFolderName.trim()) {
+                                                                setFolders(prev => prev.map(f =>
+                                                                    f.id === folder.id ? { ...f, name: editingFolderName.trim() } : f
+                                                                ));
+                                                            }
+                                                            setEditingFolderId(null);
+                                                            setEditingFolderName('');
+                                                        } else if (e.key === 'Escape') {
+                                                            setEditingFolderId(null);
+                                                            setEditingFolderName('');
+                                                        }
+                                                    }}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                    autoFocus
+                                                    className="flex-1 px-1 py-0.5 text-sm border border-blue-400 rounded outline-none"
+                                                />
+                                            ) : (
+                                                <>
+                                                    <span className="flex-1">{folder.name}</span>
+                                                    <span className="text-xs text-gray-500">({(folder.bookIds || []).length})</span>
+                                                    {/* Delete button on hover */}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (window.confirm(`Delete folder "${folder.name}"?`)) {
+                                                                setFolders(prev => prev.filter(f => f.id !== folder.id));
+                                                                if (selectedFolderId === folder.id) {
+                                                                    setSelectedFolderId('__all__');
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 px-1"
+                                                        title="Delete folder">
+                                                        ×
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     ))}
                                     {/* New folder button */}
