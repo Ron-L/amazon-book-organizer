@@ -162,6 +162,22 @@ When tag filter is active:
 - Select multiple books → Right-click → "Add Tag to Selected"
 - Bulk tagging operation
 
+**Single Book Right-Click Menu:**
+```
+┌────────────────────────┐
+│ Add/Edit Tags      →   │──┌─────────────────────────┐
+│ ...                    │  │ ☑️ Time Travel          │
+└────────────────────────┘  │ ☐ Military SF           │
+                            │ ☐ Civilization          │
+                            │ ───────────────────     │
+                            │ ➕ Create New Tag...    │
+                            └─────────────────────────┘
+```
+
+- Shows existing tags as checkboxes (checked = book has tag)
+- "Create New Tag..." opens inline text input
+- Quick way to tag without opening detail modal
+
 ### Adding Tags to Divs
 
 **Right-click Context Menu:**
