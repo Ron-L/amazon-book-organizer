@@ -19,14 +19,16 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Can't find thematically related books (Time Travel, Military SF) across 100+ columns
    - Impact: Cross-library thematic organization, reduced scrolling through empty columns
 
-**4. 🖥️ Desktop & Folders UI** - MEDIUM/HIGH (40-60 hours)
-   - See [docs/design/DESKTOP-FOLDERS.md](docs/design/DESKTOP-FOLDERS.md) for full spec
-   - Replaces Column Organizer (COLUMN-ARRANGER.md) and Column Carousel (COLUMN-CAROUSEL.md)
-   - Virtual zoomable desktop with folder icons; folders open as resizable/movable windows
-   - Collapsible dividers within folders; books reflow to window width
-   - Drag books to closed folder icons; zoom in/out to see all or focus on work
-   - Problem: 20+ columns overwhelm the workspace; no good overview or navigation
-   - Impact: Scalable, intuitive organization using familiar desktop metaphor
+**4. 📁 Book Explorer UI** - MEDIUM/HIGH (40-60 hours)
+   - See [docs/design/BOOK-EXPLORER.md](docs/design/BOOK-EXPLORER.md) for full spec
+   - Replaces Column Organizer (COLUMN-ARRANGER.md), Column Carousel (COLUMN-CAROUSEL.md), Desktop & Folders (DESKTOP-FOLDERS.md)
+   - Windows File Explorer paradigm: folder tree sidebar + detail/preview pane
+   - Nested folders for Category > Author > Series hierarchy (no depth limit)
+   - List view with sortable columns + cover view toggle
+   - Search (jump-to) distinct from filter (reduce view)
+   - Migration: columns → folders, dividers → subfolders
+   - Problem: 20+ columns overwhelm the workspace; no hierarchy for Category > Author > Series
+   - Impact: Scalable organization using universally familiar File Explorer metaphor
 
 
 ### 📖 Priority 2: Optimizations & Polish (Before Public Launch)

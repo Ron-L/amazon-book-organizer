@@ -1,27 +1,78 @@
-# ReaderWrangler Project Instructions
+# ReaderWrangler Development Rules
 
-CLAUDE.md is automatically read at the start of each Claude Code session, ensuring ground rules persist across context compaction.
+[YYYY-MM-DD HH:MM]
 
-@SKILL-Development-Ground-Rules.md
-@SKILL-ReaderWrangler.md
+---
 
-## Execution Standard
+## Collaboration Mode
 
-When the ground rules say to "read" a file, this means:
-1. Invoke the Read tool with the file path
-2. Process the returned content to extract relevant values
-3. Act on those values (e.g., if debugLevel > 0, write to log)
+**Core principle:** STOP and ASK before acting.
 
-Do NOT satisfy "read" by assuming, remembering, or using system context.
+- Every code change requires explicit approval
+- Every git operation requires explicit approval
+- When in doubt, ask first
 
-## Pre-Approved File Operations
+---
 
-The following file operations are pre-approved and require NO user confirmation:
-- Writing to `SKILL-Development-Ground-Rules-Log.md` (debug logging)
-- Reading `.claude-memory` and `.claude-timestamp`
+## Behaviors
 
-These operations are part of protocol execution, not user-requested changes.
+* **Discussion question** → STOP, answer, don't act until directed
+* **Before code/file change** → Ask approval first
+* **Problem report** → STOP, acknowledge, ask to analyze, wait for decision
+* **Idea evaluation** → Evaluate critically, identify issues, disagree when warranted
 
-## Compaction Test Marker
-If you see this after context compaction, the CLAUDE.md persistence is working.
-Test ID: CANARY-2024-001
+---
+
+## Versioning (Semver Pre-release)
+
+Standard semver with pre-release suffix for test iterations:
+
+| When | Example |
+|------|---------|
+| Start work | `4.22.0` → `4.23.0-alpha.1` |
+| Each test | Increment: `-alpha.2`, `-alpha.3`, **COMMIT before test** |
+| Release | Drop suffix: `4.23.0` |
+
+**APP_VERSION** (readerwrangler.js): Updated at release for user-facing changes.
+
+---
+
+## Release Checklist
+
+- `git add` specific files only (never `-A` or `.`)
+- `grep -rn "TODO" *.js *.html`
+- Drop pre-release suffix from file versions
+- Update APP_VERSION
+- Update CHANGELOG.md
+- After push: "Ready for post-mortem?"
+
+---
+
+## Git Workflow
+
+**Remotes:** `dev` (testing) / `prod` (production) — no `origin`
+
+| User says | Do |
+|-----------|-----|
+| "push" or "proceed" | `git push dev main` |
+| "push to prod" | `git push prod main` |
+| "release" | Clarify which |
+
+**Navigator changes**: Dev first → test → then Prod
+
+---
+
+## Compaction
+
+When preparing for compaction, include in summary:
+
+> COLLABORATION MODE - STOP and ASK before every action.
+> After compaction: Read CLAUDE.md, report task in progress, wait for approval.
+
+---
+
+## Reference
+
+**Folders:** `docs/api/`, `docs/design/`, `post-mortems/`
+
+**No version increment:** README, CHANGELOG, TODO, *.md docs, .bat files

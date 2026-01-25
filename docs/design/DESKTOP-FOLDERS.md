@@ -1,10 +1,13 @@
 # Desktop & Folders UI
 
+> **Status: SUPERSEDED** - This design has been replaced by [BOOK-EXPLORER.md](BOOK-EXPLORER.md), which uses a Windows File Explorer paradigm with nested folders instead of a virtual zoomable desktop. This document is retained for historical reference.
+
 ## Overview
 
 A virtual desktop paradigm for organizing books. Columns become "folders" that can be opened as resizable, movable windows. The desktop is a zoomable, scrollable virtual space where folder icons live when closed.
 
 **Replaces:** COLUMN-ARRANGER.md and COLUMN-CAROUSEL.md (unified approach)
+**Superseded by:** BOOK-EXPLORER.md (File Explorer paradigm)
 
 ---
 
@@ -324,6 +327,42 @@ Click and drag on empty space to draw a selection rectangle. Items touching the 
 
 ### Rationale
 Folders are the user's organizational structure. Hiding them during filtering would disrupt spatial memory. Instead, show that a folder is "empty for this filter" via count.
+
+### Visual Feedback for Empty Folders
+- **Gray out** folder icons when filter results in 0 matches
+- **Hover tooltip**: "Showing 0 of 47 books" (clarifies filtering vs. actual empty)
+- **Do NOT hide or move** folders during filtering (unlike current column app which compacts)
+
+---
+
+## Virtual Desktop Sizing
+
+### Problem Statement
+The virtual desktop needs a defined size, but optimal dimensions depend on:
+- Number of folders
+- User's arrangement preferences
+- Screen size
+
+### Options Considered
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **Fixed large size** | Simple to implement | May be too small for large collections or wastefully large for small ones |
+| **User-configurable** | Flexible | Clunky UI (enter X×Y dimensions?) |
+| **Auto-expand/contract** | Adapts to content | Complex; can't contract past rightmost/bottommost item |
+
+### Recommended Approach: Auto-Expand with Density Threshold
+
+1. **Auto-expand**: Desktop grows when folders are placed near edges
+2. **Density threshold**: Maintain ~2/3 density in each direction
+3. **Contraction limits**: Cannot shrink past the rightmost or bottommost folder/book
+4. **Minimum size**: At least viewport size (no smaller than what user can see)
+
+### Implementation Notes
+- Track bounding box of all positioned items
+- Add margin (e.g., 2 folder-widths) beyond bounding box
+- Recalculate on folder move/add/delete
+- Snap-to-grid helps keep positioning predictable
 
 ---
 
