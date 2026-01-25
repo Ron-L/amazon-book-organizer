@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.5";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6281,12 +6281,14 @@
                                         onClick={() => setSelectedFolderId('__unorganized__')}
                                         onDragOver={(e) => {
                                             e.preventDefault();
+                                            e.dataTransfer.dropEffect = 'move';
                                             setExplorerDropTargetId('__unorganized__');
                                         }}
                                         onDragLeave={() => setExplorerDropTargetId(null)}
                                         onDrop={(e) => {
                                             e.preventDefault();
-                                            const bookIds = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                            const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                            const { bookIds } = dragData;
                                             // Remove these books from all user folders
                                             setFolders(prev => prev.map(folder => ({
                                                 ...folder,
@@ -6311,18 +6313,25 @@
                                             }}
                                             onDragOver={(e) => {
                                                 e.preventDefault();
+                                                e.dataTransfer.dropEffect = 'move';
                                                 setExplorerDropTargetId(folder.id);
                                             }}
                                             onDragLeave={() => setExplorerDropTargetId(null)}
                                             onDrop={(e) => {
                                                 e.preventDefault();
-                                                const bookIds = JSON.parse(e.dataTransfer.getData('text/plain'));
-                                                // Add books to this folder (if not already present)
+                                                const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                                const { sourceFolder, bookIds } = dragData;
+                                                // Move books: remove from source folder, add to this folder
                                                 setFolders(prev => prev.map(f => {
                                                     if (f.id === folder.id) {
+                                                        // Add to destination (at top, no duplicates)
                                                         const existing = new Set(f.bookIds || []);
                                                         const newBookIds = bookIds.filter(id => !existing.has(id));
                                                         return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                    }
+                                                    if (f.id === sourceFolder) {
+                                                        // Remove from source folder
+                                                        return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
                                                     }
                                                     return f;
                                                 }));
@@ -6481,11 +6490,16 @@
                                                             className={`hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : ''}`}
                                                             draggable="true"
                                                             onDragStart={(e) => {
-                                                                // If book is in selection, drag all selected; otherwise just this book
-                                                                if (explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1) {
-                                                                    e.dataTransfer.setData('text/plain', JSON.stringify([...explorerSelectedBooks]));
-                                                                } else {
-                                                                    e.dataTransfer.setData('text/plain', JSON.stringify([book.id]));
+                                                                e.dataTransfer.effectAllowed = 'move';
+                                                                // Include source folder and book IDs in drag data
+                                                                const dragData = {
+                                                                    sourceFolder: selectedFolderId,
+                                                                    bookIds: explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1
+                                                                        ? [...explorerSelectedBooks]
+                                                                        : [book.id]
+                                                                };
+                                                                e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                                                                if (!explorerSelectedBooks.has(book.id)) {
                                                                     setExplorerSelectedBooks(new Set([book.id]));
                                                                 }
                                                                 setExplorerDragBookId(book.id);
@@ -6495,6 +6509,7 @@
                                                                 setExplorerDropTargetId(null);
                                                             }}
                                                             onClick={(e) => {
+                                                                // Single click always selects
                                                                 if (e.shiftKey && explorerSelectedBooks.size > 0) {
                                                                     // Shift-click for range select (simplified - just adds to selection)
                                                                     setExplorerSelectedBooks(prev => new Set([...prev, book.id]));
@@ -6507,10 +6522,11 @@
                                                                         return next;
                                                                     });
                                                                 } else {
-                                                                    // Regular click opens modal
-                                                                    openBookModal(book, null);
+                                                                    // Regular click selects just this book
+                                                                    setExplorerSelectedBooks(new Set([book.id]));
                                                                 }
-                                                            }}>
+                                                            }}
+                                                            onDoubleClick={() => openBookModal(book, null)}>
                                                             <td className="p-2">
                                                                 <img src={book.coverUrl} alt="" className="w-8 h-12 object-cover rounded" />
                                                             </td>
