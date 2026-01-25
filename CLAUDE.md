@@ -52,10 +52,18 @@ Standard semver with pre-release suffix for test iterations:
 
 **Remotes:** `dev` (testing) / `prod` (production) — no `origin`
 
+**Feature branches:** For customer-facing work (not doc-only changes):
+1. `git checkout -b feature/descriptive-name` from main
+2. Develop with alpha versions, commit before each test
+3. Push branch to dev for testing
+4. When complete: merge to main, push to prod
+
+Branch naming: `feature/tags`, `fix/filter-bug`, `refactor/modules`
+
 | User says | Do |
 |-----------|-----|
-| "push" or "proceed" | `git push dev main` |
-| "push to prod" | `git push prod main` |
+| "push" or "proceed" | `git push dev <current-branch>` |
+| "push to prod" | Merge to main first, then `git push prod main` |
 | "release" | Clarify which |
 
 **Navigator changes**: Dev first → test → then Prod
