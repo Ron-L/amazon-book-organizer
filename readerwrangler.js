@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.26.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.27.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "4.27.0-alpha.2";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -2441,6 +2441,9 @@
                 setModalBook(null);
                 setModalColumnId(null);
                 setIsEditingNote(false); // v4.21.0.a - reset note editor state
+                // v4.27.0 - reset tag input state
+                if (contextSubmenu === 'addTagModal') setContextSubmenu(null);
+                setTagInputValue('');
                 setNoteEditContent(''); // v4.21.0.a
             };
 
@@ -5559,12 +5562,12 @@
                                                             {contextSubmenu === 'addTagModal' && (
                                                                 <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[200px]"
                                                                     onClick={(e) => e.stopPropagation()}>
-                                                                    <div className="p-2">
+                                                                    <div className="p-2 flex items-center gap-2">
                                                                         <input
                                                                             type="text"
                                                                             value={tagInputValue}
                                                                             placeholder="Type tag name..."
-                                                                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                                             autoFocus
                                                                             onKeyDown={(e) => {
                                                                                 e.stopPropagation();
@@ -5575,18 +5578,29 @@
                                                                             }}
                                                                             onChange={(e) => setTagInputValue(e.target.value)}
                                                                         />
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setContextSubmenu(null);
+                                                                                setTagInputValue('');
+                                                                            }}
+                                                                            className="text-gray-400 hover:text-gray-600 text-lg font-bold"
+                                                                            title="Close">×</button>
                                                                     </div>
                                                                     <div className="max-h-[200px] overflow-y-auto border-t border-gray-200">
                                                                         {(() => {
                                                                             const inputValue = tagInputValue.toLowerCase().trim();
+                                                                            // Check ALL tags for exact match (not just filtered), to prevent duplicates
+                                                                            const allTagsExactMatch = Object.entries(tagRegistry)
+                                                                                .find(([id, data]) => data.label.toLowerCase() === inputValue);
+                                                                            // Filter to tags matching input AND not already on this book
                                                                             const existingTags = Object.entries(tagRegistry)
                                                                                 .filter(([id, data]) =>
                                                                                     (!inputValue || data.label.toLowerCase().includes(inputValue)) &&
                                                                                     !(modalBook.tags || []).includes(id)
                                                                                 )
                                                                                 .sort((a, b) => a[1].label.localeCompare(b[1].label));
-                                                                            const exactMatch = existingTags.find(([id, data]) => data.label.toLowerCase() === inputValue);
-                                                                            const showCreate = inputValue && !exactMatch;
+                                                                            // Only show Create if no exact match exists in registry at all
+                                                                            const showCreate = inputValue && !allTagsExactMatch;
 
                                                                             return (
                                                                                 <>
