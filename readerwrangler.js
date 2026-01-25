@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.26.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.27.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "4.27.0-alpha.3";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -5601,6 +5601,8 @@
                                                                                 .sort((a, b) => a[1].label.localeCompare(b[1].label));
                                                                             // Only show Create if no exact match exists in registry at all
                                                                             const showCreate = inputValue && !allTagsExactMatch;
+                                                                            // Check if exact match exists but book already has it
+                                                                            const tagAlreadyOnBook = allTagsExactMatch && (modalBook.tags || []).includes(allTagsExactMatch[0]);
 
                                                                             return (
                                                                                 <>
@@ -5660,7 +5662,11 @@
                                                                                     ))}
                                                                                     {existingTags.length === 0 && !showCreate && (
                                                                                         <div className="px-3 py-2 text-sm text-gray-400">
-                                                                                            {inputValue ? 'No matching tags' : 'Type to search or create'}
+                                                                                            {tagAlreadyOnBook
+                                                                                                ? `"${allTagsExactMatch[1].label}" already added`
+                                                                                                : inputValue
+                                                                                                    ? 'No matching tags'
+                                                                                                    : 'Type to search or create'}
                                                                                         </div>
                                                                                     )}
                                                                                 </>
