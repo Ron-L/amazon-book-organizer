@@ -47,6 +47,7 @@ Standard semver with pre-release suffix for test iterations:
 - Drop pre-release suffix from file versions
 - Update APP_VERSION
 - Update CHANGELOG.md
+- Update TODO.md (remove completed tasks)
 - After push: "Ready for post-mortem?"
 
 ---
