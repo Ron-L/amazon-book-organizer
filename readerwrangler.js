@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.4";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -112,6 +112,9 @@
             const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
             const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed
             const [editingFolderName, setEditingFolderName] = useState(''); // Folder rename input
+            const [explorerDragBookId, setExplorerDragBookId] = useState(null); // Book being dragged in Explorer
+            const [explorerDropTargetId, setExplorerDropTargetId] = useState(null); // Folder being dragged over
+            const [explorerSelectedBooks, setExplorerSelectedBooks] = useState(new Set()); // Multi-select in Explorer
 
             // v5.0.0 - Special folders (virtual, computed)
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -6272,10 +6275,26 @@
                                         <span className="flex-1">{FOLDER_ALL_BOOKS.name}</span>
                                         <span className="text-xs text-gray-500">({books.length})</span>
                                     </div>
-                                    {/* Unorganized (virtual) */}
+                                    {/* Unorganized (virtual) - drop target removes from all folders */}
                                     <div
-                                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__unorganized__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
-                                        onClick={() => setSelectedFolderId('__unorganized__')}>
+                                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__unorganized__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__unorganized__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                        onClick={() => setSelectedFolderId('__unorganized__')}
+                                        onDragOver={(e) => {
+                                            e.preventDefault();
+                                            setExplorerDropTargetId('__unorganized__');
+                                        }}
+                                        onDragLeave={() => setExplorerDropTargetId(null)}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            const bookIds = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                            // Remove these books from all user folders
+                                            setFolders(prev => prev.map(folder => ({
+                                                ...folder,
+                                                bookIds: (folder.bookIds || []).filter(id => !bookIds.includes(id))
+                                            })));
+                                            setExplorerDropTargetId(null);
+                                            setExplorerSelectedBooks(new Set());
+                                        }}>
                                         <span>{FOLDER_UNORGANIZED.icon}</span>
                                         <span className="flex-1">{FOLDER_UNORGANIZED.name}</span>
                                         <span className="text-xs text-gray-500">({getUnorganizedBookIds().length})</span>
@@ -6284,11 +6303,31 @@
                                     {getChildFolders(null).map(folder => (
                                         <div
                                             key={folder.id}
-                                            className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                            className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                             onClick={() => setSelectedFolderId(folder.id)}
                                             onDoubleClick={() => {
                                                 setEditingFolderId(folder.id);
                                                 setEditingFolderName(folder.name);
+                                            }}
+                                            onDragOver={(e) => {
+                                                e.preventDefault();
+                                                setExplorerDropTargetId(folder.id);
+                                            }}
+                                            onDragLeave={() => setExplorerDropTargetId(null)}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                const bookIds = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                                // Add books to this folder (if not already present)
+                                                setFolders(prev => prev.map(f => {
+                                                    if (f.id === folder.id) {
+                                                        const existing = new Set(f.bookIds || []);
+                                                        const newBookIds = bookIds.filter(id => !existing.has(id));
+                                                        return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                    }
+                                                    return f;
+                                                }));
+                                                setExplorerDropTargetId(null);
+                                                setExplorerSelectedBooks(new Set());
                                             }}
                                             onContextMenu={(e) => {
                                                 e.preventDefault();
@@ -6437,7 +6476,41 @@
                                                         return 0;
                                                     })
                                                     .map(book => (
-                                                        <tr key={book.id} className="hover:bg-gray-50 cursor-pointer border-b border-gray-100" onClick={() => openBookModal(book, null)}>
+                                                        <tr
+                                                            key={book.id}
+                                                            className={`hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : ''}`}
+                                                            draggable="true"
+                                                            onDragStart={(e) => {
+                                                                // If book is in selection, drag all selected; otherwise just this book
+                                                                if (explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1) {
+                                                                    e.dataTransfer.setData('text/plain', JSON.stringify([...explorerSelectedBooks]));
+                                                                } else {
+                                                                    e.dataTransfer.setData('text/plain', JSON.stringify([book.id]));
+                                                                    setExplorerSelectedBooks(new Set([book.id]));
+                                                                }
+                                                                setExplorerDragBookId(book.id);
+                                                            }}
+                                                            onDragEnd={() => {
+                                                                setExplorerDragBookId(null);
+                                                                setExplorerDropTargetId(null);
+                                                            }}
+                                                            onClick={(e) => {
+                                                                if (e.shiftKey && explorerSelectedBooks.size > 0) {
+                                                                    // Shift-click for range select (simplified - just adds to selection)
+                                                                    setExplorerSelectedBooks(prev => new Set([...prev, book.id]));
+                                                                } else if (e.ctrlKey || e.metaKey) {
+                                                                    // Ctrl/Cmd-click to toggle selection
+                                                                    setExplorerSelectedBooks(prev => {
+                                                                        const next = new Set(prev);
+                                                                        if (next.has(book.id)) next.delete(book.id);
+                                                                        else next.add(book.id);
+                                                                        return next;
+                                                                    });
+                                                                } else {
+                                                                    // Regular click opens modal
+                                                                    openBookModal(book, null);
+                                                                }
+                                                            }}>
                                                             <td className="p-2">
                                                                 <img src={book.coverUrl} alt="" className="w-8 h-12 object-cover rounded" />
                                                             </td>
