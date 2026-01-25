@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.25.1] - 2026-01-24
+
+### Fixed
+- **Ctrl+C/A/X in inputs and modals** - Keyboard shortcuts now work properly in input fields and modals
+  - File versions: readerwrangler.js v4.21.1
+  - Ctrl+C copies selected text when text is selected (was copying books instead)
+  - Ctrl+A/C/X work in input fields and textareas (note editor, price goal, etc.)
+  - Ctrl+A disabled when modal open to prevent selecting entire page
+
 ## [4.25.0] - 2026-01-24
 
 ### Added

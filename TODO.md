@@ -8,9 +8,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Top Personal Priorities
 
-**3 CTL C and CTL A should work in modals.**
-
-**4. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
+**3. 🏷️ Tags** - MEDIUM/MEDIUM (8-12 hours)
    - TAGS.md says Unorganized column cannot have dividers. This is NOT true!
    - Adding tags to books or divs: Typing a unrecognizied tag should offer the option to create the tag. Discuss this.
    - Tags for books (explicit) and divs (positional inheritance)
@@ -21,7 +19,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Can't find thematically related books (Time Travel, Military SF) across 100+ columns
    - Impact: Cross-library thematic organization, reduced scrolling through empty columns
 
-**5. 🖥️ Desktop & Folders UI** - MEDIUM/HIGH (40-60 hours)
+**4. 🖥️ Desktop & Folders UI** - MEDIUM/HIGH (40-60 hours)
    - See [docs/design/DESKTOP-FOLDERS.md](docs/design/DESKTOP-FOLDERS.md) for full spec
    - Replaces Column Organizer (COLUMN-ARRANGER.md) and Column Carousel (COLUMN-CAROUSEL.md)
    - Virtual zoomable desktop with folder icons; folders open as resizable/movable windows

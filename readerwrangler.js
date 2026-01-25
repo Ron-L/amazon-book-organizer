@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.25.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.21.0";  // Build version for this file
+        const APP_VERSION = "4.25.1";  // Release version shown to users
+        const ORGANIZER_VERSION = "4.21.1";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -809,6 +809,24 @@
                         setToastAnimating(false);
                         // v4.16.0.o - Clear footer clipboard visibility
                         setFooterClipboardVisible(false);
+                    }
+
+                    // v4.21.1.a - Let browser handle Ctrl+A/C/X natively when input/textarea focused
+                    const isInputFocused = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
+                    if (isInputFocused && (e.ctrlKey || e.metaKey) && ['a', 'c', 'x'].includes(e.key)) {
+                        return; // Don't preventDefault, let browser handle
+                    }
+
+                    // v4.21.1.b - Let browser handle Ctrl+C if text is selected (user wants to copy text, not books)
+                    const hasTextSelection = window.getSelection()?.toString().length > 0;
+                    if (hasTextSelection && (e.ctrlKey || e.metaKey) && e.key === 'c') {
+                        return; // Let browser copy selected text
+                    }
+
+                    // v4.21.1.c - Disable Ctrl+A when modal is open (prevent selecting entire page)
+                    if (modalBookRef.current && (e.ctrlKey || e.metaKey) && e.key === 'a') {
+                        e.preventDefault(); // Don't select entire page or books
+                        return;
                     }
 
                     // v4.8.0 - Ctrl+Z: Undo (v4.21.0.g - use ref to check modal state, consume keystroke)
