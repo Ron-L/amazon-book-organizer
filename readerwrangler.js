@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.26.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.22.0";  // Build version for this file
+        const ORGANIZER_VERSION = "4.27.0-alpha.1";  // Build version for this file
         document.title = "ReaderWrangler";
         const STORAGE_KEY = "readerwrangler-state";
         const CACHE_KEY = "readerwrangler-enriched-cache";
@@ -392,6 +392,7 @@
             const [bulkPriceInput, setBulkPriceInput] = useState(''); // v4.20.0.a - bulk price goal input
             const [isEditingNote, setIsEditingNote] = useState(false); // v4.21.0.a - book note edit mode
             const [noteEditContent, setNoteEditContent] = useState(''); // v4.21.0.a - book note editor content
+            const [tagInputValue, setTagInputValue] = useState(''); // v4.27.0 - tag input autocomplete value
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -422,6 +423,8 @@
             const [dateFrom, setDateFrom] = useState(''); // Filter by acquisition date from (YYYY-MM-DD) (NEW v3.8.0.k)
             const [dateTo, setDateTo] = useState(''); // Filter by acquisition date to (YYYY-MM-DD) (NEW v3.8.0.k)
             const [datePreset, setDatePreset] = useState(''); // Date filter preset: '' | 'last30' | 'last90' | 'lastYear' | '2025' | '2024' | '2023' | 'custom' (NEW v4.15.6)
+            const [tagFilter, setTagFilter] = useState([]); // v4.27.0 - Filter by tags (array of tag names, OR logic)
+            const [tagRegistry, setTagRegistry] = useState({}); // v4.27.0 - Central tag registry {tagName: {label, count}}
             const [filterPanelOpen, setFilterPanelOpen] = useState(false); // Collapsible filter panel state (NEW v3.8.0)
             const [showAdvancedFilters, setShowAdvancedFilters] = useState(false); // Show advanced filters section (NEW v4.14.0.a, v4.14.0.b - no persistence, resets when panel closes)
             const [showHidden, setShowHidden] = useState(false); // Show hidden books toggle (NEW v4.1.0.d)
@@ -554,6 +557,10 @@
                             if (filters.dateFrom) setDateFrom(filters.dateFrom);
                             if (filters.dateTo) setDateTo(filters.dateTo);
                         }
+                        // v4.27.0: Load tag filter
+                        if (filters.tagFilter && Array.isArray(filters.tagFilter)) {
+                            setTagFilter(filters.tagFilter);
+                        }
                     }
                 } catch (e) {
                     console.error('Failed to load filters from localStorage:', e);
@@ -580,13 +587,14 @@
                         datePreset,  // v4.15.6: Save preset instead of raw dates (except for custom)
                         dateFrom: datePreset === 'custom' ? dateFrom : '',  // Only save dates for custom preset
                         dateTo: datePreset === 'custom' ? dateTo : '',
-                        showHidden
+                        showHidden,
+                        tagFilter  // v4.27.0 - Tag filter
                     };
                     localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
                 } catch (e) {
                     console.error('Failed to save filters to localStorage:', e);
                 }
-            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden]);
+            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden, tagFilter]);
 
             // Compute dateFrom/dateTo from datePreset selection (v4.15.6)
             React.useEffect(() => {
@@ -719,6 +727,7 @@
                                     setColumns(restoredColumns);
                                     setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
                                     setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
+                                    setTagRegistry(state.organization.tagRegistry || {}); // v4.27.0
                                     setDataSource(state.organization.dataSource || 'enriched');
                                     effectiveLastSync = state.lastSyncTime || Date.now();
                                     setLastSyncTime(effectiveLastSync);
@@ -767,7 +776,8 @@
                                 })),
                                 dataSource,
                                 blankImageBooks: Array.from(blankImageBooks),
-                                hiddenInstances: Array.from(hiddenInstances) // v4.16.0.z
+                                hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
+                                tagRegistry  // v4.27.0 - Tag registry
                             },
                             lastSyncTime: lastSyncTime || Date.now(),
                             savedAt: Date.now()
@@ -777,7 +787,7 @@
                         console.warn('Could not auto-save organization:', e);
                     }
                 }
-            }, [syncStatus, columns, blankImageBooks, dataSource, lastSyncTime, hiddenInstances]);
+            }, [syncStatus, columns, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
 
             useEffect(() => {
                 localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -4075,7 +4085,8 @@
             const filteredBooks = (bookIds) => {
                 // Check if any filter is active (needed inside function scope for divider hiding)
                 const filtersActive = !!(searchTerm || readStatusFilter || collectionFilter ||
-                    ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo || dealsFilterActive);
+                    ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo || dealsFilterActive ||
+                    (tagFilter && tagFilter.length > 0));
 
                 const result = bookIds.map(item => {
                     // v3.11.0 - Handle dividers (pass through as-is)
@@ -4173,7 +4184,11 @@
                     const matchesDeals = !dealsFilterActive ||
                         (book.onWishlist && book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger);
 
-                    return matchesSearch && matchesReadStatus && matchesCollection && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries && matchesDateRange && matchesDeals;
+                    // Tag filter (v4.27.0 - OR logic: book matches if it has ANY of the selected tags)
+                    const matchesTags = !tagFilter || tagFilter.length === 0 ||
+                        (book.tags && book.tags.some(tag => tagFilter.includes(tag)));
+
+                    return matchesSearch && matchesReadStatus && matchesCollection && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries && matchesDateRange && matchesDeals && matchesTags;
                 });
 
                 // v4.15.3 - Post-process: hide dividers with no books under them when filters active
@@ -4213,7 +4228,8 @@
 
             // v4.16.0.a - Check if any filter is active (for hiding empty columns/dividers)
             const hasActiveFilters = !!(searchTerm || readStatusFilter || collectionFilter ||
-                ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo);
+                ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo ||
+                (tagFilter && tagFilter.length > 0));
 
             // Calculate combined urgency from Library and Collections status
             // Urgency is based ONLY on Load status (what's in the app right now)
@@ -4371,15 +4387,15 @@
                                     }
                                 }}
                                 className={`px-4 py-2 border rounded-lg flex items-center justify-start gap-2 min-w-[150px] ${
-                                    (searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo)
+                                    (searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo || (tagFilter && tagFilter.length > 0))
                                     ? `border-blue-500 text-blue-700 font-semibold ${!filterPanelOpen ? 'filter-button-active' : ''}`
                                     : 'border-gray-300 text-gray-700'
                                 }`}
                                 title={!filterPanelOpen ? 'Show filters' : !showAdvancedFilters ? 'Show more filters' : 'Hide filters'}>
                                 🔍 {!filterPanelOpen ? 'Filters' : !showAdvancedFilters ? 'More Filters' : 'Hide'}
-                                {/* v4.15.6.g: Use datePreset for count instead of dateFrom/dateTo */}
-                                {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset) &&
-                                    ` (${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, datePreset].filter(Boolean).length})`}
+                                {/* v4.15.6.g: Use datePreset for count instead of dateFrom/dateTo, v4.27.0: add tagFilter */}
+                                {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset || (tagFilter && tagFilter.length > 0)) &&
+                                    ` (${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, datePreset, tagFilter?.length > 0].filter(Boolean).length})`}
                             </button>
 
                             {/* Book count + Show Hidden - always visible when panel closed (v4.22.0.a) */}
@@ -4479,8 +4495,57 @@
                                                 </div>
                                             </td>
 
-                                            {/* Empty cells for columns 4-6 in row 1 */}
-                                            <td></td>
+                                            {/* Tag filter - v4.27.0 */}
+                                            <td className="px-2 py-1">
+                                                {Object.keys(tagRegistry).length > 0 && (
+                                                    <div className="flex items-center gap-1 relative">
+                                                        <span title="Tags">🏷️</span>
+                                                        <div className="relative">
+                                                            <button
+                                                                onClick={() => setContextSubmenu(contextSubmenu === 'tagFilter' ? null : 'tagFilter')}
+                                                                className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-left flex items-center justify-between gap-2 ${
+                                                                    tagFilter.length > 0 ? 'border-blue-500 text-blue-700' : 'border-gray-300 text-gray-700'
+                                                                }`}
+                                                                style={{minWidth: '120px'}}>
+                                                                <span>{tagFilter.length > 0 ? `${tagFilter.length} tag${tagFilter.length > 1 ? 's' : ''}` : 'All Tags'}</span>
+                                                                <span className="text-gray-400">▼</span>
+                                                            </button>
+                                                            {contextSubmenu === 'tagFilter' && (
+                                                                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[180px] max-h-[300px] overflow-y-auto">
+                                                                    {Object.entries(tagRegistry).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([tagId, tagData]) => (
+                                                                        <label key={tagId} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={tagFilter.includes(tagId)}
+                                                                                onChange={() => {
+                                                                                    setTagFilter(prev =>
+                                                                                        prev.includes(tagId)
+                                                                                            ? prev.filter(t => t !== tagId)
+                                                                                            : [...prev, tagId]
+                                                                                    );
+                                                                                }}
+                                                                                className="w-4 h-4 rounded border-gray-300 text-blue-600"
+                                                                            />
+                                                                            <span className="text-sm">{tagData.label} ({tagData.count})</span>
+                                                                        </label>
+                                                                    ))}
+                                                                    {tagFilter.length > 0 && (
+                                                                        <>
+                                                                            <div className="border-t border-gray-200 my-1"></div>
+                                                                            <button
+                                                                                onClick={() => setTagFilter([])}
+                                                                                className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-gray-100 text-left">
+                                                                                Clear All
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </td>
+                                            {/* Empty cells for columns 5-6 in row 1 */}
                                             <td></td>
                                             <td></td>
                                         </tr>
@@ -4698,25 +4763,25 @@
                             )}
                         </div>
 
-                        {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel, v4.15.6.m - use datePreset) */}
-                        {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || datePreset) && (
+                        {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel, v4.15.6.m - use datePreset, v4.27.0 - add tagFilter) */}
+                        {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || datePreset || (tagFilter && tagFilter.length > 0)) && (
                             <div className="bg-blue-100 border border-blue-300 rounded-lg px-4 py-2 mb-4 flex items-center justify-between">
                                 <div className="flex items-center gap-2 flex-wrap text-sm">
                                     <span className="font-semibold">🔍 Active:</span>
                                     {searchTerm && <span>Search: "{searchTerm}"</span>}
-                                    {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
+                                    {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
                                     {readStatusFilter && <span>Read: {readStatusFilter}</span>}
-                                    {readStatusFilter && (collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
+                                    {readStatusFilter && (collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
                                     {collectionFilter && <span>Collection: {collectionFilter === 'UNCOLLECTED' ? 'Uncollected' : collectionFilter}</span>}
-                                    {collectionFilter && (ratingFilter || wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
+                                    {collectionFilter && (ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
                                     {ratingFilter && <span>Rating: {ratingFilter}+★</span>}
-                                    {ratingFilter && (wishlistFilter || seriesFilter || datePreset) && <span>|</span>}
+                                    {ratingFilter && (wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
                                     {wishlistFilter && <span>Wishlist: {wishlistFilter === 'owned' ? 'Owned Only' : 'Wishlist Only'}</span>}
-                                    {wishlistFilter && (ownershipFilter || seriesFilter || datePreset) && <span>|</span>}
+                                    {wishlistFilter && (ownershipFilter || seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
                                     {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
-                                    {ownershipFilter && (seriesFilter || datePreset) && <span>|</span>}
+                                    {ownershipFilter && (seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
                                     {seriesFilter && <span>Series: {seriesFilter === 'NOT_IN_SERIES' ? 'Not in Series' : seriesFilter}</span>}
-                                    {seriesFilter && datePreset && <span>|</span>}
+                                    {seriesFilter && (datePreset || tagFilter?.length > 0) && <span>|</span>}
                                     {datePreset && <span>Date: {
                                         datePreset === 'custom' ? `${dateFrom || '...'} to ${dateTo || '...'}` :
                                         datePreset === 'last30' ? 'Last 30 Days' :
@@ -4725,6 +4790,8 @@
                                         datePreset.startsWith('year') ? datePreset.substring(4) :
                                         datePreset
                                     }</span>}
+                                    {datePreset && tagFilter?.length > 0 && <span>|</span>}
+                                    {tagFilter && tagFilter.length > 0 && <span>Tags: {tagFilter.map(t => tagRegistry[t]?.label || t).join(', ')}</span>}
                                 </div>
                                 <button
                                     onClick={() => {
@@ -4738,6 +4805,7 @@
                                         setDatePreset('');
                                         setDateFrom('');
                                         setDateTo('');
+                                        setTagFilter([]);
                                     }}
                                     className="text-blue-700 hover:text-blue-900 font-semibold text-sm whitespace-nowrap">
                                     Clear All ×
@@ -5440,6 +5508,156 @@
                                                         <span className="text-gray-400 italic">No collections</span>
                                                     </div>
                                                 )}
+                                                {/* Tags (v4.27.0) */}
+                                                <div className="flex items-start gap-2">
+                                                    <span className="font-semibold text-gray-700">Tags:</span>
+                                                    <div className="flex-1 flex flex-wrap items-center gap-1">
+                                                        {modalBook.tags && modalBook.tags.length > 0 ? (
+                                                            modalBook.tags.map(tagId => (
+                                                                <span key={tagId}
+                                                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                                                    {tagRegistry[tagId]?.label || tagId}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            // Remove tag from book
+                                                                            const newTags = modalBook.tags.filter(t => t !== tagId);
+                                                                            setBooks(prev => {
+                                                                                const updated = prev.map(b =>
+                                                                                    b.id === modalBook.id ? { ...b, tags: newTags } : b
+                                                                                );
+                                                                                saveBooksToIndexedDB(updated);
+                                                                                return updated;
+                                                                            });
+                                                                            setModalBook(prev => ({ ...prev, tags: newTags }));
+                                                                            // Update tag registry count
+                                                                            setTagRegistry(prev => {
+                                                                                const updated = { ...prev };
+                                                                                if (updated[tagId]) {
+                                                                                    updated[tagId] = { ...updated[tagId], count: Math.max(0, updated[tagId].count - 1) };
+                                                                                }
+                                                                                return updated;
+                                                                            });
+                                                                        }}
+                                                                        className="text-blue-600 hover:text-blue-800 font-bold"
+                                                                        title="Remove tag">×</button>
+                                                                </span>
+                                                            ))
+                                                        ) : (
+                                                            <span className="text-gray-400 italic text-sm">No tags</span>
+                                                        )}
+                                                        <div className="relative inline-block">
+                                                            <button
+                                                                onClick={() => {
+                                                                    if (contextSubmenu !== 'addTagModal') {
+                                                                        setTagInputValue('');
+                                                                    }
+                                                                    setContextSubmenu(contextSubmenu === 'addTagModal' ? null : 'addTagModal');
+                                                                }}
+                                                                className="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-0.5 border border-blue-300 rounded-full hover:bg-blue-50">
+                                                                + Add tag
+                                                            </button>
+                                                            {contextSubmenu === 'addTagModal' && (
+                                                                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[200px]"
+                                                                    onClick={(e) => e.stopPropagation()}>
+                                                                    <div className="p-2">
+                                                                        <input
+                                                                            type="text"
+                                                                            value={tagInputValue}
+                                                                            placeholder="Type tag name..."
+                                                                            className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                            autoFocus
+                                                                            onKeyDown={(e) => {
+                                                                                e.stopPropagation();
+                                                                                if (e.key === 'Escape') {
+                                                                                    setContextSubmenu(null);
+                                                                                    setTagInputValue('');
+                                                                                }
+                                                                            }}
+                                                                            onChange={(e) => setTagInputValue(e.target.value)}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="max-h-[200px] overflow-y-auto border-t border-gray-200">
+                                                                        {(() => {
+                                                                            const inputValue = tagInputValue.toLowerCase().trim();
+                                                                            const existingTags = Object.entries(tagRegistry)
+                                                                                .filter(([id, data]) =>
+                                                                                    (!inputValue || data.label.toLowerCase().includes(inputValue)) &&
+                                                                                    !(modalBook.tags || []).includes(id)
+                                                                                )
+                                                                                .sort((a, b) => a[1].label.localeCompare(b[1].label));
+                                                                            const exactMatch = existingTags.find(([id, data]) => data.label.toLowerCase() === inputValue);
+                                                                            const showCreate = inputValue && !exactMatch;
+
+                                                                            return (
+                                                                                <>
+                                                                                    {showCreate && (
+                                                                                        <button
+                                                                                            className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 text-blue-600 flex items-center gap-2"
+                                                                                            onClick={() => {
+                                                                                                const newTagId = inputValue.replace(/\s+/g, '-');
+                                                                                                const newTagLabel = tagInputValue.trim();
+                                                                                                // Add to tag registry
+                                                                                                setTagRegistry(prev => ({
+                                                                                                    ...prev,
+                                                                                                    [newTagId]: { label: newTagLabel, count: 1 }
+                                                                                                }));
+                                                                                                // Add to book
+                                                                                                const newTags = [...(modalBook.tags || []), newTagId];
+                                                                                                setBooks(prev => {
+                                                                                                    const updated = prev.map(b =>
+                                                                                                        b.id === modalBook.id ? { ...b, tags: newTags } : b
+                                                                                                    );
+                                                                                                    saveBooksToIndexedDB(updated);
+                                                                                                    return updated;
+                                                                                                });
+                                                                                                setModalBook(prev => ({ ...prev, tags: newTags }));
+                                                                                                setContextSubmenu(null);
+                                                                                                setTagInputValue('');
+                                                                                            }}>
+                                                                                            <span>➕</span> Create "{tagInputValue.trim()}"
+                                                                                        </button>
+                                                                                    )}
+                                                                                    {existingTags.map(([tagId, tagData]) => (
+                                                                                        <button
+                                                                                            key={tagId}
+                                                                                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 flex items-center justify-between"
+                                                                                            onClick={() => {
+                                                                                                // Add existing tag to book
+                                                                                                const newTags = [...(modalBook.tags || []), tagId];
+                                                                                                setBooks(prev => {
+                                                                                                    const updated = prev.map(b =>
+                                                                                                        b.id === modalBook.id ? { ...b, tags: newTags } : b
+                                                                                                    );
+                                                                                                    saveBooksToIndexedDB(updated);
+                                                                                                    return updated;
+                                                                                                });
+                                                                                                setModalBook(prev => ({ ...prev, tags: newTags }));
+                                                                                                // Update tag registry count
+                                                                                                setTagRegistry(prev => ({
+                                                                                                    ...prev,
+                                                                                                    [tagId]: { ...prev[tagId], count: prev[tagId].count + 1 }
+                                                                                                }));
+                                                                                                setContextSubmenu(null);
+                                                                                                setTagInputValue('');
+                                                                                            }}>
+                                                                                            <span>{tagData.label}</span>
+                                                                                            <span className="text-gray-400 text-xs">({tagData.count})</span>
+                                                                                        </button>
+                                                                                    ))}
+                                                                                    {existingTags.length === 0 && !showCreate && (
+                                                                                        <div className="px-3 py-2 text-sm text-gray-400">
+                                                                                            {inputValue ? 'No matching tags' : 'Type to search or create'}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </>
+                                                                            );
+                                                                        })()}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {/* Price section for wishlist books (v4.17.0, v4.18.0.b - show for all wishlist, not just those with price) */}

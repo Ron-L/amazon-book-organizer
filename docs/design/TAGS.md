@@ -154,8 +154,10 @@ When tag filter is active:
 ```
 
 - Click "+ Add tag" or type in field
-- Autocomplete from existing tags
-- Enter or comma to confirm
+- Autocomplete from existing tags (shows count)
+- If input matches no existing tags, dropdown shows `➕ Create "[input]"` option
+- User must select from dropdown (arrow keys + Enter, or click) - typing Enter alone does nothing
+- This prevents accidental tag creation from typos
 - Click × to remove (explicit only; inherited shows no ×)
 
 **Multi-select Context Menu:**
@@ -312,8 +314,8 @@ Tags are case-insensitive for matching, but preserve display case from first cre
 - "Military SF" created first → always displays as "Military SF"
 - User types "military sf" → matches existing, uses existing display form
 
-### Unorganized Column
-Unorganized column has no divs, so books there can only have explicit tags.
+### Books Not Under Any Div
+Books not under any div (at top of column before first div, or in columns without divs) have no inherited tags - only explicit tags.
 
 ---
 
