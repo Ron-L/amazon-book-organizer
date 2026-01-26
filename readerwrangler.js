@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.22";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.23";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -108,7 +108,7 @@
             const [viewMode, setViewMode] = useState('columns'); // 'columns' | 'explorer'
             const [folders, setFolders] = useState([]); // User-created folders
             const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
-            const [explorerSort, setExplorerSort] = useState({ column: 'custom', direction: 'asc' }); // 'custom' | 'title' | 'author' | 'rating'
+            const [explorerSort, setExplorerSort] = useState({ column: 'dateAdded', direction: 'desc' }); // 'custom' | 'title' | 'author' | 'rating' | 'dateAdded'
             const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
             const [explorerCoverCols, setExplorerCoverCols] = useState(56); // Slider value (4-60), actual cols = 64-value
             const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed
@@ -633,6 +633,16 @@
             useEffect(() => {
                 localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
             }, [folders]);
+
+            // v5.0.0-alpha.23 - Set appropriate default sort when folder changes
+            // All Books: dateAdded desc (no manual order available since read-only)
+            // User folders: custom (manual order) unless user chose otherwise
+            useEffect(() => {
+                if (selectedFolderId === '__all__' && explorerSort.column === 'custom') {
+                    // All Books can't use manual order - switch to Date Added
+                    setExplorerSort({ column: 'dateAdded', direction: 'desc' });
+                }
+            }, [selectedFolderId]);
 
             // Expose books to window for debugging
             useEffect(() => {
@@ -6646,24 +6656,28 @@
                                                 />
                                             </div>
                                         )}
-                                        {/* Sort selector (in both views) */}
-                                        <div className="flex gap-1 border-l pl-4 text-sm">
+                                        {/* Sort status display (in both views) */}
+                                        <div className="flex items-center gap-1 border-l pl-4 text-sm">
                                             <span className="text-gray-500">Sort:</span>
-                                            <select
-                                                value={explorerSort.column}
-                                                onChange={(e) => setExplorerSort({ column: e.target.value, direction: 'asc' })}
-                                                className="border-none bg-transparent text-gray-700 cursor-pointer focus:outline-none">
-                                                <option value="custom">Custom</option>
-                                                <option value="title">Title</option>
-                                                <option value="author">Author</option>
-                                                <option value="rating">Rating</option>
-                                            </select>
+                                            <span className="text-gray-700">
+                                                {explorerSort.column === 'custom' ? 'Manual Order' :
+                                                 explorerSort.column === 'title' ? 'Title' :
+                                                 explorerSort.column === 'author' ? 'Author' :
+                                                 explorerSort.column === 'rating' ? 'Rating' :
+                                                 explorerSort.column === 'dateAdded' ? 'Date Added' : explorerSort.column}
+                                            </span>
                                             {explorerSort.column !== 'custom' && (
-                                                <button
-                                                    onClick={() => setExplorerSort(prev => ({ ...prev, direction: prev.direction === 'asc' ? 'desc' : 'asc' }))}
-                                                    className="text-gray-500 hover:text-gray-700">
-                                                    {explorerSort.direction === 'asc' ? '↑' : '↓'}
-                                                </button>
+                                                <>
+                                                    <span className="text-gray-500">{explorerSort.direction === 'asc' ? '↑' : '↓'}</span>
+                                                    {selectedFolderId !== '__all__' && (
+                                                        <button
+                                                            onClick={() => setExplorerSort({ column: 'custom', direction: 'asc' })}
+                                                            className="ml-1 text-gray-400 hover:text-gray-600 text-xs"
+                                                            title="Return to Manual Order">
+                                                            ×
+                                                        </button>
+                                                    )}
+                                                </>
                                             )}
                                         </div>
                                     </div>
@@ -6683,6 +6697,9 @@
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100 w-24" onClick={() => setExplorerSort(prev => ({ column: 'rating', direction: prev.column === 'rating' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                         Rating {explorerSort.column === 'rating' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
                                                     </th>
+                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 w-28" onClick={() => setExplorerSort(prev => ({ column: 'dateAdded', direction: prev.column === 'dateAdded' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
+                                                        Date Added {explorerSort.column === 'dateAdded' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -6697,6 +6714,11 @@
                                                             if (explorerSort.column === 'title') return dir * (a.title || '').localeCompare(b.title || '');
                                                             if (explorerSort.column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
                                                             if (explorerSort.column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
+                                                            if (explorerSort.column === 'dateAdded') {
+                                                                const dateA = a.acquisitionDate || a.addedToWishlist || '';
+                                                                const dateB = b.acquisitionDate || b.addedToWishlist || '';
+                                                                return dir * dateA.localeCompare(dateB);
+                                                            }
                                                             return 0;
                                                         });
                                                     return sortedBooks.map((book, index) => (
@@ -6721,10 +6743,14 @@
                                                                 setExplorerDragBookId(book.id);
                                                             }}
                                                             onDragOver={(e) => {
+                                                                // Only allow reorder when in custom (manual) sort mode on a user folder
                                                                 if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
                                                                     e.preventDefault();
                                                                     e.dataTransfer.dropEffect = 'move';
                                                                     setExplorerReorderTarget(index);
+                                                                } else {
+                                                                    // Show not-allowed cursor when sorted
+                                                                    e.dataTransfer.dropEffect = 'none';
                                                                 }
                                                             }}
                                                             onDragLeave={() => setExplorerReorderTarget(null)}
@@ -6777,6 +6803,14 @@
                                                             <td className="p-2">
                                                                 {book.rating ? `${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5 - Math.floor(book.rating))}` : '-'}
                                                             </td>
+                                                            <td className="p-2 text-gray-500 text-xs">
+                                                                {(() => {
+                                                                    const dateStr = book.acquisitionDate || book.addedToWishlist;
+                                                                    if (!dateStr) return '-';
+                                                                    const date = new Date(dateStr);
+                                                                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                                                })()}
+                                                            </td>
                                                         </tr>
                                                     ));
                                                 })()}
@@ -6794,6 +6828,11 @@
                                                         if (explorerSort.column === 'title') return dir * (a.title || '').localeCompare(b.title || '');
                                                         if (explorerSort.column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
                                                         if (explorerSort.column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
+                                                        if (explorerSort.column === 'dateAdded') {
+                                                            const dateA = a.acquisitionDate || a.addedToWishlist || '';
+                                                            const dateB = b.acquisitionDate || b.addedToWishlist || '';
+                                                            return dir * dateA.localeCompare(dateB);
+                                                        }
                                                         return 0;
                                                     });
                                                 return sortedBooks.map((book, index) => (
@@ -6818,10 +6857,14 @@
                                                             setExplorerDragBookId(book.id);
                                                         }}
                                                         onDragOver={(e) => {
+                                                            // Only allow reorder when in custom (manual) sort mode on a user folder
                                                             if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
                                                                 e.preventDefault();
                                                                 e.dataTransfer.dropEffect = 'move';
                                                                 setExplorerReorderTarget(index);
+                                                            } else {
+                                                                // Show not-allowed cursor when sorted
+                                                                e.dataTransfer.dropEffect = 'none';
                                                             }
                                                         }}
                                                         onDragLeave={() => setExplorerReorderTarget(null)}
