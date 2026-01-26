@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.33";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.34";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6891,15 +6891,11 @@
                                                                 setExplorerDragBookId(book.id);
                                                             }}
                                                             onDragOver={(e) => {
-                                                                console.log('DEBUG onDragOver book row');
                                                                 e.preventDefault(); // Allow drop event to fire
-                                                                // Only allow reorder when in custom (manual) sort mode on a user folder
+                                                                e.dataTransfer.dropEffect = 'move'; // Must be 'move' for onDrop to fire
+                                                                // Only show reorder target when in custom (manual) sort mode on a user folder
                                                                 if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
-                                                                    e.dataTransfer.dropEffect = 'move';
                                                                     setExplorerReorderTarget(index);
-                                                                } else {
-                                                                    // Show not-allowed cursor when sorted
-                                                                    e.dataTransfer.dropEffect = 'none';
                                                                 }
                                                             }}
                                                             onDragLeave={() => setExplorerReorderTarget(null)}
@@ -7045,13 +7041,10 @@
                                                         }}
                                                         onDragOver={(e) => {
                                                             e.preventDefault(); // Allow drop event to fire
-                                                            // Only allow reorder when in custom (manual) sort mode on a user folder
+                                                            e.dataTransfer.dropEffect = 'move'; // Must be 'move' for onDrop to fire
+                                                            // Only show reorder target when in custom (manual) sort mode on a user folder
                                                             if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
-                                                                e.dataTransfer.dropEffect = 'move';
                                                                 setExplorerReorderTarget(index);
-                                                            } else {
-                                                                // Show not-allowed cursor when sorted
-                                                                e.dataTransfer.dropEffect = 'none';
                                                             }
                                                         }}
                                                         onDragLeave={() => setExplorerReorderTarget(null)}
