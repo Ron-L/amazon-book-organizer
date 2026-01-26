@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.42";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.43";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -378,17 +378,17 @@
                                 }
                             }
 
-                            // Create subfolder for divider
+                            // Create subfolder for divider (dividers use 'label' not 'name')
                             const subfolder = {
                                 id: `folder-${entry.id}`,
-                                name: entry.name || 'Untitled',
+                                name: entry.label || 'Untitled',
                                 parentId: rootFolderId,
                                 bookIds: [],
                                 collapsed: false
                             };
                             newFolders.push(subfolder);
                             currentFolder = subfolder;
-                            console.log(`📁 Created subfolder: ${entry.name}`);
+                            console.log(`📁 Created subfolder: ${entry.label}`);
                         } else {
                             // Book entry - add to current folder
                             const bookId = getBookIdFromEntry(entry);
