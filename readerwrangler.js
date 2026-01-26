@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.36";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.37";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6893,6 +6893,7 @@
                                                             onDragOver={(e) => {
                                                                 e.preventDefault(); // Allow drop event to fire
                                                                 e.dataTransfer.dropEffect = 'move'; // Must be 'move' for onDrop to fire
+                                                                console.log('DEBUG onDragOver setting reorderTarget to', index);
                                                                 setExplorerReorderTarget(index); // Always show target (styled red if not allowed)
                                                             }}
                                                             onDragLeave={() => setExplorerReorderTarget(null)}
