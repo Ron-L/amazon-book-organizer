@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.38";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.39";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6873,7 +6873,7 @@
                                                         <tr
                                                             key={book.id}
                                                             className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
-                                                            style={explorerReorderTarget === index ? { borderTop: '3px solid red' } : {}}
+                                                            style={explorerReorderTarget === index ? { borderTop: `3px solid ${explorerSort.column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}` } : {}}
                                                             draggable="true"
                                                             onDragStart={(e) => {
                                                                 e.stopPropagation();
@@ -6894,8 +6894,7 @@
                                                             onDragOver={(e) => {
                                                                 e.preventDefault(); // Allow drop event to fire
                                                                 e.dataTransfer.dropEffect = 'move'; // Must be 'move' for onDrop to fire
-                                                                console.log('DEBUG onDragOver setting reorderTarget to', index);
-                                                                setExplorerReorderTarget(index); // Always show target (styled red if not allowed)
+                                                                setExplorerReorderTarget(index); // Always show target (styled by allowed state)
                                                             }}
                                                             onDragLeave={() => setExplorerReorderTarget(null)}
                                                             onDrop={(e) => {
@@ -7019,7 +7018,8 @@
                                                 return sortedBooks.map((book, index) => (
                                                     <div
                                                         key={book.id}
-                                                        className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''} ${explorerReorderTarget === index ? (explorerSort.column === 'custom' && selectedFolderId !== '__all__' ? 'ring-2 ring-blue-500 ring-offset-2' : 'ring-2 ring-red-400 ring-offset-2') : ''}`}
+                                                        className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''}`}
+                                                        style={explorerReorderTarget === index ? { outline: `3px solid ${explorerSort.column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}`, outlineOffset: '2px' } : {}}
                                                         draggable="true"
                                                         onDragStart={(e) => {
                                                             e.stopPropagation();
