@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.41";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.42";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -341,10 +341,19 @@
             const migrateColumnsToFolders = () => {
                 const newFolders = [];
 
+                console.log('📁 Migration starting. Columns:', columns.length);
+
                 columns.forEach(column => {
                     // Skip empty columns
                     const hasContent = column.books && column.books.length > 0;
-                    if (!hasContent) return;
+                    if (!hasContent) {
+                        console.log(`📁 Skipping empty column: ${column.name}`);
+                        return;
+                    }
+
+                    console.log(`📁 Processing column: ${column.name} with ${column.books.length} entries`);
+                    // DEBUG: Log first few entries to see format
+                    console.log(`📁 First 3 entries:`, column.books.slice(0, 3));
 
                     // Create root folder for this column
                     const rootFolderId = `folder-${column.id}`;
@@ -358,7 +367,7 @@
 
                     let currentFolder = rootFolder;
 
-                    column.books.forEach(entry => {
+                    column.books.forEach((entry, idx) => {
                         if (entry && entry.type === 'divider') {
                             // Divider becomes a subfolder
                             // First, push current folder if it has books
@@ -379,11 +388,15 @@
                             };
                             newFolders.push(subfolder);
                             currentFolder = subfolder;
+                            console.log(`📁 Created subfolder: ${entry.name}`);
                         } else {
                             // Book entry - add to current folder
                             const bookId = getBookIdFromEntry(entry);
                             if (bookId) {
                                 currentFolder.bookIds.push(bookId);
+                            } else if (idx < 5) {
+                                // DEBUG: Log entries that don't yield bookIds
+                                console.log(`📁 Entry ${idx} yielded no bookId:`, entry);
                             }
                         }
                     });
@@ -392,6 +405,8 @@
                     if (!newFolders.find(f => f.id === rootFolder.id)) {
                         newFolders.push(rootFolder);
                     }
+
+                    console.log(`📁 Column ${column.name} → folder with ${rootFolder.bookIds.length} books`);
                 });
 
                 // Add Inbox folder at the end
@@ -403,6 +418,7 @@
                     collapsed: false
                 });
 
+                console.log('📁 Migration complete. Folders created:', newFolders.map(f => `${f.name}(${f.bookIds.length})`));
                 setFolders(newFolders);
                 setShowMigrationDialog(false);
                 setViewMode('explorer'); // Switch to explorer view to show result
