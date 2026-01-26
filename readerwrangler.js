@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.40";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.41";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -732,12 +732,12 @@
                     });
                 });
 
-                // Check if folders are empty (none, or only Inbox with no books)
-                const foldersEmpty = folders.length === 0 ||
-                    (folders.length === 1 && folders[0].id === '__inbox__' && (!folders[0].bookIds || folders[0].bookIds.length === 0));
+                // Check if no user-created folders exist (Inbox doesn't count - it's auto-created)
+                // Inbox may have books from auto-sync, but that's not user organization
+                const noUserFolders = !folders.some(f => f.id !== '__inbox__');
 
-                // Show migration dialog if columns have content but folders are empty
-                if (columnsHaveContent && foldersEmpty && !showMigrationDialog) {
+                // Show migration dialog if columns have content but no user folders exist
+                if (columnsHaveContent && noUserFolders && !showMigrationDialog) {
                     console.log('📁 Migration opportunity detected: columns have content, folders empty');
                     setShowMigrationDialog(true);
                 }
