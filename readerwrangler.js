@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.17";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.18";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6332,7 +6332,7 @@
                                 <div className="p-2">
                                     {/* All Books (virtual) */}
                                     <div
-                                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => setSelectedFolderId('__all__')}>
                                         <span>{FOLDER_ALL_BOOKS.icon}</span>
                                         <span className="flex-1">{FOLDER_ALL_BOOKS.name}</span>
@@ -6340,7 +6340,7 @@
                                     </div>
                                     {/* Unorganized (virtual) - drop target removes from all folders */}
                                     <div
-                                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__inbox__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__inbox__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                         onClick={() => setSelectedFolderId('__inbox__')}
                                         onDragOver={(e) => {
                                             e.preventDefault();
@@ -6368,7 +6368,7 @@
                                     {getChildFolders(null).filter(f => f.id !== '__inbox__').map(folder => (
                                         <div
                                             key={folder.id}
-                                            className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                             onClick={() => setSelectedFolderId(folder.id)}
                                             onDoubleClick={() => {
                                                 setEditingFolderId(folder.id);
