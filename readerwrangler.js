@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.18";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.19";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6347,7 +6347,12 @@
                                             e.dataTransfer.dropEffect = 'move';
                                             setExplorerDropTargetId('__inbox__');
                                         }}
-                                        onDragLeave={() => setExplorerDropTargetId(null)}
+                                        onDragLeave={(e) => {
+                                            // Only clear if actually leaving container, not moving to child element
+                                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                setExplorerDropTargetId(null);
+                                            }
+                                        }}
                                         onDrop={(e) => {
                                             e.preventDefault();
                                             const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
@@ -6360,9 +6365,9 @@
                                             setExplorerDropTargetId(null);
                                             setExplorerSelectedBooks(new Set());
                                         }}>
-                                        <span>{FOLDER_INBOX.icon}</span>
-                                        <span className="flex-1">{FOLDER_INBOX.name}</span>
-                                        <span className="text-xs text-gray-500">({getFolderBookIds('__inbox__').length})</span>
+                                        <span className="pointer-events-none">{FOLDER_INBOX.icon}</span>
+                                        <span className="flex-1 pointer-events-none">{FOLDER_INBOX.name}</span>
+                                        <span className="text-xs text-gray-500 pointer-events-none">({getFolderBookIds('__inbox__').length})</span>
                                     </div>
                                     {/* User folders (exclude Inbox since shown above) */}
                                     {getChildFolders(null).filter(f => f.id !== '__inbox__').map(folder => (
@@ -6381,7 +6386,12 @@
                                                 setExplorerIsCopyDrag(isCopy);
                                                 setExplorerDropTargetId(folder.id);
                                             }}
-                                            onDragLeave={() => setExplorerDropTargetId(null)}
+                                            onDragLeave={(e) => {
+                                                // Only clear if actually leaving container, not moving to child element
+                                                if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                    setExplorerDropTargetId(null);
+                                                }
+                                            }}
                                             onDrop={(e) => {
                                                 e.preventDefault();
                                                 const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
@@ -6421,7 +6431,7 @@
                                                     }
                                                 }
                                             }}>
-                                            <span>📁</span>
+                                            <span className="pointer-events-none">📁</span>
                                             {editingFolderId === folder.id ? (
                                                 <input
                                                     type="text"
@@ -6456,8 +6466,8 @@
                                                 />
                                             ) : (
                                                 <>
-                                                    <span className="flex-1">{folder.name}</span>
-                                                    <span className="text-xs text-gray-500">({(folder.bookIds || []).length})</span>
+                                                    <span className="flex-1 pointer-events-none">{folder.name}</span>
+                                                    <span className="text-xs text-gray-500 pointer-events-none">({(folder.bookIds || []).length})</span>
                                                     {/* Delete button on hover */}
                                                     <button
                                                         onClick={(e) => {
