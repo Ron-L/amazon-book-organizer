@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.20";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.21";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -119,6 +119,7 @@
             const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select
             const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
             const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
+            const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -6331,7 +6332,7 @@
                                     Folders
                                 </div>
                                 <div className="p-2">
-                                    {/* All Books (virtual) */}
+                                    {/* All Books (virtual, view-only) */}
                                     <div
                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => setSelectedFolderId('__all__')}>
@@ -6339,9 +6340,11 @@
                                         <span className="flex-1">{FOLDER_ALL_BOOKS.name}</span>
                                         <span className="text-xs text-gray-500">({books.length})</span>
                                     </div>
-                                    {/* Unorganized (virtual) - drop target removes from all folders */}
+                                    {/* Divider line to separate All Books from folders */}
+                                    <div className="border-b border-gray-200 my-1 mx-2"></div>
+                                    {/* Inbox - indented as part of folder hierarchy */}
                                     <div
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__inbox__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                        className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__inbox__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                         onClick={() => setSelectedFolderId('__inbox__')}
                                         onDragOver={(e) => {
                                             e.preventDefault();
@@ -6374,7 +6377,7 @@
                                     {getChildFolders(null).filter(f => f.id !== '__inbox__').map(folder => (
                                         <div
                                             key={folder.id}
-                                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                            className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                             onClick={() => setSelectedFolderId(folder.id)}
                                             onDoubleClick={() => {
                                                 setEditingFolderId(folder.id);
@@ -6383,8 +6386,19 @@
                                             onDragOver={(e) => {
                                                 e.preventDefault();
                                                 const isCopy = e.ctrlKey;
-                                                e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
                                                 setExplorerIsCopyDrag(isCopy);
+                                                // Check if drop is valid using stored drag data
+                                                if (explorerDragData) {
+                                                    const existing = new Set(folder.bookIds || []);
+                                                    const newBookIds = explorerDragData.bookIds.filter(id => !existing.has(id));
+                                                    if (newBookIds.length === 0) {
+                                                        // All books already in folder - invalid drop
+                                                        e.dataTransfer.dropEffect = 'none';
+                                                        setExplorerDropTargetId(null);
+                                                        return;
+                                                    }
+                                                }
+                                                e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
                                                 setExplorerDropTargetId(folder.id);
                                             }}
                                             onDragLeave={(e) => {
@@ -6401,9 +6415,10 @@
                                                 const existing = new Set(folder.bookIds || []);
                                                 const newBookIds = bookIds.filter(id => !existing.has(id));
                                                 if (newBookIds.length === 0) {
-                                                    // All books already in folder - show toast
+                                                    // All books already in folder - show toast at drop position
                                                     const msg = bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder';
                                                     setClipboardMessage(msg);
+                                                    setToastPosition({ x: e.clientX, y: e.clientY });
                                                     setFooterClipboardVisible(false);
                                                     setToastVisible(true);
                                                     setToastAnimating(false);
@@ -6534,6 +6549,11 @@
                                         <span className="text-sm text-gray-500 ml-2">
                                             ({getFolderBookIds(selectedFolderId).length} books)
                                         </span>
+                                        {selectedFolderId === '__all__' && (
+                                            <span className="text-xs text-gray-400 ml-2 italic">
+                                                — view only, organize from folders
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="flex gap-4 items-center">
                                         {/* View toggle - styled to match Columns/Explorer button */}
@@ -6627,6 +6647,11 @@
                                                             className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'} ${explorerReorderTarget === index ? 'border-t-2 border-t-blue-500' : ''}`}
                                                             draggable="true"
                                                             onDragStart={(e) => {
+                                                                // Disable drag from All Books (view-only)
+                                                                if (selectedFolderId === '__all__') {
+                                                                    e.preventDefault();
+                                                                    return;
+                                                                }
                                                                 e.stopPropagation();
                                                                 e.dataTransfer.effectAllowed = 'copyMove';
                                                                 const dragData = {
@@ -6636,6 +6661,7 @@
                                                                         : [book.id]
                                                                 };
                                                                 e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                                                                setExplorerDragData(dragData); // Store for validity checks in dragOver
                                                                 if (!explorerSelectedBooks.has(book.id)) {
                                                                     setExplorerSelectedBooks(new Set([book.id]));
                                                                 }
@@ -6665,6 +6691,7 @@
                                                                 setExplorerDragBookId(null);
                                                                 setExplorerDropTargetId(null);
                                                                 setExplorerReorderTarget(null);
+                                                                setExplorerDragData(null);
                                                             }}
                                                             onClick={(e) => {
                                                                 if (e.shiftKey && explorerSelectionAnchor !== null) {
@@ -6722,6 +6749,11 @@
                                                         className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''} ${explorerReorderTarget === index ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
                                                         draggable="true"
                                                         onDragStart={(e) => {
+                                                            // Disable drag from All Books (view-only)
+                                                            if (selectedFolderId === '__all__') {
+                                                                e.preventDefault();
+                                                                return;
+                                                            }
                                                             e.stopPropagation();
                                                             e.dataTransfer.effectAllowed = 'copyMove';
                                                             const dragData = {
@@ -6731,6 +6763,7 @@
                                                                     : [book.id]
                                                             };
                                                             e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                                                            setExplorerDragData(dragData); // Store for validity checks in dragOver
                                                             if (!explorerSelectedBooks.has(book.id)) {
                                                                 setExplorerSelectedBooks(new Set([book.id]));
                                                             }
@@ -6760,6 +6793,7 @@
                                                             setExplorerDragBookId(null);
                                                             setExplorerDropTargetId(null);
                                                             setExplorerReorderTarget(null);
+                                                            setExplorerDragData(null);
                                                         }}
                                                         onClick={(e) => {
                                                             if (e.shiftKey && explorerSelectionAnchor !== null) {
