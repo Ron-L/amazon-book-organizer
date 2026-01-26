@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.10";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -110,7 +110,7 @@
             const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
             const [explorerSort, setExplorerSort] = useState({ column: 'custom', direction: 'asc' }); // 'custom' | 'title' | 'author' | 'rating'
             const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
-            const [explorerCoverSize, setExplorerCoverSize] = useState('medium'); // 'small' | 'medium' | 'large'
+            const [explorerCoverCols, setExplorerCoverCols] = useState(8); // Grid columns (4-12)
             const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed
             const [editingFolderName, setEditingFolderName] = useState(''); // Folder rename input
             const [explorerDragBookId, setExplorerDragBookId] = useState(null); // Book being dragged in Explorer
@@ -6458,27 +6458,19 @@
                                                 Covers
                                             </button>
                                         </div>
-                                        {/* Cover size selector (only in cover view) */}
+                                        {/* Cover size slider (only in cover view) */}
                                         {explorerView === 'covers' && (
-                                            <div className="flex gap-1 border-l pl-4">
-                                                <button
-                                                    onClick={() => setExplorerCoverSize('small')}
-                                                    className={`px-2 py-1 text-xs rounded ${explorerCoverSize === 'small' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
-                                                    title="Small covers">
-                                                    S
-                                                </button>
-                                                <button
-                                                    onClick={() => setExplorerCoverSize('medium')}
-                                                    className={`px-2 py-1 text-xs rounded ${explorerCoverSize === 'medium' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
-                                                    title="Medium covers">
-                                                    M
-                                                </button>
-                                                <button
-                                                    onClick={() => setExplorerCoverSize('large')}
-                                                    className={`px-2 py-1 text-xs rounded ${explorerCoverSize === 'large' ? 'bg-gray-200 text-gray-800' : 'text-gray-500 hover:bg-gray-100'}`}
-                                                    title="Large covers">
-                                                    L
-                                                </button>
+                                            <div className="flex items-center gap-2 border-l pl-4">
+                                                <span className="text-xs text-gray-500">Size:</span>
+                                                <input
+                                                    type="range"
+                                                    min="4"
+                                                    max="12"
+                                                    value={explorerCoverCols}
+                                                    onChange={(e) => setExplorerCoverCols(parseInt(e.target.value))}
+                                                    className="w-20 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                                    title={`${explorerCoverCols} columns`}
+                                                />
                                             </div>
                                         )}
                                         {/* Sort selector (in both views) */}
@@ -6589,7 +6581,7 @@
                                             </tbody>
                                         </table>
                                     ) : (
-                                        <div className={`grid gap-4 ${explorerCoverSize === 'small' ? 'grid-cols-10' : explorerCoverSize === 'large' ? 'grid-cols-4' : 'grid-cols-6'}`}>
+                                        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${explorerCoverCols}, minmax(0, 1fr))` }}>
                                             {(() => {
                                                 const bookList = getFolderBookIds(selectedFolderId)
                                                     .map(id => books.find(b => b.id === id))
@@ -6607,7 +6599,7 @@
                                                 return bookList;
                                             })().map(book => (
                                                     <div key={book.id} className="cursor-pointer hover:opacity-80" onClick={() => openBookModal(book, null)}>
-                                                        <img src={book.coverUrl} alt={book.title} className={`w-full h-auto rounded shadow ${explorerCoverSize === 'small' ? 'max-w-[80px]' : ''}`} />
+                                                        <img src={book.coverUrl} alt={book.title} className="w-full h-auto rounded shadow" />
                                                         <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
                                                     </div>
                                                 ))}
