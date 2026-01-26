@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.43";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.44";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6708,153 +6708,176 @@
                                         <span className="flex-1 pointer-events-none">{FOLDER_INBOX.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">({getFolderBookIds('__inbox__').length})</span>
                                     </div>
-                                    {/* User folders (exclude Inbox since shown above) */}
-                                    {getChildFolders(null).filter(f => f.id !== '__inbox__').map(folder => (
-                                        <div
-                                            key={folder.id}
-                                            className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
-                                            onClick={() => setSelectedFolderId(folder.id)}
-                                            onDoubleClick={() => {
-                                                setEditingFolderId(folder.id);
-                                                setEditingFolderName(folder.name);
-                                            }}
-                                            onDragOver={(e) => {
-                                                e.preventDefault();
-                                                const isCopy = e.ctrlKey;
-                                                setExplorerIsCopyDrag(isCopy);
-                                                // Always allow drop so onDrop fires (toast shows on invalid)
-                                                e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
-                                                setExplorerDropTargetId(folder.id);
-                                            }}
-                                            onDragLeave={(e) => {
-                                                // Only clear if actually leaving container, not moving to child element
-                                                if (!e.currentTarget.contains(e.relatedTarget)) {
-                                                    setExplorerDropTargetId(null);
-                                                }
-                                            }}
-                                            onDrop={(e) => {
-                                                e.preventDefault();
-                                                const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                                                const { sourceFolder, bookIds } = dragData;
+                                    {/* User folders with recursive subfolder rendering */}
+                                    {(() => {
+                                        // Recursive folder renderer
+                                        const renderFolder = (folder, depth = 0) => {
+                                            const children = getChildFolders(folder.id);
+                                            const hasChildren = children.length > 0;
+                                            const isExpanded = !folder.collapsed;
 
-                                                // Helper to show toast
-                                                const showToast = (msg) => {
-                                                    setClipboardMessage(msg);
-                                                    setToastPosition({ x: e.clientX, y: e.clientY });
-                                                    setFooterClipboardVisible(false);
-                                                    setToastVisible(true);
-                                                    setToastAnimating(false);
-                                                    setTimeout(() => {
-                                                        setToastAnimating(true);
-                                                        setTimeout(() => {
-                                                            setToastVisible(false);
-                                                            setToastAnimating(false);
-                                                        }, 1000);
-                                                    }, 1500);
-                                                };
-
-                                                // Check if dragging from All Books (view-only)
-                                                if (sourceFolder === '__all__') {
-                                                    showToast('All Books is view-only. Organize from folders.');
-                                                    setExplorerDropTargetId(null);
-                                                    setExplorerSelectedBooks(new Set());
-                                                    return;
-                                                }
-
-                                                // Check if all books are already in this folder
-                                                const existing = new Set(folder.bookIds || []);
-                                                const newBookIds = bookIds.filter(id => !existing.has(id));
-                                                if (newBookIds.length === 0) {
-                                                    showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder');
-                                                } else {
-                                                    // Move or copy books
-                                                    setFolders(prev => prev.map(f => {
-                                                        if (f.id === folder.id) {
-                                                            return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
-                                                        }
-                                                        if (!explorerIsCopyDrag && f.id === sourceFolder) {
-                                                            return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
-                                                        }
-                                                        return f;
-                                                    }));
-                                                }
-                                                setExplorerDropTargetId(null);
-                                                setExplorerSelectedBooks(new Set());
-                                                setExplorerIsCopyDrag(false);
-                                            }}
-                                            onContextMenu={(e) => {
-                                                e.preventDefault();
-                                                setSelectedFolderId(folder.id);
-                                                // Simple context menu using window.confirm for now
-                                                const action = window.prompt('Enter action: rename or delete', 'rename');
-                                                if (action === 'rename') {
-                                                    setEditingFolderId(folder.id);
-                                                    setEditingFolderName(folder.name);
-                                                } else if (action === 'delete') {
-                                                    if (window.confirm(`Delete folder "${folder.name}"? Books will be moved to Unorganized.`)) {
-                                                        setFolders(prev => prev.filter(f => f.id !== folder.id));
-                                                        if (selectedFolderId === folder.id) {
-                                                            setSelectedFolderId('__all__');
-                                                        }
-                                                    }
-                                                }
-                                            }}>
-                                            <span className="pointer-events-none">📁</span>
-                                            {editingFolderId === folder.id ? (
-                                                <input
-                                                    type="text"
-                                                    value={editingFolderName}
-                                                    onChange={(e) => setEditingFolderName(e.target.value)}
-                                                    onBlur={() => {
-                                                        if (editingFolderName.trim()) {
-                                                            setFolders(prev => prev.map(f =>
-                                                                f.id === folder.id ? { ...f, name: editingFolderName.trim() } : f
-                                                            ));
-                                                        }
-                                                        setEditingFolderId(null);
-                                                        setEditingFolderName('');
-                                                    }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') {
-                                                            if (editingFolderName.trim()) {
-                                                                setFolders(prev => prev.map(f =>
-                                                                    f.id === folder.id ? { ...f, name: editingFolderName.trim() } : f
-                                                                ));
-                                                            }
-                                                            setEditingFolderId(null);
-                                                            setEditingFolderName('');
-                                                        } else if (e.key === 'Escape') {
-                                                            setEditingFolderId(null);
-                                                            setEditingFolderName('');
-                                                        }
-                                                    }}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                    autoFocus
-                                                    className="flex-1 px-1 py-0.5 text-sm border border-blue-400 rounded outline-none"
-                                                />
-                                            ) : (
-                                                <>
-                                                    <span className="flex-1 pointer-events-none">{folder.name}</span>
-                                                    <span className="text-xs text-gray-500 pointer-events-none">({(folder.bookIds || []).length})</span>
-                                                    {/* Delete button on hover */}
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (window.confirm(`Delete folder "${folder.name}"?`)) {
-                                                                setFolders(prev => prev.filter(f => f.id !== folder.id));
-                                                                if (selectedFolderId === folder.id) {
-                                                                    setSelectedFolderId('__all__');
-                                                                }
+                                            return (
+                                                <React.Fragment key={folder.id}>
+                                                    <div
+                                                        className={`w-full flex items-center gap-1 pr-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                                        style={{ paddingLeft: `${16 + depth * 16}px` }}
+                                                        onClick={() => setSelectedFolderId(folder.id)}
+                                                        onDoubleClick={() => {
+                                                            setEditingFolderId(folder.id);
+                                                            setEditingFolderName(folder.name);
+                                                        }}
+                                                        onDragOver={(e) => {
+                                                            e.preventDefault();
+                                                            const isCopy = e.ctrlKey;
+                                                            setExplorerIsCopyDrag(isCopy);
+                                                            e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
+                                                            setExplorerDropTargetId(folder.id);
+                                                        }}
+                                                        onDragLeave={(e) => {
+                                                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                                setExplorerDropTargetId(null);
                                                             }
                                                         }}
-                                                        className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 px-1"
-                                                        title="Delete folder">
-                                                        ×
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    ))}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                                            const { sourceFolder, bookIds } = dragData;
+
+                                                            const showToastLocal = (msg) => {
+                                                                setClipboardMessage(msg);
+                                                                setToastPosition({ x: e.clientX, y: e.clientY });
+                                                                setFooterClipboardVisible(false);
+                                                                setToastVisible(true);
+                                                                setToastAnimating(false);
+                                                                setTimeout(() => {
+                                                                    setToastAnimating(true);
+                                                                    setTimeout(() => {
+                                                                        setToastVisible(false);
+                                                                        setToastAnimating(false);
+                                                                    }, 1000);
+                                                                }, 1500);
+                                                            };
+
+                                                            if (sourceFolder === '__all__') {
+                                                                showToastLocal('All Books is view-only. Organize from folders.');
+                                                                setExplorerDropTargetId(null);
+                                                                setExplorerSelectedBooks(new Set());
+                                                                return;
+                                                            }
+
+                                                            const existing = new Set(folder.bookIds || []);
+                                                            const newBookIds = bookIds.filter(id => !existing.has(id));
+                                                            if (newBookIds.length === 0) {
+                                                                showToastLocal(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder');
+                                                            } else {
+                                                                setFolders(prev => prev.map(f => {
+                                                                    if (f.id === folder.id) {
+                                                                        return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                                    }
+                                                                    if (!explorerIsCopyDrag && f.id === sourceFolder) {
+                                                                        return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                                    }
+                                                                    return f;
+                                                                }));
+                                                            }
+                                                            setExplorerDropTargetId(null);
+                                                            setExplorerSelectedBooks(new Set());
+                                                            setExplorerIsCopyDrag(false);
+                                                        }}
+                                                        onContextMenu={(e) => {
+                                                            e.preventDefault();
+                                                            setSelectedFolderId(folder.id);
+                                                            const action = window.prompt('Enter action: rename or delete', 'rename');
+                                                            if (action === 'rename') {
+                                                                setEditingFolderId(folder.id);
+                                                                setEditingFolderName(folder.name);
+                                                            } else if (action === 'delete') {
+                                                                if (window.confirm(`Delete folder "${folder.name}"?`)) {
+                                                                    setFolders(prev => prev.filter(f => f.id !== folder.id));
+                                                                    if (selectedFolderId === folder.id) {
+                                                                        setSelectedFolderId('__all__');
+                                                                    }
+                                                                }
+                                                            }
+                                                        }}>
+                                                        {/* Expand/collapse chevron for folders with children */}
+                                                        {hasChildren ? (
+                                                            <span
+                                                                className="text-gray-400 hover:text-gray-600 cursor-pointer w-4 text-center"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setFolders(prev => prev.map(f =>
+                                                                        f.id === folder.id ? { ...f, collapsed: !f.collapsed } : f
+                                                                    ));
+                                                                }}>
+                                                                {isExpanded ? '▼' : '▶'}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="w-4"></span>
+                                                        )}
+                                                        <span className="pointer-events-none">📁</span>
+                                                        {editingFolderId === folder.id ? (
+                                                            <input
+                                                                type="text"
+                                                                value={editingFolderName}
+                                                                onChange={(e) => setEditingFolderName(e.target.value)}
+                                                                onBlur={() => {
+                                                                    if (editingFolderName.trim()) {
+                                                                        setFolders(prev => prev.map(f =>
+                                                                            f.id === folder.id ? { ...f, name: editingFolderName.trim() } : f
+                                                                        ));
+                                                                    }
+                                                                    setEditingFolderId(null);
+                                                                    setEditingFolderName('');
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        if (editingFolderName.trim()) {
+                                                                            setFolders(prev => prev.map(f =>
+                                                                                f.id === folder.id ? { ...f, name: editingFolderName.trim() } : f
+                                                                            ));
+                                                                        }
+                                                                        setEditingFolderId(null);
+                                                                        setEditingFolderName('');
+                                                                    } else if (e.key === 'Escape') {
+                                                                        setEditingFolderId(null);
+                                                                        setEditingFolderName('');
+                                                                    }
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                autoFocus
+                                                                className="flex-1 px-1 py-0.5 text-sm border border-blue-400 rounded outline-none"
+                                                            />
+                                                        ) : (
+                                                            <>
+                                                                <span className="flex-1 pointer-events-none">{folder.name}</span>
+                                                                <span className="text-xs text-gray-500 pointer-events-none">({(folder.bookIds || []).length})</span>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (window.confirm(`Delete folder "${folder.name}"?`)) {
+                                                                            setFolders(prev => prev.filter(f => f.id !== folder.id));
+                                                                            if (selectedFolderId === folder.id) {
+                                                                                setSelectedFolderId('__all__');
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 px-1"
+                                                                    title="Delete folder">
+                                                                    ×
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    {/* Render children if expanded */}
+                                                    {hasChildren && isExpanded && children.map(child => renderFolder(child, depth + 1))}
+                                                </React.Fragment>
+                                            );
+                                        };
+
+                                        // Render root folders (parentId: null, excluding Inbox)
+                                        return getChildFolders(null).filter(f => f.id !== '__inbox__').map(folder => renderFolder(folder, 0));
+                                    })()}
                                     {/* New folder button */}
                                     <button
                                         onClick={() => {
