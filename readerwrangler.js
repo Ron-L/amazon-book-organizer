@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.39";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.40";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -120,6 +120,7 @@
             const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
             const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
+            const [showMigrationDialog, setShowMigrationDialog] = useState(false); // v5.0.0 - Migration prompt
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -333,6 +334,80 @@
 
                     return { ...folder, bookIds: remaining };
                 }));
+            };
+
+            // v5.0.0 - Migrate columns/dividers to folders
+            // Columns become root folders, dividers become subfolders
+            const migrateColumnsToFolders = () => {
+                const newFolders = [];
+
+                columns.forEach(column => {
+                    // Skip empty columns
+                    const hasContent = column.books && column.books.length > 0;
+                    if (!hasContent) return;
+
+                    // Create root folder for this column
+                    const rootFolderId = `folder-${column.id}`;
+                    const rootFolder = {
+                        id: rootFolderId,
+                        name: column.name,
+                        parentId: null,
+                        bookIds: [],
+                        collapsed: false
+                    };
+
+                    let currentFolder = rootFolder;
+
+                    column.books.forEach(entry => {
+                        if (entry && entry.type === 'divider') {
+                            // Divider becomes a subfolder
+                            // First, push current folder if it has books
+                            if (currentFolder.bookIds.length > 0 || currentFolder === rootFolder) {
+                                // Only add root folder once
+                                if (!newFolders.find(f => f.id === rootFolder.id)) {
+                                    newFolders.push(rootFolder);
+                                }
+                            }
+
+                            // Create subfolder for divider
+                            const subfolder = {
+                                id: `folder-${entry.id}`,
+                                name: entry.name || 'Untitled',
+                                parentId: rootFolderId,
+                                bookIds: [],
+                                collapsed: false
+                            };
+                            newFolders.push(subfolder);
+                            currentFolder = subfolder;
+                        } else {
+                            // Book entry - add to current folder
+                            const bookId = getBookIdFromEntry(entry);
+                            if (bookId) {
+                                currentFolder.bookIds.push(bookId);
+                            }
+                        }
+                    });
+
+                    // Ensure root folder is added (even if no dividers)
+                    if (!newFolders.find(f => f.id === rootFolder.id)) {
+                        newFolders.push(rootFolder);
+                    }
+                });
+
+                // Add Inbox folder at the end
+                newFolders.push({
+                    id: '__inbox__',
+                    name: 'Inbox',
+                    parentId: null,
+                    bookIds: [],
+                    collapsed: false
+                });
+
+                setFolders(newFolders);
+                setShowMigrationDialog(false);
+                setViewMode('explorer'); // Switch to explorer view to show result
+                setSelectedFolderId('__all__'); // Start with All Books
+                console.log(`📁 Migrated ${columns.length} columns to ${newFolders.length} folders`);
             };
 
             // v3.11.0.d - Ref for column menu click-outside detection
@@ -640,6 +715,33 @@
                 
                 loadData();
             }, []);
+
+            // v5.0.0 - Auto-detect migration opportunity (columns → folders)
+            // Trigger: columns have content, but folders are empty or just Inbox
+            useEffect(() => {
+                if (syncStatus === 'loading') return;
+                if (books.length === 0) return; // No data loaded yet
+
+                // Check if columns have meaningful content
+                const columnsHaveContent = columns.some(col => {
+                    if (!col.books || col.books.length === 0) return false;
+                    // Check for actual books or dividers (not just empty)
+                    return col.books.some(entry => {
+                        if (entry && entry.type === 'divider') return true;
+                        return getBookIdFromEntry(entry) !== null;
+                    });
+                });
+
+                // Check if folders are empty (none, or only Inbox with no books)
+                const foldersEmpty = folders.length === 0 ||
+                    (folders.length === 1 && folders[0].id === '__inbox__' && (!folders[0].bookIds || folders[0].bookIds.length === 0));
+
+                // Show migration dialog if columns have content but folders are empty
+                if (columnsHaveContent && foldersEmpty && !showMigrationDialog) {
+                    console.log('📁 Migration opportunity detected: columns have content, folders empty');
+                    setShowMigrationDialog(true);
+                }
+            }, [syncStatus, books.length, columns, folders]);
 
             // Auto-save organization
             // v4.16.0.ab - Guard: Skip save while loading to prevent race condition
@@ -4900,6 +5002,47 @@
                                             onClick={confirmReset}
                                             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium">
                                             Reset App
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* v5.0.0 - Migration Dialog */}
+                    {showMigrationDialog && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowMigrationDialog(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-start p-4 bg-blue-600 rounded-t-lg">
+                                    <h2 className="text-xl font-bold text-white">📁 Import Column Organization?</h2>
+                                    <button onClick={() => setShowMigrationDialog(false)} className="text-white hover:text-gray-200 text-2xl font-bold">×</button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <p className="text-gray-800">
+                                        You have books organized in <strong>{columns.length} columns</strong> with dividers.
+                                        Would you like to import this organization into the new Book Explorer?
+                                    </p>
+                                    <div className="bg-gray-50 border border-gray-200 rounded p-4 text-sm text-gray-700">
+                                        <p className="font-semibold mb-2">Migration will:</p>
+                                        <ul className="list-disc list-inside space-y-1 ml-2">
+                                            <li>Convert each <strong>column</strong> → folder</li>
+                                            <li>Convert each <strong>divider</strong> → subfolder</li>
+                                            <li>Preserve book order within each folder</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
+                                        <p>Your original column organization will remain intact. You can switch between Column View and Explorer View anytime.</p>
+                                    </div>
+                                    <div className="flex gap-3 justify-end pt-2">
+                                        <button
+                                            onClick={() => setShowMigrationDialog(false)}
+                                            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium">
+                                            Not Now
+                                        </button>
+                                        <button
+                                            onClick={migrateColumnsToFolders}
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+                                            Import to Explorer
                                         </button>
                                     </div>
                                 </div>
