@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.16";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.17";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6601,7 +6601,7 @@
                                                             draggable="true"
                                                             onDragStart={(e) => {
                                                                 e.stopPropagation(); // Prevent browser Split View feature
-                                                                e.dataTransfer.effectAllowed = 'move';
+                                                                e.dataTransfer.effectAllowed = 'copyMove';
                                                                 // Include source folder and book IDs in drag data
                                                                 const dragData = {
                                                                     sourceFolder: selectedFolderId,
@@ -6697,7 +6697,7 @@
                                                         draggable="true"
                                                         onDragStart={(e) => {
                                                             e.stopPropagation(); // Prevent browser Split View feature
-                                                            e.dataTransfer.effectAllowed = 'move';
+                                                            e.dataTransfer.effectAllowed = 'copyMove';
                                                             const dragData = {
                                                                 sourceFolder: selectedFolderId,
                                                                 bookIds: explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1
