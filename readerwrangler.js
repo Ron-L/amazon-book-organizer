@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.24";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.25";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -4263,20 +4263,6 @@
                             <div className="flex gap-2 items-center">
                                 {renderStatusIndicator()}
                                 <span className="text-gray-300 mx-1">|</span>
-                                {/* v4.17.0.j - Deals filter button */}
-                                {(() => {
-                                    const dealsCount = books.filter(b => b.onWishlist && b.priceTrigger != null && b.currentPrice != null && b.currentPrice <= b.priceTrigger).length;
-                                    return dealsCount > 0 ? (
-                                        <button
-                                            onClick={() => setDealsFilterActive(!dealsFilterActive)}
-                                            className={`px-3 py-2 rounded-lg text-sm font-medium ${dealsFilterActive
-                                                ? 'bg-green-500 text-white border border-green-600'
-                                                : 'bg-white hover:bg-gray-50 text-green-700 border border-green-300'}`}
-                                            title={dealsFilterActive ? 'Click to show all books' : 'Click to show only deals (wishlist books at or below your target price)'}>
-                                            🏷️ Deals ({dealsCount})
-                                        </button>
-                                    ) : null;
-                                })()}
                                 {/* v5.0.0 - View mode toggle */}
                                 <button
                                     onClick={() => setViewMode(viewMode === 'columns' ? 'explorer' : 'columns')}
@@ -4346,7 +4332,7 @@
                                     ` (${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, datePreset, tagFilter?.length > 0].filter(Boolean).length})`}
                             </button>
 
-                            {/* Book count + Show Hidden - always visible when panel closed (v4.22.0.a) */}
+                            {/* Book count + Show Hidden + Show Deals - always visible when panel closed (v4.22.0.a, v5.0.0) */}
                             {books.length > 0 && !filterPanelOpen && (
                                 <div className="flex items-center gap-4 py-2">
                                     <span className="text-sm text-gray-600">
@@ -4368,6 +4354,18 @@
                                             className="w-4 h-4 rounded border-gray-300 text-blue-700 focus:ring-blue-500"
                                         />
                                         <span className="text-gray-600">Show Hidden</span>
+                                    </label>
+                                    {/* v5.0.0 - Show Deals checkbox (moved from header) */}
+                                    <label className="flex items-center gap-2 cursor-pointer text-sm" title="Show only wishlist books at or below your target price">
+                                        <input
+                                            type="checkbox"
+                                            checked={dealsFilterActive}
+                                            onChange={(e) => setDealsFilterActive(e.target.checked)}
+                                            className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                        />
+                                        <span className={`${dealsFilterActive ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
+                                            Show Deals ({books.filter(b => b.onWishlist && b.priceTrigger != null && b.currentPrice != null && b.currentPrice <= b.priceTrigger).length})
+                                        </span>
                                     </label>
                                 </div>
                             )}
@@ -4671,6 +4669,20 @@
                                                         className="w-4 h-4 rounded border-gray-300 text-blue-700 focus:ring-blue-500"
                                                     />
                                                     <span className="text-gray-600">Show Hidden</span>
+                                                </label>
+                                            </td>
+                                            <td className="px-2 py-1">
+                                                {/* v5.0.0 - Show Deals checkbox */}
+                                                <label className="flex items-center gap-2 cursor-pointer text-sm" title="Show only wishlist books at or below your target price">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={dealsFilterActive}
+                                                        onChange={(e) => setDealsFilterActive(e.target.checked)}
+                                                        className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                                    />
+                                                    <span className={`${dealsFilterActive ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
+                                                        Show Deals ({books.filter(b => b.onWishlist && b.priceTrigger != null && b.currentPrice != null && b.currentPrice <= b.priceTrigger).length})
+                                                    </span>
                                                 </label>
                                             </td>
                                             {/* Custom date pickers - only when Custom preset selected (columns 3-6) */}
@@ -6752,7 +6764,8 @@
                                                  explorerSort.column === 'rating' ? 'Rating' :
                                                  explorerSort.column === 'dateAdded' ? 'Date Added' :
                                                  explorerSort.column === 'price' ? 'Price' :
-                                                 explorerSort.column === 'priceGoal' ? 'Goal' : explorerSort.column}
+                                                 explorerSort.column === 'priceGoal' ? 'Goal' :
+                                                 explorerSort.column === 'delta' ? 'Under' : explorerSort.column}
                                             </span>
                                             {explorerSort.column !== 'custom' && (
                                                 <>
@@ -6794,6 +6807,9 @@
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'priceGoal', direction: prev.column === 'priceGoal' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                         Goal {explorerSort.column === 'priceGoal' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
                                                     </th>
+                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'delta', direction: prev.column === 'delta' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
+                                                        Under {explorerSort.column === 'delta' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -6822,6 +6838,12 @@
                                                                 const goalA = a.priceTrigger ?? Infinity;
                                                                 const goalB = b.priceTrigger ?? Infinity;
                                                                 return dir * (goalA - goalB);
+                                                            }
+                                                            if (explorerSort.column === 'delta') {
+                                                                // Delta = goal - price (positive = under goal, negative = over goal)
+                                                                const deltaA = (a.priceTrigger != null && a.currentPrice != null) ? (a.priceTrigger - a.currentPrice) : -Infinity;
+                                                                const deltaB = (b.priceTrigger != null && b.currentPrice != null) ? (b.priceTrigger - b.currentPrice) : -Infinity;
+                                                                return dir * (deltaA - deltaB);
                                                             }
                                                             return 0;
                                                         });
@@ -6921,6 +6943,18 @@
                                                             <td className="p-2 text-gray-500 text-xs">
                                                                 {book.priceTrigger != null ? `$${book.priceTrigger.toFixed(2)}` : '-'}
                                                             </td>
+                                                            <td className="p-2 text-xs">
+                                                                {(() => {
+                                                                    if (book.priceTrigger == null || book.currentPrice == null) return '-';
+                                                                    const delta = book.priceTrigger - book.currentPrice;
+                                                                    const isUnder = delta >= 0;
+                                                                    return (
+                                                                        <span className={isUnder ? 'text-green-600 font-semibold' : 'text-orange-500'}>
+                                                                            {isUnder ? `$${delta.toFixed(2)}` : `-$${Math.abs(delta).toFixed(2)}`}
+                                                                        </span>
+                                                                    );
+                                                                })()}
+                                                            </td>
                                                         </tr>
                                                     ));
                                                 })()}
@@ -6952,6 +6986,11 @@
                                                             const goalA = a.priceTrigger ?? Infinity;
                                                             const goalB = b.priceTrigger ?? Infinity;
                                                             return dir * (goalA - goalB);
+                                                        }
+                                                        if (explorerSort.column === 'delta') {
+                                                            const deltaA = (a.priceTrigger != null && a.currentPrice != null) ? (a.priceTrigger - a.currentPrice) : -Infinity;
+                                                            const deltaB = (b.priceTrigger != null && b.currentPrice != null) ? (b.priceTrigger - b.currentPrice) : -Infinity;
+                                                            return dir * (deltaA - deltaB);
                                                         }
                                                         return 0;
                                                     });
