@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.14";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -183,15 +183,15 @@
                 return inFolders;
             };
 
-            // Get books not in any folder (for Unorganized)
+            // Get books not in any folder (for Unorganized) - reversed for newest first
             const getUnorganizedBookIds = () => {
                 const inFolders = getBooksInFolders();
-                return books.map(b => b.id).filter(id => !inFolders.has(id));
+                return books.map(b => b.id).filter(id => !inFolders.has(id)).reverse();
             };
 
             // Get books for a folder (handles virtual folders)
             const getFolderBookIds = (folderId) => {
-                if (folderId === '__all__') return books.map(b => b.id);
+                if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first
                 if (folderId === '__unorganized__') return getUnorganizedBookIds();
                 const folder = folders.find(f => f.id === folderId);
                 return folder?.bookIds || [];
@@ -6482,12 +6482,12 @@
                                                 <span className="text-xs text-gray-500">Size:</span>
                                                 <input
                                                     type="range"
-                                                    min="4"
+                                                    min="2"
                                                     max="12"
                                                     value={explorerCoverCols}
                                                     onChange={(e) => setExplorerCoverCols(parseInt(e.target.value))}
                                                     className="w-20 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                                                    title={`${explorerCoverCols} columns`}
+                                                    title={`${16 - explorerCoverCols} columns`}
                                                 />
                                             </div>
                                         )}
@@ -6549,6 +6549,7 @@
                                                             className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'} ${explorerReorderTarget === index ? 'border-t-2 border-t-blue-500' : ''}`}
                                                             draggable="true"
                                                             onDragStart={(e) => {
+                                                                e.stopPropagation(); // Prevent browser Split View feature
                                                                 e.dataTransfer.effectAllowed = 'move';
                                                                 // Include source folder and book IDs in drag data
                                                                 const dragData = {
@@ -6644,6 +6645,7 @@
                                                         className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''} ${explorerReorderTarget === index ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
                                                         draggable="true"
                                                         onDragStart={(e) => {
+                                                            e.stopPropagation(); // Prevent browser Split View feature
                                                             e.dataTransfer.effectAllowed = 'move';
                                                             const dragData = {
                                                                 sourceFolder: selectedFolderId,
