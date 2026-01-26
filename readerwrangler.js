@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.29";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.30";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -280,6 +280,28 @@
                 const folder = folders.find(f => f.id === folderId);
                 if (folder?.id === '__inbox__') return { ...folder, ...FOLDER_INBOX };
                 return folder;
+            };
+
+            // v5.0.0 - Toast notification helper (reusable for all feedback messages)
+            // Shows toast at position, animates to footer, persists 10s, then fades
+            const showToast = (message, x, y) => {
+                setClipboardMessage(message);
+                setToastPosition({ x, y });
+                setFooterClipboardVisible(false);
+                setToastVisible(true);
+                setToastAnimating(false);
+                setTimeout(() => {
+                    setToastAnimating(true);
+                    setTimeout(() => {
+                        setToastVisible(false);
+                        setToastAnimating(false);
+                        setFooterClipboardVisible(true);
+                        // Fade out footer after 10 seconds
+                        setTimeout(() => {
+                            setFooterClipboardVisible(false);
+                        }, 10000);
+                    }, 1000); // Animation duration
+                }, 1500); // Wait before animating
             };
 
             // Get child folders of a parent (null = root level)
@@ -6888,6 +6910,9 @@
                                                                     if (dragData.sourceFolder === selectedFolderId) {
                                                                         reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                     }
+                                                                } else if (explorerSort.column !== 'custom') {
+                                                                    // Show toast when trying to reorder while sorted
+                                                                    showToast('Clear sort to reorder', e.clientX, e.clientY);
                                                                 }
                                                                 setExplorerReorderTarget(null);
                                                                 setExplorerDragBookId(null);
@@ -7035,6 +7060,9 @@
                                                                 if (dragData.sourceFolder === selectedFolderId) {
                                                                     reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                 }
+                                                            } else if (explorerSort.column !== 'custom') {
+                                                                // Show toast when trying to reorder while sorted
+                                                                showToast('Clear sort to reorder', e.clientX, e.clientY);
                                                             }
                                                             setExplorerReorderTarget(null);
                                                             setExplorerDragBookId(null);
