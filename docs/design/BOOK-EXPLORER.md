@@ -150,6 +150,40 @@ Grid of book covers, similar to current column app.
 - Keyboard shortcut: Ctrl+1 (list), Ctrl+2 (covers)
 - View preference persisted per folder (optional) or global
 
+### Right Pane Content (Folders + Books)
+
+The right pane shows **both subfolders and books** for the selected folder, following OS file explorer conventions.
+
+**Display order:** Subfolders first, then books (standard Windows/macOS behavior)
+
+**List View:**
+```
+│ Type │ Title              │ Author        │ Rating │ Series   │
+│──────┼────────────────────┼───────────────┼────────┼──────────│
+│ 📁   │ Dresden Files      │               │        │          │
+│ 📁   │ Codex Alera        │               │        │          │
+│ 📁   │ Miscellaneous      │               │        │          │
+│ 📖   │ Standalone Novel 1 │ Jim Butcher   │ ★★★★☆  │ -        │
+│ 📖   │ Standalone Novel 2 │ Jim Butcher   │ ★★★★★  │ -        │
+```
+
+**Cover View:**
+- Folder tiles: 📁 icon with folder name below
+- Book tiles: Cover image with title below
+- Folders appear first in grid, then books
+
+**Interactions:**
+| Action | On Folder | On Book |
+|--------|-----------|---------|
+| Single-click | Select (highlight) | Select (highlight) |
+| Double-click | Navigate into folder, sync tree selection | Open book detail modal |
+| Drag | Move folder (future) | Move book to another folder |
+
+**Benefits:**
+- Empty parent folders (e.g., "Jim Butcher" with 0 direct books) show subfolders instead of blank pane
+- Consistent with OS file explorer mental model
+- Enables navigation without using the tree
+
 ---
 
 ## Search vs. Filter
@@ -366,8 +400,9 @@ Filter by tag shows matching books across all folders.
 
 ## Related Documents
 
+- `WIZARD-MODE.md` - Auto-organize by author/series (Phase 5)
+- `TAGS.md` - Tag system design (complementary feature)
+- `TODO.md` - Priority 1 task list
 - `DESKTOP-FOLDERS.md` - Previous virtual desktop design (superseded)
 - `COLUMN-ARRANGER.md` - Previous split-pane design (superseded)
 - `COLUMN-CAROUSEL.md` - Previous carousel design (superseded)
-- `TAGS.md` - Tag system design (complementary feature)
-- `TODO.md` - Priority 1 task list
