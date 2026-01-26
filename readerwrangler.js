@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.44";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.45";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -308,6 +308,26 @@
             // Get child folders of a parent (null = root level)
             const getChildFolders = (parentId) => {
                 return folders.filter(f => f.parentId === parentId);
+            };
+
+            // v5.0.0 - Get total book count for a folder including all subfolders recursively
+            const getFolderTotalCount = (folderId) => {
+                const folder = folders.find(f => f.id === folderId);
+                if (!folder) return { direct: 0, subfolder: 0, total: 0 };
+
+                const direct = (folder.bookIds || []).length;
+                let subfolder = 0;
+
+                const countChildren = (parentId) => {
+                    const children = folders.filter(f => f.parentId === parentId);
+                    children.forEach(child => {
+                        subfolder += (child.bookIds || []).length;
+                        countChildren(child.id); // Recurse
+                    });
+                };
+                countChildren(folderId);
+
+                return { direct, subfolder, total: direct + subfolder };
             };
 
             // Reorder a book within a folder's bookIds array
@@ -6643,8 +6663,20 @@
                         <div className="flex-1 min-h-0 flex mb-6">
                             {/* Left pane: Folder tree */}
                             <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0">
-                                <div className="p-3 border-b border-gray-200 font-medium text-gray-700">
-                                    Folders
+                                <div className="p-3 border-b border-gray-200 font-medium text-gray-700 flex items-center justify-between">
+                                    <span>Folders</span>
+                                    {/* Expand/Collapse All toggle */}
+                                    <button
+                                        onClick={() => {
+                                            // Check if any folder is expanded
+                                            const anyExpanded = folders.some(f => !f.collapsed && getChildFolders(f.id).length > 0);
+                                            // Toggle all: if any expanded, collapse all; else expand all
+                                            setFolders(prev => prev.map(f => ({ ...f, collapsed: anyExpanded })));
+                                        }}
+                                        className="text-gray-400 hover:text-gray-600 text-sm px-1"
+                                        title={folders.some(f => !f.collapsed && getChildFolders(f.id).length > 0) ? 'Collapse all folders' : 'Expand all folders'}>
+                                        {folders.some(f => !f.collapsed && getChildFolders(f.id).length > 0) ? '▼' : '▶'}
+                                    </button>
                                 </div>
                                 <div className="p-2">
                                     {/* All Books (virtual, view-only) */}
@@ -6851,7 +6883,19 @@
                                                         ) : (
                                                             <>
                                                                 <span className="flex-1 pointer-events-none">{folder.name}</span>
-                                                                <span className="text-xs text-gray-500 pointer-events-none">({(folder.bookIds || []).length})</span>
+                                                                {(() => {
+                                                                    const counts = getFolderTotalCount(folder.id);
+                                                                    const tooltip = counts.subfolder > 0
+                                                                        ? `${counts.direct} direct • ${counts.subfolder} in subfolders`
+                                                                        : `${counts.direct} books`;
+                                                                    return (
+                                                                        <span
+                                                                            className="text-xs text-gray-500 pointer-events-none"
+                                                                            title={tooltip}>
+                                                                            ({counts.total})
+                                                                        </span>
+                                                                    );
+                                                                })()}
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
