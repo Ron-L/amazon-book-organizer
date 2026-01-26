@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.15";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.16";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -117,6 +117,7 @@
             const [explorerDropTargetId, setExplorerDropTargetId] = useState(null); // Folder being dragged over
             const [explorerSelectedBooks, setExplorerSelectedBooks] = useState(new Set()); // Multi-select in Explorer
             const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
+            const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -550,41 +551,38 @@
                 }
             }, [syncStatus, columns, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
 
-            // v5.0.0 - Sync Inbox folder: ensure books not in user folders are in Inbox
+            // v5.0.0 - Sync Inbox folder: add books not in ANY folder to Inbox
+            // Note: Only adds, doesn't remove (removal happens via move drop handler)
             useEffect(() => {
                 if (syncStatus === 'loading' || books.length === 0) return;
 
-                const booksInUserFolders = getBooksInUserFolders();
                 const inbox = getInboxFolder();
-                const booksNotInFolders = books.map(b => b.id).filter(id => !booksInUserFolders.has(id));
+                // Get all book IDs in ANY folder (including Inbox)
+                const booksInAnyFolder = new Set();
+                folders.forEach(folder => {
+                    (folder.bookIds || []).forEach(id => booksInAnyFolder.add(id));
+                });
+                const booksNotInAnyFolder = books.map(b => b.id).filter(id => !booksInAnyFolder.has(id));
 
                 if (!inbox) {
-                    // Create Inbox with all books not in folders (newest first)
-                    console.log('📥 Creating Inbox folder with', booksNotInFolders.length, 'books');
+                    // Create Inbox with all books not in any folder (newest first)
+                    console.log('📥 Creating Inbox folder with', booksNotInAnyFolder.length, 'books');
                     setFolders(prev => [{
                         id: '__inbox__',
                         name: 'Inbox',
                         parentId: null,
-                        bookIds: [...booksNotInFolders].reverse(),
+                        bookIds: [...booksNotInAnyFolder].reverse(),
                         childFolderIds: [],
                         collapsed: false,
                         isInbox: true
                     }, ...prev]);
-                } else {
-                    // Sync Inbox: add missing books, remove books that are in user folders
-                    const inboxBookIds = new Set(inbox.bookIds || []);
-                    const needsUpdate = booksNotInFolders.some(id => !inboxBookIds.has(id)) ||
-                                       (inbox.bookIds || []).some(id => booksInUserFolders.has(id));
-
-                    if (needsUpdate) {
-                        setFolders(prev => prev.map(f => {
-                            if (f.id !== '__inbox__') return f;
-                            // Keep existing order for books still in Inbox, add new ones at top
-                            const existingInInbox = (f.bookIds || []).filter(id => !booksInUserFolders.has(id));
-                            const newToInbox = booksNotInFolders.filter(id => !inboxBookIds.has(id));
-                            return { ...f, bookIds: [...newToInbox.reverse(), ...existingInInbox] };
-                        }));
-                    }
+                } else if (booksNotInAnyFolder.length > 0) {
+                    // Add new books to Inbox (books imported that aren't in any folder yet)
+                    console.log('📥 Adding', booksNotInAnyFolder.length, 'new books to Inbox');
+                    setFolders(prev => prev.map(f => {
+                        if (f.id !== '__inbox__') return f;
+                        return { ...f, bookIds: [...booksNotInAnyFolder.reverse(), ...(f.bookIds || [])] };
+                    }));
                 }
             }, [books, folders, syncStatus]);
 
@@ -6378,16 +6376,17 @@
                                             }}
                                             onDragOver={(e) => {
                                                 e.preventDefault();
-                                                e.dataTransfer.dropEffect = e.ctrlKey ? 'copy' : 'move';
+                                                const isCopy = e.ctrlKey;
+                                                e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
+                                                setExplorerIsCopyDrag(isCopy);
                                                 setExplorerDropTargetId(folder.id);
                                             }}
                                             onDragLeave={() => setExplorerDropTargetId(null)}
                                             onDrop={(e) => {
                                                 e.preventDefault();
-                                                const isCopy = e.ctrlKey;
                                                 const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
                                                 const { sourceFolder, bookIds } = dragData;
-                                                // Move or copy books
+                                                // Move or copy books (use state because ctrlKey unreliable on drop)
                                                 setFolders(prev => prev.map(f => {
                                                     if (f.id === folder.id) {
                                                         // Add to destination (at top, no duplicates)
@@ -6395,7 +6394,7 @@
                                                         const newBookIds = bookIds.filter(id => !existing.has(id));
                                                         return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
                                                     }
-                                                    if (!isCopy && f.id === sourceFolder) {
+                                                    if (!explorerIsCopyDrag && f.id === sourceFolder) {
                                                         // Remove from source folder (move only, not copy)
                                                         return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
                                                     }
@@ -6403,6 +6402,7 @@
                                                 }));
                                                 setExplorerDropTargetId(null);
                                                 setExplorerSelectedBooks(new Set());
+                                                setExplorerIsCopyDrag(false);
                                             }}
                                             onContextMenu={(e) => {
                                                 e.preventDefault();
@@ -6510,16 +6510,20 @@
                                         </span>
                                     </div>
                                     <div className="flex gap-4 items-center">
-                                        {/* View toggle */}
+                                        {/* View toggle - styled to match Columns/Explorer button */}
                                         <div className="flex gap-1">
                                             <button
                                                 onClick={() => setExplorerView('list')}
-                                                className={`px-2 py-1 text-sm rounded ${explorerView === 'list' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                                className={`px-2 py-1 text-sm rounded border ${explorerView === 'list'
+                                                    ? 'bg-blue-500 text-white border-blue-600'
+                                                    : 'bg-white hover:bg-gray-50 text-blue-700 border-blue-300'}`}>
                                                 List
                                             </button>
                                             <button
                                                 onClick={() => setExplorerView('covers')}
-                                                className={`px-2 py-1 text-sm rounded ${explorerView === 'covers' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}`}>
+                                                className={`px-2 py-1 text-sm rounded border ${explorerView === 'covers'
+                                                    ? 'bg-blue-500 text-white border-blue-600'
+                                                    : 'bg-white hover:bg-gray-50 text-blue-700 border-blue-300'}`}>
                                                 Covers
                                             </button>
                                         </div>
@@ -6670,7 +6674,7 @@
                                             </tbody>
                                         </table>
                                     ) : (
-                                        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(0, 1fr))` }}>
+                                        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(40px, 1fr))` }}>
                                             {(() => {
                                                 const bookList = getFolderBookIds(selectedFolderId)
                                                     .map(id => books.find(b => b.id === id))
