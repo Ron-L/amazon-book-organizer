@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.25";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.26";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6825,8 +6825,8 @@
                                                             if (explorerSort.column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
                                                             if (explorerSort.column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
                                                             if (explorerSort.column === 'dateAdded') {
-                                                                const dateA = a.acquisitionDate || a.addedToWishlist || '';
-                                                                const dateB = b.acquisitionDate || b.addedToWishlist || '';
+                                                                const dateA = a.acquired || a.addedToWishlist || '';
+                                                                const dateB = b.acquired || b.addedToWishlist || '';
                                                                 return dir * dateA.localeCompare(dateB);
                                                             }
                                                             if (explorerSort.column === 'price') {
@@ -6931,7 +6931,7 @@
                                                             </td>
                                                             <td className="p-2 text-gray-500 text-xs">
                                                                 {(() => {
-                                                                    const dateStr = book.acquisitionDate || book.addedToWishlist;
+                                                                    const dateStr = book.acquired || book.addedToWishlist;
                                                                     if (!dateStr) return '-';
                                                                     const date = new Date(dateStr);
                                                                     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -6973,8 +6973,8 @@
                                                         if (explorerSort.column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
                                                         if (explorerSort.column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
                                                         if (explorerSort.column === 'dateAdded') {
-                                                            const dateA = a.acquisitionDate || a.addedToWishlist || '';
-                                                            const dateB = b.acquisitionDate || b.addedToWishlist || '';
+                                                            const dateA = a.acquired || a.addedToWishlist || '';
+                                                            const dateB = b.acquired || b.addedToWishlist || '';
                                                             return dir * dateA.localeCompare(dateB);
                                                         }
                                                         if (explorerSort.column === 'price') {
