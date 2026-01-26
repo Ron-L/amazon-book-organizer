@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.20";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -116,6 +116,7 @@
             const [explorerDragBookId, setExplorerDragBookId] = useState(null); // Book being dragged in Explorer
             const [explorerDropTargetId, setExplorerDropTargetId] = useState(null); // Folder being dragged over
             const [explorerSelectedBooks, setExplorerSelectedBooks] = useState(new Set()); // Multi-select in Explorer
+            const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select
             const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
             const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
 
@@ -6396,20 +6397,35 @@
                                                 e.preventDefault();
                                                 const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
                                                 const { sourceFolder, bookIds } = dragData;
-                                                // Move or copy books (use state because ctrlKey unreliable on drop)
-                                                setFolders(prev => prev.map(f => {
-                                                    if (f.id === folder.id) {
-                                                        // Add to destination (at top, no duplicates)
-                                                        const existing = new Set(f.bookIds || []);
-                                                        const newBookIds = bookIds.filter(id => !existing.has(id));
-                                                        return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
-                                                    }
-                                                    if (!explorerIsCopyDrag && f.id === sourceFolder) {
-                                                        // Remove from source folder (move only, not copy)
-                                                        return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
-                                                    }
-                                                    return f;
-                                                }));
+                                                // Check if all books are already in this folder
+                                                const existing = new Set(folder.bookIds || []);
+                                                const newBookIds = bookIds.filter(id => !existing.has(id));
+                                                if (newBookIds.length === 0) {
+                                                    // All books already in folder - show toast
+                                                    const msg = bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder';
+                                                    setClipboardMessage(msg);
+                                                    setFooterClipboardVisible(false);
+                                                    setToastVisible(true);
+                                                    setToastAnimating(false);
+                                                    setTimeout(() => {
+                                                        setToastAnimating(true);
+                                                        setTimeout(() => {
+                                                            setToastVisible(false);
+                                                            setToastAnimating(false);
+                                                        }, 1000);
+                                                    }, 1500);
+                                                } else {
+                                                    // Move or copy books
+                                                    setFolders(prev => prev.map(f => {
+                                                        if (f.id === folder.id) {
+                                                            return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                        }
+                                                        if (!explorerIsCopyDrag && f.id === sourceFolder) {
+                                                            return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                        }
+                                                        return f;
+                                                    }));
+                                                }
                                                 setExplorerDropTargetId(null);
                                                 setExplorerSelectedBooks(new Set());
                                                 setExplorerIsCopyDrag(false);
@@ -6592,27 +6608,27 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {getFolderBookIds(selectedFolderId)
-                                                    .map(id => books.find(b => b.id === id))
-                                                    .filter(Boolean)
-                                                    .sort((a, b) => {
-                                                        // Custom sort = no sorting, use bookIds order
-                                                        if (explorerSort.column === 'custom') return 0;
-                                                        const dir = explorerSort.direction === 'asc' ? 1 : -1;
-                                                        if (explorerSort.column === 'title') return dir * (a.title || '').localeCompare(b.title || '');
-                                                        if (explorerSort.column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
-                                                        if (explorerSort.column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
-                                                        return 0;
-                                                    })
-                                                    .map((book, index) => (
+                                                {(() => {
+                                                    // Build sorted book list for range selection
+                                                    const sortedBooks = getFolderBookIds(selectedFolderId)
+                                                        .map(id => books.find(b => b.id === id))
+                                                        .filter(Boolean)
+                                                        .sort((a, b) => {
+                                                            if (explorerSort.column === 'custom') return 0;
+                                                            const dir = explorerSort.direction === 'asc' ? 1 : -1;
+                                                            if (explorerSort.column === 'title') return dir * (a.title || '').localeCompare(b.title || '');
+                                                            if (explorerSort.column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
+                                                            if (explorerSort.column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
+                                                            return 0;
+                                                        });
+                                                    return sortedBooks.map((book, index) => (
                                                         <tr
                                                             key={book.id}
                                                             className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'} ${explorerReorderTarget === index ? 'border-t-2 border-t-blue-500' : ''}`}
                                                             draggable="true"
                                                             onDragStart={(e) => {
-                                                                e.stopPropagation(); // Prevent browser Split View feature
+                                                                e.stopPropagation();
                                                                 e.dataTransfer.effectAllowed = 'copyMove';
-                                                                // Include source folder and book IDs in drag data
                                                                 const dragData = {
                                                                     sourceFolder: selectedFolderId,
                                                                     bookIds: explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1
@@ -6626,7 +6642,6 @@
                                                                 setExplorerDragBookId(book.id);
                                                             }}
                                                             onDragOver={(e) => {
-                                                                // Only allow reorder in Custom sort and user folders
                                                                 if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
                                                                     e.preventDefault();
                                                                     e.dataTransfer.dropEffect = 'move';
@@ -6640,7 +6655,6 @@
                                                                 if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
                                                                     const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
                                                                     if (dragData.sourceFolder === selectedFolderId) {
-                                                                        // Reorder within same folder
                                                                         reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                     }
                                                                 }
@@ -6653,21 +6667,25 @@
                                                                 setExplorerReorderTarget(null);
                                                             }}
                                                             onClick={(e) => {
-                                                                // Single click always selects
-                                                                if (e.shiftKey && explorerSelectedBooks.size > 0) {
-                                                                    // Shift-click for range select (simplified - just adds to selection)
-                                                                    setExplorerSelectedBooks(prev => new Set([...prev, book.id]));
+                                                                if (e.shiftKey && explorerSelectionAnchor !== null) {
+                                                                    // Shift-click: select range from anchor to current
+                                                                    const start = Math.min(explorerSelectionAnchor, index);
+                                                                    const end = Math.max(explorerSelectionAnchor, index);
+                                                                    const rangeIds = sortedBooks.slice(start, end + 1).map(b => b.id);
+                                                                    setExplorerSelectedBooks(new Set(rangeIds));
                                                                 } else if (e.ctrlKey || e.metaKey) {
-                                                                    // Ctrl/Cmd-click to toggle selection
+                                                                    // Ctrl/Cmd-click: toggle selection, update anchor
                                                                     setExplorerSelectedBooks(prev => {
                                                                         const next = new Set(prev);
                                                                         if (next.has(book.id)) next.delete(book.id);
                                                                         else next.add(book.id);
                                                                         return next;
                                                                     });
+                                                                    setExplorerSelectionAnchor(index);
                                                                 } else {
-                                                                    // Regular click selects just this book
+                                                                    // Regular click: select just this book, set anchor
                                                                     setExplorerSelectedBooks(new Set([book.id]));
+                                                                    setExplorerSelectionAnchor(index);
                                                                 }
                                                             }}
                                                             onDoubleClick={() => openBookModal(book, null)}>
@@ -6680,33 +6698,31 @@
                                                                 {book.rating ? `${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5 - Math.floor(book.rating))}` : '-'}
                                                             </td>
                                                         </tr>
-                                                    ))}
+                                                    ));
+                                                })()}
                                             </tbody>
                                         </table>
                                     ) : (
                                         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(40px, 1fr))` }}>
                                             {(() => {
-                                                const bookList = getFolderBookIds(selectedFolderId)
+                                                const sortedBooks = getFolderBookIds(selectedFolderId)
                                                     .map(id => books.find(b => b.id === id))
-                                                    .filter(Boolean);
-                                                // Apply sort (custom = no sort, use bookIds order)
-                                                if (explorerSort.column !== 'custom') {
-                                                    const dir = explorerSort.direction === 'asc' ? 1 : -1;
-                                                    bookList.sort((a, b) => {
+                                                    .filter(Boolean)
+                                                    .sort((a, b) => {
+                                                        if (explorerSort.column === 'custom') return 0;
+                                                        const dir = explorerSort.direction === 'asc' ? 1 : -1;
                                                         if (explorerSort.column === 'title') return dir * (a.title || '').localeCompare(b.title || '');
                                                         if (explorerSort.column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
                                                         if (explorerSort.column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
                                                         return 0;
                                                     });
-                                                }
-                                                return bookList;
-                                            })().map((book, index) => (
+                                                return sortedBooks.map((book, index) => (
                                                     <div
                                                         key={book.id}
                                                         className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''} ${explorerReorderTarget === index ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
                                                         draggable="true"
                                                         onDragStart={(e) => {
-                                                            e.stopPropagation(); // Prevent browser Split View feature
+                                                            e.stopPropagation();
                                                             e.dataTransfer.effectAllowed = 'copyMove';
                                                             const dragData = {
                                                                 sourceFolder: selectedFolderId,
@@ -6733,8 +6749,8 @@
                                                             e.stopPropagation();
                                                             if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
                                                                 const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                                                                if (dragData.sourceFolder === selectedFolderId && dragData.bookIds.length === 1) {
-                                                                    reorderBookInFolder(selectedFolderId, dragData.bookIds[0], index);
+                                                                if (dragData.sourceFolder === selectedFolderId) {
+                                                                    reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                 }
                                                             }
                                                             setExplorerReorderTarget(null);
@@ -6746,22 +6762,30 @@
                                                             setExplorerReorderTarget(null);
                                                         }}
                                                         onClick={(e) => {
-                                                            if (e.ctrlKey || e.metaKey) {
+                                                            if (e.shiftKey && explorerSelectionAnchor !== null) {
+                                                                const start = Math.min(explorerSelectionAnchor, index);
+                                                                const end = Math.max(explorerSelectionAnchor, index);
+                                                                const rangeIds = sortedBooks.slice(start, end + 1).map(b => b.id);
+                                                                setExplorerSelectedBooks(new Set(rangeIds));
+                                                            } else if (e.ctrlKey || e.metaKey) {
                                                                 setExplorerSelectedBooks(prev => {
                                                                     const next = new Set(prev);
                                                                     if (next.has(book.id)) next.delete(book.id);
                                                                     else next.add(book.id);
                                                                     return next;
                                                                 });
+                                                                setExplorerSelectionAnchor(index);
                                                             } else {
                                                                 setExplorerSelectedBooks(new Set([book.id]));
+                                                                setExplorerSelectionAnchor(index);
                                                             }
                                                         }}
                                                         onDoubleClick={() => openBookModal(book, null)}>
                                                         <img src={book.coverUrl} alt={book.title} className="w-full h-auto rounded shadow" />
                                                         <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
                                                     </div>
-                                                ))}
+                                                ));
+                                            })()}
                                         </div>
                                     )}
                                 </div>
