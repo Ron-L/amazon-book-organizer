@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.12";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -116,6 +116,7 @@
             const [explorerDragBookId, setExplorerDragBookId] = useState(null); // Book being dragged in Explorer
             const [explorerDropTargetId, setExplorerDropTargetId] = useState(null); // Folder being dragged over
             const [explorerSelectedBooks, setExplorerSelectedBooks] = useState(new Set()); // Multi-select in Explorer
+            const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
 
             // v5.0.0 - Special folders (virtual, computed)
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -206,6 +207,23 @@
             // Get child folders of a parent (null = root level)
             const getChildFolders = (parentId) => {
                 return folders.filter(f => f.parentId === parentId);
+            };
+
+            // Reorder a book within a folder's bookIds array
+            const reorderBookInFolder = (folderId, bookId, targetIndex) => {
+                setFolders(prev => prev.map(folder => {
+                    if (folder.id !== folderId) return folder;
+                    const bookIds = [...(folder.bookIds || [])];
+                    const currentIndex = bookIds.indexOf(bookId);
+                    if (currentIndex === -1) return folder; // Book not in folder
+                    // Remove from current position
+                    bookIds.splice(currentIndex, 1);
+                    // Adjust target index if needed (if moving down, index shifts after removal)
+                    const adjustedIndex = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
+                    // Insert at target position
+                    bookIds.splice(adjustedIndex, 0, bookId);
+                    return { ...folder, bookIds };
+                }));
             };
 
             // v3.11.0.d - Ref for column menu click-outside detection
@@ -6525,10 +6543,10 @@
                                                         if (explorerSort.column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
                                                         return 0;
                                                     })
-                                                    .map(book => (
+                                                    .map((book, index) => (
                                                         <tr
                                                             key={book.id}
-                                                            className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                            className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'} ${explorerReorderTarget === index ? 'border-t-2 border-t-blue-500' : ''}`}
                                                             draggable="true"
                                                             onDragStart={(e) => {
                                                                 e.dataTransfer.effectAllowed = 'move';
@@ -6545,9 +6563,32 @@
                                                                 }
                                                                 setExplorerDragBookId(book.id);
                                                             }}
+                                                            onDragOver={(e) => {
+                                                                // Only allow reorder in Custom sort and user folders
+                                                                if (explorerSort.column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__unorganized__') {
+                                                                    e.preventDefault();
+                                                                    e.dataTransfer.dropEffect = 'move';
+                                                                    setExplorerReorderTarget(index);
+                                                                }
+                                                            }}
+                                                            onDragLeave={() => setExplorerReorderTarget(null)}
+                                                            onDrop={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                if (explorerSort.column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__unorganized__') {
+                                                                    const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                                                    if (dragData.sourceFolder === selectedFolderId && dragData.bookIds.length === 1) {
+                                                                        // Reorder within same folder
+                                                                        reorderBookInFolder(selectedFolderId, dragData.bookIds[0], index);
+                                                                    }
+                                                                }
+                                                                setExplorerReorderTarget(null);
+                                                                setExplorerDragBookId(null);
+                                                            }}
                                                             onDragEnd={() => {
                                                                 setExplorerDragBookId(null);
                                                                 setExplorerDropTargetId(null);
+                                                                setExplorerReorderTarget(null);
                                                             }}
                                                             onClick={(e) => {
                                                                 // Single click always selects
