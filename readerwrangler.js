@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.34";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.35";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6902,15 +6902,14 @@
                                                             onDrop={(e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
-                                                                console.log('DEBUG onDrop:', { sortColumn: explorerSort.column, folderId: selectedFolderId });
                                                                 if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
                                                                     const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
                                                                     if (dragData.sourceFolder === selectedFolderId) {
                                                                         reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                     }
+                                                                } else if (selectedFolderId === '__all__') {
+                                                                    showToast('Cannot reorder in All Books', e.clientX, e.clientY);
                                                                 } else if (explorerSort.column !== 'custom') {
-                                                                    // Show toast when trying to reorder while sorted
-                                                                    console.log('DEBUG showing toast');
                                                                     showToast('Clear sort to reorder', e.clientX, e.clientY);
                                                                 }
                                                                 setExplorerReorderTarget(null);
@@ -7056,8 +7055,9 @@
                                                                 if (dragData.sourceFolder === selectedFolderId) {
                                                                     reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                 }
+                                                            } else if (selectedFolderId === '__all__') {
+                                                                showToast('Cannot reorder in All Books', e.clientX, e.clientY);
                                                             } else if (explorerSort.column !== 'custom') {
-                                                                // Show toast when trying to reorder while sorted
                                                                 showToast('Clear sort to reorder', e.clientX, e.clientY);
                                                             }
                                                             setExplorerReorderTarget(null);
