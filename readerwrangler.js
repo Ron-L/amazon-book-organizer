@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.21";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.22";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -454,6 +454,25 @@
                             }
                         }
 
+                        // v5.0.0 - Load Explorer settings
+                        const savedExplorer = localStorage.getItem(EXPLORER_KEY);
+                        if (savedExplorer) {
+                            const explorerData = JSON.parse(savedExplorer);
+                            if (explorerData.viewMode) setViewMode(explorerData.viewMode);
+                            if (explorerData.selectedFolderId) setSelectedFolderId(explorerData.selectedFolderId);
+                            if (explorerData.explorerView) setExplorerView(explorerData.explorerView);
+                            if (explorerData.explorerSort) setExplorerSort(explorerData.explorerSort);
+                            if (explorerData.explorerCoverCols) setExplorerCoverCols(explorerData.explorerCoverCols);
+                            console.log('📁 Restored Explorer settings from localStorage');
+                        }
+
+                        // v5.0.0 - Load folders
+                        const savedFolders = localStorage.getItem(FOLDERS_KEY);
+                        if (savedFolders) {
+                            setFolders(JSON.parse(savedFolders));
+                            console.log('📁 Restored folders from localStorage');
+                        }
+
                         // Load books from IndexedDB
                         let loadedBooks = await loadBooksFromIndexedDB();
 
@@ -597,6 +616,23 @@
                 const statusData = { libraryStatus, collectionsStatus };
                 localStorage.setItem(STATUS_KEY, JSON.stringify(statusData));
             }, [libraryStatus, collectionsStatus]);
+
+            // v5.0.0 - Save Explorer settings to localStorage
+            useEffect(() => {
+                const explorerData = {
+                    viewMode,
+                    selectedFolderId,
+                    explorerView,
+                    explorerSort,
+                    explorerCoverCols
+                };
+                localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
+            }, [viewMode, selectedFolderId, explorerView, explorerSort, explorerCoverCols]);
+
+            // v5.0.0 - Save folders to localStorage
+            useEffect(() => {
+                localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
+            }, [folders]);
 
             // Expose books to window for debugging
             useEffect(() => {
@@ -6360,7 +6396,27 @@
                                         onDrop={(e) => {
                                             e.preventDefault();
                                             const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                                            const { bookIds } = dragData;
+                                            const { sourceFolder, bookIds } = dragData;
+
+                                            // Check if dragging from All Books (view-only)
+                                            if (sourceFolder === '__all__') {
+                                                setClipboardMessage('All Books is view-only. Organize from folders.');
+                                                setToastPosition({ x: e.clientX, y: e.clientY });
+                                                setFooterClipboardVisible(false);
+                                                setToastVisible(true);
+                                                setToastAnimating(false);
+                                                setTimeout(() => {
+                                                    setToastAnimating(true);
+                                                    setTimeout(() => {
+                                                        setToastVisible(false);
+                                                        setToastAnimating(false);
+                                                    }, 1000);
+                                                }, 1500);
+                                                setExplorerDropTargetId(null);
+                                                setExplorerSelectedBooks(new Set());
+                                                return;
+                                            }
+
                                             // Remove these books from all user folders
                                             setFolders(prev => prev.map(folder => ({
                                                 ...folder,
@@ -6387,17 +6443,7 @@
                                                 e.preventDefault();
                                                 const isCopy = e.ctrlKey;
                                                 setExplorerIsCopyDrag(isCopy);
-                                                // Check if drop is valid using stored drag data
-                                                if (explorerDragData) {
-                                                    const existing = new Set(folder.bookIds || []);
-                                                    const newBookIds = explorerDragData.bookIds.filter(id => !existing.has(id));
-                                                    if (newBookIds.length === 0) {
-                                                        // All books already in folder - invalid drop
-                                                        e.dataTransfer.dropEffect = 'none';
-                                                        setExplorerDropTargetId(null);
-                                                        return;
-                                                    }
-                                                }
+                                                // Always allow drop so onDrop fires (toast shows on invalid)
                                                 e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
                                                 setExplorerDropTargetId(folder.id);
                                             }}
@@ -6411,12 +6457,9 @@
                                                 e.preventDefault();
                                                 const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
                                                 const { sourceFolder, bookIds } = dragData;
-                                                // Check if all books are already in this folder
-                                                const existing = new Set(folder.bookIds || []);
-                                                const newBookIds = bookIds.filter(id => !existing.has(id));
-                                                if (newBookIds.length === 0) {
-                                                    // All books already in folder - show toast at drop position
-                                                    const msg = bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder';
+
+                                                // Helper to show toast
+                                                const showToast = (msg) => {
                                                     setClipboardMessage(msg);
                                                     setToastPosition({ x: e.clientX, y: e.clientY });
                                                     setFooterClipboardVisible(false);
@@ -6429,6 +6472,21 @@
                                                             setToastAnimating(false);
                                                         }, 1000);
                                                     }, 1500);
+                                                };
+
+                                                // Check if dragging from All Books (view-only)
+                                                if (sourceFolder === '__all__') {
+                                                    showToast('All Books is view-only. Organize from folders.');
+                                                    setExplorerDropTargetId(null);
+                                                    setExplorerSelectedBooks(new Set());
+                                                    return;
+                                                }
+
+                                                // Check if all books are already in this folder
+                                                const existing = new Set(folder.bookIds || []);
+                                                const newBookIds = bookIds.filter(id => !existing.has(id));
+                                                if (newBookIds.length === 0) {
+                                                    showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder');
                                                 } else {
                                                     // Move or copy books
                                                     setFolders(prev => prev.map(f => {
@@ -6647,21 +6705,16 @@
                                                             className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'} ${explorerReorderTarget === index ? 'border-t-2 border-t-blue-500' : ''}`}
                                                             draggable="true"
                                                             onDragStart={(e) => {
-                                                                // Disable drag from All Books (view-only)
-                                                                if (selectedFolderId === '__all__') {
-                                                                    e.preventDefault();
-                                                                    return;
-                                                                }
                                                                 e.stopPropagation();
                                                                 e.dataTransfer.effectAllowed = 'copyMove';
                                                                 const dragData = {
-                                                                    sourceFolder: selectedFolderId,
+                                                                    sourceFolder: selectedFolderId, // '__all__' for All Books
                                                                     bookIds: explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1
                                                                         ? [...explorerSelectedBooks]
                                                                         : [book.id]
                                                                 };
                                                                 e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
-                                                                setExplorerDragData(dragData); // Store for validity checks in dragOver
+                                                                setExplorerDragData(dragData); // Store for validity checks
                                                                 if (!explorerSelectedBooks.has(book.id)) {
                                                                     setExplorerSelectedBooks(new Set([book.id]));
                                                                 }
@@ -6749,15 +6802,10 @@
                                                         className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''} ${explorerReorderTarget === index ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
                                                         draggable="true"
                                                         onDragStart={(e) => {
-                                                            // Disable drag from All Books (view-only)
-                                                            if (selectedFolderId === '__all__') {
-                                                                e.preventDefault();
-                                                                return;
-                                                            }
                                                             e.stopPropagation();
                                                             e.dataTransfer.effectAllowed = 'copyMove';
                                                             const dragData = {
-                                                                sourceFolder: selectedFolderId,
+                                                                sourceFolder: selectedFolderId, // '__all__' for All Books
                                                                 bookIds: explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1
                                                                     ? [...explorerSelectedBooks]
                                                                     : [book.id]

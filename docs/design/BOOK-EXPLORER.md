@@ -333,6 +333,7 @@ Filter by tag shows matching books across all folders.
 - Search (jump-to)
 - Keyboard navigation
 - Cut/copy/paste
+- All Books: Hover tooltip showing folder location(s) with links that navigate to book in that folder
 
 ### Phase 3: Polish
 - Drag to reorder folders
