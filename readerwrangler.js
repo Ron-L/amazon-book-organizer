@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.15";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -110,7 +110,7 @@
             const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
             const [explorerSort, setExplorerSort] = useState({ column: 'custom', direction: 'asc' }); // 'custom' | 'title' | 'author' | 'rating'
             const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
-            const [explorerCoverCols, setExplorerCoverCols] = useState(8); // Grid columns (4-12)
+            const [explorerCoverCols, setExplorerCoverCols] = useState(56); // Slider value (4-60), actual cols = 64-value
             const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed
             const [editingFolderName, setEditingFolderName] = useState(''); // Folder rename input
             const [explorerDragBookId, setExplorerDragBookId] = useState(null); // Book being dragged in Explorer
@@ -118,9 +118,9 @@
             const [explorerSelectedBooks, setExplorerSelectedBooks] = useState(new Set()); // Multi-select in Explorer
             const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
 
-            // v5.0.0 - Special folders (virtual, computed)
+            // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
-            const FOLDER_UNORGANIZED = { id: '__unorganized__', name: 'Unorganized', virtual: true, icon: '📥' };
+            const FOLDER_INBOX = { id: '__inbox__', name: 'Inbox', virtual: false, icon: '📥', isInbox: true };
 
             // v4.16.0.s - Helper to extract bookId from column entry (handles legacy string and new object format)
             // Entry types: string (legacy bookId), {type:'divider',...}, {instanceId, bookId} (new format)
@@ -174,34 +174,33 @@
             };
 
             // v5.0.0 - Book Explorer folder helpers
-            // Get all book IDs that are in any folder
-            const getBooksInFolders = () => {
+            // Get all book IDs that are in any user folder (not Inbox)
+            const getBooksInUserFolders = () => {
                 const inFolders = new Set();
                 folders.forEach(folder => {
-                    (folder.bookIds || []).forEach(id => inFolders.add(id));
+                    if (folder.id !== '__inbox__') {
+                        (folder.bookIds || []).forEach(id => inFolders.add(id));
+                    }
                 });
                 return inFolders;
             };
 
-            // Get books not in any folder (for Unorganized) - reversed for newest first
-            const getUnorganizedBookIds = () => {
-                const inFolders = getBooksInFolders();
-                return books.map(b => b.id).filter(id => !inFolders.has(id)).reverse();
-            };
+            // Get the Inbox folder from folders array
+            const getInboxFolder = () => folders.find(f => f.id === '__inbox__');
 
-            // Get books for a folder (handles virtual folders)
+            // Get books for a folder (handles All Books virtual folder)
             const getFolderBookIds = (folderId) => {
                 if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first
-                if (folderId === '__unorganized__') return getUnorganizedBookIds();
                 const folder = folders.find(f => f.id === folderId);
                 return folder?.bookIds || [];
             };
 
-            // Get folder by ID (handles virtual folders)
+            // Get folder by ID (handles All Books virtual folder)
             const getFolderById = (folderId) => {
                 if (folderId === '__all__') return FOLDER_ALL_BOOKS;
-                if (folderId === '__unorganized__') return FOLDER_UNORGANIZED;
-                return folders.find(f => f.id === folderId);
+                const folder = folders.find(f => f.id === folderId);
+                if (folder?.id === '__inbox__') return { ...folder, ...FOLDER_INBOX };
+                return folder;
             };
 
             // Get child folders of a parent (null = root level)
@@ -210,19 +209,28 @@
             };
 
             // Reorder a book within a folder's bookIds array
-            const reorderBookInFolder = (folderId, bookId, targetIndex) => {
+            // Reorder books within a folder (supports single or multiple books)
+            const reorderBooksInFolder = (folderId, bookIdsToMove, targetIndex) => {
                 setFolders(prev => prev.map(folder => {
                     if (folder.id !== folderId) return folder;
                     const bookIds = [...(folder.bookIds || [])];
-                    const currentIndex = bookIds.indexOf(bookId);
-                    if (currentIndex === -1) return folder; // Book not in folder
-                    // Remove from current position
-                    bookIds.splice(currentIndex, 1);
-                    // Adjust target index if needed (if moving down, index shifts after removal)
-                    const adjustedIndex = targetIndex > currentIndex ? targetIndex - 1 : targetIndex;
-                    // Insert at target position
-                    bookIds.splice(adjustedIndex, 0, bookId);
-                    return { ...folder, bookIds };
+                    const moveSet = new Set(bookIdsToMove);
+
+                    // Find the minimum current index of books being moved
+                    const minCurrentIndex = Math.min(...bookIdsToMove.map(id => bookIds.indexOf(id)).filter(i => i >= 0));
+
+                    // Remove all books being moved
+                    const remaining = bookIds.filter(id => !moveSet.has(id));
+
+                    // Adjust target index based on how many items were removed before it
+                    const removedBefore = bookIds.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
+                    const adjustedIndex = targetIndex - removedBefore;
+
+                    // Insert all books at target position (maintaining their relative order)
+                    const orderedBooksToMove = bookIdsToMove.filter(id => bookIds.includes(id));
+                    remaining.splice(adjustedIndex, 0, ...orderedBooksToMove);
+
+                    return { ...folder, bookIds: remaining };
                 }));
             };
 
@@ -541,6 +549,44 @@
                     }
                 }
             }, [syncStatus, columns, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
+
+            // v5.0.0 - Sync Inbox folder: ensure books not in user folders are in Inbox
+            useEffect(() => {
+                if (syncStatus === 'loading' || books.length === 0) return;
+
+                const booksInUserFolders = getBooksInUserFolders();
+                const inbox = getInboxFolder();
+                const booksNotInFolders = books.map(b => b.id).filter(id => !booksInUserFolders.has(id));
+
+                if (!inbox) {
+                    // Create Inbox with all books not in folders (newest first)
+                    console.log('📥 Creating Inbox folder with', booksNotInFolders.length, 'books');
+                    setFolders(prev => [{
+                        id: '__inbox__',
+                        name: 'Inbox',
+                        parentId: null,
+                        bookIds: [...booksNotInFolders].reverse(),
+                        childFolderIds: [],
+                        collapsed: false,
+                        isInbox: true
+                    }, ...prev]);
+                } else {
+                    // Sync Inbox: add missing books, remove books that are in user folders
+                    const inboxBookIds = new Set(inbox.bookIds || []);
+                    const needsUpdate = booksNotInFolders.some(id => !inboxBookIds.has(id)) ||
+                                       (inbox.bookIds || []).some(id => booksInUserFolders.has(id));
+
+                    if (needsUpdate) {
+                        setFolders(prev => prev.map(f => {
+                            if (f.id !== '__inbox__') return f;
+                            // Keep existing order for books still in Inbox, add new ones at top
+                            const existingInInbox = (f.bookIds || []).filter(id => !booksInUserFolders.has(id));
+                            const newToInbox = booksNotInFolders.filter(id => !inboxBookIds.has(id));
+                            return { ...f, bookIds: [...newToInbox.reverse(), ...existingInInbox] };
+                        }));
+                    }
+                }
+            }, [books, folders, syncStatus]);
 
             useEffect(() => {
                 localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
@@ -6296,12 +6342,12 @@
                                     </div>
                                     {/* Unorganized (virtual) - drop target removes from all folders */}
                                     <div
-                                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__unorganized__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__unorganized__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
-                                        onClick={() => setSelectedFolderId('__unorganized__')}
+                                        className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__inbox__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                        onClick={() => setSelectedFolderId('__inbox__')}
                                         onDragOver={(e) => {
                                             e.preventDefault();
                                             e.dataTransfer.dropEffect = 'move';
-                                            setExplorerDropTargetId('__unorganized__');
+                                            setExplorerDropTargetId('__inbox__');
                                         }}
                                         onDragLeave={() => setExplorerDropTargetId(null)}
                                         onDrop={(e) => {
@@ -6316,12 +6362,12 @@
                                             setExplorerDropTargetId(null);
                                             setExplorerSelectedBooks(new Set());
                                         }}>
-                                        <span>{FOLDER_UNORGANIZED.icon}</span>
-                                        <span className="flex-1">{FOLDER_UNORGANIZED.name}</span>
-                                        <span className="text-xs text-gray-500">({getUnorganizedBookIds().length})</span>
+                                        <span>{FOLDER_INBOX.icon}</span>
+                                        <span className="flex-1">{FOLDER_INBOX.name}</span>
+                                        <span className="text-xs text-gray-500">({getFolderBookIds('__inbox__').length})</span>
                                     </div>
-                                    {/* User folders */}
-                                    {getChildFolders(null).map(folder => (
+                                    {/* User folders (exclude Inbox since shown above) */}
+                                    {getChildFolders(null).filter(f => f.id !== '__inbox__').map(folder => (
                                         <div
                                             key={folder.id}
                                             className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
@@ -6332,15 +6378,16 @@
                                             }}
                                             onDragOver={(e) => {
                                                 e.preventDefault();
-                                                e.dataTransfer.dropEffect = 'move';
+                                                e.dataTransfer.dropEffect = e.ctrlKey ? 'copy' : 'move';
                                                 setExplorerDropTargetId(folder.id);
                                             }}
                                             onDragLeave={() => setExplorerDropTargetId(null)}
                                             onDrop={(e) => {
                                                 e.preventDefault();
+                                                const isCopy = e.ctrlKey;
                                                 const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
                                                 const { sourceFolder, bookIds } = dragData;
-                                                // Move books: remove from source folder, add to this folder
+                                                // Move or copy books
                                                 setFolders(prev => prev.map(f => {
                                                     if (f.id === folder.id) {
                                                         // Add to destination (at top, no duplicates)
@@ -6348,8 +6395,8 @@
                                                         const newBookIds = bookIds.filter(id => !existing.has(id));
                                                         return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
                                                     }
-                                                    if (f.id === sourceFolder) {
-                                                        // Remove from source folder
+                                                    if (!isCopy && f.id === sourceFolder) {
+                                                        // Remove from source folder (move only, not copy)
                                                         return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
                                                     }
                                                     return f;
@@ -6482,12 +6529,12 @@
                                                 <span className="text-xs text-gray-500">Size:</span>
                                                 <input
                                                     type="range"
-                                                    min="2"
-                                                    max="12"
+                                                    min="4"
+                                                    max="60"
                                                     value={explorerCoverCols}
                                                     onChange={(e) => setExplorerCoverCols(parseInt(e.target.value))}
-                                                    className="w-20 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                                                    title={`${16 - explorerCoverCols} columns`}
+                                                    className="w-24 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                                    title={`${64 - explorerCoverCols} columns`}
                                                 />
                                             </div>
                                         )}
@@ -6566,7 +6613,7 @@
                                                             }}
                                                             onDragOver={(e) => {
                                                                 // Only allow reorder in Custom sort and user folders
-                                                                if (explorerSort.column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__unorganized__') {
+                                                                if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
                                                                     e.preventDefault();
                                                                     e.dataTransfer.dropEffect = 'move';
                                                                     setExplorerReorderTarget(index);
@@ -6576,11 +6623,11 @@
                                                             onDrop={(e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
-                                                                if (explorerSort.column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__unorganized__') {
+                                                                if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
                                                                     const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
-                                                                    if (dragData.sourceFolder === selectedFolderId && dragData.bookIds.length === 1) {
+                                                                    if (dragData.sourceFolder === selectedFolderId) {
                                                                         // Reorder within same folder
-                                                                        reorderBookInFolder(selectedFolderId, dragData.bookIds[0], index);
+                                                                        reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                     }
                                                                 }
                                                                 setExplorerReorderTarget(null);
@@ -6623,7 +6670,7 @@
                                             </tbody>
                                         </table>
                                     ) : (
-                                        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${16 - explorerCoverCols}, minmax(0, 1fr))` }}>
+                                        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(0, 1fr))` }}>
                                             {(() => {
                                                 const bookList = getFolderBookIds(selectedFolderId)
                                                     .map(id => books.find(b => b.id === id))
@@ -6660,7 +6707,7 @@
                                                             setExplorerDragBookId(book.id);
                                                         }}
                                                         onDragOver={(e) => {
-                                                            if (explorerSort.column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__unorganized__') {
+                                                            if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
                                                                 e.preventDefault();
                                                                 e.dataTransfer.dropEffect = 'move';
                                                                 setExplorerReorderTarget(index);
@@ -6670,7 +6717,7 @@
                                                         onDrop={(e) => {
                                                             e.preventDefault();
                                                             e.stopPropagation();
-                                                            if (explorerSort.column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__unorganized__') {
+                                                            if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
                                                                 const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
                                                                 if (dragData.sourceFolder === selectedFolderId && dragData.bookIds.length === 1) {
                                                                     reorderBookInFolder(selectedFolderId, dragData.bookIds[0], index);
