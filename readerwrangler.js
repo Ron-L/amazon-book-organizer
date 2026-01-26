@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.35";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.36";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6872,7 +6872,7 @@
                                                     return sortedBooks.map((book, index) => (
                                                         <tr
                                                             key={book.id}
-                                                            className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'} ${explorerReorderTarget === index ? 'border-t-2 border-t-blue-500' : ''}`}
+                                                            className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'} ${explorerReorderTarget === index ? (explorerSort.column === 'custom' && selectedFolderId !== '__all__' ? 'border-t-2 border-t-blue-500' : 'border-t-2 border-t-red-400') : ''}`}
                                                             draggable="true"
                                                             onDragStart={(e) => {
                                                                 e.stopPropagation();
@@ -6893,10 +6893,7 @@
                                                             onDragOver={(e) => {
                                                                 e.preventDefault(); // Allow drop event to fire
                                                                 e.dataTransfer.dropEffect = 'move'; // Must be 'move' for onDrop to fire
-                                                                // Only show reorder target when in custom (manual) sort mode on a user folder
-                                                                if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
-                                                                    setExplorerReorderTarget(index);
-                                                                }
+                                                                setExplorerReorderTarget(index); // Always show target (styled red if not allowed)
                                                             }}
                                                             onDragLeave={() => setExplorerReorderTarget(null)}
                                                             onDrop={(e) => {
@@ -7020,7 +7017,7 @@
                                                 return sortedBooks.map((book, index) => (
                                                     <div
                                                         key={book.id}
-                                                        className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''} ${explorerReorderTarget === index ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+                                                        className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''} ${explorerReorderTarget === index ? (explorerSort.column === 'custom' && selectedFolderId !== '__all__' ? 'ring-2 ring-blue-500 ring-offset-2' : 'ring-2 ring-red-400 ring-offset-2') : ''}`}
                                                         draggable="true"
                                                         onDragStart={(e) => {
                                                             e.stopPropagation();
@@ -7041,10 +7038,7 @@
                                                         onDragOver={(e) => {
                                                             e.preventDefault(); // Allow drop event to fire
                                                             e.dataTransfer.dropEffect = 'move'; // Must be 'move' for onDrop to fire
-                                                            // Only show reorder target when in custom (manual) sort mode on a user folder
-                                                            if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
-                                                                setExplorerReorderTarget(index);
-                                                            }
+                                                            setExplorerReorderTarget(index); // Always show target (styled red if not allowed)
                                                         }}
                                                         onDragLeave={() => setExplorerReorderTarget(null)}
                                                         onDrop={(e) => {
