@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.27";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.28";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6932,9 +6932,8 @@
                                                             <td className="p-2 text-gray-500 text-xs">
                                                                 {(() => {
                                                                     const dateStr = book.acquired || book.addedToWishlist;
-                                                                    if (book.asin === 'B016I7I5GE') console.log('DEBUG B016I7I5GE:', { acquired: book.acquired, addedToWishlist: book.addedToWishlist, dateStr, type: typeof book.acquired });
                                                                     if (!dateStr) return '-';
-                                                                    const date = new Date(dateStr);
+                                                                    const date = /^\d{10,}$/.test(dateStr) ? new Date(Number(dateStr)) : new Date(dateStr);
                                                                     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                                                                 })()}
                                                             </td>
