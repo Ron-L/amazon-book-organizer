@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.13";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6638,8 +6638,63 @@
                                                     });
                                                 }
                                                 return bookList;
-                                            })().map(book => (
-                                                    <div key={book.id} className="cursor-pointer hover:opacity-80" onClick={() => openBookModal(book, null)}>
+                                            })().map((book, index) => (
+                                                    <div
+                                                        key={book.id}
+                                                        className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''} ${explorerReorderTarget === index ? 'ring-2 ring-blue-500 ring-offset-2' : ''}`}
+                                                        draggable="true"
+                                                        onDragStart={(e) => {
+                                                            e.dataTransfer.effectAllowed = 'move';
+                                                            const dragData = {
+                                                                sourceFolder: selectedFolderId,
+                                                                bookIds: explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1
+                                                                    ? [...explorerSelectedBooks]
+                                                                    : [book.id]
+                                                            };
+                                                            e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                                                            if (!explorerSelectedBooks.has(book.id)) {
+                                                                setExplorerSelectedBooks(new Set([book.id]));
+                                                            }
+                                                            setExplorerDragBookId(book.id);
+                                                        }}
+                                                        onDragOver={(e) => {
+                                                            if (explorerSort.column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__unorganized__') {
+                                                                e.preventDefault();
+                                                                e.dataTransfer.dropEffect = 'move';
+                                                                setExplorerReorderTarget(index);
+                                                            }
+                                                        }}
+                                                        onDragLeave={() => setExplorerReorderTarget(null)}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            if (explorerSort.column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__unorganized__') {
+                                                                const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                                                if (dragData.sourceFolder === selectedFolderId && dragData.bookIds.length === 1) {
+                                                                    reorderBookInFolder(selectedFolderId, dragData.bookIds[0], index);
+                                                                }
+                                                            }
+                                                            setExplorerReorderTarget(null);
+                                                            setExplorerDragBookId(null);
+                                                        }}
+                                                        onDragEnd={() => {
+                                                            setExplorerDragBookId(null);
+                                                            setExplorerDropTargetId(null);
+                                                            setExplorerReorderTarget(null);
+                                                        }}
+                                                        onClick={(e) => {
+                                                            if (e.ctrlKey || e.metaKey) {
+                                                                setExplorerSelectedBooks(prev => {
+                                                                    const next = new Set(prev);
+                                                                    if (next.has(book.id)) next.delete(book.id);
+                                                                    else next.add(book.id);
+                                                                    return next;
+                                                                });
+                                                            } else {
+                                                                setExplorerSelectedBooks(new Set([book.id]));
+                                                            }
+                                                        }}
+                                                        onDoubleClick={() => openBookModal(book, null)}>
                                                         <img src={book.coverUrl} alt={book.title} className="w-full h-auto rounded shadow" />
                                                         <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
                                                     </div>
