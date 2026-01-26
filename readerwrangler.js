@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.23";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.24";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -196,6 +196,82 @@
                 if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first
                 const folder = folders.find(f => f.id === folderId);
                 return folder?.bookIds || [];
+            };
+
+            // Filter a single book for Explorer view (applies all active filters)
+            const filterBookForExplorer = (book) => {
+                if (!book) return false;
+
+                // Text search filter
+                const matchesSearch = !searchTerm ||
+                    book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    book.author.toLowerCase().includes(searchTerm.toLowerCase());
+
+                // Read status filter
+                const matchesReadStatus = !readStatusFilter || book.readStatus === readStatusFilter;
+
+                // Collection filter
+                let matchesCollection = true;
+                if (collectionFilter) {
+                    if (collectionFilter === 'UNCOLLECTED') {
+                        matchesCollection = !book.collections || book.collections.length === 0;
+                    } else {
+                        matchesCollection = book.collections &&
+                            book.collections.some(c => c.name === collectionFilter);
+                    }
+                }
+
+                // Rating filter
+                const matchesRating = !ratingFilter || (book.rating >= parseFloat(ratingFilter));
+
+                // Wishlist filter
+                const matchesWishlist = !wishlistFilter ||
+                    (wishlistFilter === 'wishlist' && book.onWishlist) ||
+                    (wishlistFilter === 'owned' && !book.onWishlist);
+
+                // Ownership type filter
+                const matchesOwnership = !ownershipFilter ||
+                    (book.ownershipType || 'purchased') === ownershipFilter;
+
+                // Hidden filter (book-level for Explorer)
+                const matchesHidden = showHidden || !book.isHidden;
+
+                // Series filter
+                let matchesSeries = true;
+                if (seriesFilter) {
+                    if (seriesFilter === 'NOT_IN_SERIES') {
+                        matchesSeries = !book.series || book.series.trim() === '';
+                    } else {
+                        matchesSeries = book.series && book.series === seriesFilter;
+                    }
+                }
+
+                // Date range filter
+                let matchesDateRange = true;
+                if (dateFrom || dateTo) {
+                    if (book.acquired) {
+                        const bookDate = new Date(parseInt(book.acquired)).toISOString().split('T')[0];
+                        const fromDate = dateFrom || '0000-01-01';
+                        const toDate = dateTo || new Date().toISOString().split('T')[0];
+                        if (bookDate < fromDate || bookDate > toDate) {
+                            matchesDateRange = false;
+                        }
+                    } else {
+                        matchesDateRange = false;
+                    }
+                }
+
+                // Deals filter
+                const matchesDeals = !dealsFilterActive ||
+                    (book.onWishlist && book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger);
+
+                // Tag filter
+                const matchesTags = !tagFilter || tagFilter.length === 0 ||
+                    (book.tags && book.tags.some(tag => tagFilter.includes(tag)));
+
+                return matchesSearch && matchesReadStatus && matchesCollection && matchesRating &&
+                    matchesWishlist && matchesOwnership && matchesHidden && matchesSeries &&
+                    matchesDateRange && matchesDeals && matchesTags;
             };
 
             // Get folder by ID (handles All Books virtual folder)
@@ -6615,7 +6691,17 @@
                                     <div className="font-medium text-gray-700">
                                         {getFolderById(selectedFolderId)?.name || 'Books'}
                                         <span className="text-sm text-gray-500 ml-2">
-                                            ({getFolderBookIds(selectedFolderId).length} books)
+                                            {(() => {
+                                                const allBookIds = getFolderBookIds(selectedFolderId);
+                                                const filteredCount = allBookIds
+                                                    .map(id => books.find(b => b.id === id))
+                                                    .filter(book => filterBookForExplorer(book))
+                                                    .length;
+                                                const totalCount = allBookIds.length;
+                                                return filteredCount === totalCount
+                                                    ? `(${totalCount} books)`
+                                                    : `(${filteredCount} of ${totalCount} books)`;
+                                            })()}
                                         </span>
                                         {selectedFolderId === '__all__' && (
                                             <span className="text-xs text-gray-400 ml-2 italic">
@@ -6664,7 +6750,9 @@
                                                  explorerSort.column === 'title' ? 'Title' :
                                                  explorerSort.column === 'author' ? 'Author' :
                                                  explorerSort.column === 'rating' ? 'Rating' :
-                                                 explorerSort.column === 'dateAdded' ? 'Date Added' : explorerSort.column}
+                                                 explorerSort.column === 'dateAdded' ? 'Date Added' :
+                                                 explorerSort.column === 'price' ? 'Price' :
+                                                 explorerSort.column === 'priceGoal' ? 'Goal' : explorerSort.column}
                                             </span>
                                             {explorerSort.column !== 'custom' && (
                                                 <>
@@ -6684,8 +6772,8 @@
                                 </div>
                                 <div className="flex-1 overflow-auto p-4">
                                     {explorerView === 'list' ? (
-                                        <table className="w-full text-sm">
-                                            <thead className="sticky top-0 bg-gray-50">
+                                        <table className="w-full text-sm min-w-[900px]">
+                                            <thead className="sticky top-0 bg-gray-50 z-10">
                                                 <tr className="text-left text-gray-600">
                                                     <th className="p-2 w-12"></th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
@@ -6700,14 +6788,20 @@
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100 w-28" onClick={() => setExplorerSort(prev => ({ column: 'dateAdded', direction: prev.column === 'dateAdded' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
                                                         Date Added {explorerSort.column === 'dateAdded' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
                                                     </th>
+                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'price', direction: prev.column === 'price' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                        Price {explorerSort.column === 'price' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                    </th>
+                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'priceGoal', direction: prev.column === 'priceGoal' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                        Goal {explorerSort.column === 'priceGoal' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                    </th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {(() => {
-                                                    // Build sorted book list for range selection
+                                                    // Build sorted book list for range selection (with filtering)
                                                     const sortedBooks = getFolderBookIds(selectedFolderId)
                                                         .map(id => books.find(b => b.id === id))
-                                                        .filter(Boolean)
+                                                        .filter(book => filterBookForExplorer(book))
                                                         .sort((a, b) => {
                                                             if (explorerSort.column === 'custom') return 0;
                                                             const dir = explorerSort.direction === 'asc' ? 1 : -1;
@@ -6718,6 +6812,16 @@
                                                                 const dateA = a.acquisitionDate || a.addedToWishlist || '';
                                                                 const dateB = b.acquisitionDate || b.addedToWishlist || '';
                                                                 return dir * dateA.localeCompare(dateB);
+                                                            }
+                                                            if (explorerSort.column === 'price') {
+                                                                const priceA = a.currentPrice ?? Infinity;
+                                                                const priceB = b.currentPrice ?? Infinity;
+                                                                return dir * (priceA - priceB);
+                                                            }
+                                                            if (explorerSort.column === 'priceGoal') {
+                                                                const goalA = a.priceTrigger ?? Infinity;
+                                                                const goalB = b.priceTrigger ?? Infinity;
+                                                                return dir * (goalA - goalB);
                                                             }
                                                             return 0;
                                                         });
@@ -6796,7 +6900,7 @@
                                                             }}
                                                             onDoubleClick={() => openBookModal(book, null)}>
                                                             <td className="p-2">
-                                                                <img src={book.coverUrl} alt="" className="w-8 h-12 object-cover rounded" />
+                                                                <img src={book.coverUrl} alt="" className={`w-8 h-12 object-cover rounded ${book.onWishlist ? 'opacity-40' : ''}`} />
                                                             </td>
                                                             <td className="p-2 font-medium">{book.title}</td>
                                                             <td className="p-2 text-gray-600">{book.author}</td>
@@ -6811,6 +6915,12 @@
                                                                     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                                                                 })()}
                                                             </td>
+                                                            <td className={`p-2 text-xs ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'text-green-600 font-semibold' : 'text-gray-600'}`}>
+                                                                {book.currentPrice != null ? `$${book.currentPrice.toFixed(2)}` : '-'}
+                                                            </td>
+                                                            <td className="p-2 text-gray-500 text-xs">
+                                                                {book.priceTrigger != null ? `$${book.priceTrigger.toFixed(2)}` : '-'}
+                                                            </td>
                                                         </tr>
                                                     ));
                                                 })()}
@@ -6821,7 +6931,7 @@
                                             {(() => {
                                                 const sortedBooks = getFolderBookIds(selectedFolderId)
                                                     .map(id => books.find(b => b.id === id))
-                                                    .filter(Boolean)
+                                                    .filter(book => filterBookForExplorer(book))
                                                     .sort((a, b) => {
                                                         if (explorerSort.column === 'custom') return 0;
                                                         const dir = explorerSort.direction === 'asc' ? 1 : -1;
@@ -6832,6 +6942,16 @@
                                                             const dateA = a.acquisitionDate || a.addedToWishlist || '';
                                                             const dateB = b.acquisitionDate || b.addedToWishlist || '';
                                                             return dir * dateA.localeCompare(dateB);
+                                                        }
+                                                        if (explorerSort.column === 'price') {
+                                                            const priceA = a.currentPrice ?? Infinity;
+                                                            const priceB = b.currentPrice ?? Infinity;
+                                                            return dir * (priceA - priceB);
+                                                        }
+                                                        if (explorerSort.column === 'priceGoal') {
+                                                            const goalA = a.priceTrigger ?? Infinity;
+                                                            const goalB = b.priceTrigger ?? Infinity;
+                                                            return dir * (goalA - goalB);
                                                         }
                                                         return 0;
                                                     });
@@ -6906,7 +7026,7 @@
                                                             }
                                                         }}
                                                         onDoubleClick={() => openBookModal(book, null)}>
-                                                        <img src={book.coverUrl} alt={book.title} className="w-full h-auto rounded shadow" />
+                                                        <img src={book.coverUrl} alt={book.title} className={`w-full h-auto rounded shadow ${book.onWishlist ? 'opacity-40' : ''}`} />
                                                         <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
                                                     </div>
                                                 ));
