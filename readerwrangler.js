@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.48";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.49";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6868,7 +6868,9 @@
                     {viewMode === 'explorer' && (
                         <div className="flex-1 min-h-0 flex mb-6">
                             {/* Left pane: Folder tree */}
-                            <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0">
+                            {/* v5.0.0-alpha.49 - onDragOver prevents browser "split view" prompt */}
+                            <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0"
+                                onDragOver={(e) => e.preventDefault()}>
                                 <div className="p-3 border-b border-gray-200 font-medium text-gray-700 flex items-center justify-between">
                                     <span>Folders</span>
                                     {/* Expand/Collapse All toggle */}
