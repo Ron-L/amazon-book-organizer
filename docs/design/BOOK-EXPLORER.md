@@ -388,6 +388,8 @@ Filter by tag shows matching books across all folders.
 - Basic folder operations (create, rename, delete)
 
 ### Phase 2: Enhanced Features
+- Show subfolders in right panel (folders + books view)
+- Resizable left pane (drag divider)
 - Cover view toggle
 - Column chooser
 - Search (jump-to)

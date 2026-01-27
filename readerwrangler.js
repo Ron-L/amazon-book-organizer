@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.53";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.54";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -116,6 +116,7 @@
             const [explorerDragBookId, setExplorerDragBookId] = useState(null); // Book being dragged in Explorer
             const [explorerDropTargetId, setExplorerDropTargetId] = useState(null); // Folder being dragged over
             const [explorerSelectedBooks, setExplorerSelectedBooks] = useState(new Set()); // Multi-select in Explorer
+            const [explorerSelectedFolders, setExplorerSelectedFolders] = useState(new Set()); // v5.0.0-alpha.54 - Folder selection in right pane
             const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select
             const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
             const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
@@ -7308,15 +7309,21 @@
                                         {getFolderById(selectedFolderId)?.name || 'Books'}
                                         <span className="text-sm text-gray-500 ml-2">
                                             {(() => {
+                                                // v5.0.0-alpha.54 - Show folder count + book count
+                                                const childFolders = selectedFolderId === '__all__' ? [] : getChildFolders(selectedFolderId);
+                                                const folderCount = childFolders.length;
                                                 const allBookIds = getFolderBookIds(selectedFolderId);
                                                 const filteredCount = allBookIds
                                                     .map(id => books.find(b => b.id === id))
                                                     .filter(book => filterBookForExplorer(book))
                                                     .length;
                                                 const totalCount = allBookIds.length;
-                                                return filteredCount === totalCount
-                                                    ? `(${totalCount} books)`
-                                                    : `(${filteredCount} of ${totalCount} books)`;
+                                                const bookPart = filteredCount === totalCount
+                                                    ? `${totalCount} books`
+                                                    : `${filteredCount} of ${totalCount} books`;
+                                                return folderCount > 0
+                                                    ? `(${folderCount} folders, ${bookPart})`
+                                                    : `(${bookPart})`;
                                             })()}
                                         </span>
                                         {selectedFolderId === '__all__' && (
@@ -7363,7 +7370,7 @@
                                             <span className="text-gray-500">Sort:</span>
                                             <span className="text-gray-700">
                                                 {explorerSort.column === 'custom' ? 'Manual Order' :
-                                                 explorerSort.column === 'title' ? 'Title' :
+                                                 explorerSort.column === 'title' ? 'Name' :
                                                  explorerSort.column === 'author' ? 'Author' :
                                                  explorerSort.column === 'rating' ? 'Rating' :
                                                  explorerSort.column === 'dateAdded' ? 'Date Added' :
@@ -7394,7 +7401,7 @@
                                                 <tr className="text-left text-gray-600">
                                                     <th className="p-2 w-12"></th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                                                        Title {explorerSort.column === 'title' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                        Name {explorerSort.column === 'title' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
                                                     </th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'author', direction: prev.column === 'author' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                         Author {explorerSort.column === 'author' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
@@ -7417,6 +7424,56 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
+                                                {/* v5.0.0-alpha.54 - Folder rows (before books) */}
+                                                {(() => {
+                                                    // Get child folders (only for user folders, not All Books)
+                                                    if (selectedFolderId === '__all__') return null;
+                                                    const childFolders = getChildFolders(selectedFolderId);
+                                                    if (childFolders.length === 0) return null;
+
+                                                    // Sort folders: alphabetically, respecting direction only when sorting by Name
+                                                    const dir = explorerSort.column === 'title' && explorerSort.direction === 'desc' ? -1 : 1;
+                                                    const sortedFolders = [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+
+                                                    return sortedFolders.map(folder => (
+                                                        <tr
+                                                            key={`folder-${folder.id}`}
+                                                            className={`cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                            onClick={(e) => {
+                                                                // Clear book selection when selecting folder
+                                                                setExplorerSelectedBooks(new Set());
+                                                                if (e.ctrlKey || e.metaKey) {
+                                                                    setExplorerSelectedFolders(prev => {
+                                                                        const next = new Set(prev);
+                                                                        if (next.has(folder.id)) next.delete(folder.id);
+                                                                        else next.add(folder.id);
+                                                                        return next;
+                                                                    });
+                                                                } else {
+                                                                    setExplorerSelectedFolders(new Set([folder.id]));
+                                                                }
+                                                            }}
+                                                            onDoubleClick={() => {
+                                                                // Navigate into folder
+                                                                setSelectedFolderId(folder.id);
+                                                                // Expand parent if collapsed
+                                                                setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f));
+                                                                // Clear selections
+                                                                setExplorerSelectedFolders(new Set());
+                                                                setExplorerSelectedBooks(new Set());
+                                                            }}>
+                                                            <td className="p-2 text-center text-xl">📁</td>
+                                                            <td className="p-2 font-medium">{folder.name}</td>
+                                                            <td className="p-2 text-gray-400">—</td>
+                                                            <td className="p-2 text-gray-400">—</td>
+                                                            <td className="p-2 text-gray-400">—</td>
+                                                            <td className="p-2 text-gray-400">—</td>
+                                                            <td className="p-2 text-gray-400">—</td>
+                                                            <td className="p-2 text-gray-400">—</td>
+                                                        </tr>
+                                                    ));
+                                                })()}
+                                                {/* Book rows */}
                                                 {(() => {
                                                     // Build sorted book list for range selection (with filtering)
                                                     const sortedBooks = getFolderBookIds(selectedFolderId)
@@ -7565,6 +7622,46 @@
                                         </table>
                                     ) : (
                                         <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(40px, 1fr))` }}>
+                                            {/* v5.0.0-alpha.54 - Folder tiles (before books) */}
+                                            {(() => {
+                                                if (selectedFolderId === '__all__') return null;
+                                                const childFolders = getChildFolders(selectedFolderId);
+                                                if (childFolders.length === 0) return null;
+
+                                                const dir = explorerSort.column === 'title' && explorerSort.direction === 'desc' ? -1 : 1;
+                                                const sortedFolders = [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+
+                                                return sortedFolders.map(folder => (
+                                                    <div
+                                                        key={`folder-${folder.id}`}
+                                                        className={`cursor-pointer hover:opacity-80 ${explorerSelectedFolders.has(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
+                                                        onClick={(e) => {
+                                                            setExplorerSelectedBooks(new Set());
+                                                            if (e.ctrlKey || e.metaKey) {
+                                                                setExplorerSelectedFolders(prev => {
+                                                                    const next = new Set(prev);
+                                                                    if (next.has(folder.id)) next.delete(folder.id);
+                                                                    else next.add(folder.id);
+                                                                    return next;
+                                                                });
+                                                            } else {
+                                                                setExplorerSelectedFolders(new Set([folder.id]));
+                                                            }
+                                                        }}
+                                                        onDoubleClick={() => {
+                                                            setSelectedFolderId(folder.id);
+                                                            setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f));
+                                                            setExplorerSelectedFolders(new Set());
+                                                            setExplorerSelectedBooks(new Set());
+                                                        }}>
+                                                        <div className="aspect-[2/3] bg-amber-50 border-2 border-amber-200 rounded shadow flex items-center justify-center">
+                                                            <span className="text-4xl">📁</span>
+                                                        </div>
+                                                        <div className="mt-1 text-xs text-gray-700 truncate text-center">{folder.name}</div>
+                                                    </div>
+                                                ));
+                                            })()}
+                                            {/* Book tiles */}
                                             {(() => {
                                                 const sortedBooks = getFolderBookIds(selectedFolderId)
                                                     .map(id => books.find(b => b.id === id))
