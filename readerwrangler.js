@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.46";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.47";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -1176,6 +1176,41 @@
                             // Keep clipboard for copy (can paste again)
                             // v4.16.0.g - Keep message for copy (can paste again)
                         }
+                    }
+
+                    // v5.0.0-alpha.46 - DEL key in Explorer: Remove selected books from current folder
+                    if (e.key === 'Delete' && viewMode === 'explorer' && explorerSelectedBooks.size > 0) {
+                        e.preventDefault();
+                        // Can't remove from All Books (view-only) or Inbox
+                        if (selectedFolderId === '__all__' || selectedFolderId === '__inbox__') {
+                            console.log('🚫 Cannot remove books from All Books or Inbox');
+                            return;
+                        }
+                        const folder = folders.find(f => f.id === selectedFolderId);
+                        if (!folder) return;
+
+                        const bookIdsToRemove = [...explorerSelectedBooks];
+                        const fromIndices = bookIdsToRemove.map(id => (folder.bookIds || []).indexOf(id));
+
+                        // Remove books from folder
+                        setFolders(prev => prev.map(f => {
+                            if (f.id === selectedFolderId) {
+                                return { ...f, bookIds: (f.bookIds || []).filter(id => !explorerSelectedBooks.has(id)) };
+                            }
+                            return f;
+                        }));
+
+                        // Record for undo
+                        recordAction({
+                            type: 'REMOVE_BOOKS_FOLDER',
+                            folderId: selectedFolderId,
+                            bookIds: bookIdsToRemove,
+                            fromIndices: fromIndices
+                        });
+
+                        console.log(`🗑️ Removed ${bookIdsToRemove.length} book(s) from "${folder.name}"`);
+                        setExplorerSelectedBooks(new Set());
+                        return; // Don't fall through to column delete
                     }
 
                     // v4.16.0.bd - DEL key: Delete selected books (with last-copy protection)
