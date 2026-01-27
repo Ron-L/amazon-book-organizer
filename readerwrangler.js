@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.52";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.53";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7252,10 +7252,32 @@
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         if (window.confirm(`Delete folder "${folder.name}"?`)) {
-                                                                            setFolders(prev => prev.filter(f => f.id !== folder.id));
-                                                                            if (selectedFolderId === folder.id) {
+                                                                            // v5.0.0-alpha.53 - Fix: capture descendants and record for undo
+                                                                            const getAllDescendants = (folderId, allFolders) => {
+                                                                                const children = allFolders.filter(f => f.parentId === folderId);
+                                                                                let descendants = [...children];
+                                                                                children.forEach(child => {
+                                                                                    descendants = [...descendants, ...getAllDescendants(child.id, allFolders)];
+                                                                                });
+                                                                                return descendants;
+                                                                            };
+                                                                            const descendants = getAllDescendants(folder.id, folders);
+                                                                            const foldersToDelete = [folder, ...descendants];
+                                                                            const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
+                                                                            const folderIndices = foldersToDelete.map(f => folders.findIndex(x => x.id === f.id));
+
+                                                                            // Record action for undo before modifying state
+                                                                            recordAction({
+                                                                                type: 'DELETE_FOLDERS',
+                                                                                deletedFolders: foldersToDelete.map(f => ({ ...f })),
+                                                                                folderIndices: folderIndices
+                                                                            });
+
+                                                                            setFolders(prev => prev.filter(f => !folderIdsToDelete.has(f.id)));
+                                                                            if (selectedFolderId === folder.id || folderIdsToDelete.has(selectedFolderId)) {
                                                                                 setSelectedFolderId('__all__');
                                                                             }
+                                                                            console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}`);
                                                                         }
                                                                     }}
                                                                     className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 px-1"
