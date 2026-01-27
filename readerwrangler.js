@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.47";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.48";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -1286,7 +1286,7 @@
 
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [activeColumnId, columns, selectedBooks, clipboard, hiddenInstances]);
+            }, [activeColumnId, columns, selectedBooks, clipboard, hiddenInstances, viewMode, explorerSelectedBooks, selectedFolderId, folders]);
 
             // Initialize activeColumnId to first column when columns are loaded
             useEffect(() => {
