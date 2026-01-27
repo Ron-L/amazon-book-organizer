@@ -134,7 +134,7 @@ Sortable table with configurable columns.
 **Column Chooser:**
 - Right-click column header to show/hide columns
 - Drag columns to reorder
-- Available columns: Cover, Title, Author, Rating, Series, Pages, Acquisition Date, Collections, Read Status, Price, Review Count
+- Available columns: Cover, Title, Author, Rating, Series, Series Position, Pages, Acquisition Date, Collections, Read Status, Price, Review Count
 
 ### Cover View
 Grid of book covers, similar to current column app.
@@ -149,6 +149,32 @@ Grid of book covers, similar to current column app.
 - Button in toolbar: [List] [Covers]
 - Keyboard shortcut: Ctrl+1 (list), Ctrl+2 (covers)
 - View preference persisted per folder (optional) or global
+
+### Sorting vs. Custom Order
+
+Two distinct modes with different behaviors:
+
+| Mode | Column Header Click | Drag to Reorder | Use Case |
+|------|---------------------|-----------------|----------|
+| **Sorted View** (Title, Author, Rating, etc.) | Changes sort direction | Disabled | Quick browsing, finding books |
+| **Custom View** | **Reorders books permanently** | Enabled | Organizing, manual arrangement |
+
+**Custom View workflow:**
+1. Open folder (shows custom order - typically acquisition date initially)
+2. Click column header (e.g., "Series Position") → books reorder permanently
+3. Drag to adjust (e.g., insert omnibus at position 1, move anthology between #3 and #4)
+4. Undo captures reorder operations
+
+**Benefits:**
+- Immediate visual feedback when reordering
+- Consistent mental model: Custom = editable workspace, Sorted = read-only lens
+- One-step operation (no separate "Apply" action)
+- Column headers are already interactive and discoverable
+
+**Visual cues:**
+- Tooltip on Custom view headers: "Click to reorder"
+- Animation when reordering so user sees change
+- Sort indicator (▲/▼) only shown in Sorted views, not Custom
 
 ### Right Pane Content (Folders + Books)
 
@@ -395,6 +421,9 @@ Filter by tag shows matching books across all folders.
 ### Dual-Pane Split
 - Two folder views side by side
 - **Deferred to v2**: Tree + drag-to-folder covers 90% of use cases
+- **Design options:** See [DUAL-PANE-SPLIT.md](DUAL-PANE-SPLIT.md) for full analysis
+  - Option A: Built-in split pane (8-12 hours, native drag works)
+  - Option B: BroadcastChannel sync for two browser tabs (4-6 hours, copy/paste only)
 
 ---
 
@@ -402,6 +431,7 @@ Filter by tag shows matching books across all folders.
 
 - `WIZARD-MODE.md` - Auto-organize by author/series (Phase 5)
 - `TAGS.md` - Tag system design (complementary feature)
+- `DUAL-PANE-SPLIT.md` - V2 dual-pane design options (deferred)
 - `TODO.md` - Priority 1 task list
 - `DESKTOP-FOLDERS.md` - Previous virtual desktop design (superseded)
 - `COLUMN-ARRANGER.md` - Previous split-pane design (superseded)

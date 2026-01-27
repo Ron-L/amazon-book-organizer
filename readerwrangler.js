@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.50";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.52";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -3010,6 +3010,14 @@
                             return newFolders;
                         });
                         break;
+                    case 'CREATE_FOLDER':
+                        // v5.0.0-alpha.51 - Undo folder creation: remove the created folder
+                        console.log('[UNDO CREATE_FOLDER] Removing folder:', action.folderId);
+                        setFolders(prev => prev.filter(f => f.id !== action.folderId));
+                        if (selectedFolderId === action.folderId) {
+                            setSelectedFolderId(action.parentId || '__all__');
+                        }
+                        break;
                     default:
                         console.warn('Unknown action type for undo:', action.type);
                 }
@@ -3245,6 +3253,12 @@
                         console.log('[REDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
                         const folderIdsToDelete = new Set(action.deletedFolders.map(f => f.id));
                         setFolders(prev => prev.filter(f => !folderIdsToDelete.has(f.id)));
+                        break;
+                    case 'CREATE_FOLDER':
+                        // v5.0.0-alpha.51 - Redo folder creation: re-add the folder
+                        console.log('[REDO CREATE_FOLDER] Re-adding folder:', action.folder.name);
+                        setFolders(prev => [...prev, { ...action.folder }]);
+                        setSelectedFolderId(action.folderId);
                         break;
                     default:
                         console.warn('Unknown action type for redo:', action.type);
@@ -6887,13 +6901,39 @@
                                     </button>
                                 </div>
                                 <div className="p-2">
-                                    {/* All Books (virtual, view-only) */}
+                                    {/* All Books (virtual, view-only) - v5.0.0-alpha.52 added "+" for new root folder */}
                                     <div
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => setSelectedFolderId('__all__')}>
-                                        <span>{FOLDER_ALL_BOOKS.icon}</span>
-                                        <span className="flex-1">{FOLDER_ALL_BOOKS.name}</span>
-                                        <span className="text-xs text-gray-500">({books.length})</span>
+                                        <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
+                                        <span className="flex-1 pointer-events-none">{FOLDER_ALL_BOOKS.name}</span>
+                                        <span className="text-xs text-gray-500 pointer-events-none">({books.length})</span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const newFolder = {
+                                                    id: `folder-${Date.now()}`,
+                                                    name: 'New Folder',
+                                                    parentId: null,
+                                                    bookIds: [],
+                                                    childFolderIds: [],
+                                                    collapsed: false
+                                                };
+                                                recordAction({
+                                                    type: 'CREATE_FOLDER',
+                                                    folderId: newFolder.id,
+                                                    parentId: null,
+                                                    folder: { ...newFolder }
+                                                });
+                                                setFolders(prev => [...prev, newFolder]);
+                                                setSelectedFolderId(newFolder.id);
+                                                setEditingFolderId(newFolder.id);
+                                                setEditingFolderName('New Folder');
+                                            }}
+                                            className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 px-1"
+                                            title="New folder">
+                                            +
+                                        </button>
                                     </div>
                                     {/* Divider line to separate All Books from folders */}
                                     <div className="border-b border-gray-200 my-1 mx-2"></div>
@@ -7052,10 +7092,36 @@
                                                         onContextMenu={(e) => {
                                                             e.preventDefault();
                                                             setSelectedFolderId(folder.id);
-                                                            const action = window.prompt('Enter action: rename or delete', 'rename');
+                                                            const action = window.prompt('Enter action: rename, delete, or subfolder', 'rename');
                                                             if (action === 'rename') {
                                                                 setEditingFolderId(folder.id);
                                                                 setEditingFolderName(folder.name);
+                                                            } else if (action === 'subfolder') {
+                                                                // v5.0.0-alpha.51 - Create subfolder within this folder
+                                                                const newFolder = {
+                                                                    id: `folder-${Date.now()}`,
+                                                                    name: 'New Subfolder',
+                                                                    parentId: folder.id,
+                                                                    bookIds: [],
+                                                                    childFolderIds: [],
+                                                                    collapsed: false
+                                                                };
+                                                                // Record action for undo
+                                                                recordAction({
+                                                                    type: 'CREATE_FOLDER',
+                                                                    folderId: newFolder.id,
+                                                                    parentId: folder.id,
+                                                                    folder: { ...newFolder }
+                                                                });
+                                                                // Expand parent and add subfolder in single update
+                                                                setFolders(prev => [
+                                                                    ...prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f),
+                                                                    newFolder
+                                                                ]);
+                                                                setSelectedFolderId(newFolder.id);
+                                                                setEditingFolderId(newFolder.id);
+                                                                setEditingFolderName('New Subfolder');
+                                                                console.log(`📁 Created subfolder in "${folder.name}"`);
                                                             } else if (action === 'delete') {
                                                                 if (window.confirm(`Delete folder "${folder.name}"?`)) {
                                                                     // v5.0.0-alpha.46 - Capture folder and descendants for undo
@@ -7151,6 +7217,37 @@
                                                                         </span>
                                                                     );
                                                                 })()}
+                                                                {/* v5.0.0-alpha.52 - New subfolder button */}
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const newFolder = {
+                                                                            id: `folder-${Date.now()}`,
+                                                                            name: 'New Subfolder',
+                                                                            parentId: folder.id,
+                                                                            bookIds: [],
+                                                                            childFolderIds: [],
+                                                                            collapsed: false
+                                                                        };
+                                                                        recordAction({
+                                                                            type: 'CREATE_FOLDER',
+                                                                            folderId: newFolder.id,
+                                                                            parentId: folder.id,
+                                                                            folder: { ...newFolder }
+                                                                        });
+                                                                        // Expand parent and add subfolder in single update
+                                                                        setFolders(prev => [
+                                                                            ...prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f),
+                                                                            newFolder
+                                                                        ]);
+                                                                        setSelectedFolderId(newFolder.id);
+                                                                        setEditingFolderId(newFolder.id);
+                                                                        setEditingFolderName('New Subfolder');
+                                                                    }}
+                                                                    className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 px-1"
+                                                                    title="New subfolder">
+                                                                    +
+                                                                </button>
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
@@ -7177,26 +7274,7 @@
                                         // Render root folders (parentId: null, excluding Inbox)
                                         return getChildFolders(null).filter(f => f.id !== '__inbox__').map(folder => renderFolder(folder, 0));
                                     })()}
-                                    {/* New folder button */}
-                                    <button
-                                        onClick={() => {
-                                            const newFolder = {
-                                                id: `folder-${Date.now()}`,
-                                                name: 'New Folder',
-                                                parentId: null,
-                                                bookIds: [],
-                                                childFolderIds: [],
-                                                collapsed: false
-                                            };
-                                            setFolders(prev => [...prev, newFolder]);
-                                            setSelectedFolderId(newFolder.id);
-                                            setEditingFolderId(newFolder.id);
-                                            setEditingFolderName('New Folder');
-                                        }}
-                                        className="flex items-center gap-2 px-2 py-1.5 mt-2 text-blue-600 hover:bg-blue-50 rounded w-full text-left">
-                                        <span>➕</span>
-                                        <span>New Folder</span>
-                                    </button>
+                                    {/* v5.0.0-alpha.52 - Removed bottom "New Folder" button; use "+" on All Books or folder rows instead */}
                                 </div>
                             </div>
 
