@@ -2699,6 +2699,7 @@
                 setRedoStack([]); // Clear redo on new action
             };
 
+            // TODO - Delete verbose console.log statements in executeUndo/executeRedo before release
             const executeUndo = (action) => {
                 switch (action.type) {
                     case 'MOVE_BOOKS':
