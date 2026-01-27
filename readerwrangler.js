@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.49";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.50";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -6914,7 +6914,7 @@
                                         }}
                                         onDrop={(e) => {
                                             e.preventDefault();
-                                            const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                            const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                             const { sourceFolder, bookIds } = dragData;
 
                                             // Check if dragging from All Books (view-only)
@@ -6980,7 +6980,7 @@
                                                         }}
                                                         onDrop={(e) => {
                                                             e.preventDefault();
-                                                            const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                                            const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                                             const { sourceFolder, bookIds } = dragData;
 
                                                             const showToastLocal = (msg) => {
@@ -7365,7 +7365,7 @@
                                                                         ? [...explorerSelectedBooks]
                                                                         : [book.id]
                                                                 };
-                                                                e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                                                                e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
                                                                 setExplorerDragData(dragData); // Store for validity checks
                                                                 if (!explorerSelectedBooks.has(book.id)) {
                                                                     setExplorerSelectedBooks(new Set([book.id]));
@@ -7382,7 +7382,7 @@
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
                                                                 if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
-                                                                    const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                                                    const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                                                     if (dragData.sourceFolder === selectedFolderId) {
                                                                         reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                     }
@@ -7511,7 +7511,7 @@
                                                                     ? [...explorerSelectedBooks]
                                                                     : [book.id]
                                                             };
-                                                            e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                                                            e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
                                                             setExplorerDragData(dragData); // Store for validity checks in dragOver
                                                             if (!explorerSelectedBooks.has(book.id)) {
                                                                 setExplorerSelectedBooks(new Set([book.id]));
@@ -7528,7 +7528,7 @@
                                                             e.preventDefault();
                                                             e.stopPropagation();
                                                             if (explorerSort.column === 'custom' && selectedFolderId !== '__all__') {
-                                                                const dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                                                                const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                                                 if (dragData.sourceFolder === selectedFolderId) {
                                                                     reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                 }
