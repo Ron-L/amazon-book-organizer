@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.54";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.55";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -2999,10 +2999,23 @@
                         break;
                     case 'DELETE_FOLDERS':
                         // Undo delete: restore folders with their bookIds and hierarchy
+                        // v5.0.0-alpha.55 - Also remove orphaned books from destination
                         console.log('[UNDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => {
+                            let newFolders = [...prev];
+
+                            // Remove orphaned books from destination folder (if any were moved)
+                            if (action.orphanedBooks?.length > 0 && action.orphanDestination) {
+                                const orphanedSet = new Set(action.orphanedBooks);
+                                newFolders = newFolders.map(f => {
+                                    if (f.id === action.orphanDestination) {
+                                        return { ...f, bookIds: (f.bookIds || []).filter(id => !orphanedSet.has(id)) };
+                                    }
+                                    return f;
+                                });
+                            }
+
                             // Re-insert folders at their original indices (sorted ascending)
-                            const newFolders = [...prev];
                             const sortedFolders = action.deletedFolders
                                 .map((f, i) => ({ folder: f, index: action.folderIndices[i] }))
                                 .sort((a, b) => a.index - b.index);
@@ -3251,10 +3264,26 @@
                         }));
                         break;
                     case 'DELETE_FOLDERS':
-                        // Redo delete: remove folders again
+                        // Redo delete: move orphaned books to destination, then remove folders
+                        // v5.0.0-alpha.55 - Handle orphaned books on redo
                         console.log('[REDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
                         const folderIdsToDelete = new Set(action.deletedFolders.map(f => f.id));
-                        setFolders(prev => prev.filter(f => !folderIdsToDelete.has(f.id)));
+                        setFolders(prev => {
+                            let updated = prev;
+                            // Move orphaned books to destination (if any)
+                            if (action.orphanedBooks?.length > 0 && action.orphanDestination) {
+                                updated = updated.map(f => {
+                                    if (f.id === action.orphanDestination) {
+                                        const existingIds = new Set(f.bookIds || []);
+                                        const newBookIds = action.orphanedBooks.filter(id => !existingIds.has(id));
+                                        return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                    }
+                                    return f;
+                                });
+                            }
+                            // Remove deleted folders
+                            return updated.filter(f => !folderIdsToDelete.has(f.id));
+                        });
                         break;
                     case 'CREATE_FOLDER':
                         // v5.0.0-alpha.51 - Redo folder creation: re-add the folder
@@ -7126,7 +7155,7 @@
                                                                 console.log(`📁 Created subfolder in "${folder.name}"`);
                                                             } else if (action === 'delete') {
                                                                 if (window.confirm(`Delete folder "${folder.name}"?`)) {
-                                                                    // v5.0.0-alpha.46 - Capture folder and descendants for undo
+                                                                    // v5.0.0-alpha.55 - Move orphaned books up one level before deleting
                                                                     const getAllDescendants = (folderId, allFolders) => {
                                                                         const children = allFolders.filter(f => f.parentId === folderId);
                                                                         let descendants = [...children];
@@ -7140,18 +7169,49 @@
                                                                     const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
                                                                     const folderIndices = foldersToDelete.map(f => folders.findIndex(x => x.id === f.id));
 
-                                                                    // Record action for undo before modifying state
+                                                                    // Determine destination for orphaned books: parent folder or Inbox
+                                                                    const destinationId = folder.parentId || '__inbox__';
+                                                                    const destinationFolder = folders.find(f => f.id === destinationId);
+                                                                    const destinationName = destinationFolder?.name || 'Inbox';
+
+                                                                    // Collect all books from folders being deleted
+                                                                    const allOrphanedBookIds = foldersToDelete.flatMap(f => f.bookIds || []);
+                                                                    const uniqueOrphanedBookIds = [...new Set(allOrphanedBookIds)];
+
+                                                                    // Record action for undo (includes orphan relocation info)
                                                                     recordAction({
                                                                         type: 'DELETE_FOLDERS',
-                                                                        deletedFolders: foldersToDelete.map(f => ({ ...f })), // Deep copy
-                                                                        folderIndices: folderIndices
+                                                                        deletedFolders: foldersToDelete.map(f => ({ ...f })),
+                                                                        folderIndices: folderIndices,
+                                                                        orphanedBooks: uniqueOrphanedBookIds,
+                                                                        orphanDestination: destinationId
                                                                     });
 
-                                                                    setFolders(prev => prev.filter(f => !folderIdsToDelete.has(f.id)));
+                                                                    // Move orphaned books to destination, then delete folders
+                                                                    setFolders(prev => {
+                                                                        let updated = prev.map(f => {
+                                                                            if (f.id === destinationId && uniqueOrphanedBookIds.length > 0) {
+                                                                                // Add orphaned books to destination (at top)
+                                                                                const existingIds = new Set(f.bookIds || []);
+                                                                                const newBookIds = uniqueOrphanedBookIds.filter(id => !existingIds.has(id));
+                                                                                return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                                            }
+                                                                            return f;
+                                                                        });
+                                                                        // Remove deleted folders
+                                                                        return updated.filter(f => !folderIdsToDelete.has(f.id));
+                                                                    });
+
                                                                     if (selectedFolderId === folder.id || folderIdsToDelete.has(selectedFolderId)) {
                                                                         setSelectedFolderId('__all__');
                                                                     }
-                                                                    console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}`);
+
+                                                                    // Show toast with result
+                                                                    if (uniqueOrphanedBookIds.length > 0) {
+                                                                        const bookWord = uniqueOrphanedBookIds.length === 1 ? 'book' : 'books';
+                                                                        showToast(`${uniqueOrphanedBookIds.length} ${bookWord} moved to ${destinationName}`, window.innerWidth / 2, 100);
+                                                                    }
+                                                                    console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}${uniqueOrphanedBookIds.length > 0 ? `, moved ${uniqueOrphanedBookIds.length} books to ${destinationName}` : ''}`);
                                                                 }
                                                             }
                                                         }}>
@@ -7254,7 +7314,7 @@
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         if (window.confirm(`Delete folder "${folder.name}"?`)) {
-                                                                            // v5.0.0-alpha.53 - Fix: capture descendants and record for undo
+                                                                            // v5.0.0-alpha.55 - Move orphaned books up one level before deleting
                                                                             const getAllDescendants = (folderId, allFolders) => {
                                                                                 const children = allFolders.filter(f => f.parentId === folderId);
                                                                                 let descendants = [...children];
@@ -7268,18 +7328,47 @@
                                                                             const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
                                                                             const folderIndices = foldersToDelete.map(f => folders.findIndex(x => x.id === f.id));
 
-                                                                            // Record action for undo before modifying state
+                                                                            // Determine destination for orphaned books: parent folder or Inbox
+                                                                            const destinationId = folder.parentId || '__inbox__';
+                                                                            const destinationFolder = folders.find(f => f.id === destinationId);
+                                                                            const destinationName = destinationFolder?.name || 'Inbox';
+
+                                                                            // Collect all books from folders being deleted
+                                                                            const allOrphanedBookIds = foldersToDelete.flatMap(f => f.bookIds || []);
+                                                                            const uniqueOrphanedBookIds = [...new Set(allOrphanedBookIds)];
+
+                                                                            // Record action for undo (includes orphan relocation info)
                                                                             recordAction({
                                                                                 type: 'DELETE_FOLDERS',
                                                                                 deletedFolders: foldersToDelete.map(f => ({ ...f })),
-                                                                                folderIndices: folderIndices
+                                                                                folderIndices: folderIndices,
+                                                                                orphanedBooks: uniqueOrphanedBookIds,
+                                                                                orphanDestination: destinationId
                                                                             });
 
-                                                                            setFolders(prev => prev.filter(f => !folderIdsToDelete.has(f.id)));
+                                                                            // Move orphaned books to destination, then delete folders
+                                                                            setFolders(prev => {
+                                                                                let updated = prev.map(f => {
+                                                                                    if (f.id === destinationId && uniqueOrphanedBookIds.length > 0) {
+                                                                                        const existingIds = new Set(f.bookIds || []);
+                                                                                        const newBookIds = uniqueOrphanedBookIds.filter(id => !existingIds.has(id));
+                                                                                        return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                                                    }
+                                                                                    return f;
+                                                                                });
+                                                                                return updated.filter(f => !folderIdsToDelete.has(f.id));
+                                                                            });
+
                                                                             if (selectedFolderId === folder.id || folderIdsToDelete.has(selectedFolderId)) {
                                                                                 setSelectedFolderId('__all__');
                                                                             }
-                                                                            console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}`);
+
+                                                                            // Show toast with result
+                                                                            if (uniqueOrphanedBookIds.length > 0) {
+                                                                                const bookWord = uniqueOrphanedBookIds.length === 1 ? 'book' : 'books';
+                                                                                showToast(`${uniqueOrphanedBookIds.length} ${bookWord} moved to ${destinationName}`, window.innerWidth / 2, 100);
+                                                                            }
+                                                                            console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}${uniqueOrphanedBookIds.length > 0 ? `, moved ${uniqueOrphanedBookIds.length} books to ${destinationName}` : ''}`);
                                                                         }
                                                                     }}
                                                                     className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 px-1"
