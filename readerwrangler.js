@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.45";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.46";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -332,7 +332,13 @@
 
             // Reorder a book within a folder's bookIds array
             // Reorder books within a folder (supports single or multiple books)
+            // v5.0.0-alpha.46 - Added undo support
             const reorderBooksInFolder = (folderId, bookIdsToMove, targetIndex) => {
+                // Capture fromIndices BEFORE modifying state (for undo)
+                const currentFolder = folders.find(f => f.id === folderId);
+                const currentBookIds = currentFolder?.bookIds || [];
+                const fromIndices = bookIdsToMove.map(id => currentBookIds.indexOf(id));
+
                 setFolders(prev => prev.map(folder => {
                     if (folder.id !== folderId) return folder;
                     const bookIds = [...(folder.bookIds || [])];
@@ -354,6 +360,16 @@
 
                     return { ...folder, bookIds: remaining };
                 }));
+
+                // Record action for undo
+                recordAction({
+                    type: 'REORDER_BOOKS_FOLDER',
+                    folderId: folderId,
+                    bookIds: bookIdsToMove,
+                    fromIndices: fromIndices,
+                    toIndex: targetIndex
+                });
+                console.log(`🔄 Reordered ${bookIdsToMove.length} book(s) in folder`);
             };
 
             // v5.0.0 - Migrate columns/dividers to folders
@@ -2871,6 +2887,94 @@
                             return col;
                         }));
                         break;
+                    // v5.0.0-alpha.46 - Explorer folder operations
+                    case 'MOVE_BOOKS_FOLDER':
+                        // Undo move: remove from target folder, add back to source folder
+                        console.log('[UNDO MOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.toFolderId) {
+                                // Remove books from target
+                                return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
+                            }
+                            if (folder.id === action.fromFolderId) {
+                                // Re-insert at original positions
+                                const newBookIds = [...(folder.bookIds || [])];
+                                const sortedPairs = action.bookIds
+                                    .map((id, i) => ({ id, index: action.fromIndices[i] }))
+                                    .sort((a, b) => a.index - b.index);
+                                sortedPairs.forEach(({ id, index }) => {
+                                    newBookIds.splice(index, 0, id);
+                                });
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'COPY_BOOKS_FOLDER':
+                        // Undo copy: just remove from target folder
+                        console.log('[UNDO COPY_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.toFolderId) {
+                                return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'REMOVE_BOOKS_FOLDER':
+                        // Undo remove: add books back to folder at original positions
+                        console.log('[UNDO REMOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                const newBookIds = [...(folder.bookIds || [])];
+                                const sortedPairs = action.bookIds
+                                    .map((id, i) => ({ id, index: action.fromIndices[i] }))
+                                    .sort((a, b) => a.index - b.index);
+                                sortedPairs.forEach(({ id, index }) => {
+                                    newBookIds.splice(index, 0, id);
+                                });
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'REORDER_BOOKS_FOLDER':
+                        // Undo reorder: restore original positions
+                        console.log('[UNDO REORDER_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                const newBookIds = [...(folder.bookIds || [])];
+                                // Remove the moved books
+                                action.bookIds.forEach(id => {
+                                    const idx = newBookIds.indexOf(id);
+                                    if (idx !== -1) newBookIds.splice(idx, 1);
+                                });
+                                // Re-insert at original positions (sorted ascending)
+                                const sortedPairs = action.bookIds
+                                    .map((id, i) => ({ id, index: action.fromIndices[i] }))
+                                    .sort((a, b) => a.index - b.index);
+                                sortedPairs.forEach(({ id, index }) => {
+                                    newBookIds.splice(index, 0, id);
+                                });
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'DELETE_FOLDERS':
+                        // Undo delete: restore folders with their bookIds and hierarchy
+                        console.log('[UNDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => {
+                            // Re-insert folders at their original indices (sorted ascending)
+                            const newFolders = [...prev];
+                            const sortedFolders = action.deletedFolders
+                                .map((f, i) => ({ folder: f, index: action.folderIndices[i] }))
+                                .sort((a, b) => a.index - b.index);
+                            sortedFolders.forEach(({ folder, index }) => {
+                                newFolders.splice(index, 0, folder);
+                            });
+                            return newFolders;
+                        });
+                        break;
                     default:
                         console.warn('Unknown action type for undo:', action.type);
                 }
@@ -3039,6 +3143,73 @@
                             }
                             return col;
                         }));
+                        break;
+                    // v5.0.0-alpha.46 - Explorer folder operations
+                    case 'MOVE_BOOKS_FOLDER':
+                        // Redo move: remove from source, add to target
+                        console.log('[REDO MOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.fromFolderId) {
+                                return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
+                            }
+                            if (folder.id === action.toFolderId) {
+                                const newBookIds = [...(folder.bookIds || [])];
+                                newBookIds.splice(action.toIndex, 0, ...action.bookIds);
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'COPY_BOOKS_FOLDER':
+                        // Redo copy: add to target folder
+                        console.log('[REDO COPY_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.toFolderId) {
+                                const newBookIds = [...(folder.bookIds || [])];
+                                newBookIds.splice(action.toIndex, 0, ...action.bookIds);
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'REMOVE_BOOKS_FOLDER':
+                        // Redo remove: remove books from folder
+                        console.log('[REDO REMOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'REORDER_BOOKS_FOLDER':
+                        // Redo reorder: apply the reorder again
+                        console.log('[REDO REORDER_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                const newBookIds = [...(folder.bookIds || [])];
+                                // Remove by indices (descending to maintain positions)
+                                const sortedIndices = [...action.fromIndices].sort((a, b) => b - a);
+                                sortedIndices.forEach(idx => {
+                                    if (idx >= 0 && idx < newBookIds.length) newBookIds.splice(idx, 1);
+                                });
+                                // Calculate adjusted insert index
+                                let adjustedIndex = action.toIndex;
+                                action.fromIndices.forEach(origIdx => {
+                                    if (origIdx < action.toIndex) adjustedIndex--;
+                                });
+                                // Insert books at target position
+                                newBookIds.splice(adjustedIndex, 0, ...action.bookIds);
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'DELETE_FOLDERS':
+                        // Redo delete: remove folders again
+                        console.log('[REDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
+                        const folderIdsToDelete = new Set(action.deletedFolders.map(f => f.id));
+                        setFolders(prev => prev.filter(f => !folderIdsToDelete.has(f.id)));
                         break;
                     default:
                         console.warn('Unknown action type for redo:', action.type);
@@ -6802,6 +6973,10 @@
                                                             if (newBookIds.length === 0) {
                                                                 showToastLocal(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder');
                                                             } else {
+                                                                // v5.0.0-alpha.46 - Capture fromIndices for undo before modifying
+                                                                const sourceFolderObj = folders.find(f => f.id === sourceFolder);
+                                                                const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
+
                                                                 setFolders(prev => prev.map(f => {
                                                                     if (f.id === folder.id) {
                                                                         return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
@@ -6811,6 +6986,27 @@
                                                                     }
                                                                     return f;
                                                                 }));
+
+                                                                // v5.0.0-alpha.46 - Record action for undo
+                                                                if (explorerIsCopyDrag) {
+                                                                    recordAction({
+                                                                        type: 'COPY_BOOKS_FOLDER',
+                                                                        toFolderId: folder.id,
+                                                                        bookIds: newBookIds,
+                                                                        toIndex: 0 // Prepended to start
+                                                                    });
+                                                                    console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
+                                                                } else {
+                                                                    recordAction({
+                                                                        type: 'MOVE_BOOKS_FOLDER',
+                                                                        fromFolderId: sourceFolder,
+                                                                        toFolderId: folder.id,
+                                                                        bookIds: bookIds,
+                                                                        fromIndices: fromIndices,
+                                                                        toIndex: 0 // Prepended to start
+                                                                    });
+                                                                    console.log(`📦 Moved ${bookIds.length} book(s) to "${folder.name}"`);
+                                                                }
                                                             }
                                                             setExplorerDropTargetId(null);
                                                             setExplorerSelectedBooks(new Set());
@@ -6825,10 +7021,32 @@
                                                                 setEditingFolderName(folder.name);
                                                             } else if (action === 'delete') {
                                                                 if (window.confirm(`Delete folder "${folder.name}"?`)) {
-                                                                    setFolders(prev => prev.filter(f => f.id !== folder.id));
-                                                                    if (selectedFolderId === folder.id) {
+                                                                    // v5.0.0-alpha.46 - Capture folder and descendants for undo
+                                                                    const getAllDescendants = (folderId, allFolders) => {
+                                                                        const children = allFolders.filter(f => f.parentId === folderId);
+                                                                        let descendants = [...children];
+                                                                        children.forEach(child => {
+                                                                            descendants = [...descendants, ...getAllDescendants(child.id, allFolders)];
+                                                                        });
+                                                                        return descendants;
+                                                                    };
+                                                                    const descendants = getAllDescendants(folder.id, folders);
+                                                                    const foldersToDelete = [folder, ...descendants];
+                                                                    const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
+                                                                    const folderIndices = foldersToDelete.map(f => folders.findIndex(x => x.id === f.id));
+
+                                                                    // Record action for undo before modifying state
+                                                                    recordAction({
+                                                                        type: 'DELETE_FOLDERS',
+                                                                        deletedFolders: foldersToDelete.map(f => ({ ...f })), // Deep copy
+                                                                        folderIndices: folderIndices
+                                                                    });
+
+                                                                    setFolders(prev => prev.filter(f => !folderIdsToDelete.has(f.id)));
+                                                                    if (selectedFolderId === folder.id || folderIdsToDelete.has(selectedFolderId)) {
                                                                         setSelectedFolderId('__all__');
                                                                     }
+                                                                    console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}`);
                                                                 }
                                                             }
                                                         }}>
