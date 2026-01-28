@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.55";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.56";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -2999,7 +2999,7 @@
                         break;
                     case 'DELETE_FOLDERS':
                         // Undo delete: restore folders with their bookIds and hierarchy
-                        // v5.0.0-alpha.55 - Also remove orphaned books from destination
+                        // v5.0.0-alpha.56 - Also remove orphaned books from destination and restore selection
                         console.log('[UNDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => {
                             let newFolders = [...prev];
@@ -3024,6 +3024,10 @@
                             });
                             return newFolders;
                         });
+                        // Restore selection to first restored folder
+                        if (action.deletedFolders?.length > 0) {
+                            setSelectedFolderId(action.deletedFolders[0].id);
+                        }
                         break;
                     case 'CREATE_FOLDER':
                         // v5.0.0-alpha.51 - Undo folder creation: remove the created folder
@@ -3265,9 +3269,9 @@
                         break;
                     case 'DELETE_FOLDERS':
                         // Redo delete: move orphaned books to destination, then remove folders
-                        // v5.0.0-alpha.55 - Handle orphaned books on redo
+                        // v5.0.0-alpha.56 - Handle orphaned books on redo and update selection
                         console.log('[REDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
-                        const folderIdsToDelete = new Set(action.deletedFolders.map(f => f.id));
+                        const folderIdsToDeleteRedo = new Set(action.deletedFolders.map(f => f.id));
                         setFolders(prev => {
                             let updated = prev;
                             // Move orphaned books to destination (if any)
@@ -3282,8 +3286,12 @@
                                 });
                             }
                             // Remove deleted folders
-                            return updated.filter(f => !folderIdsToDelete.has(f.id));
+                            return updated.filter(f => !folderIdsToDeleteRedo.has(f.id));
                         });
+                        // Update selection if current folder is being deleted
+                        if (folderIdsToDeleteRedo.has(selectedFolderId)) {
+                            setSelectedFolderId('__all__');
+                        }
                         break;
                     case 'CREATE_FOLDER':
                         // v5.0.0-alpha.51 - Redo folder creation: re-add the folder
@@ -7209,7 +7217,9 @@
                                                                     // Show toast with result
                                                                     if (uniqueOrphanedBookIds.length > 0) {
                                                                         const bookWord = uniqueOrphanedBookIds.length === 1 ? 'book' : 'books';
-                                                                        showToast(`${uniqueOrphanedBookIds.length} ${bookWord} moved to ${destinationName}`, window.innerWidth / 2, 100);
+                                                                        showToast(`Deleted "${folder.name}" — ${uniqueOrphanedBookIds.length} ${bookWord} moved to ${destinationName}`, window.innerWidth / 2, 100);
+                                                                    } else {
+                                                                        showToast(`Deleted "${folder.name}"`, window.innerWidth / 2, 100);
                                                                     }
                                                                     console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}${uniqueOrphanedBookIds.length > 0 ? `, moved ${uniqueOrphanedBookIds.length} books to ${destinationName}` : ''}`);
                                                                 }
@@ -7366,7 +7376,9 @@
                                                                             // Show toast with result
                                                                             if (uniqueOrphanedBookIds.length > 0) {
                                                                                 const bookWord = uniqueOrphanedBookIds.length === 1 ? 'book' : 'books';
-                                                                                showToast(`${uniqueOrphanedBookIds.length} ${bookWord} moved to ${destinationName}`, window.innerWidth / 2, 100);
+                                                                                showToast(`Deleted "${folder.name}" — ${uniqueOrphanedBookIds.length} ${bookWord} moved to ${destinationName}`, window.innerWidth / 2, 100);
+                                                                            } else {
+                                                                                showToast(`Deleted "${folder.name}"`, window.innerWidth / 2, 100);
                                                                             }
                                                                             console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}${uniqueOrphanedBookIds.length > 0 ? `, moved ${uniqueOrphanedBookIds.length} books to ${destinationName}` : ''}`);
                                                                         }
@@ -7483,10 +7495,10 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex-1 overflow-auto p-4">
+                                <div className="flex-1 overflow-auto px-4 pb-4">
                                     {explorerView === 'list' ? (
                                         <table className="w-full text-sm min-w-[900px]">
-                                            <thead className="sticky top-0 bg-gray-50 z-10">
+                                            <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
                                                 <tr className="text-left text-gray-600">
                                                     <th className="p-2 w-12"></th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
