@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.63";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.64";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7565,8 +7565,11 @@
                                                     if (childFolders.length === 0) return null;
 
                                                     // Sort folders: alphabetically, respecting direction only when sorting by Name
+                                                    // v5.0.0-alpha.64 - Keep Inbox first when in My Library view
                                                     const dir = explorerSort.column === 'title' && explorerSort.direction === 'desc' ? -1 : 1;
-                                                    const sortedFolders = [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                    const sortedFolders = selectedFolderId === '__library__'
+                                                        ? [childFolders.find(f => f.id === '__inbox__'), ...childFolders.filter(f => f.id !== '__inbox__').sort((a, b) => dir * a.name.localeCompare(b.name))].filter(Boolean)
+                                                        : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
 
                                                     return sortedFolders.map(folder => (
                                                         <tr
@@ -7764,8 +7767,11 @@
                                                     : getChildFolders(selectedFolderId);
                                                 if (childFolders.length === 0) return null;
 
+                                                // v5.0.0-alpha.64 - Keep Inbox first when in My Library view
                                                 const dir = explorerSort.column === 'title' && explorerSort.direction === 'desc' ? -1 : 1;
-                                                const sortedFolders = [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                const sortedFolders = selectedFolderId === '__library__'
+                                                    ? [childFolders.find(f => f.id === '__inbox__'), ...childFolders.filter(f => f.id !== '__inbox__').sort((a, b) => dir * a.name.localeCompare(b.name))].filter(Boolean)
+                                                    : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
 
                                                 // v5.0.0-alpha.62 - Scale folder icon responsively with container
                                                 return sortedFolders.map(folder => (
