@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.78";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.79";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -457,7 +457,7 @@
                 console.log(`🔄 Reordered ${folderIdsToMove.length} folder(s) in parent ${parentId || 'root'}`);
             };
 
-            // v5.0.0-alpha.76 - Phase D: Reparent folder (move into another folder)
+            // v5.0.0-alpha.78 - Phase D: Reparent folder (move into another folder) with undo
             const reparentFolder = (folderIds, newParentId) => {
                 // Helper: Check if targetId is a descendant of folderId
                 const isDescendant = (folderId, targetId) => {
@@ -485,6 +485,12 @@
                     return false;
                 }
 
+                // Save old parentIds for undo
+                const oldParentIds = folderIds.map(id => {
+                    const folder = folders.find(f => f.id === id);
+                    return { folderId: id, oldParentId: folder?.parentId };
+                });
+
                 setFolders(prev => prev.map(folder => {
                     if (folderIds.includes(folder.id)) {
                         return { ...folder, parentId: newParentId };
@@ -492,8 +498,17 @@
                     return folder;
                 }));
 
+                // Record for undo
                 const folderNames = folderIds.map(id => folders.find(f => f.id === id)?.name || id).join(', ');
                 const targetName = newParentId ? folders.find(f => f.id === newParentId)?.name : 'root';
+                recordAction({
+                    type: 'REPARENT_FOLDER',
+                    folderIds,
+                    oldParentIds,
+                    newParentId,
+                    description: `Move "${folderNames}" into "${targetName}"`
+                });
+
                 showToast(`Moved "${folderNames}" into "${targetName}"`, 'success');
                 console.log(`📁 Moved ${folderIds.length} folder(s) into ${newParentId || 'root'}`);
                 return true;
@@ -3169,6 +3184,18 @@
                             setSelectedFolderId(action.parentId || '__all__');
                         }
                         break;
+                    case 'REPARENT_FOLDER':
+                        // v5.0.0-alpha.78 - Undo reparent: restore old parentIds
+                        console.log('[UNDO REPARENT_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            const oldData = action.oldParentIds.find(o => o.folderId === folder.id);
+                            if (oldData) {
+                                return { ...folder, parentId: oldData.oldParentId };
+                            }
+                            return folder;
+                        }));
+                        showToast(`Undo: ${action.description}`, 'info');
+                        break;
                     default:
                         console.warn('Unknown action type for undo:', action.type);
                 }
@@ -3430,6 +3457,17 @@
                         console.log('[REDO CREATE_FOLDER] Re-adding folder:', action.folder.name);
                         setFolders(prev => [...prev, { ...action.folder }]);
                         setSelectedFolderId(action.folderId);
+                        break;
+                    case 'REPARENT_FOLDER':
+                        // v5.0.0-alpha.78 - Redo reparent: apply the new parentId again
+                        console.log('[REDO REPARENT_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (action.folderIds.includes(folder.id)) {
+                                return { ...folder, parentId: action.newParentId };
+                            }
+                            return folder;
+                        }));
+                        showToast(`Redo: ${action.description}`, 'info');
                         break;
                     default:
                         console.warn('Unknown action type for redo:', action.type);
