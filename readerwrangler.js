@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.72";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.73";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7595,7 +7595,7 @@
                                                     {selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && (
                                                         <button
                                                             onClick={() => setExplorerSort({ column: 'custom', direction: 'asc' })}
-                                                            className="ml-1 text-gray-400 hover:text-gray-600 text-xs"
+                                                            className="ml-1 text-gray-500 hover:text-red-500"
                                                             title="Return to Manual Order">
                                                             ×
                                                         </button>
@@ -7612,25 +7612,25 @@
                                                 <tr className="text-left text-gray-600">
                                                     <th className="p-2 w-12"></th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                                                        Name {explorerSort.column === 'title' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                        Name {explorerSort.column === 'title' && (<>{explorerSort.direction === 'asc' ? '↑' : '↓'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-1 text-gray-500 hover:text-red-500 font-normal" title="Return to Manual Order">×</button>}</>)}
                                                     </th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'author', direction: prev.column === 'author' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                                                        Author {explorerSort.column === 'author' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                        Author {explorerSort.column === 'author' && (<>{explorerSort.direction === 'asc' ? '↑' : '↓'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-1 text-gray-500 hover:text-red-500 font-normal" title="Return to Manual Order">×</button>}</>)}
                                                     </th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100 w-24" onClick={() => setExplorerSort(prev => ({ column: 'rating', direction: prev.column === 'rating' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                                                        Rating {explorerSort.column === 'rating' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                        Rating {explorerSort.column === 'rating' && (<>{explorerSort.direction === 'asc' ? '↑' : '↓'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-1 text-gray-500 hover:text-red-500 font-normal" title="Return to Manual Order">×</button>}</>)}
                                                     </th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100 w-28" onClick={() => setExplorerSort(prev => ({ column: 'dateAdded', direction: prev.column === 'dateAdded' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
-                                                        Date Added {explorerSort.column === 'dateAdded' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                        Date Added {explorerSort.column === 'dateAdded' && (<>{explorerSort.direction === 'asc' ? '↑' : '↓'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-1 text-gray-500 hover:text-red-500 font-normal" title="Return to Manual Order">×</button>}</>)}
                                                     </th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'price', direction: prev.column === 'price' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                                                        Price {explorerSort.column === 'price' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                        Price {explorerSort.column === 'price' && (<>{explorerSort.direction === 'asc' ? '↑' : '↓'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-1 text-gray-500 hover:text-red-500 font-normal" title="Return to Manual Order">×</button>}</>)}
                                                     </th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'priceGoal', direction: prev.column === 'priceGoal' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                                                        Goal {explorerSort.column === 'priceGoal' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                        Goal {explorerSort.column === 'priceGoal' && (<>{explorerSort.direction === 'asc' ? '↑' : '↓'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-1 text-gray-500 hover:text-red-500 font-normal" title="Return to Manual Order">×</button>}</>)}
                                                     </th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'delta', direction: prev.column === 'delta' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
-                                                        Under {explorerSort.column === 'delta' && (explorerSort.direction === 'asc' ? '↑' : '↓')}
+                                                        Under {explorerSort.column === 'delta' && (<>{explorerSort.direction === 'asc' ? '↑' : '↓'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-1 text-gray-500 hover:text-red-500 font-normal" title="Return to Manual Order">×</button>}</>)}
                                                     </th>
                                                 </tr>
                                             </thead>
