@@ -207,3 +207,27 @@ Call reorder or reparent based on target type.
 | D: Drop actions | 45 min |
 | E: Left panel | 30 min |
 | **Total** | ~3 hours |
+
+---
+
+## Session Checklist (Accumulated Items)
+
+### In Progress
+- [ ] **Phase D: Add undo to reparentFolder** - Essential for testing
+
+### Pending - Navigation
+- [ ] **Breadcrumb navigation** - Show path: `My Library › Jim Butcher › Miscellaneous`
+- [ ] **Auto-expand + highlight current folder in tree** - Keep tree synced with navigation
+- [ ] **Drag to breadcrumb** - Move folder to ancestor by dropping on breadcrumb
+
+### Pending - Drag/Drop
+- [ ] **Phase E: Left panel folder reordering** - Drag in sidebar tree
+- [ ] **Auto-expand collapsed folder on drag hover** - UX improvement
+
+### Pending - Other
+- [ ] **Backup restore: Include folders structure** - Currently only restores columns
+- [ ] **Right-click "Move to..." context menu** - Alternative to drag/drop
+- [ ] **Ctrl+A select all in right pane** - Select all books/folders
+
+### Principle
+> **Undo should be part of basic implementation** - Every new operation should include undo support
