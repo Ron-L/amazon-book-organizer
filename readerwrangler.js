@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.70";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.71";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7708,7 +7708,7 @@
                                                                     }
                                                                 } : undefined}
                                                                 onDragOver={(e) => {
-                                                                    // v5.0.0-alpha.69 - Phase B: Two-target zone detection
+                                                                    // v5.0.0-alpha.70 - Phase B: Two-target zone detection (optimized)
                                                                     e.preventDefault();
                                                                     e.dataTransfer.dropEffect = 'move';
                                                                     const rect = e.currentTarget.getBoundingClientRect();
@@ -7716,12 +7716,21 @@
                                                                     const height = rect.height;
                                                                     const edgeZone = height * 0.25;
 
+                                                                    let newTarget;
                                                                     if (y < edgeZone) {
-                                                                        setExplorerFolderDragTarget({ type: 'reorder', index: folderIndex, position: 'before' });
+                                                                        newTarget = { type: 'reorder', index: folderIndex, position: 'before' };
                                                                     } else if (y > height - edgeZone) {
-                                                                        setExplorerFolderDragTarget({ type: 'reorder', index: folderIndex, position: 'after' });
+                                                                        newTarget = { type: 'reorder', index: folderIndex, position: 'after' };
                                                                     } else {
-                                                                        setExplorerFolderDragTarget({ type: 'reparent', folderId: folder.id });
+                                                                        newTarget = { type: 'reparent', folderId: folder.id };
+                                                                    }
+                                                                    // Only update state if target changed
+                                                                    const current = explorerFolderDragTarget;
+                                                                    if (!current || current.type !== newTarget.type ||
+                                                                        current.index !== newTarget.index ||
+                                                                        current.position !== newTarget.position ||
+                                                                        current.folderId !== newTarget.folderId) {
+                                                                        setExplorerFolderDragTarget(newTarget);
                                                                     }
                                                                 }}
                                                                 onDragLeave={() => setExplorerFolderDragTarget(null)}
@@ -8001,7 +8010,7 @@
                                                             }
                                                         } : undefined}
                                                         onDragOver={(e) => {
-                                                            // v5.0.0-alpha.69 - Phase B: Two-target zone detection
+                                                            // v5.0.0-alpha.70 - Phase B: Two-target zone detection (optimized)
                                                             e.preventDefault();
                                                             e.dataTransfer.dropEffect = 'move';
                                                             const rect = e.currentTarget.getBoundingClientRect();
@@ -8009,12 +8018,21 @@
                                                             const height = rect.height;
                                                             const edgeZone = height * 0.25;
 
+                                                            let newTarget;
                                                             if (y < edgeZone) {
-                                                                setExplorerFolderDragTarget({ type: 'reorder', index: folderIndex, position: 'before' });
+                                                                newTarget = { type: 'reorder', index: folderIndex, position: 'before' };
                                                             } else if (y > height - edgeZone) {
-                                                                setExplorerFolderDragTarget({ type: 'reorder', index: folderIndex, position: 'after' });
+                                                                newTarget = { type: 'reorder', index: folderIndex, position: 'after' };
                                                             } else {
-                                                                setExplorerFolderDragTarget({ type: 'reparent', folderId: folder.id });
+                                                                newTarget = { type: 'reparent', folderId: folder.id };
+                                                            }
+                                                            // Only update state if target changed
+                                                            const current = explorerFolderDragTarget;
+                                                            if (!current || current.type !== newTarget.type ||
+                                                                current.index !== newTarget.index ||
+                                                                current.position !== newTarget.position ||
+                                                                current.folderId !== newTarget.folderId) {
+                                                                setExplorerFolderDragTarget(newTarget);
                                                             }
                                                         }}
                                                         onDragLeave={() => setExplorerFolderDragTarget(null)}
