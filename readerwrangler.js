@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.64";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.65";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7571,43 +7571,55 @@
                                                         ? [childFolders.find(f => f.id === '__inbox__'), ...childFolders.filter(f => f.id !== '__inbox__').sort((a, b) => dir * a.name.localeCompare(b.name))].filter(Boolean)
                                                         : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
 
-                                                    return sortedFolders.map(folder => (
-                                                        <tr
-                                                            key={`folder-${folder.id}`}
-                                                            className={`cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
-                                                            onClick={(e) => {
-                                                                // Clear book selection when selecting folder
-                                                                setExplorerSelectedBooks(new Set());
-                                                                if (e.ctrlKey || e.metaKey) {
-                                                                    setExplorerSelectedFolders(prev => {
-                                                                        const next = new Set(prev);
-                                                                        if (next.has(folder.id)) next.delete(folder.id);
-                                                                        else next.add(folder.id);
-                                                                        return next;
-                                                                    });
-                                                                } else {
-                                                                    setExplorerSelectedFolders(new Set([folder.id]));
-                                                                }
-                                                            }}
-                                                            onDoubleClick={() => {
-                                                                // Navigate into folder
-                                                                setSelectedFolderId(folder.id);
-                                                                // Expand parent if collapsed
-                                                                setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f));
-                                                                // Clear selections
-                                                                setExplorerSelectedFolders(new Set());
-                                                                setExplorerSelectedBooks(new Set());
-                                                            }}>
-                                                            <td className="p-2 text-center text-xl">{folder.id === '__inbox__' ? '📥' : '📁'}</td>
-                                                            <td className="p-2 font-medium">{folder.name}</td>
-                                                            <td className="p-2 text-gray-400">—</td>
-                                                            <td className="p-2 text-gray-400">—</td>
-                                                            <td className="p-2 text-gray-400">—</td>
-                                                            <td className="p-2 text-gray-400">—</td>
-                                                            <td className="p-2 text-gray-400">—</td>
-                                                            <td className="p-2 text-gray-400">—</td>
-                                                        </tr>
-                                                    ));
+                                                    // v5.0.0-alpha.65 - Use flatMap to add separator after Inbox in My Library view
+                                                    return sortedFolders.flatMap(folder => {
+                                                        const row = (
+                                                            <tr
+                                                                key={`folder-${folder.id}`}
+                                                                className={`cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                                onClick={(e) => {
+                                                                    // Clear book selection when selecting folder
+                                                                    setExplorerSelectedBooks(new Set());
+                                                                    if (e.ctrlKey || e.metaKey) {
+                                                                        setExplorerSelectedFolders(prev => {
+                                                                            const next = new Set(prev);
+                                                                            if (next.has(folder.id)) next.delete(folder.id);
+                                                                            else next.add(folder.id);
+                                                                            return next;
+                                                                        });
+                                                                    } else {
+                                                                        setExplorerSelectedFolders(new Set([folder.id]));
+                                                                    }
+                                                                }}
+                                                                onDoubleClick={() => {
+                                                                    // Navigate into folder
+                                                                    setSelectedFolderId(folder.id);
+                                                                    // Expand parent if collapsed
+                                                                    setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f));
+                                                                    // Clear selections
+                                                                    setExplorerSelectedFolders(new Set());
+                                                                    setExplorerSelectedBooks(new Set());
+                                                                }}>
+                                                                <td className="p-2 text-center text-xl">{folder.id === '__inbox__' ? '📥' : '📁'}</td>
+                                                                <td className="p-2 font-medium">{folder.name}</td>
+                                                                <td className="p-2 text-gray-400">—</td>
+                                                                <td className="p-2 text-gray-400">—</td>
+                                                                <td className="p-2 text-gray-400">—</td>
+                                                                <td className="p-2 text-gray-400">—</td>
+                                                                <td className="p-2 text-gray-400">—</td>
+                                                                <td className="p-2 text-gray-400">—</td>
+                                                            </tr>
+                                                        );
+                                                        // Add separator line after Inbox when in My Library view
+                                                        if (selectedFolderId === '__library__' && folder.id === '__inbox__') {
+                                                            return [row, (
+                                                                <tr key="inbox-separator" className="h-0">
+                                                                    <td colSpan="8" className="p-0"><div className="border-b-2 border-gray-300 my-1"></div></td>
+                                                                </tr>
+                                                            )];
+                                                        }
+                                                        return [row];
+                                                    });
                                                 })()}
                                                 {/* Book rows */}
                                                 {(() => {
@@ -7797,7 +7809,11 @@
                                                             setExplorerSelectedFolders(new Set());
                                                             setExplorerSelectedBooks(new Set());
                                                         }}>
-                                                        <div className={`aspect-[2/3] ${folder.id === '__inbox__' ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'} border-2 rounded shadow flex items-center justify-center`} style={{ containerType: 'inline-size' }}>
+                                                        <div className={`aspect-[2/3] ${folder.id === '__inbox__' ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'} border-2 rounded shadow flex items-center justify-center relative`} style={{ containerType: 'inline-size' }}>
+                                                            {/* v5.0.0-alpha.65 - Pin icon for Inbox in My Library view */}
+                                                            {selectedFolderId === '__library__' && folder.id === '__inbox__' && (
+                                                                <span className="absolute top-1 right-1 text-xs">📌</span>
+                                                            )}
                                                             <span style={{ fontSize: '50cqw' }}>{folder.id === '__inbox__' ? '📥' : '📁'}</span>
                                                         </div>
                                                         <div className="mt-1 text-xs text-gray-700 truncate text-center">{folder.name}</div>
