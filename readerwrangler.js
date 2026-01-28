@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.66";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.68";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7673,15 +7673,15 @@
 
                                                     // v5.0.0-alpha.65 - Use flatMap to add separator after Inbox in My Library view
                                                     return sortedFolders.flatMap((folder, folderIndex) => {
-                                                        // Inbox can't be dragged (it's pinned)
-                                                        const isDraggable = canReorderFolders && folder.id !== '__inbox__';
+                                                        // v5.0.0-alpha.67 - Phase A: Enable dragging everywhere (drop determines validity)
+                                                        const isDraggable = folder.id !== '__inbox__';
 
                                                         const row = (
                                                             <tr
                                                                 key={`folder-${folder.id}`}
                                                                 className={`cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
                                                                 style={explorerFolderReorderTarget === folderIndex ? { borderTop: '3px solid #3b82f6' } : {}}
-                                                                draggable={isDraggable ? "true" : undefined}
+                                                                draggable={isDraggable}
                                                                 onDragStart={isDraggable ? (e) => {
                                                                     e.stopPropagation();
                                                                     e.dataTransfer.effectAllowed = 'move';
@@ -7941,14 +7941,15 @@
 
                                                 // v5.0.0-alpha.62 - Scale folder icon responsively with container
                                                 return sortedFolders.map((folder, folderIndex) => {
-                                                    const isDraggable = canReorderFolders && folder.id !== '__inbox__';
+                                                    // v5.0.0-alpha.67 - Phase A: Enable dragging everywhere (drop determines validity)
+                                                    const isDraggable = folder.id !== '__inbox__';
 
                                                     return (
                                                     <div
                                                         key={`folder-${folder.id}`}
                                                         className={`cursor-pointer hover:opacity-80 ${explorerSelectedFolders.has(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
                                                         style={explorerFolderReorderTarget === folderIndex ? { outline: '3px solid #3b82f6', outlineOffset: '2px' } : {}}
-                                                        draggable={isDraggable ? "true" : undefined}
+                                                        draggable={isDraggable}
                                                         onDragStart={isDraggable ? (e) => {
                                                             e.stopPropagation();
                                                             e.dataTransfer.effectAllowed = 'move';

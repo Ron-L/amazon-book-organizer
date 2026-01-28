@@ -11,6 +11,40 @@ Two distinct drag operations for folders in the right pane:
 
 ---
 
+## Mode/View Conceptual Model
+
+Understanding **why** operations are allowed requires distinguishing between VIEWs and MODEs:
+
+### Virtual Views (Read-Only)
+**All Books** and **My Library** are virtual VIEWS, not containers:
+- Always sorted (clicking column headers changes sort)
+- Cannot enter "custom mode" — no manual reordering
+- All Books: Shows all books across all folders (flat list)
+- My Library: Shows organizational structure (folders only)
+
+### User Folders (Two Modes)
+User-created folders can operate in two modes:
+
+| Mode | How to Enter | Column Header Click | Drag to Reorder | Visual Indicator |
+|------|--------------|---------------------|-----------------|------------------|
+| **Sorted View** | Click any column header | Changes sort direction | Disabled | ▲/▼ shown |
+| **Custom Mode** | Click "Custom" or cancel sort | Reorders permanently | Enabled | No ▲/▼ |
+
+**Mode persists** across List ↔ Cover view toggle.
+
+### Implications for Folder Drag/Drop
+
+| Context | Why Reorder Allowed? | Why Reparent Allowed? |
+|---------|----------------------|-----------------------|
+| All Books | ❌ Virtual view, no container | ❌ Can't modify virtual view |
+| My Library | ❌ Virtual view of root folders | ✅ Can change folder's parent |
+| User folder (sorted) | ❌ Sort defines order | ✅ Moving folder doesn't affect sort |
+| User folder (custom) | ✅ User controls order | ✅ Full control |
+
+**Key principle**: Dragging is always allowed (except Inbox/All Books). The DROP determines operation validity based on current mode.
+
+---
+
 ## Detection Logic
 
 For each folder element during dragOver, calculate mouse position relative to element:
