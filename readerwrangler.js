@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.62";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.63";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -125,6 +125,7 @@
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
+            const FOLDER_LIBRARY = { id: '__library__', name: 'My Library', virtual: true, icon: '📚' }; // v5.0.0-alpha.63
             const FOLDER_INBOX = { id: '__inbox__', name: 'Inbox', virtual: false, icon: '📥', isInbox: true };
 
             // v4.16.0.s - Helper to extract bookId from column entry (handles legacy string and new object format)
@@ -193,9 +194,10 @@
             // Get the Inbox folder from folders array
             const getInboxFolder = () => folders.find(f => f.id === '__inbox__');
 
-            // Get books for a folder (handles All Books virtual folder)
+            // Get books for a folder (handles All Books and My Library virtual folders)
             const getFolderBookIds = (folderId) => {
                 if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first
+                if (folderId === '__library__') return []; // v5.0.0-alpha.63 - My Library shows folders, not books
                 const folder = folders.find(f => f.id === folderId);
                 return folder?.bookIds || [];
             };
@@ -276,9 +278,10 @@
                     matchesDateRange && matchesDeals && matchesTags;
             };
 
-            // Get folder by ID (handles All Books virtual folder)
+            // Get folder by ID (handles All Books and My Library virtual folders)
             const getFolderById = (folderId) => {
                 if (folderId === '__all__') return FOLDER_ALL_BOOKS;
+                if (folderId === '__library__') return FOLDER_LIBRARY; // v5.0.0-alpha.63
                 const folder = folders.find(f => f.id === folderId);
                 if (folder?.id === '__inbox__') return { ...folder, ...FOLDER_INBOX };
                 return folder;
@@ -6976,6 +6979,16 @@
                                     </div>
                                     {/* Divider line to separate All Books from folders */}
                                     <div className="border-b border-gray-200 my-1 mx-2"></div>
+                                    {/* v5.0.0-alpha.63 - My Library (organizational root container) */}
+                                    <div
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        onClick={() => setSelectedFolderId('__library__')}>
+                                        <span className="pointer-events-none">{FOLDER_LIBRARY.icon}</span>
+                                        <span className="flex-1 pointer-events-none">{FOLDER_LIBRARY.name}</span>
+                                        <span className="text-xs text-gray-500 pointer-events-none">
+                                            ({getChildFolders(null).length} folders)
+                                        </span>
+                                    </div>
                                     {/* Inbox - indented as part of folder hierarchy */}
                                     <div
                                         className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__inbox__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
@@ -7413,7 +7426,12 @@
                                         <span className="text-sm text-gray-500 ml-2">
                                             {(() => {
                                                 // v5.0.0-alpha.54 - Show folder count + book count
-                                                const childFolders = selectedFolderId === '__all__' ? [] : getChildFolders(selectedFolderId);
+                                                // v5.0.0-alpha.63 - Handle My Library folder count
+                                                const childFolders = selectedFolderId === '__all__'
+                                                    ? []
+                                                    : selectedFolderId === '__library__'
+                                                        ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                                                        : getChildFolders(selectedFolderId);
                                                 const folderCount = childFolders.length;
                                                 const allBookIds = getFolderBookIds(selectedFolderId);
                                                 const filteredCount = allBookIds
@@ -7421,6 +7439,10 @@
                                                     .filter(book => filterBookForExplorer(book))
                                                     .length;
                                                 const totalCount = allBookIds.length;
+                                                // v5.0.0-alpha.63 - My Library shows only folders, no books
+                                                if (selectedFolderId === '__library__') {
+                                                    return `(${folderCount} folders)`;
+                                                }
                                                 const bookPart = filteredCount === totalCount
                                                     ? `${totalCount} books`
                                                     : `${filteredCount} of ${totalCount} books`;
@@ -7432,6 +7454,11 @@
                                         {selectedFolderId === '__all__' && (
                                             <span className="text-xs text-gray-400 ml-2 italic">
                                                 — view only, organize from folders
+                                            </span>
+                                        )}
+                                        {selectedFolderId === '__library__' && (
+                                            <span className="text-xs text-gray-400 ml-2 italic">
+                                                — double-click to open folder
                                             </span>
                                         )}
                                     </div>
@@ -7484,7 +7511,7 @@
                                             {explorerSort.column !== 'custom' && (
                                                 <>
                                                     <span className="text-gray-500">{explorerSort.direction === 'asc' ? '↑' : '↓'}</span>
-                                                    {selectedFolderId !== '__all__' && (
+                                                    {selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && (
                                                         <button
                                                             onClick={() => setExplorerSort({ column: 'custom', direction: 'asc' })}
                                                             className="ml-1 text-gray-400 hover:text-gray-600 text-xs"
@@ -7531,7 +7558,10 @@
                                                 {(() => {
                                                     // Get child folders (only for user folders, not All Books)
                                                     if (selectedFolderId === '__all__') return null;
-                                                    const childFolders = getChildFolders(selectedFolderId);
+                                                    // v5.0.0-alpha.63 - My Library shows Inbox + root folders
+                                                    const childFolders = selectedFolderId === '__library__'
+                                                        ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                                                        : getChildFolders(selectedFolderId);
                                                     if (childFolders.length === 0) return null;
 
                                                     // Sort folders: alphabetically, respecting direction only when sorting by Name
@@ -7565,7 +7595,7 @@
                                                                 setExplorerSelectedFolders(new Set());
                                                                 setExplorerSelectedBooks(new Set());
                                                             }}>
-                                                            <td className="p-2 text-center text-xl">📁</td>
+                                                            <td className="p-2 text-center text-xl">{folder.id === '__inbox__' ? '📥' : '📁'}</td>
                                                             <td className="p-2 font-medium">{folder.name}</td>
                                                             <td className="p-2 text-gray-400">—</td>
                                                             <td className="p-2 text-gray-400">—</td>
@@ -7728,7 +7758,10 @@
                                             {/* v5.0.0-alpha.54 - Folder tiles (before books) */}
                                             {(() => {
                                                 if (selectedFolderId === '__all__') return null;
-                                                const childFolders = getChildFolders(selectedFolderId);
+                                                // v5.0.0-alpha.63 - My Library shows Inbox + root folders
+                                                const childFolders = selectedFolderId === '__library__'
+                                                    ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                                                    : getChildFolders(selectedFolderId);
                                                 if (childFolders.length === 0) return null;
 
                                                 const dir = explorerSort.column === 'title' && explorerSort.direction === 'desc' ? -1 : 1;
@@ -7758,8 +7791,8 @@
                                                             setExplorerSelectedFolders(new Set());
                                                             setExplorerSelectedBooks(new Set());
                                                         }}>
-                                                        <div className="aspect-[2/3] bg-amber-50 border-2 border-amber-200 rounded shadow flex items-center justify-center" style={{ containerType: 'inline-size' }}>
-                                                            <span style={{ fontSize: '50cqw' }}>📁</span>
+                                                        <div className={`aspect-[2/3] ${folder.id === '__inbox__' ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'} border-2 rounded shadow flex items-center justify-center`} style={{ containerType: 'inline-size' }}>
+                                                            <span style={{ fontSize: '50cqw' }}>{folder.id === '__inbox__' ? '📥' : '📁'}</span>
                                                         </div>
                                                         <div className="mt-1 text-xs text-gray-700 truncate text-center">{folder.name}</div>
                                                     </div>
