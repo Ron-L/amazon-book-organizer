@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.57";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.58";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -3295,9 +3295,9 @@
                             // Remove deleted folders
                             return updated.filter(f => !folderIdsToDeleteRedo.has(f.id));
                         });
-                        // Update selection if current folder is being deleted
+                        // v5.0.0-alpha.58 - Navigate to parent folder instead of All Books
                         if (folderIdsToDeleteRedo.has(selectedFolderId)) {
-                            setSelectedFolderId('__all__');
+                            setSelectedFolderId(action.orphanDestination || '__all__');
                         }
                         break;
                     case 'CREATE_FOLDER':
@@ -7217,8 +7217,9 @@
                                                                         return updated.filter(f => !folderIdsToDelete.has(f.id));
                                                                     });
 
+                                                                    // v5.0.0-alpha.58 - Navigate to parent folder instead of All Books
                                                                     if (selectedFolderId === folder.id || folderIdsToDelete.has(selectedFolderId)) {
-                                                                        setSelectedFolderId('__all__');
+                                                                        setSelectedFolderId(destinationId);
                                                                     }
 
                                                                     // Show toast with result
@@ -7376,8 +7377,9 @@
                                                                                 return updated.filter(f => !folderIdsToDelete.has(f.id));
                                                                             });
 
+                                                                            // v5.0.0-alpha.58 - Navigate to parent folder instead of All Books
                                                                             if (selectedFolderId === folder.id || folderIdsToDelete.has(selectedFolderId)) {
-                                                                                setSelectedFolderId('__all__');
+                                                                                setSelectedFolderId(destinationId);
                                                                             }
 
                                                                             // Show toast with result
