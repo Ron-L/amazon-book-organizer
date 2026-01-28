@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.65";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.66";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -119,6 +119,7 @@
             const [explorerSelectedFolders, setExplorerSelectedFolders] = useState(new Set()); // v5.0.0-alpha.54 - Folder selection in right pane
             const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select
             const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
+            const [explorerFolderReorderTarget, setExplorerFolderReorderTarget] = useState(null); // v5.0.0-alpha.66 - Index for folder reorder drop target
             const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
             const [showMigrationDialog, setShowMigrationDialog] = useState(false); // v5.0.0 - Migration prompt
@@ -310,8 +311,38 @@
             };
 
             // Get child folders of a parent (null = root level)
+            // v5.0.0-alpha.66 - Respects custom order from parent's childFolderIds or sortIndex
             const getChildFolders = (parentId) => {
-                return folders.filter(f => f.parentId === parentId);
+                const children = folders.filter(f => f.parentId === parentId);
+
+                if (parentId === null) {
+                    // Root level folders - use sortIndex property if available
+                    const hasSortIndex = children.some(f => f.sortIndex !== undefined);
+                    if (hasSortIndex) {
+                        return [...children].sort((a, b) => {
+                            const idxA = a.sortIndex ?? Infinity;
+                            const idxB = b.sortIndex ?? Infinity;
+                            if (idxA !== idxB) return idxA - idxB;
+                            return a.name.localeCompare(b.name);
+                        });
+                    }
+                } else {
+                    // Nested folders - use parent's childFolderIds
+                    const parentFolder = folders.find(f => f.id === parentId);
+                    const customOrder = parentFolder?.childFolderIds || [];
+
+                    if (customOrder.length > 0) {
+                        const orderMap = new Map(customOrder.map((id, i) => [id, i]));
+                        return [...children].sort((a, b) => {
+                            const posA = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+                            const posB = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+                            if (posA !== posB) return posA - posB;
+                            return a.name.localeCompare(b.name);
+                        });
+                    }
+                }
+
+                return children; // No custom order, return as-is (will be sorted alphabetically later)
             };
 
             // v5.0.0 - Get total book count for a folder including all subfolders recursively
@@ -374,6 +405,56 @@
                     toIndex: targetIndex
                 });
                 console.log(`🔄 Reordered ${bookIdsToMove.length} book(s) in folder`);
+            };
+
+            // v5.0.0-alpha.66 - Reorder folders within their parent
+            // Updates parent's childFolderIds array to persist custom order
+            const reorderFoldersInParent = (parentId, folderIdsToMove, targetIndex) => {
+                // Get current child folders in their current order
+                const currentChildren = getChildFolders(parentId);
+                const currentOrder = currentChildren.map(f => f.id);
+
+                // Capture fromIndices BEFORE modifying (for potential undo)
+                const fromIndices = folderIdsToMove.map(id => currentOrder.indexOf(id));
+
+                // Build new order
+                const moveSet = new Set(folderIdsToMove);
+                const remaining = currentOrder.filter(id => !moveSet.has(id));
+
+                // Adjust target index based on how many items were removed before it
+                const removedBefore = currentOrder.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
+                const adjustedIndex = targetIndex - removedBefore;
+
+                // Insert at target position (maintaining relative order of moved items)
+                const orderedToMove = folderIdsToMove.filter(id => currentOrder.includes(id));
+                remaining.splice(adjustedIndex, 0, ...orderedToMove);
+
+                // Update parent's childFolderIds (or create virtual parent tracking for root level)
+                if (parentId) {
+                    setFolders(prev => prev.map(folder => {
+                        if (folder.id !== parentId) return folder;
+                        return { ...folder, childFolderIds: remaining };
+                    }));
+                } else {
+                    // Root level folders - store order in a special way
+                    // For now, we'll store this in localStorage as root folder order
+                    // Actually, we need to update each folder's parentId order somehow...
+                    // Simpler: Add a "rootFolderOrder" to explorer state
+                    // For now, let's update folders to include a sort index
+                    setFolders(prev => {
+                        const updated = [...prev];
+                        remaining.forEach((folderId, idx) => {
+                            const folderIdx = updated.findIndex(f => f.id === folderId);
+                            if (folderIdx >= 0) {
+                                updated[folderIdx] = { ...updated[folderIdx], sortIndex: idx };
+                            }
+                        });
+                        return updated;
+                    });
+                }
+
+                // TODO: Add undo support for folder reordering
+                console.log(`🔄 Reordered ${folderIdsToMove.length} folder(s) in parent ${parentId || 'root'}`);
             };
 
             // v5.0.0 - Migrate columns/dividers to folders
@@ -7564,19 +7645,76 @@
                                                         : getChildFolders(selectedFolderId);
                                                     if (childFolders.length === 0) return null;
 
-                                                    // Sort folders: alphabetically, respecting direction only when sorting by Name
-                                                    // v5.0.0-alpha.64 - Keep Inbox first when in My Library view
+                                                    // v5.0.0-alpha.66 - In custom mode, use getChildFolders order (respects custom order)
+                                                    // In sorted mode, sort alphabetically
                                                     const dir = explorerSort.column === 'title' && explorerSort.direction === 'desc' ? -1 : 1;
-                                                    const sortedFolders = selectedFolderId === '__library__'
-                                                        ? [childFolders.find(f => f.id === '__inbox__'), ...childFolders.filter(f => f.id !== '__inbox__').sort((a, b) => dir * a.name.localeCompare(b.name))].filter(Boolean)
-                                                        : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                    let sortedFolders;
+                                                    if (selectedFolderId === '__library__') {
+                                                        // My Library: Inbox first (pinned), then alphabetical or custom
+                                                        const inbox = childFolders.find(f => f.id === '__inbox__');
+                                                        const others = childFolders.filter(f => f.id !== '__inbox__');
+                                                        // In custom mode, use order from getChildFolders; otherwise sort alphabetically
+                                                        const sortedOthers = explorerSort.column === 'custom'
+                                                            ? others
+                                                            : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                        sortedFolders = [inbox, ...sortedOthers].filter(Boolean);
+                                                    } else {
+                                                        // Regular folder view
+                                                        sortedFolders = explorerSort.column === 'custom'
+                                                            ? childFolders // Already in custom order from getChildFolders
+                                                            : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                    }
+
+                                                    // v5.0.0-alpha.66 - Determine if folder reordering is allowed
+                                                    const canReorderFolders = explorerSort.column === 'custom' &&
+                                                        selectedFolderId !== '__all__' &&
+                                                        selectedFolderId !== '__library__'; // Can't reorder in My Library (Inbox is pinned)
+                                                    const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
 
                                                     // v5.0.0-alpha.65 - Use flatMap to add separator after Inbox in My Library view
-                                                    return sortedFolders.flatMap(folder => {
+                                                    return sortedFolders.flatMap((folder, folderIndex) => {
+                                                        // Inbox can't be dragged (it's pinned)
+                                                        const isDraggable = canReorderFolders && folder.id !== '__inbox__';
+
                                                         const row = (
                                                             <tr
                                                                 key={`folder-${folder.id}`}
                                                                 className={`cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                                style={explorerFolderReorderTarget === folderIndex ? { borderTop: '3px solid #3b82f6' } : {}}
+                                                                draggable={isDraggable ? "true" : undefined}
+                                                                onDragStart={isDraggable ? (e) => {
+                                                                    e.stopPropagation();
+                                                                    e.dataTransfer.effectAllowed = 'move';
+                                                                    e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
+                                                                        folderIds: explorerSelectedFolders.has(folder.id) && explorerSelectedFolders.size > 1
+                                                                            ? [...explorerSelectedFolders]
+                                                                            : [folder.id],
+                                                                        parentId: parentForReorder
+                                                                    }));
+                                                                    if (!explorerSelectedFolders.has(folder.id)) {
+                                                                        setExplorerSelectedFolders(new Set([folder.id]));
+                                                                    }
+                                                                } : undefined}
+                                                                onDragOver={canReorderFolders ? (e) => {
+                                                                    e.preventDefault();
+                                                                    e.dataTransfer.dropEffect = 'move';
+                                                                    setExplorerFolderReorderTarget(folderIndex);
+                                                                } : undefined}
+                                                                onDragLeave={canReorderFolders ? () => setExplorerFolderReorderTarget(null) : undefined}
+                                                                onDrop={canReorderFolders ? (e) => {
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    try {
+                                                                        const dragData = JSON.parse(e.dataTransfer.getData('application/x-folder-reorder'));
+                                                                        if (dragData.parentId === parentForReorder) {
+                                                                            reorderFoldersInParent(parentForReorder, dragData.folderIds, folderIndex);
+                                                                        }
+                                                                    } catch (err) {
+                                                                        // Not a folder reorder drag
+                                                                    }
+                                                                    setExplorerFolderReorderTarget(null);
+                                                                } : undefined}
+                                                                onDragEnd={() => setExplorerFolderReorderTarget(null)}
                                                                 onClick={(e) => {
                                                                     // Clear book selection when selecting folder
                                                                     setExplorerSelectedBooks(new Set());
@@ -7779,17 +7917,71 @@
                                                     : getChildFolders(selectedFolderId);
                                                 if (childFolders.length === 0) return null;
 
-                                                // v5.0.0-alpha.64 - Keep Inbox first when in My Library view
+                                                // v5.0.0-alpha.66 - In custom mode, use getChildFolders order (respects custom order)
                                                 const dir = explorerSort.column === 'title' && explorerSort.direction === 'desc' ? -1 : 1;
-                                                const sortedFolders = selectedFolderId === '__library__'
-                                                    ? [childFolders.find(f => f.id === '__inbox__'), ...childFolders.filter(f => f.id !== '__inbox__').sort((a, b) => dir * a.name.localeCompare(b.name))].filter(Boolean)
-                                                    : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                let sortedFolders;
+                                                if (selectedFolderId === '__library__') {
+                                                    const inbox = childFolders.find(f => f.id === '__inbox__');
+                                                    const others = childFolders.filter(f => f.id !== '__inbox__');
+                                                    const sortedOthers = explorerSort.column === 'custom'
+                                                        ? others
+                                                        : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                    sortedFolders = [inbox, ...sortedOthers].filter(Boolean);
+                                                } else {
+                                                    sortedFolders = explorerSort.column === 'custom'
+                                                        ? childFolders
+                                                        : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                }
+
+                                                // v5.0.0-alpha.66 - Determine if folder reordering is allowed
+                                                const canReorderFolders = explorerSort.column === 'custom' &&
+                                                    selectedFolderId !== '__all__' &&
+                                                    selectedFolderId !== '__library__';
+                                                const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
 
                                                 // v5.0.0-alpha.62 - Scale folder icon responsively with container
-                                                return sortedFolders.map(folder => (
+                                                return sortedFolders.map((folder, folderIndex) => {
+                                                    const isDraggable = canReorderFolders && folder.id !== '__inbox__';
+
+                                                    return (
                                                     <div
                                                         key={`folder-${folder.id}`}
                                                         className={`cursor-pointer hover:opacity-80 ${explorerSelectedFolders.has(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
+                                                        style={explorerFolderReorderTarget === folderIndex ? { outline: '3px solid #3b82f6', outlineOffset: '2px' } : {}}
+                                                        draggable={isDraggable ? "true" : undefined}
+                                                        onDragStart={isDraggable ? (e) => {
+                                                            e.stopPropagation();
+                                                            e.dataTransfer.effectAllowed = 'move';
+                                                            e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
+                                                                folderIds: explorerSelectedFolders.has(folder.id) && explorerSelectedFolders.size > 1
+                                                                    ? [...explorerSelectedFolders]
+                                                                    : [folder.id],
+                                                                parentId: parentForReorder
+                                                            }));
+                                                            if (!explorerSelectedFolders.has(folder.id)) {
+                                                                setExplorerSelectedFolders(new Set([folder.id]));
+                                                            }
+                                                        } : undefined}
+                                                        onDragOver={canReorderFolders ? (e) => {
+                                                            e.preventDefault();
+                                                            e.dataTransfer.dropEffect = 'move';
+                                                            setExplorerFolderReorderTarget(folderIndex);
+                                                        } : undefined}
+                                                        onDragLeave={canReorderFolders ? () => setExplorerFolderReorderTarget(null) : undefined}
+                                                        onDrop={canReorderFolders ? (e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            try {
+                                                                const dragData = JSON.parse(e.dataTransfer.getData('application/x-folder-reorder'));
+                                                                if (dragData.parentId === parentForReorder) {
+                                                                    reorderFoldersInParent(parentForReorder, dragData.folderIds, folderIndex);
+                                                                }
+                                                            } catch (err) {
+                                                                // Not a folder reorder drag
+                                                            }
+                                                            setExplorerFolderReorderTarget(null);
+                                                        } : undefined}
+                                                        onDragEnd={() => setExplorerFolderReorderTarget(null)}
                                                         onClick={(e) => {
                                                             setExplorerSelectedBooks(new Set());
                                                             if (e.ctrlKey || e.metaKey) {
@@ -7818,7 +8010,8 @@
                                                         </div>
                                                         <div className="mt-1 text-xs text-gray-700 truncate text-center">{folder.name}</div>
                                                     </div>
-                                                ));
+                                                    );
+                                                });
                                             })()}
                                             {/* Book tiles */}
                                             {(() => {
