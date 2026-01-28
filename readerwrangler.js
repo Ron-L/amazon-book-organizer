@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.59";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.60";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7734,6 +7734,10 @@
                                                 const dir = explorerSort.column === 'title' && explorerSort.direction === 'desc' ? -1 : 1;
                                                 const sortedFolders = [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
 
+                                                // v5.0.0-alpha.60 - Scale folder icon with grid column count
+                                                const numCols = 64 - explorerCoverCols;
+                                                const folderIconSize = Math.max(16, Math.min(64, Math.round(192 / numCols)));
+
                                                 return sortedFolders.map(folder => (
                                                     <div
                                                         key={`folder-${folder.id}`}
@@ -7758,7 +7762,7 @@
                                                             setExplorerSelectedBooks(new Set());
                                                         }}>
                                                         <div className="aspect-[2/3] bg-amber-50 border-2 border-amber-200 rounded shadow flex items-center justify-center">
-                                                            <span className="text-4xl">📁</span>
+                                                            <span style={{ fontSize: `${folderIconSize}px` }}>📁</span>
                                                         </div>
                                                         <div className="mt-1 text-xs text-gray-700 truncate text-center">{folder.name}</div>
                                                     </div>
