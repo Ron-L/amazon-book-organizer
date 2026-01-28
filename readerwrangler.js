@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.60";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.61";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7736,7 +7736,9 @@
 
                                                 // v5.0.0-alpha.60 - Scale folder icon with grid column count
                                                 const numCols = 64 - explorerCoverCols;
-                                                const folderIconSize = Math.max(16, Math.min(64, Math.round(192 / numCols)));
+                                                // Scale from 24px (60 cols, small) to 72px (4 cols, large)
+                                                const folderIconSize = Math.max(24, Math.min(72, Math.round(300 / numCols)));
+                                                console.log('Folder icon size:', folderIconSize, 'numCols:', numCols, 'explorerCoverCols:', explorerCoverCols);
 
                                                 return sortedFolders.map(folder => (
                                                     <div
