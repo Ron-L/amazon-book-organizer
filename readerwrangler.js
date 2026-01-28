@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.58";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.59";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -901,11 +901,6 @@
             useEffect(() => {
                 window.books = books;
             }, [books]);
-
-            // DEBUG: Track selectedFolderId changes
-            useEffect(() => {
-                console.log('[DEBUG] selectedFolderId changed to:', selectedFolderId);
-            }, [selectedFolderId]);
 
             // ESC key to clear selection, Ctrl+A to select all in active column
             useEffect(() => {
@@ -3031,9 +3026,7 @@
                         });
                         // Restore selection to first restored folder
                         if (action.deletedFolders?.length > 0) {
-                            console.log('[UNDO DELETE_FOLDERS] Setting selection to:', action.deletedFolders[0].id);
                             setSelectedFolderId(action.deletedFolders[0].id);
-                            console.log('[UNDO DELETE_FOLDERS] setSelectedFolderId called');
                         }
                         break;
                     case 'CREATE_FOLDER':
