@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.69";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.70";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -119,7 +119,7 @@
             const [explorerSelectedFolders, setExplorerSelectedFolders] = useState(new Set()); // v5.0.0-alpha.54 - Folder selection in right pane
             const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select
             const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
-            const [explorerFolderReorderTarget, setExplorerFolderReorderTarget] = useState(null); // v5.0.0-alpha.66 - Index for folder reorder drop target
+            const [explorerFolderDragTarget, setExplorerFolderDragTarget] = useState(null); // v5.0.0-alpha.69 - { type: 'reorder'|'reparent', index?, position?, folderId? }
             const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
             const [showMigrationDialog, setShowMigrationDialog] = useState(false); // v5.0.0 - Migration prompt
@@ -7680,7 +7680,19 @@
                                                             <tr
                                                                 key={`folder-${folder.id}`}
                                                                 className={`cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
-                                                                style={explorerFolderReorderTarget === folderIndex ? { borderTop: '3px solid #3b82f6' } : {}}
+                                                                style={(() => {
+                                                                    // v5.0.0-alpha.69 - Phase B: Visual feedback based on drag target
+                                                                    if (!explorerFolderDragTarget) return {};
+                                                                    if (explorerFolderDragTarget.type === 'reorder' && explorerFolderDragTarget.index === folderIndex) {
+                                                                        return explorerFolderDragTarget.position === 'before'
+                                                                            ? { borderTop: '3px solid #3b82f6' }
+                                                                            : { borderBottom: '3px solid #3b82f6' };
+                                                                    }
+                                                                    if (explorerFolderDragTarget.type === 'reparent' && explorerFolderDragTarget.folderId === folder.id) {
+                                                                        return { backgroundColor: '#dbeafe' }; // blue-100
+                                                                    }
+                                                                    return {};
+                                                                })()}
                                                                 draggable={isDraggable}
                                                                 onDragStart={isDraggable ? (e) => {
                                                                     e.stopPropagation();
@@ -7695,13 +7707,26 @@
                                                                         setExplorerSelectedFolders(new Set([folder.id]));
                                                                     }
                                                                 } : undefined}
-                                                                onDragOver={canReorderFolders ? (e) => {
+                                                                onDragOver={(e) => {
+                                                                    // v5.0.0-alpha.69 - Phase B: Two-target zone detection
                                                                     e.preventDefault();
                                                                     e.dataTransfer.dropEffect = 'move';
-                                                                    setExplorerFolderReorderTarget(folderIndex);
-                                                                } : undefined}
-                                                                onDragLeave={canReorderFolders ? () => setExplorerFolderReorderTarget(null) : undefined}
+                                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                                    const y = e.clientY - rect.top;
+                                                                    const height = rect.height;
+                                                                    const edgeZone = height * 0.25;
+
+                                                                    if (y < edgeZone) {
+                                                                        setExplorerFolderDragTarget({ type: 'reorder', index: folderIndex, position: 'before' });
+                                                                    } else if (y > height - edgeZone) {
+                                                                        setExplorerFolderDragTarget({ type: 'reorder', index: folderIndex, position: 'after' });
+                                                                    } else {
+                                                                        setExplorerFolderDragTarget({ type: 'reparent', folderId: folder.id });
+                                                                    }
+                                                                }}
+                                                                onDragLeave={() => setExplorerFolderDragTarget(null)}
                                                                 onDrop={canReorderFolders ? (e) => {
+                                                                    // TODO: Phase D will handle both reorder and reparent
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
                                                                     try {
@@ -7712,9 +7737,9 @@
                                                                     } catch (err) {
                                                                         // Not a folder reorder drag
                                                                     }
-                                                                    setExplorerFolderReorderTarget(null);
+                                                                    setExplorerFolderDragTarget(null);
                                                                 } : undefined}
-                                                                onDragEnd={() => setExplorerFolderReorderTarget(null)}
+                                                                onDragEnd={() => setExplorerFolderDragTarget(null)}
                                                                 onClick={(e) => {
                                                                     // Clear book selection when selecting folder
                                                                     setExplorerSelectedBooks(new Set());
@@ -7948,7 +7973,19 @@
                                                     <div
                                                         key={`folder-${folder.id}`}
                                                         className={`cursor-pointer hover:opacity-80 ${!isDraggable ? 'select-none' : ''} ${explorerSelectedFolders.has(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
-                                                        style={explorerFolderReorderTarget === folderIndex ? { outline: '3px solid #3b82f6', outlineOffset: '2px' } : {}}
+                                                        style={(() => {
+                                                            // v5.0.0-alpha.69 - Phase B: Visual feedback based on drag target
+                                                            if (!explorerFolderDragTarget) return {};
+                                                            if (explorerFolderDragTarget.type === 'reorder' && explorerFolderDragTarget.index === folderIndex) {
+                                                                return explorerFolderDragTarget.position === 'before'
+                                                                    ? { outline: '3px solid #3b82f6', outlineOffset: '2px', borderTop: '3px solid #3b82f6' }
+                                                                    : { outline: '3px solid #3b82f6', outlineOffset: '2px', borderBottom: '3px solid #3b82f6' };
+                                                            }
+                                                            if (explorerFolderDragTarget.type === 'reparent' && explorerFolderDragTarget.folderId === folder.id) {
+                                                                return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' };
+                                                            }
+                                                            return {};
+                                                        })()}
                                                         draggable={isDraggable}
                                                         onDragStart={isDraggable ? (e) => {
                                                             e.stopPropagation();
@@ -7963,13 +8000,26 @@
                                                                 setExplorerSelectedFolders(new Set([folder.id]));
                                                             }
                                                         } : undefined}
-                                                        onDragOver={canReorderFolders ? (e) => {
+                                                        onDragOver={(e) => {
+                                                            // v5.0.0-alpha.69 - Phase B: Two-target zone detection
                                                             e.preventDefault();
                                                             e.dataTransfer.dropEffect = 'move';
-                                                            setExplorerFolderReorderTarget(folderIndex);
-                                                        } : undefined}
-                                                        onDragLeave={canReorderFolders ? () => setExplorerFolderReorderTarget(null) : undefined}
+                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                            const y = e.clientY - rect.top;
+                                                            const height = rect.height;
+                                                            const edgeZone = height * 0.25;
+
+                                                            if (y < edgeZone) {
+                                                                setExplorerFolderDragTarget({ type: 'reorder', index: folderIndex, position: 'before' });
+                                                            } else if (y > height - edgeZone) {
+                                                                setExplorerFolderDragTarget({ type: 'reorder', index: folderIndex, position: 'after' });
+                                                            } else {
+                                                                setExplorerFolderDragTarget({ type: 'reparent', folderId: folder.id });
+                                                            }
+                                                        }}
+                                                        onDragLeave={() => setExplorerFolderDragTarget(null)}
                                                         onDrop={canReorderFolders ? (e) => {
+                                                            // TODO: Phase D will handle both reorder and reparent
                                                             e.preventDefault();
                                                             e.stopPropagation();
                                                             try {
@@ -7980,9 +8030,9 @@
                                                             } catch (err) {
                                                                 // Not a folder reorder drag
                                                             }
-                                                            setExplorerFolderReorderTarget(null);
+                                                            setExplorerFolderDragTarget(null);
                                                         } : undefined}
-                                                        onDragEnd={() => setExplorerFolderReorderTarget(null)}
+                                                        onDragEnd={() => setExplorerFolderDragTarget(null)}
                                                         onClick={(e) => {
                                                             setExplorerSelectedBooks(new Set());
                                                             if (e.ctrlKey || e.metaKey) {
