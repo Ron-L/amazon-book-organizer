@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.73";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.74";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7681,15 +7681,17 @@
                                                                 key={`folder-${folder.id}`}
                                                                 className={`cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
                                                                 style={(() => {
-                                                                    // v5.0.0-alpha.69 - Phase B: Visual feedback based on drag target
+                                                                    // v5.0.0-alpha.73 - Phase C: Visual feedback (blue=valid, red=invalid)
                                                                     if (!explorerFolderDragTarget) return {};
                                                                     if (explorerFolderDragTarget.type === 'reorder' && explorerFolderDragTarget.index === folderIndex) {
+                                                                        // Reorder: blue if allowed (custom mode), red if not
+                                                                        const color = canReorderFolders ? '#3b82f6' : '#ef4444';
                                                                         return explorerFolderDragTarget.position === 'before'
-                                                                            ? { borderTop: '3px solid #3b82f6' }
-                                                                            : { borderBottom: '3px solid #3b82f6' };
+                                                                            ? { borderTop: `3px solid ${color}` }
+                                                                            : { borderBottom: `3px solid ${color}` };
                                                                     }
                                                                     if (explorerFolderDragTarget.type === 'reparent' && explorerFolderDragTarget.folderId === folder.id) {
-                                                                        return { backgroundColor: '#dbeafe' }; // blue-100
+                                                                        return { backgroundColor: '#dbeafe' }; // blue-100 (reparent always valid)
                                                                     }
                                                                     return {};
                                                                 })()}
@@ -7983,15 +7985,17 @@
                                                         key={`folder-${folder.id}`}
                                                         className={`cursor-pointer hover:opacity-80 ${!isDraggable ? 'select-none' : ''} ${explorerSelectedFolders.has(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
                                                         style={(() => {
-                                                            // v5.0.0-alpha.69 - Phase B: Visual feedback based on drag target
+                                                            // v5.0.0-alpha.73 - Phase C: Visual feedback (blue=valid, red=invalid)
                                                             if (!explorerFolderDragTarget) return {};
                                                             if (explorerFolderDragTarget.type === 'reorder' && explorerFolderDragTarget.index === folderIndex) {
+                                                                // Reorder: blue if allowed (custom mode), red if not
+                                                                const color = canReorderFolders ? '#3b82f6' : '#ef4444';
                                                                 return explorerFolderDragTarget.position === 'before'
-                                                                    ? { outline: '3px solid #3b82f6', outlineOffset: '2px', borderTop: '3px solid #3b82f6' }
-                                                                    : { outline: '3px solid #3b82f6', outlineOffset: '2px', borderBottom: '3px solid #3b82f6' };
+                                                                    ? { outline: `3px solid ${color}`, outlineOffset: '2px', borderTop: `3px solid ${color}` }
+                                                                    : { outline: `3px solid ${color}`, outlineOffset: '2px', borderBottom: `3px solid ${color}` };
                                                             }
                                                             if (explorerFolderDragTarget.type === 'reparent' && explorerFolderDragTarget.folderId === folder.id) {
-                                                                return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' };
+                                                                return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' }; // reparent always valid
                                                             }
                                                             return {};
                                                         })()}
