@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.61";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.62";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7734,12 +7734,7 @@
                                                 const dir = explorerSort.column === 'title' && explorerSort.direction === 'desc' ? -1 : 1;
                                                 const sortedFolders = [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
 
-                                                // v5.0.0-alpha.60 - Scale folder icon with grid column count
-                                                const numCols = 64 - explorerCoverCols;
-                                                // Scale from 24px (60 cols, small) to 72px (4 cols, large)
-                                                const folderIconSize = Math.max(24, Math.min(72, Math.round(300 / numCols)));
-                                                console.log('Folder icon size:', folderIconSize, 'numCols:', numCols, 'explorerCoverCols:', explorerCoverCols);
-
+                                                // v5.0.0-alpha.62 - Scale folder icon responsively with container
                                                 return sortedFolders.map(folder => (
                                                     <div
                                                         key={`folder-${folder.id}`}
@@ -7763,8 +7758,8 @@
                                                             setExplorerSelectedFolders(new Set());
                                                             setExplorerSelectedBooks(new Set());
                                                         }}>
-                                                        <div className="aspect-[2/3] bg-amber-50 border-2 border-amber-200 rounded shadow flex items-center justify-center">
-                                                            <span style={{ fontSize: `${folderIconSize}px` }}>📁</span>
+                                                        <div className="aspect-[2/3] bg-amber-50 border-2 border-amber-200 rounded shadow flex items-center justify-center" style={{ containerType: 'inline-size' }}>
+                                                            <span style={{ fontSize: '50cqw' }}>📁</span>
                                                         </div>
                                                         <div className="mt-1 text-xs text-gray-700 truncate text-center">{folder.name}</div>
                                                     </div>
