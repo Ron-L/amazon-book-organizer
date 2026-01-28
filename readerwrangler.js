@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.76";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.77";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -455,6 +455,48 @@
 
                 // TODO: Add undo support for folder reordering
                 console.log(`🔄 Reordered ${folderIdsToMove.length} folder(s) in parent ${parentId || 'root'}`);
+            };
+
+            // v5.0.0-alpha.76 - Phase D: Reparent folder (move into another folder)
+            const reparentFolder = (folderIds, newParentId) => {
+                // Helper: Check if targetId is a descendant of folderId
+                const isDescendant = (folderId, targetId) => {
+                    if (folderId === targetId) return true;
+                    const children = folders.filter(f => f.parentId === folderId);
+                    return children.some(child => isDescendant(child.id, targetId));
+                };
+
+                // Validate: can't move folder into itself or its descendants
+                for (const folderId of folderIds) {
+                    if (folderId === newParentId || isDescendant(folderId, newParentId)) {
+                        showToast("Can't move folder into itself or its subfolder", 'error');
+                        return false;
+                    }
+                    // Can't reparent Inbox
+                    if (folderId === '__inbox__') {
+                        showToast("Inbox cannot be moved", 'error');
+                        return false;
+                    }
+                }
+
+                // Can't move into Inbox
+                if (newParentId === '__inbox__') {
+                    showToast("Can't move folders into Inbox", 'error');
+                    return false;
+                }
+
+                setFolders(prev => prev.map(folder => {
+                    if (folderIds.includes(folder.id)) {
+                        return { ...folder, parentId: newParentId };
+                    }
+                    return folder;
+                }));
+
+                const folderNames = folderIds.map(id => folders.find(f => f.id === id)?.name || id).join(', ');
+                const targetName = newParentId ? folders.find(f => f.id === newParentId)?.name : 'root';
+                showToast(`Moved "${folderNames}" into "${targetName}"`, 'success');
+                console.log(`📁 Moved ${folderIds.length} folder(s) into ${newParentId || 'root'}`);
+                return true;
             };
 
             // v5.0.0 - Migrate columns/dividers to folders
@@ -7736,20 +7778,33 @@
                                                                     }
                                                                 }}
                                                                 onDragLeave={() => setExplorerFolderDragTarget(null)}
-                                                                onDrop={canReorderFolders ? (e) => {
-                                                                    // TODO: Phase D will handle both reorder and reparent
+                                                                onDrop={(e) => {
+                                                                    // v5.0.0-alpha.76 - Phase D: Handle reorder and reparent
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
                                                                     try {
                                                                         const dragData = JSON.parse(e.dataTransfer.getData('application/x-folder-reorder'));
-                                                                        if (dragData.parentId === parentForReorder) {
-                                                                            reorderFoldersInParent(parentForReorder, dragData.folderIds, folderIndex);
+                                                                        const target = explorerFolderDragTarget;
+
+                                                                        if (target?.type === 'reparent') {
+                                                                            // Move folder(s) INTO target folder
+                                                                            reparentFolder(dragData.folderIds, target.folderId);
+                                                                        } else if (target?.type === 'reorder') {
+                                                                            // Reorder within same parent
+                                                                            if (canReorderFolders) {
+                                                                                if (dragData.parentId === parentForReorder) {
+                                                                                    const adjustedIndex = target.position === 'after' ? folderIndex + 1 : folderIndex;
+                                                                                    reorderFoldersInParent(parentForReorder, dragData.folderIds, adjustedIndex);
+                                                                                }
+                                                                            } else {
+                                                                                showToast("Switch to Manual Order to reorder folders", 'info');
+                                                                            }
                                                                         }
                                                                     } catch (err) {
-                                                                        // Not a folder reorder drag
+                                                                        // Not a folder drag
                                                                     }
                                                                     setExplorerFolderDragTarget(null);
-                                                                } : undefined}
+                                                                }}
                                                                 onDragEnd={() => setExplorerFolderDragTarget(null)}
                                                                 onClick={(e) => {
                                                                     // Clear book selection when selecting folder
@@ -8040,20 +8095,33 @@
                                                             }
                                                         }}
                                                         onDragLeave={() => setExplorerFolderDragTarget(null)}
-                                                        onDrop={canReorderFolders ? (e) => {
-                                                            // TODO: Phase D will handle both reorder and reparent
+                                                        onDrop={(e) => {
+                                                            // v5.0.0-alpha.76 - Phase D: Handle reorder and reparent
                                                             e.preventDefault();
                                                             e.stopPropagation();
                                                             try {
                                                                 const dragData = JSON.parse(e.dataTransfer.getData('application/x-folder-reorder'));
-                                                                if (dragData.parentId === parentForReorder) {
-                                                                    reorderFoldersInParent(parentForReorder, dragData.folderIds, folderIndex);
+                                                                const target = explorerFolderDragTarget;
+
+                                                                if (target?.type === 'reparent') {
+                                                                    // Move folder(s) INTO target folder
+                                                                    reparentFolder(dragData.folderIds, target.folderId);
+                                                                } else if (target?.type === 'reorder') {
+                                                                    // Reorder within same parent
+                                                                    if (canReorderFolders) {
+                                                                        if (dragData.parentId === parentForReorder) {
+                                                                            const adjustedIndex = target.position === 'after' ? folderIndex + 1 : folderIndex;
+                                                                            reorderFoldersInParent(parentForReorder, dragData.folderIds, adjustedIndex);
+                                                                        }
+                                                                    } else {
+                                                                        showToast("Switch to Manual Order to reorder folders", 'info');
+                                                                    }
                                                                 }
                                                             } catch (err) {
-                                                                // Not a folder reorder drag
+                                                                // Not a folder drag
                                                             }
                                                             setExplorerFolderDragTarget(null);
-                                                        } : undefined}
+                                                        }}
                                                         onDragEnd={() => setExplorerFolderDragTarget(null)}
                                                         onClick={(e) => {
                                                             setExplorerSelectedBooks(new Set());
