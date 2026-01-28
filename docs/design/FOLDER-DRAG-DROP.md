@@ -217,12 +217,13 @@ Call reorder or reparent based on target type.
 
 ### Pending - Navigation
 - [ ] **Breadcrumb navigation** - Show path: `My Library › Jim Butcher › Miscellaneous`
-- [ ] **Auto-expand + highlight current folder in tree** - Keep tree synced with navigation
+- [ ] **Tree auto-expansion** (shared implementation):
+  - On navigation: expand tree to show current folder + highlight
+  - On drag hover: expand collapsed folder after delay to reveal drop targets
 - [ ] **Drag to breadcrumb** - Move folder to ancestor by dropping on breadcrumb
 
 ### Pending - Drag/Drop
 - [ ] **Phase E: Left panel folder reordering** - Drag in sidebar tree
-- [ ] **Auto-expand collapsed folder on drag hover** - UX improvement
 
 ### Pending - Other
 - [ ] **Backup restore: Include folders structure** - Currently only restores columns
