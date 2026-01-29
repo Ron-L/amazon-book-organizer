@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.81";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.83";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -122,6 +122,7 @@
             const [explorerFolderDragTarget, setExplorerFolderDragTarget] = useState(null); // v5.0.0-alpha.69 - { type: 'reorder'|'reparent', index?, position?, folderId? }
             const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
+            const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
             const [showMigrationDialog, setShowMigrationDialog] = useState(false); // v5.0.0 - Migration prompt
 
             // v5.0.0 - Special folders
@@ -685,6 +686,9 @@
             // v4.15.6: Track initial mount to prevent save effect from overwriting loaded values
             const filtersLoadedRef = useRef(false);
 
+            // v5.0.0-alpha.82 - Timeout for auto-expanding folder on drag hover
+            const dragHoverExpandTimeoutRef = useRef(null);
+
             // Load saved filters from localStorage on mount (v3.8.0.f, updated v3.8.0.k, v4.15.6)
             React.useEffect(() => {
                 try {
@@ -1066,6 +1070,25 @@
                 if (selectedFolderId === '__all__' && explorerSort.column === 'custom') {
                     // All Books can't use manual order - switch to Date Added
                     setExplorerSort({ column: 'dateAdded', direction: 'desc' });
+                }
+            }, [selectedFolderId]);
+
+            // v5.0.0-alpha.82 - Auto-expand tree to show selected folder
+            useEffect(() => {
+                // Skip virtual folders (All Books, My Library)
+                if (!selectedFolderId || selectedFolderId === '__all__' || selectedFolderId === '__library__') return;
+
+                // Get path from root to selected folder
+                const path = getFolderPath(selectedFolderId);
+                // Extract ancestor IDs (skip virtual root and current folder - only expand parents)
+                const ancestorIds = path
+                    .filter(f => f.id !== '__library__' && f.id !== selectedFolderId)
+                    .map(f => f.id);
+
+                if (ancestorIds.length > 0) {
+                    setFolders(prev => prev.map(f =>
+                        ancestorIds.includes(f.id) ? { ...f, collapsed: false } : f
+                    ));
                 }
             }, [selectedFolderId]);
 
@@ -7312,14 +7335,36 @@
                                                             setExplorerIsCopyDrag(isCopy);
                                                             e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
                                                             setExplorerDropTargetId(folder.id);
+
+                                                            // v5.0.0-alpha.82 - Auto-expand collapsed folder after 500ms hover
+                                                            if (hasChildren && folder.collapsed) {
+                                                                if (!dragHoverExpandTimeoutRef.current) {
+                                                                    dragHoverExpandTimeoutRef.current = setTimeout(() => {
+                                                                        setFolders(prev => prev.map(f =>
+                                                                            f.id === folder.id ? { ...f, collapsed: false } : f
+                                                                        ));
+                                                                        dragHoverExpandTimeoutRef.current = null;
+                                                                    }, 500);
+                                                                }
+                                                            }
                                                         }}
                                                         onDragLeave={(e) => {
                                                             if (!e.currentTarget.contains(e.relatedTarget)) {
                                                                 setExplorerDropTargetId(null);
+                                                                // v5.0.0-alpha.82 - Clear auto-expand timeout
+                                                                if (dragHoverExpandTimeoutRef.current) {
+                                                                    clearTimeout(dragHoverExpandTimeoutRef.current);
+                                                                    dragHoverExpandTimeoutRef.current = null;
+                                                                }
                                                             }
                                                         }}
                                                         onDrop={(e) => {
                                                             e.preventDefault();
+                                                            // v5.0.0-alpha.82 - Clear auto-expand timeout on drop
+                                                            if (dragHoverExpandTimeoutRef.current) {
+                                                                clearTimeout(dragHoverExpandTimeoutRef.current);
+                                                                dragHoverExpandTimeoutRef.current = null;
+                                                            }
                                                             const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                                             const { sourceFolder, bookIds } = dragData;
 
@@ -7670,7 +7715,7 @@
                             <div className="flex-1 bg-white overflow-hidden flex flex-col">
                                 <div className="p-3 border-b border-gray-200 flex items-center justify-between">
                                     <div className="font-medium text-gray-700 flex items-center">
-                                        {/* v5.0.0-alpha.80 - Breadcrumb navigation */}
+                                        {/* v5.0.0-alpha.80 - Breadcrumb navigation, v5.0.0-alpha.83 - Drop target for folder reparenting */}
                                         {getFolderPath(selectedFolderId).map((folder, idx, arr) => (
                                             <span key={folder.id} className="flex items-center">
                                                 {idx > 0 && <span className="mx-1 text-gray-400">›</span>}
@@ -7679,7 +7724,33 @@
                                                 ) : (
                                                     <button
                                                         onClick={() => setSelectedFolderId(folder.id)}
-                                                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                                                        className={`text-blue-600 hover:text-blue-800 hover:underline px-1 rounded ${breadcrumbDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                                        onDragOver={(e) => {
+                                                            // Only accept folder drags (types is DOMStringList, spread to array)
+                                                            if ([...e.dataTransfer.types].includes('application/x-folder-reorder')) {
+                                                                e.preventDefault();
+                                                                e.dataTransfer.dropEffect = 'move';
+                                                                setBreadcrumbDropTargetId(folder.id);
+                                                            }
+                                                        }}
+                                                        onDragLeave={(e) => {
+                                                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                                setBreadcrumbDropTargetId(null);
+                                                            }
+                                                        }}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            setBreadcrumbDropTargetId(null);
+                                                            try {
+                                                                const dragData = JSON.parse(e.dataTransfer.getData('application/x-folder-reorder'));
+                                                                const { folderIds } = dragData;
+                                                                // My Library = root level (null), otherwise use folder.id
+                                                                const newParentId = folder.id === '__library__' ? null : folder.id;
+                                                                reparentFolder(folderIds, newParentId);
+                                                            } catch (err) {
+                                                                console.error('Breadcrumb drop error:', err);
+                                                            }
+                                                        }}
                                                     >
                                                         {folder.name}
                                                     </button>
@@ -7945,7 +8016,10 @@
                                                                     }
                                                                     setExplorerFolderDragTarget(null);
                                                                 }}
-                                                                onDragEnd={() => setExplorerFolderDragTarget(null)}
+                                                                onDragEnd={() => {
+                                                                    setExplorerFolderDragTarget(null);
+                                                                    setBreadcrumbDropTargetId(null); // v5.0.0-alpha.83
+                                                                }}
                                                                 onClick={(e) => {
                                                                     // Clear book selection when selecting folder
                                                                     setExplorerSelectedBooks(new Set());
@@ -8262,7 +8336,10 @@
                                                             }
                                                             setExplorerFolderDragTarget(null);
                                                         }}
-                                                        onDragEnd={() => setExplorerFolderDragTarget(null)}
+                                                        onDragEnd={() => {
+                                                            setExplorerFolderDragTarget(null);
+                                                            setBreadcrumbDropTargetId(null); // v5.0.0-alpha.83
+                                                        }}
                                                         onClick={(e) => {
                                                             setExplorerSelectedBooks(new Set());
                                                             if (e.ctrlKey || e.metaKey) {

@@ -215,12 +215,10 @@ Call reorder or reparent based on target type.
 ### Completed This Session
 - [x] **Phase A-D: Folder drag/drop** - Dragging, zone detection, visual feedback, drop actions
 - [x] **Undo for all folder operations** - Reparent and reorder both have undo/redo
+- [x] **Breadcrumb navigation** - Clickable path in header
+- [x] **Tree auto-expansion** - On navigation + drag hover (500ms delay)
 
 ### Pending - Navigation
-- [ ] **Breadcrumb navigation** - Show path: `My Library › Jim Butcher › Miscellaneous`
-- [ ] **Tree auto-expansion** (shared implementation):
-  - On navigation: expand tree to show current folder + highlight
-  - On drag hover: expand collapsed folder after delay to reveal drop targets
 - [ ] **Drag to breadcrumb** - Move folder to ancestor by dropping on breadcrumb
 
 ### Pending - Drag/Drop
