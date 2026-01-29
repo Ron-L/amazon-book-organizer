@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.79";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.80";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -407,14 +407,14 @@
                 console.log(`🔄 Reordered ${bookIdsToMove.length} book(s) in folder`);
             };
 
-            // v5.0.0-alpha.66 - Reorder folders within their parent
+            // v5.0.0-alpha.79 - Reorder folders within their parent (with undo)
             // Updates parent's childFolderIds array to persist custom order
             const reorderFoldersInParent = (parentId, folderIdsToMove, targetIndex) => {
                 // Get current child folders in their current order
                 const currentChildren = getChildFolders(parentId);
                 const currentOrder = currentChildren.map(f => f.id);
 
-                // Capture fromIndices BEFORE modifying (for potential undo)
+                // Capture fromIndices BEFORE modifying (for undo)
                 const fromIndices = folderIdsToMove.map(id => currentOrder.indexOf(id));
 
                 // Build new order
@@ -453,7 +453,19 @@
                     });
                 }
 
-                // TODO: Add undo support for folder reordering
+                // Record for undo
+                const folderNames = folderIdsToMove.map(id => folders.find(f => f.id === id)?.name || id).join(', ');
+                recordAction({
+                    type: 'REORDER_FOLDER',
+                    parentId,
+                    folderIds: folderIdsToMove,
+                    fromIndices,
+                    toIndex: adjustedIndex,
+                    oldOrder: currentOrder,
+                    newOrder: remaining,
+                    description: `Reorder "${folderNames}"`
+                });
+
                 console.log(`🔄 Reordered ${folderIdsToMove.length} folder(s) in parent ${parentId || 'root'}`);
             };
 
@@ -3196,6 +3208,31 @@
                         }));
                         showToast(`Undo: ${action.description}`, 'info');
                         break;
+                    case 'REORDER_FOLDER':
+                        // v5.0.0-alpha.79 - Undo folder reorder: restore old order
+                        console.log('[UNDO REORDER_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        if (action.parentId) {
+                            setFolders(prev => prev.map(folder => {
+                                if (folder.id === action.parentId) {
+                                    return { ...folder, childFolderIds: action.oldOrder };
+                                }
+                                return folder;
+                            }));
+                        } else {
+                            // Root level - restore sortIndex
+                            setFolders(prev => {
+                                const updated = [...prev];
+                                action.oldOrder.forEach((folderId, idx) => {
+                                    const folderIdx = updated.findIndex(f => f.id === folderId);
+                                    if (folderIdx >= 0) {
+                                        updated[folderIdx] = { ...updated[folderIdx], sortIndex: idx };
+                                    }
+                                });
+                                return updated;
+                            });
+                        }
+                        showToast(`Undo: ${action.description}`, 'info');
+                        break;
                     default:
                         console.warn('Unknown action type for undo:', action.type);
                 }
@@ -3467,6 +3504,31 @@
                             }
                             return folder;
                         }));
+                        showToast(`Redo: ${action.description}`, 'info');
+                        break;
+                    case 'REORDER_FOLDER':
+                        // v5.0.0-alpha.79 - Redo folder reorder: apply new order
+                        console.log('[REDO REORDER_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        if (action.parentId) {
+                            setFolders(prev => prev.map(folder => {
+                                if (folder.id === action.parentId) {
+                                    return { ...folder, childFolderIds: action.newOrder };
+                                }
+                                return folder;
+                            }));
+                        } else {
+                            // Root level - apply new sortIndex
+                            setFolders(prev => {
+                                const updated = [...prev];
+                                action.newOrder.forEach((folderId, idx) => {
+                                    const folderIdx = updated.findIndex(f => f.id === folderId);
+                                    if (folderIdx >= 0) {
+                                        updated[folderIdx] = { ...updated[folderIdx], sortIndex: idx };
+                                    }
+                                });
+                                return updated;
+                            });
+                        }
                         showToast(`Redo: ${action.description}`, 'info');
                         break;
                     default:
