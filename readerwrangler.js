@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.83";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.84";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7726,8 +7726,10 @@
                                                         onClick={() => setSelectedFolderId(folder.id)}
                                                         className={`text-blue-600 hover:text-blue-800 hover:underline px-1 rounded ${breadcrumbDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                                         onDragOver={(e) => {
-                                                            // Only accept folder drags (types is DOMStringList, spread to array)
-                                                            if ([...e.dataTransfer.types].includes('application/x-folder-reorder')) {
+                                                            // Accept folder drags - check type with Array.from for DOMStringList compatibility
+                                                            const types = Array.from(e.dataTransfer.types);
+                                                            console.log('Breadcrumb dragOver, types:', types); // DEBUG
+                                                            if (types.includes('application/x-folder-reorder')) {
                                                                 e.preventDefault();
                                                                 e.dataTransfer.dropEffect = 'move';
                                                                 setBreadcrumbDropTargetId(folder.id);
