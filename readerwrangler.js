@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.89";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.90";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -430,19 +430,17 @@
 
             // v5.0.0-alpha.79 - Reorder folders within their parent (with undo)
             // Updates parent's childFolderIds array to persist custom order
-            const reorderFoldersInParent = (parentId, folderIdsToMove, targetIndex) => {
+            // v5.0.0-alpha.90 - Changed to use targetFolderId + position instead of index
+            // This fixes off-by-one issues when display order differs from getChildFolders order
+            const reorderFoldersInParent = (parentId, folderIdsToMove, targetFolderId, position) => {
                 // Get current child folders in their current order
                 const currentChildren = getChildFolders(parentId);
                 const currentOrder = currentChildren.map(f => f.id);
 
-                // DEBUG v5.0.0-alpha.89
-                console.log('reorderFoldersInParent DEBUG:', {
-                    parentId,
-                    folderIdsToMove,
-                    targetIndex,
-                    currentOrder,
-                    currentChildren: currentChildren.map(f => ({ id: f.id, name: f.name, sortIndex: f.sortIndex }))
-                });
+                // Find target index based on folder ID (not visual index)
+                let targetIndex = currentOrder.indexOf(targetFolderId);
+                if (targetIndex === -1) return; // Target not found
+                if (position === 'after') targetIndex++;
 
                 // Capture fromIndices BEFORE modifying (for undo)
                 const fromIndices = folderIdsToMove.map(id => currentOrder.indexOf(id));
@@ -454,8 +452,6 @@
                 // Adjust target index based on how many items were removed before it
                 const removedBefore = currentOrder.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
                 const adjustedIndex = targetIndex - removedBefore;
-
-                console.log('reorderFoldersInParent DEBUG after:', { remaining, removedBefore, adjustedIndex }); // DEBUG
 
                 // Insert at target position (maintaining relative order of moved items)
                 const orderedToMove = folderIdsToMove.filter(id => currentOrder.includes(id));
@@ -8192,8 +8188,8 @@
                                                                             // Reorder within same parent
                                                                             if (canReorderFolders) {
                                                                                 if (dragData.parentId === parentForReorder) {
-                                                                                    const adjustedIndex = target.position === 'after' ? folderIndex + 1 : folderIndex;
-                                                                                    reorderFoldersInParent(parentForReorder, dragData.folderIds, adjustedIndex);
+                                                                                    // v5.0.0-alpha.90 - Pass folder.id and position (not visual index)
+                                                                                    reorderFoldersInParent(parentForReorder, dragData.folderIds, folder.id, target.position);
                                                                                 }
                                                                             } else {
                                                                                 showToast("Switch to Manual Order to reorder folders", e.clientX, e.clientY);
@@ -8511,8 +8507,8 @@
                                                                     // Reorder within same parent
                                                                     if (canReorderFolders) {
                                                                         if (dragData.parentId === parentForReorder) {
-                                                                            const adjustedIndex = target.position === 'after' ? folderIndex + 1 : folderIndex;
-                                                                            reorderFoldersInParent(parentForReorder, dragData.folderIds, adjustedIndex);
+                                                                            // v5.0.0-alpha.90 - Pass folder.id and position (not visual index)
+                                                                            reorderFoldersInParent(parentForReorder, dragData.folderIds, folder.id, target.position);
                                                                         }
                                                                     } else {
                                                                         showToast("Switch to Manual Order to reorder folders", e.clientX, e.clientY);
