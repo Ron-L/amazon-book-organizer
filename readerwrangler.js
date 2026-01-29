@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.85";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.86";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -123,6 +123,7 @@
             const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
             const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
+            const [sidebarFolderDragTarget, setSidebarFolderDragTarget] = useState(null); // v5.0.0-alpha.86 - { type: 'reorder'|'reparent', folderId, position? }
             const [showMigrationDialog, setShowMigrationDialog] = useState(false); // v5.0.0 - Migration prompt
 
             // v5.0.0 - Special folders
@@ -7322,8 +7323,29 @@
                                             return (
                                                 <React.Fragment key={folder.id}>
                                                     <div
-                                                        className={`w-full flex items-center gap-1 pr-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
-                                                        style={{ paddingLeft: `${16 + depth * 16}px` }}
+                                                        className={`w-full flex items-center gap-1 pr-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id || (sidebarFolderDragTarget?.type === 'reparent' && sidebarFolderDragTarget?.folderId === folder.id) ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                                        style={{
+                                                            paddingLeft: `${16 + depth * 16}px`,
+                                                            // v5.0.0-alpha.86 - Visual feedback for folder reorder
+                                                            ...(sidebarFolderDragTarget?.type === 'reorder' && sidebarFolderDragTarget?.folderId === folder.id
+                                                                ? sidebarFolderDragTarget.position === 'before'
+                                                                    ? { borderTop: '3px solid #3b82f6' }
+                                                                    : { borderBottom: '3px solid #3b82f6' }
+                                                                : {})
+                                                        }}
+                                                        draggable={true}
+                                                        onDragStart={(e) => {
+                                                            // v5.0.0-alpha.86 - Enable folder dragging in sidebar
+                                                            e.dataTransfer.effectAllowed = 'move';
+                                                            e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
+                                                                folderIds: [folder.id],
+                                                                sourceFolderId: selectedFolderId
+                                                            }));
+                                                        }}
+                                                        onDragEnd={() => {
+                                                            setSidebarFolderDragTarget(null);
+                                                            setBreadcrumbDropTargetId(null);
+                                                        }}
                                                         onClick={() => setSelectedFolderId(folder.id)}
                                                         onDoubleClick={() => {
                                                             setEditingFolderId(folder.id);
@@ -7331,10 +7353,40 @@
                                                         }}
                                                         onDragOver={(e) => {
                                                             e.preventDefault();
-                                                            const isCopy = e.ctrlKey;
-                                                            setExplorerIsCopyDrag(isCopy);
-                                                            e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
-                                                            setExplorerDropTargetId(folder.id);
+                                                            const types = Array.from(e.dataTransfer.types);
+                                                            const isFolderDrag = types.includes('application/x-folder-reorder');
+                                                            const isBookDrag = types.includes('application/x-readerwrangler');
+
+                                                            if (isBookDrag) {
+                                                                // Book drag - existing behavior
+                                                                const isCopy = e.ctrlKey;
+                                                                setExplorerIsCopyDrag(isCopy);
+                                                                e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
+                                                                setExplorerDropTargetId(folder.id);
+                                                            } else if (isFolderDrag) {
+                                                                // v5.0.0-alpha.86 - Folder drag with zone detection
+                                                                e.dataTransfer.dropEffect = 'move';
+                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                const y = e.clientY - rect.top;
+                                                                const height = rect.height;
+                                                                const edgeZone = height * 0.25;
+
+                                                                let newTarget;
+                                                                if (y < edgeZone) {
+                                                                    newTarget = { type: 'reorder', folderId: folder.id, position: 'before' };
+                                                                } else if (y > height - edgeZone) {
+                                                                    newTarget = { type: 'reorder', folderId: folder.id, position: 'after' };
+                                                                } else {
+                                                                    newTarget = { type: 'reparent', folderId: folder.id };
+                                                                }
+                                                                // Only update if changed
+                                                                const current = sidebarFolderDragTarget;
+                                                                if (!current || current.type !== newTarget.type ||
+                                                                    current.folderId !== newTarget.folderId ||
+                                                                    current.position !== newTarget.position) {
+                                                                    setSidebarFolderDragTarget(newTarget);
+                                                                }
+                                                            }
 
                                                             // v5.0.0-alpha.82 - Auto-expand collapsed folder after 500ms hover
                                                             if (hasChildren && folder.collapsed) {
@@ -7351,6 +7403,7 @@
                                                         onDragLeave={(e) => {
                                                             if (!e.currentTarget.contains(e.relatedTarget)) {
                                                                 setExplorerDropTargetId(null);
+                                                                setSidebarFolderDragTarget(null);
                                                                 // v5.0.0-alpha.82 - Clear auto-expand timeout
                                                                 if (dragHoverExpandTimeoutRef.current) {
                                                                     clearTimeout(dragHoverExpandTimeoutRef.current);
@@ -7365,7 +7418,80 @@
                                                                 clearTimeout(dragHoverExpandTimeoutRef.current);
                                                                 dragHoverExpandTimeoutRef.current = null;
                                                             }
-                                                            const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
+
+                                                            // v5.0.0-alpha.86 - Handle folder drops first
+                                                            const folderData = e.dataTransfer.getData('application/x-folder-reorder');
+                                                            if (folderData) {
+                                                                try {
+                                                                    const { folderIds } = JSON.parse(folderData);
+                                                                    const target = sidebarFolderDragTarget;
+                                                                    setSidebarFolderDragTarget(null);
+
+                                                                    if (target?.type === 'reparent') {
+                                                                        reparentFolder(folderIds, folder.id);
+                                                                    } else if (target?.type === 'reorder') {
+                                                                        // Reorder among siblings
+                                                                        const draggedFolder = folders.find(f => f.id === folderIds[0]);
+                                                                        if (!draggedFolder) return;
+
+                                                                        // Only reorder if same parent level
+                                                                        if (draggedFolder.parentId !== folder.parentId) {
+                                                                            // Different parent - reparent to this folder's parent first
+                                                                            reparentFolder(folderIds, folder.parentId);
+                                                                        }
+
+                                                                        // Get siblings at this level
+                                                                        const siblings = getChildFolders(folder.parentId);
+                                                                        const fromIndex = siblings.findIndex(f => f.id === folderIds[0]);
+                                                                        let toIndex = siblings.findIndex(f => f.id === folder.id);
+                                                                        if (target.position === 'after') toIndex++;
+                                                                        if (fromIndex < toIndex) toIndex--;
+
+                                                                        if (fromIndex !== -1 && fromIndex !== toIndex) {
+                                                                            // Build new order
+                                                                            const newOrder = siblings.filter(f => f.id !== folderIds[0]);
+                                                                            newOrder.splice(toIndex, 0, draggedFolder);
+
+                                                                            // Update sortIndex or childFolderIds
+                                                                            if (folder.parentId === null) {
+                                                                                // Root level - update sortIndex
+                                                                                setFolders(prev => prev.map(f => {
+                                                                                    const idx = newOrder.findIndex(s => s.id === f.id);
+                                                                                    if (idx !== -1) {
+                                                                                        return { ...f, sortIndex: idx };
+                                                                                    }
+                                                                                    return f;
+                                                                                }));
+                                                                            } else {
+                                                                                // Nested - update parent's childFolderIds
+                                                                                const newChildIds = newOrder.map(f => f.id);
+                                                                                setFolders(prev => prev.map(f =>
+                                                                                    f.id === folder.parentId
+                                                                                        ? { ...f, childFolderIds: newChildIds }
+                                                                                        : f
+                                                                                ));
+                                                                            }
+
+                                                                            recordAction({
+                                                                                type: 'REORDER_FOLDER',
+                                                                                folderId: folderIds[0],
+                                                                                fromIndex,
+                                                                                toIndex,
+                                                                                parentId: folder.parentId
+                                                                            });
+                                                                            console.log(`📁 Reordered folder in sidebar`);
+                                                                        }
+                                                                    }
+                                                                } catch (err) {
+                                                                    console.error('Sidebar folder drop error:', err);
+                                                                }
+                                                                return;
+                                                            }
+
+                                                            // Book drop - existing behavior
+                                                            const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                            if (!bookDataStr) return;
+                                                            const dragData = JSON.parse(bookDataStr);
                                                             const { sourceFolder, bookIds } = dragData;
 
                                                             const showToastLocal = (msg) => {
