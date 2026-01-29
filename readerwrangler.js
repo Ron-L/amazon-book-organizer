@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.80";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.81";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -286,6 +286,25 @@
                 const folder = folders.find(f => f.id === folderId);
                 if (folder?.id === '__inbox__') return { ...folder, ...FOLDER_INBOX };
                 return folder;
+            };
+
+            // v5.0.0-alpha.80 - Get folder path (breadcrumb) from root to current folder
+            const getFolderPath = (folderId) => {
+                if (folderId === '__all__') return [FOLDER_ALL_BOOKS];
+                if (folderId === '__library__') return [FOLDER_LIBRARY];
+
+                const path = [];
+                let current = getFolderById(folderId);
+                while (current) {
+                    path.unshift(current);
+                    if (current.parentId === null || current.parentId === undefined) {
+                        // At root level, prepend My Library
+                        path.unshift(FOLDER_LIBRARY);
+                        break;
+                    }
+                    current = getFolderById(current.parentId);
+                }
+                return path;
             };
 
             // v5.0.0 - Toast notification helper (reusable for all feedback messages)
@@ -7650,9 +7669,24 @@
                             {/* Right pane: Book list */}
                             <div className="flex-1 bg-white overflow-hidden flex flex-col">
                                 <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-                                    <div className="font-medium text-gray-700">
-                                        {getFolderById(selectedFolderId)?.name || 'Books'}
-                                        <span className="text-sm text-gray-500 ml-2">
+                                    <div className="font-medium text-gray-700 flex items-center">
+                                        {/* v5.0.0-alpha.80 - Breadcrumb navigation */}
+                                        {getFolderPath(selectedFolderId).map((folder, idx, arr) => (
+                                            <span key={folder.id} className="flex items-center">
+                                                {idx > 0 && <span className="mx-1 text-gray-400">›</span>}
+                                                {idx === arr.length - 1 ? (
+                                                    <span>{folder.name}</span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setSelectedFolderId(folder.id)}
+                                                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                                                    >
+                                                        {folder.name}
+                                                    </button>
+                                                )}
+                                            </span>
+                                        ))}
+                                        <span className="text-sm text-gray-500 ml-2 font-normal">
                                             {(() => {
                                                 // v5.0.0-alpha.54 - Show folder count + book count
                                                 // v5.0.0-alpha.63 - Handle My Library folder count
