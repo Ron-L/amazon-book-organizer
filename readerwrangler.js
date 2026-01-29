@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.87";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.88";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -8096,10 +8096,9 @@
                                                             : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
                                                     }
 
-                                                    // v5.0.0-alpha.66 - Determine if folder reordering is allowed
+                                                    // v5.0.0-alpha.88 - Allow folder reordering in My Library (Inbox protected by isDraggable=false)
                                                     const canReorderFolders = explorerSort.column === 'custom' &&
-                                                        selectedFolderId !== '__all__' &&
-                                                        selectedFolderId !== '__library__'; // Can't reorder in My Library (Inbox is pinned)
+                                                        selectedFolderId !== '__all__';
                                                     const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
 
                                                     // v5.0.0-alpha.65 - Use flatMap to add separator after Inbox in My Library view
@@ -8186,9 +8185,7 @@
                                                                                     reorderFoldersInParent(parentForReorder, dragData.folderIds, adjustedIndex);
                                                                                 }
                                                                             } else {
-                                                                                // v5.0.0-alpha.87 - Fixed toast position
                                                                                 showToast("Switch to Manual Order to reorder folders", e.clientX, e.clientY);
-                                                                                console.log('canReorderFolders check:', { sortColumn: explorerSort.column, selectedFolderId, canReorderFolders }); // DEBUG
                                                                             }
                                                                         }
                                                                     } catch (err) {
@@ -8418,10 +8415,9 @@
                                                         : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
                                                 }
 
-                                                // v5.0.0-alpha.66 - Determine if folder reordering is allowed
+                                                // v5.0.0-alpha.88 - Allow folder reordering in My Library (Inbox protected by isDraggable=false)
                                                 const canReorderFolders = explorerSort.column === 'custom' &&
-                                                    selectedFolderId !== '__all__' &&
-                                                    selectedFolderId !== '__library__';
+                                                    selectedFolderId !== '__all__';
                                                 const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
 
                                                 // v5.0.0-alpha.62 - Scale folder icon responsively with container
@@ -8508,9 +8504,7 @@
                                                                             reorderFoldersInParent(parentForReorder, dragData.folderIds, adjustedIndex);
                                                                         }
                                                                     } else {
-                                                                        // v5.0.0-alpha.87 - Fixed toast position
                                                                         showToast("Switch to Manual Order to reorder folders", e.clientX, e.clientY);
-                                                                        console.log('canReorderFolders check:', { sortColumn: explorerSort.column, selectedFolderId, canReorderFolders }); // DEBUG
                                                                     }
                                                                 }
                                                             } catch (err) {
