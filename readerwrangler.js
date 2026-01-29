@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.84";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.85";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7726,10 +7726,12 @@
                                                         onClick={() => setSelectedFolderId(folder.id)}
                                                         className={`text-blue-600 hover:text-blue-800 hover:underline px-1 rounded ${breadcrumbDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                                         onDragOver={(e) => {
-                                                            // Accept folder drags - check type with Array.from for DOMStringList compatibility
+                                                            // v5.0.0-alpha.85 - Accept folder drags and book drags (but not books on My Library)
                                                             const types = Array.from(e.dataTransfer.types);
-                                                            console.log('Breadcrumb dragOver, types:', types); // DEBUG
-                                                            if (types.includes('application/x-folder-reorder')) {
+                                                            const isFolderDrag = types.includes('application/x-folder-reorder');
+                                                            const isBookDrag = types.includes('application/x-readerwrangler');
+                                                            // Books can't go to root level (My Library)
+                                                            if (isFolderDrag || (isBookDrag && folder.id !== '__library__')) {
                                                                 e.preventDefault();
                                                                 e.dataTransfer.dropEffect = 'move';
                                                                 setBreadcrumbDropTargetId(folder.id);
@@ -7743,14 +7745,62 @@
                                                         onDrop={(e) => {
                                                             e.preventDefault();
                                                             setBreadcrumbDropTargetId(null);
-                                                            try {
-                                                                const dragData = JSON.parse(e.dataTransfer.getData('application/x-folder-reorder'));
-                                                                const { folderIds } = dragData;
-                                                                // My Library = root level (null), otherwise use folder.id
-                                                                const newParentId = folder.id === '__library__' ? null : folder.id;
-                                                                reparentFolder(folderIds, newParentId);
-                                                            } catch (err) {
-                                                                console.error('Breadcrumb drop error:', err);
+
+                                                            // Try folder drag first
+                                                            const folderData = e.dataTransfer.getData('application/x-folder-reorder');
+                                                            if (folderData) {
+                                                                try {
+                                                                    const { folderIds } = JSON.parse(folderData);
+                                                                    const newParentId = folder.id === '__library__' ? null : folder.id;
+                                                                    reparentFolder(folderIds, newParentId);
+                                                                } catch (err) {
+                                                                    console.error('Breadcrumb folder drop error:', err);
+                                                                }
+                                                                return;
+                                                            }
+
+                                                            // Try book drag
+                                                            const bookData = e.dataTransfer.getData('application/x-readerwrangler');
+                                                            if (bookData && folder.id !== '__library__') {
+                                                                try {
+                                                                    const { sourceFolder, bookIds } = JSON.parse(bookData);
+                                                                    const targetFolder = folders.find(f => f.id === folder.id);
+                                                                    if (!targetFolder) return;
+
+                                                                    const existing = new Set(targetFolder.bookIds || []);
+                                                                    const newBookIds = bookIds.filter(id => !existing.has(id));
+
+                                                                    if (newBookIds.length === 0) {
+                                                                        showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder', e.clientX, e.clientY);
+                                                                    } else {
+                                                                        // Move books: add to target, remove from source
+                                                                        const sourceFolderObj = folders.find(f => f.id === sourceFolder);
+                                                                        const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
+
+                                                                        setFolders(prev => prev.map(f => {
+                                                                            if (f.id === folder.id) {
+                                                                                return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                                            }
+                                                                            if (f.id === sourceFolder) {
+                                                                                return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                                            }
+                                                                            return f;
+                                                                        }));
+
+                                                                        recordAction({
+                                                                            type: 'MOVE_BOOKS_FOLDER',
+                                                                            fromFolderId: sourceFolder,
+                                                                            toFolderId: folder.id,
+                                                                            bookIds: bookIds,
+                                                                            fromIndices: fromIndices,
+                                                                            toIndex: 0
+                                                                        });
+                                                                        console.log(`📦 Moved ${bookIds.length} book(s) to "${folder.name}" via breadcrumb`);
+                                                                    }
+                                                                    setExplorerSelectedBooks(new Set());
+                                                                } catch (err) {
+                                                                    console.error('Breadcrumb book drop error:', err);
+                                                                }
                                                             }
                                                         }}
                                                     >
