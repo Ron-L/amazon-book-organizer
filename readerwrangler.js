@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.92";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.93";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7267,7 +7267,26 @@
                                 style={{ width: `${leftPaneWidth}px` }}
                                 onDragOver={(e) => e.preventDefault()}>
                                 <div className="p-3 border-b border-gray-200 font-medium text-gray-700 flex items-center justify-between">
-                                    <span>Folders</span>
+                                    <div className="flex items-center gap-2">
+                                        <span>Folders</span>
+                                        {/* v5.0.0-alpha.93 - Navigation history buttons */}
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={goBack}
+                                                disabled={!canGoBack}
+                                                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${canGoBack ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                                title="Back (Alt+Left)">
+                                                ←
+                                            </button>
+                                            <button
+                                                onClick={goForward}
+                                                disabled={!canGoForward}
+                                                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${canGoForward ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                                title="Forward (Alt+Right)">
+                                                →
+                                            </button>
+                                        </div>
+                                    </div>
                                     {/* Expand/Collapse All toggle */}
                                     <button
                                         onClick={() => {
@@ -7918,23 +7937,6 @@
                             <div className="flex-1 bg-white overflow-hidden flex flex-col">
                                 <div className="p-3 border-b border-gray-200 flex items-center justify-between">
                                     <div className="font-medium text-gray-700 flex items-center">
-                                        {/* v5.0.0-alpha.92 - Navigation history */}
-                                        <div className="flex gap-1 mr-3 pr-3 border-r border-gray-300">
-                                            <button
-                                                onClick={goBack}
-                                                disabled={!canGoBack}
-                                                className={`px-2 py-1 rounded transition-colors ${canGoBack ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
-                                                title="Back (Alt+Left)">
-                                                ←
-                                            </button>
-                                            <button
-                                                onClick={goForward}
-                                                disabled={!canGoForward}
-                                                className={`px-2 py-1 rounded transition-colors ${canGoForward ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
-                                                title="Forward (Alt+Right)">
-                                                →
-                                            </button>
-                                        </div>
                                         {/* v5.0.0-alpha.80 - Breadcrumb navigation, v5.0.0-alpha.83 - Drop target for folder reparenting */}
                                         {getFolderPath(selectedFolderId).map((folder, idx, arr) => (
                                             <span key={folder.id} className="flex items-center">
