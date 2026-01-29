@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.88";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.89";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -435,6 +435,15 @@
                 const currentChildren = getChildFolders(parentId);
                 const currentOrder = currentChildren.map(f => f.id);
 
+                // DEBUG v5.0.0-alpha.89
+                console.log('reorderFoldersInParent DEBUG:', {
+                    parentId,
+                    folderIdsToMove,
+                    targetIndex,
+                    currentOrder,
+                    currentChildren: currentChildren.map(f => ({ id: f.id, name: f.name, sortIndex: f.sortIndex }))
+                });
+
                 // Capture fromIndices BEFORE modifying (for undo)
                 const fromIndices = folderIdsToMove.map(id => currentOrder.indexOf(id));
 
@@ -445,6 +454,8 @@
                 // Adjust target index based on how many items were removed before it
                 const removedBefore = currentOrder.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
                 const adjustedIndex = targetIndex - removedBefore;
+
+                console.log('reorderFoldersInParent DEBUG after:', { remaining, removedBefore, adjustedIndex }); // DEBUG
 
                 // Insert at target position (maintaining relative order of moved items)
                 const orderedToMove = folderIdsToMove.filter(id => currentOrder.includes(id));
