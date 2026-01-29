@@ -217,17 +217,34 @@ Call reorder or reparent based on target type.
 - [x] **Undo for all folder operations** - Reparent and reorder both have undo/redo
 - [x] **Breadcrumb navigation** - Clickable path in header
 - [x] **Tree auto-expansion** - On navigation + drag hover (500ms delay)
+- [x] **Drag to breadcrumb** - Move folder/books to ancestor by dropping on breadcrumb
 
-### Pending - Navigation
-- [ ] **Drag to breadcrumb** - Move folder to ancestor by dropping on breadcrumb
+### Completed This Session
+- [x] **Phase A-D: Folder drag/drop** - Dragging, zone detection, visual feedback, drop actions
+- [x] **Undo for all folder operations** - Reparent and reorder both have undo/redo
+- [x] **Breadcrumb navigation** - Clickable path in header
+- [x] **Tree auto-expansion** - On navigation + drag hover (500ms delay)
+- [x] **Drag to breadcrumb** - Move folder/books to ancestor by dropping on breadcrumb
+- [x] **Resizable left pane** - Drag divider to resize sidebar (v5.0.0-alpha.91)
 
 ### Pending - Drag/Drop
 - [ ] **Phase E: Left panel folder reordering** - Drag in sidebar tree
+
+### Pending - UI/Layout
+- [ ] **All Books folder tooltip** - Hover shows folder location(s) with clickable links
+
+### Pending - Features
+- [ ] **Column chooser** - Select which columns to show in list view
+- [ ] **Search (jump-to)** - Jump to book/folder by name (distinct from filter)
+- [ ] **Cut/copy/paste** - Keyboard shortcuts for book operations
+- [ ] **Nested folder creation via drag** - Drag folder onto another to create as child
 
 ### Pending - Other
 - [ ] **Backup restore: Include folders structure** - Currently only restores columns
 - [ ] **Right-click "Move to..." context menu** - Alternative to drag/drop
 - [ ] **Ctrl+A select all in right pane** - Select all books/folders
+- [ ] **Sort persistence per folder** - Remember sort settings per folder
+- [ ] **Mobile/responsive layout** - Adapt for smaller screens
 
 ### Principle
 > **Undo should be part of basic implementation** - Every new operation should include undo support

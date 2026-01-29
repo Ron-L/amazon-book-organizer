@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.90";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.91";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -125,6 +125,8 @@
             const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
             const [sidebarFolderDragTarget, setSidebarFolderDragTarget] = useState(null); // v5.0.0-alpha.86 - { type: 'reorder'|'reparent', folderId, position? }
             const [showMigrationDialog, setShowMigrationDialog] = useState(false); // v5.0.0 - Migration prompt
+            const [leftPaneWidth, setLeftPaneWidth] = useState(256); // v5.0.0-alpha.91 - Resizable left pane width (px)
+            const [isResizingPane, setIsResizingPane] = useState(false); // v5.0.0-alpha.91 - Pane resize in progress
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -873,6 +875,7 @@
                             if (explorerData.explorerView) setExplorerView(explorerData.explorerView);
                             if (explorerData.explorerSort) setExplorerSort(explorerData.explorerSort);
                             if (explorerData.explorerCoverCols) setExplorerCoverCols(explorerData.explorerCoverCols);
+                            if (explorerData.leftPaneWidth) setLeftPaneWidth(explorerData.leftPaneWidth); // v5.0.0-alpha.91
                             console.log('📁 Restored Explorer settings from localStorage');
                         }
 
@@ -1061,10 +1064,11 @@
                     selectedFolderId,
                     explorerView,
                     explorerSort,
-                    explorerCoverCols
+                    explorerCoverCols,
+                    leftPaneWidth // v5.0.0-alpha.91
                 };
                 localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
-            }, [viewMode, selectedFolderId, explorerView, explorerSort, explorerCoverCols]);
+            }, [viewMode, selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth]);
 
             // v5.0.0 - Save folders to localStorage
             useEffect(() => {
@@ -4192,6 +4196,13 @@
             };
 
             const handleMouseMove = (e) => {
+                // v5.0.0-alpha.91 - Handle pane resizing
+                if (isResizingPane) {
+                    const newWidth = Math.max(200, Math.min(600, e.clientX));
+                    setLeftPaneWidth(newWidth);
+                    return;
+                }
+
                 if (draggedColumn) {
                     setDragCurrentPos({ x: e.clientX, y: e.clientY }); // Column drag still uses state (low volume)
 
@@ -4321,6 +4332,12 @@
             };
 
             const handleMouseUp = (e) => {
+                // v5.0.0-alpha.91 - Stop pane resizing
+                if (isResizingPane) {
+                    setIsResizingPane(false);
+                    return;
+                }
+
                 // v3.12.0 - Clear auto-scroll interval when drag ends
                 if (autoScrollInterval) {
                     clearInterval(autoScrollInterval);
@@ -7204,7 +7221,9 @@
                         <div className="flex-1 min-h-0 flex mb-6">
                             {/* Left pane: Folder tree */}
                             {/* v5.0.0-alpha.49 - onDragOver prevents browser "split view" prompt */}
-                            <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0"
+                            {/* v5.0.0-alpha.91 - Resizable left pane */}
+                            <div className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0"
+                                style={{ width: `${leftPaneWidth}px` }}
                                 onDragOver={(e) => e.preventDefault()}>
                                 <div className="p-3 border-b border-gray-200 font-medium text-gray-700 flex items-center justify-between">
                                     <span>Folders</span>
@@ -7843,6 +7862,16 @@
                                     {/* v5.0.0-alpha.52 - Removed bottom "New Folder" button; use "+" on All Books or folder rows instead */}
                                 </div>
                             </div>
+
+                            {/* v5.0.0-alpha.91 - Resizable divider */}
+                            <div
+                                className={`w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize transition-colors ${isResizingPane ? 'bg-blue-500' : ''}`}
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setIsResizingPane(true);
+                                }}
+                                title="Drag to resize sidebar"
+                            />
 
                             {/* Right pane: Book list */}
                             <div className="flex-1 bg-white overflow-hidden flex flex-col">
