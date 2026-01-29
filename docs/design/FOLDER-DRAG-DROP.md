@@ -226,6 +226,7 @@ Call reorder or reparent based on target type.
 - [x] **Tree auto-expansion** - On navigation + drag hover (500ms delay)
 - [x] **Drag to breadcrumb** - Move folder/books to ancestor by dropping on breadcrumb
 - [x] **Resizable left pane** - Drag divider to resize sidebar (v5.0.0-alpha.91)
+- [x] **Navigation history (Back/Forward)** - Browser-style navigation with Alt+Left/Right (v5.0.0-alpha.92)
 
 ### Pending - Drag/Drop
 - [ ] **Phase E: Left panel folder reordering** - Drag in sidebar tree

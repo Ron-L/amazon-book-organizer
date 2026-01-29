@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.91";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.92";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -127,6 +127,8 @@
             const [showMigrationDialog, setShowMigrationDialog] = useState(false); // v5.0.0 - Migration prompt
             const [leftPaneWidth, setLeftPaneWidth] = useState(256); // v5.0.0-alpha.91 - Resizable left pane width (px)
             const [isResizingPane, setIsResizingPane] = useState(false); // v5.0.0-alpha.91 - Pane resize in progress
+            const [navHistory, setNavHistory] = useState(['__all__']); // v5.0.0-alpha.92 - Navigation history stack
+            const [navHistoryIndex, setNavHistoryIndex] = useState(0); // v5.0.0-alpha.92 - Current position in history
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -693,6 +695,35 @@
             });
             const dragThreshold = 50;
 
+            // v5.0.0-alpha.92 - Navigation history functions
+            const navigateToFolder = (folderId, addToHistory = true) => {
+                setSelectedFolderId(folderId);
+                if (addToHistory) {
+                    // Truncate forward history and add new entry
+                    setNavHistory(prev => [...prev.slice(0, navHistoryIndex + 1), folderId]);
+                    setNavHistoryIndex(prev => prev + 1);
+                }
+            };
+
+            const canGoBack = navHistoryIndex > 0;
+            const canGoForward = navHistoryIndex < navHistory.length - 1;
+
+            const goBack = () => {
+                if (canGoBack) {
+                    const newIndex = navHistoryIndex - 1;
+                    setNavHistoryIndex(newIndex);
+                    setSelectedFolderId(navHistory[newIndex]);
+                }
+            };
+
+            const goForward = () => {
+                if (canGoForward) {
+                    const newIndex = navHistoryIndex + 1;
+                    setNavHistoryIndex(newIndex);
+                    setSelectedFolderId(navHistory[newIndex]);
+                }
+            };
+
             // v4.15.6: Track initial mount to prevent save effect from overwriting loaded values
             const filtersLoadedRef = useRef(false);
 
@@ -1148,6 +1179,16 @@
                     if (modalBookRef.current && (e.ctrlKey || e.metaKey) && e.key === 'a') {
                         e.preventDefault(); // Don't select entire page or books
                         return;
+                    }
+
+                    // v5.0.0-alpha.92 - Alt+Left: Back, Alt+Right: Forward (only in Explorer view)
+                    if (viewMode === 'explorer' && e.altKey && e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        goBack();
+                    }
+                    if (viewMode === 'explorer' && e.altKey && e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        goForward();
                     }
 
                     // v4.8.0 - Ctrl+Z: Undo (v4.21.0.g - use ref to check modal state, consume keystroke)
@@ -7244,7 +7285,7 @@
                                     {/* All Books (virtual, view-only) - v5.0.0-alpha.52 added "+" for new root folder */}
                                     <div
                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
-                                        onClick={() => setSelectedFolderId('__all__')}>
+                                        onClick={() => navigateToFolder('__all__')}>
                                         <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
                                         <span className="flex-1 pointer-events-none">{FOLDER_ALL_BOOKS.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">({books.length})</span>
@@ -7266,7 +7307,7 @@
                                                     folder: { ...newFolder }
                                                 });
                                                 setFolders(prev => [...prev, newFolder]);
-                                                setSelectedFolderId(newFolder.id);
+                                                navigateToFolder(newFolder.id);
                                                 setEditingFolderId(newFolder.id);
                                                 setEditingFolderName('New Folder');
                                             }}
@@ -7280,7 +7321,7 @@
                                     {/* v5.0.0-alpha.63 - My Library (organizational root container) */}
                                     <div
                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
-                                        onClick={() => setSelectedFolderId('__library__')}>
+                                        onClick={() => navigateToFolder('__library__')}>
                                         <span className="pointer-events-none">{FOLDER_LIBRARY.icon}</span>
                                         <span className="flex-1 pointer-events-none">{FOLDER_LIBRARY.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">
@@ -7290,7 +7331,7 @@
                                     {/* Inbox - indented as part of folder hierarchy */}
                                     <div
                                         className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__inbox__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
-                                        onClick={() => setSelectedFolderId('__inbox__')}
+                                        onClick={() => navigateToFolder('__inbox__')}
                                         onDragOver={(e) => {
                                             e.preventDefault();
                                             e.dataTransfer.dropEffect = 'move';
@@ -7372,7 +7413,7 @@
                                                             setSidebarFolderDragTarget(null);
                                                             setBreadcrumbDropTargetId(null);
                                                         }}
-                                                        onClick={() => setSelectedFolderId(folder.id)}
+                                                        onClick={() => navigateToFolder(folder.id)}
                                                         onDoubleClick={() => {
                                                             setEditingFolderId(folder.id);
                                                             setEditingFolderName(folder.name);
@@ -7588,7 +7629,7 @@
                                                         }}
                                                         onContextMenu={(e) => {
                                                             e.preventDefault();
-                                                            setSelectedFolderId(folder.id);
+                                                            navigateToFolder(folder.id);
                                                             const action = window.prompt('Enter action: rename, delete, or subfolder', 'rename');
                                                             if (action === 'rename') {
                                                                 setEditingFolderId(folder.id);
@@ -7615,7 +7656,7 @@
                                                                     ...prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f),
                                                                     newFolder
                                                                 ]);
-                                                                setSelectedFolderId(newFolder.id);
+                                                                navigateToFolder(newFolder.id);
                                                                 setEditingFolderId(newFolder.id);
                                                                 setEditingFolderName('New Subfolder');
                                                                 console.log(`📁 Created subfolder in "${folder.name}"`);
@@ -7771,7 +7812,7 @@
                                                                             ...prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f),
                                                                             newFolder
                                                                         ]);
-                                                                        setSelectedFolderId(newFolder.id);
+                                                                        navigateToFolder(newFolder.id);
                                                                         setEditingFolderId(newFolder.id);
                                                                         setEditingFolderName('New Subfolder');
                                                                     }}
@@ -7877,6 +7918,23 @@
                             <div className="flex-1 bg-white overflow-hidden flex flex-col">
                                 <div className="p-3 border-b border-gray-200 flex items-center justify-between">
                                     <div className="font-medium text-gray-700 flex items-center">
+                                        {/* v5.0.0-alpha.92 - Navigation history */}
+                                        <div className="flex gap-1 mr-3 pr-3 border-r border-gray-300">
+                                            <button
+                                                onClick={goBack}
+                                                disabled={!canGoBack}
+                                                className={`px-2 py-1 rounded transition-colors ${canGoBack ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                                title="Back (Alt+Left)">
+                                                ←
+                                            </button>
+                                            <button
+                                                onClick={goForward}
+                                                disabled={!canGoForward}
+                                                className={`px-2 py-1 rounded transition-colors ${canGoForward ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                                title="Forward (Alt+Right)">
+                                                →
+                                            </button>
+                                        </div>
                                         {/* v5.0.0-alpha.80 - Breadcrumb navigation, v5.0.0-alpha.83 - Drop target for folder reparenting */}
                                         {getFolderPath(selectedFolderId).map((folder, idx, arr) => (
                                             <span key={folder.id} className="flex items-center">
@@ -7885,7 +7943,7 @@
                                                     <span>{folder.name}</span>
                                                 ) : (
                                                     <button
-                                                        onClick={() => setSelectedFolderId(folder.id)}
+                                                        onClick={() => navigateToFolder(folder.id)}
                                                         className={`text-blue-600 hover:text-blue-800 hover:underline px-1 rounded ${breadcrumbDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                                         onDragOver={(e) => {
                                                             // v5.0.0-alpha.85 - Accept folder drags and book drags (but not books on My Library)
@@ -8249,7 +8307,7 @@
                                                                 }}
                                                                 onDoubleClick={() => {
                                                                     // Navigate into folder
-                                                                    setSelectedFolderId(folder.id);
+                                                                    navigateToFolder(folder.id);
                                                                     // Expand parent if collapsed
                                                                     setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f));
                                                                     // Clear selections
@@ -8566,7 +8624,7 @@
                                                             }
                                                         }}
                                                         onDoubleClick={() => {
-                                                            setSelectedFolderId(folder.id);
+                                                            navigateToFolder(folder.id);
                                                             setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f));
                                                             setExplorerSelectedFolders(new Set());
                                                             setExplorerSelectedBooks(new Set());
