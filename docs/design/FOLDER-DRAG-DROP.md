@@ -212,8 +212,9 @@ Call reorder or reparent based on target type.
 
 ## Session Checklist (Accumulated Items)
 
-### In Progress
-- [ ] **Phase D: Add undo to reparentFolder** - Essential for testing
+### Completed This Session
+- [x] **Phase A-D: Folder drag/drop** - Dragging, zone detection, visual feedback, drop actions
+- [x] **Undo for all folder operations** - Reparent and reorder both have undo/redo
 
 ### Pending - Navigation
 - [ ] **Breadcrumb navigation** - Show path: `My Library › Jim Butcher › Miscellaneous`
