@@ -7402,6 +7402,7 @@
                                         <span className="text-xs text-gray-500 pointer-events-none">({getFolderBookIds('__inbox__').length})</span>
                                     </div>
                                 </div>
+                                </div>
                                 {/* Scrollable section: User folders */}
                                 <div className="flex-1 overflow-y-auto p-2">
                                     {/* User folders with recursive subfolder rendering */}
