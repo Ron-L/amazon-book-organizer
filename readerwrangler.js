@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.110";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.111";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -4428,10 +4428,10 @@
             };
 
             const handleMouseMove = (e) => {
-                // v5.0.0-alpha.110 - Handle column resizing (optimized for large tables)
+                // v5.0.0-alpha.111 - Handle column resizing (min width 35px, table-layout fixed)
                 if (resizingColumn) {
                     const deltaX = e.clientX - resizingColumn.startX;
-                    const newWidth = Math.max(50, resizingColumn.startWidth + deltaX);
+                    const newWidth = Math.max(35, resizingColumn.startWidth + deltaX);
 
                     // Update CSS custom property directly (no React re-render)
                     document.documentElement.style.setProperty(`--col-${resizingColumn.columnId}`, `${newWidth}px`);
@@ -8474,7 +8474,7 @@
                                 </div>
                                 <div className="flex-1 overflow-auto px-4 pb-4">
                                     {explorerView === 'list' ? (
-                                        <table className="w-full text-sm min-w-[900px]">
+                                        <table className="w-full text-sm min-w-[900px]" style={{ tableLayout: 'fixed' }}>
                                             <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
                                                 <tr className="text-left text-gray-600"
                                                     onContextMenu={(e) => {
