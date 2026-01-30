@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.101";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.102";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -1272,6 +1272,35 @@
                             if (firstDividerId) {
                                 setSelectedDivider({ columnId: activeColumnId, dividerId: firstDividerId });
                             }
+                        }
+                    }
+
+                    // v5.0.0-alpha.102 - Ctrl+A in Explorer view: Select all visible books/folders
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && viewMode === 'explorer' && !activeColumnId) {
+                        e.preventDefault(); // Prevent browser's select-all
+
+                        // Determine what to select based on current view
+                        if (selectedFolderId === '__all__' || (selectedFolderId !== '__library__' && getFolderBookIds(selectedFolderId).length > 0)) {
+                            // Viewing books - select all visible (filtered) books
+                            const allVisibleBookIds = getFolderBookIds(selectedFolderId)
+                                .map(id => books.find(b => b.id === id))
+                                .filter(book => filterBookForExplorer(book))
+                                .map(book => book.id);
+
+                            setExplorerSelectedBooks(new Set(allVisibleBookIds));
+                            setExplorerSelectedFolders(new Set()); // Clear folder selection
+                            console.log(`✅ Selected ${allVisibleBookIds.length} book(s) in Explorer`);
+                        } else {
+                            // Viewing folders (My Library or folder with subfolders) - select all visible folders
+                            const childFolders = selectedFolderId === '__library__'
+                                ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                                : getChildFolders(selectedFolderId);
+
+                            const allVisibleFolderIds = childFolders.map(f => f.id);
+
+                            setExplorerSelectedFolders(new Set(allVisibleFolderIds));
+                            setExplorerSelectedBooks(new Set()); // Clear book selection
+                            console.log(`✅ Selected ${allVisibleFolderIds.length} folder(s) in Explorer`);
                         }
                     }
 
