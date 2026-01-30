@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.111";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.112";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -8474,7 +8474,16 @@
                                 </div>
                                 <div className="flex-1 overflow-auto px-4 pb-4">
                                     {explorerView === 'list' ? (
-                                        <table className="w-full text-sm min-w-[900px]" style={{ tableLayout: 'fixed' }}>
+                                        <table className="text-sm" style={{
+                                            tableLayout: 'fixed',
+                                            width: `${48 + columnWidths.title +
+                                                (visibleColumns.author ? columnWidths.author : 0) +
+                                                (visibleColumns.rating ? columnWidths.rating : 0) +
+                                                (visibleColumns.dateAdded ? columnWidths.dateAdded : 0) +
+                                                (visibleColumns.price ? columnWidths.price : 0) +
+                                                (visibleColumns.priceGoal ? columnWidths.priceGoal : 0) +
+                                                (visibleColumns.delta ? columnWidths.delta : 0)}px`
+                                        }}>
                                             <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
                                                 <tr className="text-left text-gray-600"
                                                     onContextMenu={(e) => {
