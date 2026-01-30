@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.97";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.98";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -129,6 +129,7 @@
             const [isResizingPane, setIsResizingPane] = useState(false); // v5.0.0-alpha.91 - Pane resize in progress
             const [navHistory, setNavHistory] = useState(['__all__']); // v5.0.0-alpha.92 - Navigation history stack
             const [navHistoryIndex, setNavHistoryIndex] = useState(0); // v5.0.0-alpha.92 - Current position in history
+            const [bookTooltip, setBookTooltip] = useState(null); // v5.0.0-alpha.98 - Tooltip for All Books view { bookId, x, y }
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -311,6 +312,16 @@
                     current = getFolderById(current.parentId);
                 }
                 return path;
+            };
+
+            // v5.0.0-alpha.98 - Get all folders containing a book (for All Books tooltip)
+            const getFoldersContainingBook = (bookId) => {
+                return folders.filter(f => {
+                    // Skip virtual folders
+                    if (f.id === '__all__' || f.id === '__library__') return false;
+                    // Check if folder's bookIds includes this book
+                    return (f.bookIds || []).includes(bookId);
+                });
             };
 
             // v5.0.0 - Toast notification helper (reusable for all feedback messages)
@@ -8386,6 +8397,11 @@
                                                             className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
                                                             style={explorerReorderTarget === index ? { borderTop: `3px solid ${explorerSort.column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}` } : {}}
                                                             draggable="true"
+                                                            onMouseEnter={selectedFolderId === '__all__' ? (e) => {
+                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top });
+                                                            } : undefined}
+                                                            onMouseLeave={selectedFolderId === '__all__' ? () => setBookTooltip(null) : undefined}
                                                             onDragStart={(e) => {
                                                                 e.stopPropagation();
                                                                 e.dataTransfer.effectAllowed = 'copyMove';
@@ -8690,6 +8706,11 @@
                                                         className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''}`}
                                                         style={explorerReorderTarget === index ? { outline: `3px solid ${explorerSort.column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}`, outlineOffset: '2px' } : {}}
                                                         draggable="true"
+                                                        onMouseEnter={selectedFolderId === '__all__' ? (e) => {
+                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                            setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top });
+                                                        } : undefined}
+                                                        onMouseLeave={selectedFolderId === '__all__' ? () => setBookTooltip(null) : undefined}
                                                         onDragStart={(e) => {
                                                             e.stopPropagation();
                                                             e.dataTransfer.effectAllowed = 'copyMove';
@@ -10017,6 +10038,39 @@
                             {clipboardMessage}
                         </div>
                     )}
+
+                    {/* v5.0.0-alpha.98 - Book folder tooltip (All Books view only) */}
+                    {bookTooltip && selectedFolderId === '__all__' && (() => {
+                        const containingFolders = getFoldersContainingBook(bookTooltip.bookId);
+                        if (containingFolders.length === 0) return null;
+
+                        return (
+                            <div
+                                className="fixed bg-white border border-gray-300 shadow-lg rounded px-3 py-2 text-sm z-50"
+                                style={{
+                                    left: `${bookTooltip.x + 220}px`,
+                                    top: `${bookTooltip.y}px`,
+                                    maxWidth: '300px'
+                                }}
+                                onMouseEnter={() => {}}
+                                onMouseLeave={() => setBookTooltip(null)}>
+                                <div className="font-semibold text-gray-700 mb-1">Found in:</div>
+                                <div className="flex flex-col gap-1">
+                                    {containingFolders.map(folder => (
+                                        <button
+                                            key={folder.id}
+                                            onClick={() => {
+                                                navigateToFolder(folder.id);
+                                                setBookTooltip(null);
+                                            }}
+                                            className="text-left text-blue-600 hover:text-blue-800 hover:underline">
+                                            {folder.id === '__inbox__' ? '📥 ' : '📁 '}{folder.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* Affiliate Disclosure Footer (v4.4.0) */}
                     {/* v4.16.0.j - Restructured to include clipboard message on left */}
