@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.96";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.97";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7268,7 +7268,8 @@
                                 style={{ width: `${leftPaneWidth}px` }}
                                 onDragOver={(e) => e.preventDefault()}>
                                 {/* Sticky section: Header + virtual folders */}
-                                <div className="sticky top-0 bg-white z-10">
+                                {/* v5.0.0-alpha.97 - Border-bottom separates sticky from scrollable */}
+                                <div className="sticky top-0 bg-white z-10 border-b border-gray-300">
                                 <div className="p-3 border-b border-gray-200 font-medium text-gray-700 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span>Folders</span>
