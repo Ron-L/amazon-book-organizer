@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.103";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.104";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -131,6 +131,15 @@
             const [navHistory, setNavHistory] = useState(['__all__']); // v5.0.0-alpha.92 - Navigation history stack
             const [navHistoryIndex, setNavHistoryIndex] = useState(0); // v5.0.0-alpha.92 - Current position in history
             const [bookTooltip, setBookTooltip] = useState(null); // v5.0.0-alpha.98 - Tooltip for All Books view { bookId, x, y }
+            const [visibleColumns, setVisibleColumns] = useState({ // v5.0.0-alpha.104 - Column visibility (Name always visible)
+                author: true,
+                rating: true,
+                dateAdded: true,
+                price: true,
+                priceGoal: true,
+                delta: true
+            });
+            const [columnMenuOpen, setColumnMenuOpen] = useState(false); // v5.0.0-alpha.104 - Column chooser menu state
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -920,6 +929,7 @@
                             if (explorerData.explorerCoverCols) setExplorerCoverCols(explorerData.explorerCoverCols);
                             if (explorerData.leftPaneWidth) setLeftPaneWidth(explorerData.leftPaneWidth); // v5.0.0-alpha.91
                             if (explorerData.folderSortSettings) setFolderSortSettings(explorerData.folderSortSettings); // v5.0.0-alpha.100
+                            if (explorerData.visibleColumns) setVisibleColumns(explorerData.visibleColumns); // v5.0.0-alpha.104
                             console.log('📁 Restored Explorer settings from localStorage');
                         }
 
@@ -1110,10 +1120,11 @@
                     explorerSort,
                     explorerCoverCols,
                     leftPaneWidth, // v5.0.0-alpha.91
-                    folderSortSettings // v5.0.0-alpha.100 - Per-folder sort settings
+                    folderSortSettings, // v5.0.0-alpha.100 - Per-folder sort settings
+                    visibleColumns // v5.0.0-alpha.104 - Column visibility
                 };
                 localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
-            }, [viewMode, selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings]);
+            }, [viewMode, selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, visibleColumns]);
 
             // v5.0.0 - Save folders to localStorage
             useEffect(() => {
@@ -1159,6 +1170,21 @@
                     }));
                 }
             }, [explorerSort, selectedFolderId]);
+
+            // v5.0.0-alpha.104 - Close column menu when clicking outside
+            useEffect(() => {
+                if (!columnMenuOpen) return;
+
+                const handleClickOutside = (e) => {
+                    // Close menu if clicking outside (not on the gear button or menu)
+                    if (!e.target.closest('.column-chooser-menu') && !e.target.closest('.column-chooser-button')) {
+                        setColumnMenuOpen(false);
+                    }
+                };
+
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [columnMenuOpen]);
 
             // v5.0.0-alpha.82 - Auto-expand tree to show selected folder
             useEffect(() => {
@@ -8285,6 +8311,99 @@
                                                 </>
                                             )}
                                         </div>
+                                        {/* v5.0.0-alpha.104 - Column chooser gear icon */}
+                                        {explorerView === 'list' && (
+                                            <div className="relative ml-4">
+                                                <button
+                                                    onClick={() => setColumnMenuOpen(!columnMenuOpen)}
+                                                    className="column-chooser-button text-gray-500 hover:text-gray-700 text-lg"
+                                                    title="Choose columns">
+                                                    ⚙️
+                                                </button>
+                                                {/* Column chooser dropdown */}
+                                                {columnMenuOpen && (
+                                                    <div className="column-chooser-menu absolute right-0 mt-2 bg-white border border-gray-300 rounded shadow-lg p-3 z-50 min-w-[200px]">
+                                                        <div className="text-sm font-semibold text-gray-700 mb-2">Show Columns</div>
+                                                        <div className="flex flex-col gap-1.5">
+                                                            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-not-allowed opacity-50">
+                                                                <input type="checkbox" checked={true} disabled className="cursor-not-allowed" />
+                                                                Name (always visible)
+                                                            </label>
+                                                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={visibleColumns.author}
+                                                                    onChange={() => setVisibleColumns(prev => ({ ...prev, author: !prev.author }))}
+                                                                    className="cursor-pointer"
+                                                                />
+                                                                Author
+                                                            </label>
+                                                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={visibleColumns.rating}
+                                                                    onChange={() => setVisibleColumns(prev => ({ ...prev, rating: !prev.rating }))}
+                                                                    className="cursor-pointer"
+                                                                />
+                                                                Rating
+                                                            </label>
+                                                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={visibleColumns.dateAdded}
+                                                                    onChange={() => setVisibleColumns(prev => ({ ...prev, dateAdded: !prev.dateAdded }))}
+                                                                    className="cursor-pointer"
+                                                                />
+                                                                Date Added
+                                                            </label>
+                                                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={visibleColumns.price}
+                                                                    onChange={() => setVisibleColumns(prev => ({ ...prev, price: !prev.price }))}
+                                                                    className="cursor-pointer"
+                                                                />
+                                                                Price
+                                                            </label>
+                                                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={visibleColumns.priceGoal}
+                                                                    onChange={() => setVisibleColumns(prev => ({ ...prev, priceGoal: !prev.priceGoal }))}
+                                                                    className="cursor-pointer"
+                                                                />
+                                                                Goal
+                                                            </label>
+                                                            <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={visibleColumns.delta}
+                                                                    onChange={() => setVisibleColumns(prev => ({ ...prev, delta: !prev.delta }))}
+                                                                    className="cursor-pointer"
+                                                                />
+                                                                Under
+                                                            </label>
+                                                        </div>
+                                                        <div className="mt-3 pt-2 border-t border-gray-200">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setVisibleColumns({
+                                                                        author: true,
+                                                                        rating: true,
+                                                                        dateAdded: true,
+                                                                        price: true,
+                                                                        priceGoal: true,
+                                                                        delta: true
+                                                                    });
+                                                                }}
+                                                                className="text-xs text-blue-600 hover:text-blue-800">
+                                                                Show All
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex-1 overflow-auto px-4 pb-4">
