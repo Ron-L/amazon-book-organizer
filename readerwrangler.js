@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.107";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.108";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -8433,7 +8433,23 @@
                                                 <tr className="text-left text-gray-600"
                                                     onContextMenu={(e) => {
                                                         e.preventDefault();
-                                                        setExplorerColumnMenuPos({ x: e.clientX, y: e.clientY });
+                                                        // v5.0.0-alpha.108 - Smart positioning to avoid viewport overflow
+                                                        const menuWidth = 200;
+                                                        const menuHeight = 300;
+                                                        let x = e.clientX;
+                                                        let y = e.clientY;
+
+                                                        // Adjust if menu would overflow right edge
+                                                        if (x + menuWidth > window.innerWidth) {
+                                                            x = e.clientX - menuWidth;
+                                                        }
+
+                                                        // Adjust if menu would overflow bottom edge
+                                                        if (y + menuHeight > window.innerHeight) {
+                                                            y = e.clientY - menuHeight;
+                                                        }
+
+                                                        setExplorerColumnMenuPos({ x, y });
                                                         setExplorerColumnMenuOpen(true);
                                                     }}>
                                                     <th className="p-2 w-12"></th>
