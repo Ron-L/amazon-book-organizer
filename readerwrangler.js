@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.102";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.103";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -1276,7 +1276,8 @@
                     }
 
                     // v5.0.0-alpha.102 - Ctrl+A in Explorer view: Select all visible books/folders
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && viewMode === 'explorer' && !activeColumnId) {
+                    // v5.0.0-alpha.103 - Fixed: Check viewMode first (activeColumnId is set even in Explorer view)
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && viewMode === 'explorer') {
                         e.preventDefault(); // Prevent browser's select-all
 
                         // Determine what to select based on current view
