@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.105";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.106";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -8323,7 +8323,15 @@
                                                 {/* Column chooser dropdown */}
                                                 {explorerColumnMenuOpen && (
                                                     <div className="column-chooser-menu absolute right-0 mt-2 bg-white border border-gray-300 rounded shadow-lg p-3 z-50 min-w-[200px]">
-                                                        <div className="text-sm font-semibold text-gray-700 mb-2">Show Columns</div>
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <div className="text-sm font-semibold text-gray-700">Show Columns</div>
+                                                            <button
+                                                                onClick={() => setExplorerColumnMenuOpen(false)}
+                                                                className="text-gray-500 hover:text-gray-700 font-bold text-lg leading-none"
+                                                                title="Close">
+                                                                ✕
+                                                            </button>
+                                                        </div>
                                                         <div className="flex flex-col gap-1.5">
                                                             <label className="flex items-center gap-2 text-sm text-gray-600 cursor-not-allowed opacity-50">
                                                                 <input type="checkbox" checked={true} disabled className="cursor-not-allowed" />
@@ -8415,24 +8423,36 @@
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                         Name {explorerSort.column === 'title' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
                                                     </th>
-                                                    <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'author', direction: prev.column === 'author' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                                                        Author {explorerSort.column === 'author' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
-                                                    </th>
-                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 w-24" onClick={() => setExplorerSort(prev => ({ column: 'rating', direction: prev.column === 'rating' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                                                        Rating {explorerSort.column === 'rating' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
-                                                    </th>
-                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 w-28" onClick={() => setExplorerSort(prev => ({ column: 'dateAdded', direction: prev.column === 'dateAdded' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
-                                                        Date Added {explorerSort.column === 'dateAdded' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
-                                                    </th>
-                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'price', direction: prev.column === 'price' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                                                        Price {explorerSort.column === 'price' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
-                                                    </th>
-                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'priceGoal', direction: prev.column === 'priceGoal' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
-                                                        Goal {explorerSort.column === 'priceGoal' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
-                                                    </th>
-                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'delta', direction: prev.column === 'delta' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
-                                                        Under {explorerSort.column === 'delta' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
-                                                    </th>
+                                                    {visibleColumns.author && (
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'author', direction: prev.column === 'author' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                            Author {explorerSort.column === 'author' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
+                                                        </th>
+                                                    )}
+                                                    {visibleColumns.rating && (
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 w-24" onClick={() => setExplorerSort(prev => ({ column: 'rating', direction: prev.column === 'rating' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                            Rating {explorerSort.column === 'rating' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
+                                                        </th>
+                                                    )}
+                                                    {visibleColumns.dateAdded && (
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 w-28" onClick={() => setExplorerSort(prev => ({ column: 'dateAdded', direction: prev.column === 'dateAdded' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
+                                                            Date Added {explorerSort.column === 'dateAdded' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
+                                                        </th>
+                                                    )}
+                                                    {visibleColumns.price && (
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'price', direction: prev.column === 'price' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                            Price {explorerSort.column === 'price' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
+                                                        </th>
+                                                    )}
+                                                    {visibleColumns.priceGoal && (
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'priceGoal', direction: prev.column === 'priceGoal' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                            Goal {explorerSort.column === 'priceGoal' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
+                                                        </th>
+                                                    )}
+                                                    {visibleColumns.delta && (
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 w-20" onClick={() => setExplorerSort(prev => ({ column: 'delta', direction: prev.column === 'delta' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
+                                                            Under {explorerSort.column === 'delta' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
+                                                        </th>
+                                                    )}
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -8592,12 +8612,12 @@
                                                                 }}>
                                                                 <td className="p-2 text-center text-xl">{folder.id === '__inbox__' ? '📥' : '📁'}</td>
                                                                 <td className="p-2 font-medium">{folder.name}</td>
-                                                                <td className="p-2 text-gray-400">—</td>
-                                                                <td className="p-2 text-gray-400">—</td>
-                                                                <td className="p-2 text-gray-400">—</td>
-                                                                <td className="p-2 text-gray-400">—</td>
-                                                                <td className="p-2 text-gray-400">—</td>
-                                                                <td className="p-2 text-gray-400">—</td>
+                                                                {visibleColumns.author && <td className="p-2 text-gray-400">—</td>}
+                                                                {visibleColumns.rating && <td className="p-2 text-gray-400">—</td>}
+                                                                {visibleColumns.dateAdded && <td className="p-2 text-gray-400">—</td>}
+                                                                {visibleColumns.price && <td className="p-2 text-gray-400">—</td>}
+                                                                {visibleColumns.priceGoal && <td className="p-2 text-gray-400">—</td>}
+                                                                {visibleColumns.delta && <td className="p-2 text-gray-400">—</td>}
                                                             </tr>
                                                         );
                                                         // Add separator line after Inbox when in My Library view
@@ -8728,36 +8748,48 @@
                                                                 <img src={book.coverUrl} alt="" className={`w-8 h-12 object-cover rounded ${book.onWishlist ? 'opacity-40' : ''}`} />
                                                             </td>
                                                             <td className="p-2 font-medium">{book.title}</td>
-                                                            <td className="p-2 text-gray-600">{book.author}</td>
-                                                            <td className="p-2">
-                                                                {book.rating ? `${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5 - Math.floor(book.rating))}` : '-'}
-                                                            </td>
-                                                            <td className="p-2 text-gray-500 text-xs">
-                                                                {(() => {
-                                                                    const dateStr = book.acquired || book.addedToWishlist;
-                                                                    if (!dateStr) return '-';
-                                                                    const date = /^\d{8,}$/.test(dateStr) ? new Date(Number(dateStr)) : new Date(dateStr);
-                                                                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                                                                })()}
-                                                            </td>
-                                                            <td className={`p-2 text-xs ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'text-green-600 font-semibold' : 'text-gray-600'}`}>
-                                                                {book.currentPrice != null ? `$${book.currentPrice.toFixed(2)}` : '-'}
-                                                            </td>
-                                                            <td className="p-2 text-gray-500 text-xs">
-                                                                {book.priceTrigger != null ? `$${book.priceTrigger.toFixed(2)}` : '-'}
-                                                            </td>
-                                                            <td className="p-2 text-xs">
-                                                                {(() => {
-                                                                    if (book.priceTrigger == null || book.currentPrice == null) return '-';
-                                                                    const delta = book.priceTrigger - book.currentPrice;
-                                                                    const isUnder = delta >= 0;
-                                                                    return (
-                                                                        <span className={isUnder ? 'text-green-600 font-semibold' : 'text-orange-500'}>
-                                                                            {isUnder ? `$${delta.toFixed(2)}` : `-$${Math.abs(delta).toFixed(2)}`}
-                                                                        </span>
-                                                                    );
-                                                                })()}
-                                                            </td>
+                                                            {visibleColumns.author && (
+                                                                <td className="p-2 text-gray-600">{book.author}</td>
+                                                            )}
+                                                            {visibleColumns.rating && (
+                                                                <td className="p-2">
+                                                                    {book.rating ? `${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5 - Math.floor(book.rating))}` : '-'}
+                                                                </td>
+                                                            )}
+                                                            {visibleColumns.dateAdded && (
+                                                                <td className="p-2 text-gray-500 text-xs">
+                                                                    {(() => {
+                                                                        const dateStr = book.acquired || book.addedToWishlist;
+                                                                        if (!dateStr) return '-';
+                                                                        const date = /^\d{8,}$/.test(dateStr) ? new Date(Number(dateStr)) : new Date(dateStr);
+                                                                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                                                    })()}
+                                                                </td>
+                                                            )}
+                                                            {visibleColumns.price && (
+                                                                <td className={`p-2 text-xs ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'text-green-600 font-semibold' : 'text-gray-600'}`}>
+                                                                    {book.currentPrice != null ? `$${book.currentPrice.toFixed(2)}` : '-'}
+                                                                </td>
+                                                            )}
+                                                            {visibleColumns.priceGoal && (
+                                                                <td className="p-2 text-gray-500 text-xs">
+                                                                    {book.priceTrigger != null ? `$${book.priceTrigger.toFixed(2)}` : '-'}
+                                                                </td>
+                                                            )}
+                                                            {visibleColumns.delta && (
+                                                                <td className="p-2 text-xs">
+                                                                    {(() => {
+                                                                        if (book.priceTrigger == null || book.currentPrice == null) return '-';
+                                                                        const delta = book.priceTrigger - book.currentPrice;
+                                                                        const isUnder = delta >= 0;
+                                                                        return (
+                                                                            <span className={isUnder ? 'text-green-600 font-semibold' : 'text-orange-500'}>
+                                                                                {isUnder ? `$${delta.toFixed(2)}` : `-$${Math.abs(delta).toFixed(2)}`}
+                                                                            </span>
+                                                                        );
+                                                                    })()}
+                                                                </td>
+                                                            )}
                                                         </tr>
                                                     ));
                                                 })()}
