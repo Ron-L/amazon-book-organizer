@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.113";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.121";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -8476,7 +8476,7 @@
                                     {explorerView === 'list' ? (
                                         <table className="text-sm" style={{
                                             tableLayout: 'fixed',
-                                            width: `${48 + columnWidths.title +
+                                            width: `${72 + columnWidths.title +
                                                 (visibleColumns.author ? columnWidths.author : 0) +
                                                 (visibleColumns.rating ? columnWidths.rating : 0) +
                                                 (visibleColumns.dateAdded ? columnWidths.dateAdded : 0) +
@@ -8507,6 +8507,8 @@
                                                         setExplorerColumnMenuPos({ x, y });
                                                         setExplorerColumnMenuOpen(true);
                                                     }}>
+                                                    {/* v5.0.0-alpha.121 - Checkbox column (styled div, not input) */}
+                                                    <th className="p-2" style={{ width: '24px' }}></th>
                                                     <th className="p-2 w-12"></th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `var(--col-title, ${columnWidths.title}px)` }} onClick={() => setExplorerSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                         Name {explorerSort.column === 'title' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
@@ -8652,7 +8654,7 @@
                                                         const row = (
                                                             <tr
                                                                 key={`folder-${folder.id}`}
-                                                                className={`cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                                className={`group cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
                                                                 style={(() => {
                                                                     // v5.0.0-alpha.73 - Phase C: Visual feedback (blue=valid, red=invalid)
                                                                     if (!explorerFolderDragTarget) return {};
@@ -8763,6 +8765,10 @@
                                                                     setExplorerSelectedFolders(new Set());
                                                                     setExplorerSelectedBooks(new Set());
                                                                 }}>
+                                                                {/* v5.0.0-alpha.121 - Styled div checkbox (not input element) */}
+                                                                <td className="p-2 text-center" style={{ width: '24px' }}>
+                                                                    <div className="w-3.5 h-3.5 border border-gray-400 rounded opacity-0 group-hover:opacity-100"></div>
+                                                                </td>
                                                                 <td className="p-2 text-center text-xl">{folder.id === '__inbox__' ? '📥' : '📁'}</td>
                                                                 <td className="p-2 font-medium" style={{ width: `var(--col-title, ${columnWidths.title}px)` }}>{folder.name}</td>
                                                                 {visibleColumns.author && <td className="p-2 text-gray-400" style={{ width: `var(--col-author, ${columnWidths.author}px)` }}>—</td>}
@@ -8823,7 +8829,7 @@
                                                     return sortedBooks.map((book, index) => (
                                                         <tr
                                                             key={book.id}
-                                                            className={`cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                            className={`group cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
                                                             style={explorerReorderTarget === index ? { borderTop: `3px solid ${explorerSort.column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}` } : {}}
                                                             draggable="true"
                                                             onMouseEnter={selectedFolderId === '__all__' ? (e) => {
@@ -8898,6 +8904,10 @@
                                                                 }
                                                             }}
                                                             onDoubleClick={() => openBookModal(book, null)}>
+                                                            {/* v5.0.0-alpha.121 - Styled div checkbox (not input element) */}
+                                                            <td className="p-2 text-center" style={{ width: '24px' }}>
+                                                                <div className="w-3.5 h-3.5 border border-gray-400 rounded opacity-0 group-hover:opacity-100"></div>
+                                                            </td>
                                                             <td className="p-2">
                                                                 <img src={book.coverUrl} alt="" className={`w-8 h-12 object-cover rounded ${book.onWishlist ? 'opacity-40' : ''}`} />
                                                             </td>
