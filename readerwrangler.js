@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.94";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.95";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7263,25 +7263,28 @@
                             {/* Left pane: Folder tree */}
                             {/* v5.0.0-alpha.49 - onDragOver prevents browser "split view" prompt */}
                             {/* v5.0.0-alpha.91 - Resizable left pane */}
-                            <div className="bg-white border-r border-gray-200 overflow-y-auto flex-shrink-0"
+                            {/* v5.0.0-alpha.95 - Sticky header and virtual folders */}
+                            <div className="bg-white border-r border-gray-200 flex flex-col flex-shrink-0"
                                 style={{ width: `${leftPaneWidth}px` }}
                                 onDragOver={(e) => e.preventDefault()}>
+                                {/* Sticky section: Header + virtual folders */}
+                                <div className="sticky top-0 bg-white z-10">
                                 <div className="p-3 border-b border-gray-200 font-medium text-gray-700 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span>Folders</span>
-                                        {/* v5.0.0-alpha.94 - Navigation history buttons with visual separation */}
+                                        {/* v5.0.0-alpha.95 - Navigation history buttons (larger size for better visibility) */}
                                         <div className="flex gap-1 border-x border-gray-300 px-2">
                                             <button
                                                 onClick={goBack}
                                                 disabled={!canGoBack}
-                                                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${canGoBack ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                                className={`px-2 py-1 rounded transition-colors ${canGoBack ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
                                                 title="Back (Alt+Left)">
                                                 ←
                                             </button>
                                             <button
                                                 onClick={goForward}
                                                 disabled={!canGoForward}
-                                                className={`px-1.5 py-0.5 text-xs rounded transition-colors ${canGoForward ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                                className={`px-2 py-1 rounded transition-colors ${canGoForward ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
                                                 title="Forward (Alt+Right)">
                                                 →
                                             </button>
@@ -7398,6 +7401,9 @@
                                         <span className="flex-1 pointer-events-none">{FOLDER_INBOX.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">({getFolderBookIds('__inbox__').length})</span>
                                     </div>
+                                </div>
+                                {/* Scrollable section: User folders */}
+                                <div className="flex-1 overflow-y-auto p-2">
                                     {/* User folders with recursive subfolder rendering */}
                                     {(() => {
                                         // Recursive folder renderer
