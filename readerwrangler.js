@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.106";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.107";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -140,6 +140,7 @@
                 delta: true
             });
             const [explorerColumnMenuOpen, setExplorerColumnMenuOpen] = useState(false); // v5.0.0-alpha.104 - Explorer column chooser menu
+            const [explorerColumnMenuPos, setExplorerColumnMenuPos] = useState(null); // v5.0.0-alpha.107 - Context menu position { x, y } or null
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -1179,6 +1180,7 @@
                     // Close menu if clicking outside (not on the gear button or menu)
                     if (!e.target.closest('.column-chooser-menu') && !e.target.closest('.column-chooser-button')) {
                         setExplorerColumnMenuOpen(false);
+                        setExplorerColumnMenuPos(null); // v5.0.0-alpha.107 - Clear context menu position
                     }
                 };
 
@@ -8315,18 +8317,28 @@
                                         {explorerView === 'list' && (
                                             <div className="relative ml-4">
                                                 <button
-                                                    onClick={() => setExplorerColumnMenuOpen(!explorerColumnMenuOpen)}
+                                                    onClick={() => {
+                                                        setExplorerColumnMenuOpen(!explorerColumnMenuOpen);
+                                                        setExplorerColumnMenuPos(null); // v5.0.0-alpha.107 - Clear context menu position when using gear
+                                                    }}
                                                     className="column-chooser-button text-gray-500 hover:text-gray-700 text-lg"
                                                     title="Choose columns">
                                                     ⚙️
                                                 </button>
                                                 {/* Column chooser dropdown */}
                                                 {explorerColumnMenuOpen && (
-                                                    <div className="column-chooser-menu absolute right-0 mt-2 bg-white border border-gray-300 rounded shadow-lg p-3 z-50 min-w-[200px]">
+                                                    <div
+                                                        className={`column-chooser-menu bg-white border border-gray-300 rounded shadow-lg p-3 z-50 min-w-[200px] ${
+                                                            explorerColumnMenuPos ? 'fixed' : 'absolute right-0 mt-2'
+                                                        }`}
+                                                        style={explorerColumnMenuPos ? { left: `${explorerColumnMenuPos.x}px`, top: `${explorerColumnMenuPos.y}px` } : {}}>
                                                         <div className="flex justify-between items-center mb-2">
                                                             <div className="text-sm font-semibold text-gray-700">Show Columns</div>
                                                             <button
-                                                                onClick={() => setExplorerColumnMenuOpen(false)}
+                                                                onClick={() => {
+                                                                    setExplorerColumnMenuOpen(false);
+                                                                    setExplorerColumnMenuPos(null); // v5.0.0-alpha.107
+                                                                }}
                                                                 className="text-gray-500 hover:text-gray-700 font-bold text-lg leading-none"
                                                                 title="Close">
                                                                 ✕
@@ -8418,7 +8430,12 @@
                                     {explorerView === 'list' ? (
                                         <table className="w-full text-sm min-w-[900px]">
                                             <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
-                                                <tr className="text-left text-gray-600">
+                                                <tr className="text-left text-gray-600"
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault();
+                                                        setExplorerColumnMenuPos({ x: e.clientX, y: e.clientY });
+                                                        setExplorerColumnMenuOpen(true);
+                                                    }}>
                                                     <th className="p-2 w-12"></th>
                                                     <th className="p-2 cursor-pointer hover:bg-gray-100" onClick={() => setExplorerSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                         Name {explorerSort.column === 'title' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
