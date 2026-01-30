@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.98";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.99";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -1854,7 +1854,7 @@
                     // v4.15.1.b: Only include collections section if we have real collections data
                     const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
                     const exportData = {
-                        schemaVersion: "2.1",
+                        schemaVersion: "2.2",
                         isBackup: true,
                         books: {
                             fetchDate: libraryStatus.loadDate || new Date().toISOString(),
@@ -1870,6 +1870,15 @@
                             })),
                             columnOrder: columns.map(col => col.id),
                             blankImageBooks: Array.from(blankImageBooks),
+                            // v5.0.0-alpha.99 - Include folder organization for Explorer view
+                            folders: folders.map(folder => ({
+                                id: folder.id,
+                                name: folder.name,
+                                bookIds: folder.bookIds || [],
+                                parentId: folder.parentId,
+                                collapsed: folder.collapsed,
+                                childFolderIds: folder.childFolderIds
+                            })),
                             exportDate: new Date().toISOString(),
                             appVersion: ORGANIZER_VERSION
                         }
@@ -1916,6 +1925,8 @@
                     localStorage.removeItem(CACHE_KEY);
                     localStorage.removeItem(STATUS_KEY); // v3.7.0.n - clear saved status
                     localStorage.removeItem(FILTERS_KEY); // v3.8.0.h - clear saved filters
+                    localStorage.removeItem(EXPLORER_KEY); // v5.0.0-alpha.99 - clear Explorer view settings
+                    localStorage.removeItem(FOLDERS_KEY); // v5.0.0-alpha.99 - clear folder organization
 
                     // Reset all filters (v3.8.0.h, updated v3.8.0.k, v4.1.0.d)
                     setSearchTerm('');
@@ -1943,6 +1954,14 @@
                         loadStatus: 'empty',
                         loadDate: null
                     });
+
+                    // v5.0.0-alpha.99 - Reset Explorer view state (folders and view settings)
+                    setFolders([{ id: '__inbox__', name: 'Inbox', bookIds: [], parentId: null }]);
+                    setSelectedFolderId('__all__');
+                    setExplorerSort({ column: 'dateAdded', direction: 'desc' });
+                    setExplorerView('list');
+                    setViewMode('columns'); // Reset to Columns view
+
                     console.log('✅ Cleared library - app reset to initial state');
                     new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/app-reset';
                 } catch (error) {
@@ -2374,6 +2393,37 @@
 
                     setColumns(restoredColumns);
                     setBlankImageBooks(new Set(orgToRestore.blankImageBooks || []));
+
+                    // v5.0.0-alpha.99 - Restore folders from backup (if present)
+                    if (orgToRestore.folders && Array.isArray(orgToRestore.folders)) {
+                        const restoredFolders = orgToRestore.folders.map(folder => ({
+                            id: folder.id,
+                            name: folder.name,
+                            bookIds: folder.bookIds || [],
+                            parentId: folder.parentId,
+                            collapsed: folder.collapsed,
+                            childFolderIds: folder.childFolderIds
+                        }));
+
+                        // Ensure Inbox exists (for backward compatibility with old backups)
+                        const hasInbox = restoredFolders.some(f => f.id === '__inbox__');
+                        if (!hasInbox) {
+                            restoredFolders.push({
+                                id: '__inbox__',
+                                name: 'Inbox',
+                                bookIds: [],
+                                parentId: null
+                            });
+                        }
+
+                        setFolders(restoredFolders);
+                        localStorage.setItem(FOLDERS_KEY, JSON.stringify(restoredFolders));
+                        console.log(`✅ Restored ${restoredFolders.length} folders from ${orgSource}`);
+                    } else {
+                        // No folders in backup - preserve existing folders from localStorage (backward compatibility)
+                        console.log('📁 No folders in backup - keeping existing folder structure');
+                    }
+
                     console.log(`✅ Restored organization from ${orgSource}`);
                     setDataSource('enriched');
                     setLastSyncTime(Date.now());
