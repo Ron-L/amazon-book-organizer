@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.93";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.94";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7269,8 +7269,8 @@
                                 <div className="p-3 border-b border-gray-200 font-medium text-gray-700 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span>Folders</span>
-                                        {/* v5.0.0-alpha.93 - Navigation history buttons */}
-                                        <div className="flex gap-1">
+                                        {/* v5.0.0-alpha.94 - Navigation history buttons with visual separation */}
+                                        <div className="flex gap-1 border-x border-gray-300 px-2">
                                             <button
                                                 onClick={goBack}
                                                 disabled={!canGoBack}
