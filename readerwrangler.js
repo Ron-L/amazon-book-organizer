@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.104";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.105";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -139,7 +139,7 @@
                 priceGoal: true,
                 delta: true
             });
-            const [columnMenuOpen, setColumnMenuOpen] = useState(false); // v5.0.0-alpha.104 - Column chooser menu state
+            const [explorerColumnMenuOpen, setExplorerColumnMenuOpen] = useState(false); // v5.0.0-alpha.104 - Explorer column chooser menu
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -1171,20 +1171,20 @@
                 }
             }, [explorerSort, selectedFolderId]);
 
-            // v5.0.0-alpha.104 - Close column menu when clicking outside
+            // v5.0.0-alpha.104 - Close Explorer column menu when clicking outside
             useEffect(() => {
-                if (!columnMenuOpen) return;
+                if (!explorerColumnMenuOpen) return;
 
                 const handleClickOutside = (e) => {
                     // Close menu if clicking outside (not on the gear button or menu)
                     if (!e.target.closest('.column-chooser-menu') && !e.target.closest('.column-chooser-button')) {
-                        setColumnMenuOpen(false);
+                        setExplorerColumnMenuOpen(false);
                     }
                 };
 
                 document.addEventListener('mousedown', handleClickOutside);
                 return () => document.removeEventListener('mousedown', handleClickOutside);
-            }, [columnMenuOpen]);
+            }, [explorerColumnMenuOpen]);
 
             // v5.0.0-alpha.82 - Auto-expand tree to show selected folder
             useEffect(() => {
@@ -8315,13 +8315,13 @@
                                         {explorerView === 'list' && (
                                             <div className="relative ml-4">
                                                 <button
-                                                    onClick={() => setColumnMenuOpen(!columnMenuOpen)}
+                                                    onClick={() => setExplorerColumnMenuOpen(!explorerColumnMenuOpen)}
                                                     className="column-chooser-button text-gray-500 hover:text-gray-700 text-lg"
                                                     title="Choose columns">
                                                     ⚙️
                                                 </button>
                                                 {/* Column chooser dropdown */}
-                                                {columnMenuOpen && (
+                                                {explorerColumnMenuOpen && (
                                                     <div className="column-chooser-menu absolute right-0 mt-2 bg-white border border-gray-300 rounded shadow-lg p-3 z-50 min-w-[200px]">
                                                         <div className="text-sm font-semibold text-gray-700 mb-2">Show Columns</div>
                                                         <div className="flex flex-col gap-1.5">
