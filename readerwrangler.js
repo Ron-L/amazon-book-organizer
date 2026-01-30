@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.121";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.122";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -8765,9 +8765,15 @@
                                                                     setExplorerSelectedFolders(new Set());
                                                                     setExplorerSelectedBooks(new Set());
                                                                 }}>
-                                                                {/* v5.0.0-alpha.121 - Styled div checkbox (not input element) */}
+                                                                {/* v5.0.0-alpha.122 - Checkbox shows selection state */}
                                                                 <td className="p-2 text-center" style={{ width: '24px' }}>
-                                                                    <div className="w-3.5 h-3.5 border border-gray-400 rounded opacity-0 group-hover:opacity-100"></div>
+                                                                    <div className={`w-3.5 h-3.5 border rounded flex items-center justify-center text-xs ${
+                                                                        explorerSelectedFolders.has(folder.id)
+                                                                            ? 'opacity-100 bg-blue-500 border-blue-500 text-white'
+                                                                            : 'opacity-0 group-hover:opacity-100 border-gray-400'
+                                                                    }`}>
+                                                                        {explorerSelectedFolders.has(folder.id) && '✓'}
+                                                                    </div>
                                                                 </td>
                                                                 <td className="p-2 text-center text-xl">{folder.id === '__inbox__' ? '📥' : '📁'}</td>
                                                                 <td className="p-2 font-medium" style={{ width: `var(--col-title, ${columnWidths.title}px)` }}>{folder.name}</td>
@@ -8904,9 +8910,15 @@
                                                                 }
                                                             }}
                                                             onDoubleClick={() => openBookModal(book, null)}>
-                                                            {/* v5.0.0-alpha.121 - Styled div checkbox (not input element) */}
+                                                            {/* v5.0.0-alpha.122 - Checkbox shows selection state */}
                                                             <td className="p-2 text-center" style={{ width: '24px' }}>
-                                                                <div className="w-3.5 h-3.5 border border-gray-400 rounded opacity-0 group-hover:opacity-100"></div>
+                                                                <div className={`w-3.5 h-3.5 border rounded flex items-center justify-center text-xs ${
+                                                                    explorerSelectedBooks.has(book.id)
+                                                                        ? 'opacity-100 bg-blue-500 border-blue-500 text-white'
+                                                                        : 'opacity-0 group-hover:opacity-100 border-gray-400'
+                                                                }`}>
+                                                                    {explorerSelectedBooks.has(book.id) && '✓'}
+                                                                </div>
                                                             </td>
                                                             <td className="p-2">
                                                                 <img src={book.coverUrl} alt="" className={`w-8 h-12 object-cover rounded ${book.onWishlist ? 'opacity-40' : ''}`} />
