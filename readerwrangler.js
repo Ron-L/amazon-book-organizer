@@ -1141,7 +1141,8 @@
                         setExplorerSort({ column: 'custom', direction: 'asc' });
                     }
                 }
-            }, [selectedFolderId, folderSortSettings]);
+                // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, [selectedFolderId]); // Only re-run when folder changes, not when settings change
 
             // v5.0.0-alpha.100 - Save sort settings for current folder when sort changes
             useEffect(() => {
