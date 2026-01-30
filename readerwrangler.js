@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.99";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.100";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -109,6 +109,7 @@
             const [folders, setFolders] = useState([]); // User-created folders
             const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
             const [explorerSort, setExplorerSort] = useState({ column: 'dateAdded', direction: 'desc' }); // 'custom' | 'title' | 'author' | 'rating' | 'dateAdded'
+            const [folderSortSettings, setFolderSortSettings] = useState({}); // v5.0.0-alpha.100 - Per-folder sort settings map {folderId: {column, direction}}
             const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
             const [explorerCoverCols, setExplorerCoverCols] = useState(56); // Slider value (4-60), actual cols = 64-value
             const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed
@@ -918,6 +919,7 @@
                             if (explorerData.explorerSort) setExplorerSort(explorerData.explorerSort);
                             if (explorerData.explorerCoverCols) setExplorerCoverCols(explorerData.explorerCoverCols);
                             if (explorerData.leftPaneWidth) setLeftPaneWidth(explorerData.leftPaneWidth); // v5.0.0-alpha.91
+                            if (explorerData.folderSortSettings) setFolderSortSettings(explorerData.folderSortSettings); // v5.0.0-alpha.100
                             console.log('📁 Restored Explorer settings from localStorage');
                         }
 
@@ -1107,25 +1109,55 @@
                     explorerView,
                     explorerSort,
                     explorerCoverCols,
-                    leftPaneWidth // v5.0.0-alpha.91
+                    leftPaneWidth, // v5.0.0-alpha.91
+                    folderSortSettings // v5.0.0-alpha.100 - Per-folder sort settings
                 };
                 localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
-            }, [viewMode, selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth]);
+            }, [viewMode, selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings]);
 
             // v5.0.0 - Save folders to localStorage
             useEffect(() => {
                 localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
             }, [folders]);
 
-            // v5.0.0-alpha.23 - Set appropriate default sort when folder changes
-            // All Books: dateAdded desc (no manual order available since read-only)
-            // User folders: custom (manual order) unless user chose otherwise
+            // v5.0.0-alpha.100 - Restore per-folder sort when folder changes
             useEffect(() => {
-                if (selectedFolderId === '__all__' && explorerSort.column === 'custom') {
-                    // All Books can't use manual order - switch to Date Added
-                    setExplorerSort({ column: 'dateAdded', direction: 'desc' });
+                // Check if we have saved sort for this folder
+                const savedSort = folderSortSettings[selectedFolderId];
+
+                if (savedSort) {
+                    // Restore saved sort for this folder
+                    setExplorerSort(savedSort);
+                } else {
+                    // No saved sort - use sensible defaults
+                    if (selectedFolderId === '__all__') {
+                        // All Books: dateAdded desc (no manual order available)
+                        setExplorerSort({ column: 'dateAdded', direction: 'desc' });
+                    } else if (selectedFolderId === '__library__') {
+                        // My Library: title asc (folder view)
+                        setExplorerSort({ column: 'title', direction: 'asc' });
+                    } else {
+                        // User folders: custom (manual order)
+                        setExplorerSort({ column: 'custom', direction: 'asc' });
+                    }
                 }
-            }, [selectedFolderId]);
+            }, [selectedFolderId, folderSortSettings]);
+
+            // v5.0.0-alpha.100 - Save sort settings for current folder when sort changes
+            useEffect(() => {
+                // Only save if sort is different from what's saved for this folder
+                const savedSort = folderSortSettings[selectedFolderId];
+                const sortChanged = !savedSort ||
+                    savedSort.column !== explorerSort.column ||
+                    savedSort.direction !== explorerSort.direction;
+
+                if (sortChanged) {
+                    setFolderSortSettings(prev => ({
+                        ...prev,
+                        [selectedFolderId]: { ...explorerSort }
+                    }));
+                }
+            }, [explorerSort, selectedFolderId]);
 
             // v5.0.0-alpha.82 - Auto-expand tree to show selected folder
             useEffect(() => {
@@ -1959,6 +1991,7 @@
                     setFolders([{ id: '__inbox__', name: 'Inbox', bookIds: [], parentId: null }]);
                     setSelectedFolderId('__all__');
                     setExplorerSort({ column: 'dateAdded', direction: 'desc' });
+                    setFolderSortSettings({}); // v5.0.0-alpha.100 - Clear per-folder sort settings
                     setExplorerView('list');
                     setViewMode('columns'); // Reset to Columns view
 
