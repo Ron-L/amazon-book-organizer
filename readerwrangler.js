@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.122";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.123";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -8765,8 +8765,20 @@
                                                                     setExplorerSelectedFolders(new Set());
                                                                     setExplorerSelectedBooks(new Set());
                                                                 }}>
-                                                                {/* v5.0.0-alpha.122 - Checkbox shows selection state */}
-                                                                <td className="p-2 text-center" style={{ width: '24px' }}>
+                                                                {/* v5.0.0-alpha.123 - Clickable checkbox */}
+                                                                <td
+                                                                    className="p-2 text-center cursor-pointer"
+                                                                    style={{ width: '24px' }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setExplorerSelectedFolders(prev => {
+                                                                            const next = new Set(prev);
+                                                                            if (next.has(folder.id)) next.delete(folder.id);
+                                                                            else next.add(folder.id);
+                                                                            return next;
+                                                                        });
+                                                                        setExplorerSelectedBooks(new Set());
+                                                                    }}>
                                                                     <div className={`w-3.5 h-3.5 border rounded flex items-center justify-center text-xs ${
                                                                         explorerSelectedFolders.has(folder.id)
                                                                             ? 'opacity-100 bg-blue-500 border-blue-500 text-white'
@@ -8910,8 +8922,20 @@
                                                                 }
                                                             }}
                                                             onDoubleClick={() => openBookModal(book, null)}>
-                                                            {/* v5.0.0-alpha.122 - Checkbox shows selection state */}
-                                                            <td className="p-2 text-center" style={{ width: '24px' }}>
+                                                            {/* v5.0.0-alpha.123 - Clickable checkbox */}
+                                                            <td
+                                                                className="p-2 text-center cursor-pointer"
+                                                                style={{ width: '24px' }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setExplorerSelectedBooks(prev => {
+                                                                        const next = new Set(prev);
+                                                                        if (next.has(book.id)) next.delete(book.id);
+                                                                        else next.add(book.id);
+                                                                        return next;
+                                                                    });
+                                                                    setExplorerSelectedFolders(new Set());
+                                                                }}>
                                                                 <div className={`w-3.5 h-3.5 border rounded flex items-center justify-center text-xs ${
                                                                     explorerSelectedBooks.has(book.id)
                                                                         ? 'opacity-100 bg-blue-500 border-blue-500 text-white'
