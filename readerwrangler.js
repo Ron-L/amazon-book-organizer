@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.112";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.113";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -8604,6 +8604,8 @@
                                                             />
                                                         </th>
                                                     )}
+                                                    {/* v5.0.0-alpha.113 - Spacer column to absorb extra space */}
+                                                    <th className="p-2"></th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -8769,6 +8771,7 @@
                                                                 {visibleColumns.price && <td className="p-2 text-gray-400" style={{ width: `var(--col-price, ${columnWidths.price}px)` }}>—</td>}
                                                                 {visibleColumns.priceGoal && <td className="p-2 text-gray-400" style={{ width: `var(--col-priceGoal, ${columnWidths.priceGoal}px)` }}>—</td>}
                                                                 {visibleColumns.delta && <td className="p-2 text-gray-400" style={{ width: `var(--col-delta, ${columnWidths.delta}px)` }}>—</td>}
+                                                                <td className="p-2"></td>
                                                             </tr>
                                                         );
                                                         // Add separator line after Inbox when in My Library view
@@ -8941,6 +8944,7 @@
                                                                     })()}
                                                                 </td>
                                                             )}
+                                                            <td className="p-2"></td>
                                                         </tr>
                                                     ));
                                                 })()}
