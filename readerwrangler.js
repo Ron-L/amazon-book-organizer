@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.109";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.110";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -4428,14 +4428,16 @@
             };
 
             const handleMouseMove = (e) => {
-                // v5.0.0-alpha.109 - Handle column resizing
+                // v5.0.0-alpha.110 - Handle column resizing (optimized for large tables)
                 if (resizingColumn) {
                     const deltaX = e.clientX - resizingColumn.startX;
                     const newWidth = Math.max(50, resizingColumn.startWidth + deltaX);
-                    setColumnWidths(prev => ({
-                        ...prev,
-                        [resizingColumn.columnId]: newWidth
-                    }));
+
+                    // Update CSS custom property directly (no React re-render)
+                    document.documentElement.style.setProperty(`--col-${resizingColumn.columnId}`, `${newWidth}px`);
+
+                    // Store current width for mouseup commit
+                    resizingColumn.currentWidth = newWidth;
                     return;
                 }
 
@@ -4575,8 +4577,19 @@
             };
 
             const handleMouseUp = (e) => {
-                // v5.0.0-alpha.109 - Stop column resizing
+                // v5.0.0-alpha.110 - Stop column resizing and commit final width
                 if (resizingColumn) {
+                    // Commit final width to React state
+                    if (resizingColumn.currentWidth !== undefined) {
+                        setColumnWidths(prev => ({
+                            ...prev,
+                            [resizingColumn.columnId]: resizingColumn.currentWidth
+                        }));
+                    }
+
+                    // Clear CSS custom property
+                    document.documentElement.style.removeProperty(`--col-${resizingColumn.columnId}`);
+
                     setResizingColumn(null);
                     return;
                 }
@@ -8486,7 +8499,7 @@
                                                         setExplorerColumnMenuOpen(true);
                                                     }}>
                                                     <th className="p-2 w-12"></th>
-                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `${columnWidths.title}px` }} onClick={() => setExplorerSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                    <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `var(--col-title, ${columnWidths.title}px)` }} onClick={() => setExplorerSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                         Name {explorerSort.column === 'title' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
                                                         <div
                                                             className={`absolute right-0 top-0 bottom-0 w-1 hover:bg-blue-400 cursor-col-resize ${resizingColumn?.columnId === 'title' ? 'bg-blue-500' : 'bg-transparent'}`}
@@ -8499,7 +8512,7 @@
                                                         />
                                                     </th>
                                                     {visibleColumns.author && (
-                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `${columnWidths.author}px` }} onClick={() => setExplorerSort(prev => ({ column: 'author', direction: prev.column === 'author' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `var(--col-author, ${columnWidths.author}px)` }} onClick={() => setExplorerSort(prev => ({ column: 'author', direction: prev.column === 'author' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                             Author {explorerSort.column === 'author' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
                                                             <div
                                                                 className={`absolute right-0 top-0 bottom-0 w-1 hover:bg-blue-400 cursor-col-resize ${resizingColumn?.columnId === 'author' ? 'bg-blue-500' : 'bg-transparent'}`}
@@ -8513,7 +8526,7 @@
                                                         </th>
                                                     )}
                                                     {visibleColumns.rating && (
-                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `${columnWidths.rating}px` }} onClick={() => setExplorerSort(prev => ({ column: 'rating', direction: prev.column === 'rating' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `var(--col-rating, ${columnWidths.rating}px)` }} onClick={() => setExplorerSort(prev => ({ column: 'rating', direction: prev.column === 'rating' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                             Rating {explorerSort.column === 'rating' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
                                                             <div
                                                                 className={`absolute right-0 top-0 bottom-0 w-1 hover:bg-blue-400 cursor-col-resize ${resizingColumn?.columnId === 'rating' ? 'bg-blue-500' : 'bg-transparent'}`}
@@ -8527,7 +8540,7 @@
                                                         </th>
                                                     )}
                                                     {visibleColumns.dateAdded && (
-                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `${columnWidths.dateAdded}px` }} onClick={() => setExplorerSort(prev => ({ column: 'dateAdded', direction: prev.column === 'dateAdded' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `var(--col-dateAdded, ${columnWidths.dateAdded}px)` }} onClick={() => setExplorerSort(prev => ({ column: 'dateAdded', direction: prev.column === 'dateAdded' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
                                                             Date Added {explorerSort.column === 'dateAdded' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
                                                             <div
                                                                 className={`absolute right-0 top-0 bottom-0 w-1 hover:bg-blue-400 cursor-col-resize ${resizingColumn?.columnId === 'dateAdded' ? 'bg-blue-500' : 'bg-transparent'}`}
@@ -8541,7 +8554,7 @@
                                                         </th>
                                                     )}
                                                     {visibleColumns.price && (
-                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `${columnWidths.price}px` }} onClick={() => setExplorerSort(prev => ({ column: 'price', direction: prev.column === 'price' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `var(--col-price, ${columnWidths.price}px)` }} onClick={() => setExplorerSort(prev => ({ column: 'price', direction: prev.column === 'price' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                             Price {explorerSort.column === 'price' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
                                                             <div
                                                                 className={`absolute right-0 top-0 bottom-0 w-1 hover:bg-blue-400 cursor-col-resize ${resizingColumn?.columnId === 'price' ? 'bg-blue-500' : 'bg-transparent'}`}
@@ -8555,7 +8568,7 @@
                                                         </th>
                                                     )}
                                                     {visibleColumns.priceGoal && (
-                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `${columnWidths.priceGoal}px` }} onClick={() => setExplorerSort(prev => ({ column: 'priceGoal', direction: prev.column === 'priceGoal' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `var(--col-priceGoal, ${columnWidths.priceGoal}px)` }} onClick={() => setExplorerSort(prev => ({ column: 'priceGoal', direction: prev.column === 'priceGoal' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                             Goal {explorerSort.column === 'priceGoal' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
                                                             <div
                                                                 className={`absolute right-0 top-0 bottom-0 w-1 hover:bg-blue-400 cursor-col-resize ${resizingColumn?.columnId === 'priceGoal' ? 'bg-blue-500' : 'bg-transparent'}`}
@@ -8569,7 +8582,7 @@
                                                         </th>
                                                     )}
                                                     {visibleColumns.delta && (
-                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `${columnWidths.delta}px` }} onClick={() => setExplorerSort(prev => ({ column: 'delta', direction: prev.column === 'delta' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
+                                                        <th className="p-2 cursor-pointer hover:bg-gray-100 relative" style={{ width: `var(--col-delta, ${columnWidths.delta}px)` }} onClick={() => setExplorerSort(prev => ({ column: 'delta', direction: prev.column === 'delta' && prev.direction === 'desc' ? 'asc' : 'desc' }))}>
                                                             Under {explorerSort.column === 'delta' && (<>{explorerSort.direction === 'asc' ? '▲' : '▼'}{selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && <button onClick={(e) => { e.stopPropagation(); setExplorerSort({ column: 'custom', direction: 'asc' }); }} className="ml-2 text-gray-500 hover:text-red-500 font-bold" title="Return to Manual Order">✕</button>}</>)}
                                                             <div
                                                                 className={`absolute right-0 top-0 bottom-0 w-1 hover:bg-blue-400 cursor-col-resize ${resizingColumn?.columnId === 'delta' ? 'bg-blue-500' : 'bg-transparent'}`}
@@ -8740,13 +8753,13 @@
                                                                     setExplorerSelectedBooks(new Set());
                                                                 }}>
                                                                 <td className="p-2 text-center text-xl">{folder.id === '__inbox__' ? '📥' : '📁'}</td>
-                                                                <td className="p-2 font-medium" style={{ width: `${columnWidths.title}px` }}>{folder.name}</td>
-                                                                {visibleColumns.author && <td className="p-2 text-gray-400" style={{ width: `${columnWidths.author}px` }}>—</td>}
-                                                                {visibleColumns.rating && <td className="p-2 text-gray-400" style={{ width: `${columnWidths.rating}px` }}>—</td>}
-                                                                {visibleColumns.dateAdded && <td className="p-2 text-gray-400" style={{ width: `${columnWidths.dateAdded}px` }}>—</td>}
-                                                                {visibleColumns.price && <td className="p-2 text-gray-400" style={{ width: `${columnWidths.price}px` }}>—</td>}
-                                                                {visibleColumns.priceGoal && <td className="p-2 text-gray-400" style={{ width: `${columnWidths.priceGoal}px` }}>—</td>}
-                                                                {visibleColumns.delta && <td className="p-2 text-gray-400" style={{ width: `${columnWidths.delta}px` }}>—</td>}
+                                                                <td className="p-2 font-medium" style={{ width: `var(--col-title, ${columnWidths.title}px)` }}>{folder.name}</td>
+                                                                {visibleColumns.author && <td className="p-2 text-gray-400" style={{ width: `var(--col-author, ${columnWidths.author}px)` }}>—</td>}
+                                                                {visibleColumns.rating && <td className="p-2 text-gray-400" style={{ width: `var(--col-rating, ${columnWidths.rating}px)` }}>—</td>}
+                                                                {visibleColumns.dateAdded && <td className="p-2 text-gray-400" style={{ width: `var(--col-dateAdded, ${columnWidths.dateAdded}px)` }}>—</td>}
+                                                                {visibleColumns.price && <td className="p-2 text-gray-400" style={{ width: `var(--col-price, ${columnWidths.price}px)` }}>—</td>}
+                                                                {visibleColumns.priceGoal && <td className="p-2 text-gray-400" style={{ width: `var(--col-priceGoal, ${columnWidths.priceGoal}px)` }}>—</td>}
+                                                                {visibleColumns.delta && <td className="p-2 text-gray-400" style={{ width: `var(--col-delta, ${columnWidths.delta}px)` }}>—</td>}
                                                             </tr>
                                                         );
                                                         // Add separator line after Inbox when in My Library view
@@ -8876,17 +8889,17 @@
                                                             <td className="p-2">
                                                                 <img src={book.coverUrl} alt="" className={`w-8 h-12 object-cover rounded ${book.onWishlist ? 'opacity-40' : ''}`} />
                                                             </td>
-                                                            <td className="p-2 font-medium" style={{ width: `${columnWidths.title}px` }}>{book.title}</td>
+                                                            <td className="p-2 font-medium" style={{ width: `var(--col-title, ${columnWidths.title}px)` }}>{book.title}</td>
                                                             {visibleColumns.author && (
-                                                                <td className="p-2 text-gray-600" style={{ width: `${columnWidths.author}px` }}>{book.author}</td>
+                                                                <td className="p-2 text-gray-600" style={{ width: `var(--col-author, ${columnWidths.author}px)` }}>{book.author}</td>
                                                             )}
                                                             {visibleColumns.rating && (
-                                                                <td className="p-2" style={{ width: `${columnWidths.rating}px` }}>
+                                                                <td className="p-2" style={{ width: `var(--col-rating, ${columnWidths.rating}px)` }}>
                                                                     {book.rating ? `${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5 - Math.floor(book.rating))}` : '-'}
                                                                 </td>
                                                             )}
                                                             {visibleColumns.dateAdded && (
-                                                                <td className="p-2 text-gray-500 text-xs" style={{ width: `${columnWidths.dateAdded}px` }}>
+                                                                <td className="p-2 text-gray-500 text-xs" style={{ width: `var(--col-dateAdded, ${columnWidths.dateAdded}px)` }}>
                                                                     {(() => {
                                                                         const dateStr = book.acquired || book.addedToWishlist;
                                                                         if (!dateStr) return '-';
@@ -8896,17 +8909,17 @@
                                                                 </td>
                                                             )}
                                                             {visibleColumns.price && (
-                                                                <td className={`p-2 text-xs ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'text-green-600 font-semibold' : 'text-gray-600'}`} style={{ width: `${columnWidths.price}px` }}>
+                                                                <td className={`p-2 text-xs ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'text-green-600 font-semibold' : 'text-gray-600'}`} style={{ width: `var(--col-price, ${columnWidths.price}px)` }}>
                                                                     {book.currentPrice != null ? `$${book.currentPrice.toFixed(2)}` : '-'}
                                                                 </td>
                                                             )}
                                                             {visibleColumns.priceGoal && (
-                                                                <td className="p-2 text-gray-500 text-xs" style={{ width: `${columnWidths.priceGoal}px` }}>
+                                                                <td className="p-2 text-gray-500 text-xs" style={{ width: `var(--col-priceGoal, ${columnWidths.priceGoal}px)` }}>
                                                                     {book.priceTrigger != null ? `$${book.priceTrigger.toFixed(2)}` : '-'}
                                                                 </td>
                                                             )}
                                                             {visibleColumns.delta && (
-                                                                <td className="p-2 text-xs" style={{ width: `${columnWidths.delta}px` }}>
+                                                                <td className="p-2 text-xs" style={{ width: `var(--col-delta, ${columnWidths.delta}px)` }}>
                                                                     {(() => {
                                                                         if (book.priceTrigger == null || book.currentPrice == null) return '-';
                                                                         const delta = book.priceTrigger - book.currentPrice;
