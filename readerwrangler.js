@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.100";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.101";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -1887,7 +1887,7 @@
                     // v4.15.1.b: Only include collections section if we have real collections data
                     const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
                     const exportData = {
-                        schemaVersion: "2.2",
+                        schemaVersion: "2.3",
                         isBackup: true,
                         books: {
                             fetchDate: libraryStatus.loadDate || new Date().toISOString(),
@@ -1912,6 +1912,14 @@
                                 collapsed: folder.collapsed,
                                 childFolderIds: folder.childFolderIds
                             })),
+                            // v5.0.0-alpha.101 - Include Explorer view settings
+                            explorerSettings: {
+                                viewMode,
+                                folderSortSettings,
+                                explorerView,
+                                explorerCoverCols,
+                                leftPaneWidth
+                            },
                             exportDate: new Date().toISOString(),
                             appVersion: ORGANIZER_VERSION
                         }
@@ -2456,6 +2464,20 @@
                     } else {
                         // No folders in backup - preserve existing folders from localStorage (backward compatibility)
                         console.log('📁 No folders in backup - keeping existing folder structure');
+                    }
+
+                    // v5.0.0-alpha.101 - Restore Explorer settings from backup (if present)
+                    if (orgToRestore.explorerSettings) {
+                        const settings = orgToRestore.explorerSettings;
+                        if (settings.viewMode) setViewMode(settings.viewMode);
+                        if (settings.folderSortSettings) setFolderSortSettings(settings.folderSortSettings);
+                        if (settings.explorerView) setExplorerView(settings.explorerView);
+                        if (settings.explorerCoverCols) setExplorerCoverCols(settings.explorerCoverCols);
+                        if (settings.leftPaneWidth) setLeftPaneWidth(settings.leftPaneWidth);
+                        console.log('✅ Restored Explorer view settings from backup');
+                    } else {
+                        // No explorer settings in backup - preserve existing from localStorage (backward compatibility)
+                        console.log('📁 No explorer settings in backup - keeping existing preferences');
                     }
 
                     console.log(`✅ Restored organization from ${orgSource}`);
