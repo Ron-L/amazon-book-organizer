@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.0-alpha.123";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.0-alpha.125";  // Build version for this file
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -7494,21 +7494,33 @@
                                 <div className="p-3 border-b border-gray-200 font-medium text-gray-700 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span>Folders</span>
-                                        {/* v5.0.0-alpha.95 - Navigation history buttons (larger size for better visibility) */}
+                                        {/* v5.0.0-alpha.125 - Navigation buttons with proper chevron icons */}
                                         <div className="flex gap-1 border-x border-gray-300 px-2">
                                             <button
                                                 onClick={goBack}
                                                 disabled={!canGoBack}
-                                                className={`px-2 py-1 rounded transition-colors ${canGoBack ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                                className={`w-6 h-6 rounded flex items-center justify-center transition-colors border ${
+                                                    canGoBack
+                                                        ? 'text-gray-700 hover:bg-blue-50 hover:border-blue-300 border-gray-300'
+                                                        : 'text-gray-300 cursor-not-allowed border-gray-200'
+                                                }`}
                                                 title="Back (Alt+Left)">
-                                                ←
+                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={canGoBack ? '' : 'opacity-40'}>
+                                                    <path d="M7.5 2L3.5 6L7.5 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
                                             </button>
                                             <button
                                                 onClick={goForward}
                                                 disabled={!canGoForward}
-                                                className={`px-2 py-1 rounded transition-colors ${canGoForward ? 'text-blue-600 hover:bg-blue-50' : 'text-gray-300 cursor-not-allowed'}`}
+                                                className={`w-6 h-6 rounded flex items-center justify-center transition-colors border ${
+                                                    canGoForward
+                                                        ? 'text-gray-700 hover:bg-blue-50 hover:border-blue-300 border-gray-300'
+                                                        : 'text-gray-300 cursor-not-allowed border-gray-200'
+                                                }`}
                                                 title="Forward (Alt+Right)">
-                                                →
+                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={canGoForward ? '' : 'opacity-40'}>
+                                                    <path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
                                             </button>
                                         </div>
                                     </div>
