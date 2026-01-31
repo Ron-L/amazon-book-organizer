@@ -8900,6 +8900,8 @@
                                                                 setExplorerDragData(null);
                                                             }}
                                                             onClick={(e) => {
+                                                                // v5.0.0-alpha.124 - Clear folder selection when selecting book (matches folder row behavior)
+                                                                setExplorerSelectedFolders(new Set());
                                                                 if (e.shiftKey && explorerSelectionAnchor !== null) {
                                                                     // Shift-click: select range from anchor to current
                                                                     const start = Math.min(explorerSelectionAnchor, index);
