@@ -6,67 +6,109 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 🎯 Priority 1: Top Personal Priorities
+### 🎯 Priority 0: Bug
+**1. Remove Column App**
+   - Defer to post V5
 
-**3. 📁 Book Explorer UI** - MEDIUM/HIGH (40-60 hours)
-   - See [docs/design/BOOK-EXPLORER.md](docs/design/BOOK-EXPLORER.md) for full spec
-   - Replaces Column Organizer (COLUMN-ARRANGER.md), Column Carousel (COLUMN-CAROUSEL.md), Desktop & Folders (DESKTOP-FOLDERS.md)
-   - Windows File Explorer paradigm: folder tree sidebar + detail/preview pane
-   - Nested folders for Category > Author > Series hierarchy (no depth limit)
-   - List view with sortable columns + cover view toggle
-   - Search (jump-to) distinct from filter (reduce view)
-   - Migration: columns → folders, dividers → subfolders
-   - Problem: 20+ columns overwhelm the workspace; no hierarchy for Category > Author > Series
-   - Impact: Scalable organization using universally familiar File Explorer metaphor
+### 🎯 Priority 1: Current Focus
 
+**1. Wizard Mode**
+   - See [docs/design/WIZARD-MODE.md](docs/design/WIZARD-MODE.md)
 
-### 📖 Priority 2: Optimizations & Polish (Before Public Launch)
+---
 
-**1. 📚 Book Recommendations** - LOW/LOW (2-3 hours)
+### ⚡ Priority 2: Core Enhancements
+
+**1. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
+   - Show reading progress percentage/position for each book in dialog and a column in explorer
+   - Implementation guidance: [Amazon Organizer Reading Progress conversation](https://claude.ai/chat/6e6f23c8-b84e-4900-8c64-fecb6a6e0bd1)
+   - Note: Collections data already merged (line 452 LOG.md), this adds progress visualization
+   - Problem: Users can't see reading progress in organizer
+   - Impact: Better tracking of currently-reading books; transforms app from "organizer" to "reading companion"
+
+**2. 📚 Book Recommendations** - LOW/LOW (2-3 hours)
    - See [docs/design/BOOK-RECOMMENDATIONS.md](docs/design/BOOK-RECOMMENDATIONS.md) for full spec
    - Display "Similar Books" in book detail modal (collapsible, hidden by default)
    - Data already fetched in Phase 3 (tags API) but currently discarded
    - Store: `recommendations: [{asin, title, coverUrl}]` per book (~1KB/book)
    - Click opens Amazon product page; "Owned" badge if book is in library
+   - Future: "You own these similar books you haven't read yet" cross-reference
+   - Future: Highlight forgotten purchases based on high ratings
    - Problem: No discovery of related books from within the app
    - Impact: Book discovery without leaving ReaderWrangler
 
-**2. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
-   - Show reading progress percentage/position for each book
-   - Implementation guidance: [Amazon Organizer Reading Progress conversation](https://claude.ai/chat/6e6f23c8-b84e-4900-8c64-fecb6a6e0bd1)
-   - Note: Collections data already merged (line 452 LOG.md), this adds progress visualization
-   - Problem: Users can't see reading progress in organizer
-   - Impact: Better tracking of currently-reading books
+---
 
-**3. 🔄 Extend Gap-Fill to Include Reviews** - LOW/LOW (1 hour)
-   - File: `amazon-library-fetcher.js`
-   - Current gap-fill only targets books missing descriptions
-   - Extend filter: `!description || (reviewCount > 0 && !topReviews?.length)`
-   - When enrichBook returns data, update ALL fields (not just the missing one)
-   - Same `enrichBook` API returns both description and reviews in one call
-   - Problem: ~1.3% of books missing reviews despite having review count
-   - Impact: Progressive data completeness improvement
+### ✨ Priority 3: Foundational UX
 
-**4. 🔄 Wishlist Deduplication** - LOW/LOW (2-3 hours)
-   - See [docs/design/WISHLIST-DEDUP.md](docs/design/WISHLIST-DEDUP.md) for full spec
-   - Prevent duplicate wishlist entries (dedupe on save by ASIN)
-   - Toast notifications for user feedback (non-blocking, auto-dismiss)
-   - Single add: "Added to wishlist" / "Already on wishlist" / "Already in library"
-   - Series add: Summary toast "Added 15. Skipped: 3 owned, 2 on wishlist"
-   - One-time cleanup utility in Data Status for existing duplicates
-   - Problem: Easy to add same book multiple times; no feedback; bloats JSON
-   - Impact: Cleaner data, user awareness without workflow interruption
+**1. Tooltips for Control Buttons** - LOW/LOW (1 hour)
+   - Add tooltips to Backup, Restore, Reset, Clear buttons
+   - Problem: Users unsure what buttons do
+   - Impact: Discoverability, reduced confusion
 
-**5. 🗑️ Orphan Detection & Recycle Bin** - MEDIUM/MEDIUM (9-13 hours)
-   - Detect books no longer in Amazon library after re-import
-   - Recycle Bin virtual column for soft-deleted books
-   - See [docs/design/ORPHAN-DETECTION-RECYCLE-BIN.md](docs/design/ORPHAN-DETECTION-RECYCLE-BIN.md) for full spec
-   - Problem: Orphaned books (samples replaced by purchase, returns, expired subscriptions) clutter library
-   - Impact: Clean library management, safe deletion with restore capability
+**2. First-run Welcome Dialog** - LOW/LOW (2 hours)
+   - Explain what ReaderWrangler is on first visit
+   - Brief intro, link to documentation
+   - Problem: New users don't know what the app does
+   - Impact: Better onboarding
+
+**3. Keyboard Shortcuts Help** - LOW/LOW (2 hours)
+   - "?" icon or Ctrl+? to show shortcuts dialog
+   - List: Undo/Redo, multi-select, navigation, etc.
+   - Problem: Users don't know available shortcuts
+   - Impact: Power user efficiency
+
+**4. Filter Chevron UI** - LOW/LOW (2-3 hours)
+   - Replace cycling filter button with expandable chevron pattern:
+     ```
+     ▶ Filters                     [collapsed - no filters visible]
+     ▼ Filters  [basic filters]    [click ▶ to expand basic]
+        ▶ More                     [advanced collapsed]
+     ▼ Filters  [basic filters]    [both expanded]
+        ▼ More  [advanced filters]
+     ```
+   - Benefits: More discoverable, more predictable, more familiar, easier to undo
+   - Current: Button cycles through Hidden → Basic → Advanced → Hidden
+   - Proposed: Nested disclosure triangles that rotate on expand/collapse
+   - Implementation: Two state variables (`filtersExpanded`, `advancedExpanded`) instead of single `filterMode`
+
+**5. Column/Explorer Mode Deprecation Notice** - LOW/LOW (30 minutes)
+   - Update Column/Explorer toggle button tooltip
+   - When hovering Explorer button while in Column mode:
+   - "Column mode is deprecated. Switch to Explorer mode and import your organization automatically."
+   - Problem: Users may not know Column mode is being phased out
+   - Impact: Guides users toward the supported mode
+
+**6. Enhanced Getting Started UX** - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
+   - Status: Planned (post-rename enhancement)
+   - Help menu links, enhanced empty library state
+
+**7. Quality Attribute Validation** - LOW/LOW (2-3 hours)
+   - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
+   - **Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second
+   - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
+   - **Storage monitoring:** 2300 books = 150 MB / 557 GB quota (0.03%) - NOT a concern
+   - Problem: Need confidence app handles edge cases for public release
+   - Impact: Robustness validation before launch
+
+**8. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
+   - Semantic HTML audit (use `<button>` not `<div onclick>`)
+   - ARIA labels for key interactions (context menus, drag operations)
+   - Keyboard-only navigation validation (tab order, focus indicators)
+   - Note: Full accessibility audit deferred (personal-use project)
+   - Problem: Potential public users may need accessibility features
+   - Impact: Broader user base support with minimal effort
+
+**9. Browser Compatibility Documentation** - LOW/LOW (30 min)
+   - Document Chrome-only requirement in README and app footer
+   - Note: Firefox/Edge may work but untested
+   - Optional: 30-min Firefox smoke test before public release
+   - Problem: Users may try on unsupported browsers
+   - Impact: Clear expectations, reduced support burden
 
 ---
 
-### 📖 Priority 3: Polish & Documentation (Before Public Launch)
+### 📖 Priority 4: Documentation
 
 **1. 📖 Quick Start Video & Written Guide** - HIGH/LOW (2-4 hours) - See [docs/design/VIDEO-PRODUCTION-PLAN.md](docs/design/VIDEO-PRODUCTION-PLAN.md)
 
@@ -96,17 +138,46 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Partial documentation confuses users
    - Impact: Complete feature documentation
 
-**6. Enhanced Getting Started UX** #Architecture - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
-   - Status: Planned (post-rename enhancement)
-   - Help menu links, enhanced empty library state
+---
 
-**7. Launch**
+### 🚀 Priority 5: Launch
+
+**1. Launch**
    - COMMUNITY-SHARING-PLAN.md
 
 ---
 
-### ✨ Priority 4: High Priority Features
+### 🚀 Priority 6: Post-Launch Internal Improvements
 
+**1. 🔄 Extend Gap-Fill to Include Reviews** - LOW/LOW (1 hour)
+   - File: `amazon-library-fetcher.js`
+   - Current gap-fill only targets books missing descriptions
+   - Extend filter: `!description || (reviewCount > 0 && !topReviews?.length)`
+   - When enrichBook returns data, update ALL fields (not just the missing one)
+   - Same `enrichBook` API returns both description and reviews in one call
+   - Problem: ~1.3% of books missing reviews despite having review count
+   - Impact: Progressive data completeness improvement
+
+**2. 🔄 Wishlist Deduplication** - LOW/LOW (2-3 hours)
+   - See [docs/design/WISHLIST-DEDUP.md](docs/design/WISHLIST-DEDUP.md) for full spec
+   - Prevent duplicate wishlist entries (dedupe on save by ASIN)
+   - Toast notifications for user feedback (non-blocking, auto-dismiss)
+   - Single add: "Added to wishlist" / "Already on wishlist" / "Already in library"
+   - Series add: Summary toast "Added 15. Skipped: 3 owned, 2 on wishlist"
+   - One-time cleanup utility in Data Status for existing duplicates
+   - Problem: Easy to add same book multiple times; no feedback; bloats JSON
+   - Impact: Cleaner data, user awareness without workflow interruption
+
+**3. 🗑️ Orphan Detection & Recycle Bin** - MEDIUM/MEDIUM (9-13 hours)
+   - Detect books no longer in Amazon library after re-import
+   - Recycle Bin virtual column for soft-deleted books
+   - See [docs/design/ORPHAN-DETECTION-RECYCLE-BIN.md](docs/design/ORPHAN-DETECTION-RECYCLE-BIN.md) for full spec
+   - Problem: Orphaned books (samples replaced by purchase, returns, expired subscriptions) clutter library
+   - Impact: Clean library management, safe deletion with restore capability
+
+ ---
+
+### 🚀 Priority 7: Post-Launch Enhancements
 
 **1. 👨‍👩‍👧 Family Sharing Info** - LOW/LOW (2-4 hours)
    - See [docs/design/FAMILY-SHARING.md](docs/design/FAMILY-SHARING.md) for full spec
@@ -117,35 +188,22 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: No visibility into which books are shared with family
    - Impact: Better awareness of Family Library sharing status
 
-**4. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
-   - Current state: 3,862-line monolithic file with 50+ state variables, 80+ functions
-   - **Recommended: Minimal Split (4 modules)**
+**2. 📖 Series Management** - See [docs/design/WIZARD-MODE.md](docs/design/WIZARD-MODE.md)
+   - Covered by Wizard Mode (auto-organize by author/series)
+   - Includes: Automatic series detection, series reading order, series subfolders
+   - Future: Missing book detection ("You have Dresden Files #1-15 but missing #7")
+   - Problem: Series books scattered across library
+   - Impact: Better management for series readers
 
-   | Module | ~Lines | Contents |
-   |--------|--------|----------|
-   | `storage.js` | 150 | IndexedDB, localStorage operations |
-   | `dataProcessing.js` | 400 | Import, merge, filter logic |
-   | `dragDrop.js` | 500 | Drag handlers, binary search optimization |
-   | `uiHelpers.js` | 200 | Formatters, display helpers, constants |
-   | `readerwrangler.js` | 1,500 | State, hooks, orchestration, JSX |
+**3. 🖼️ V2 Dual-Pane Split** - MEDIUM/MEDIUM (8-12 hours)
+   - See [docs/design/DUAL-PANE-SPLIT.md](docs/design/DUAL-PANE-SPLIT.md) for full analysis
+   - Two folder views side by side for power users
+   - Option A: Built-in split pane (8-12 hours, native drag works)
+   - Option B: BroadcastChannel sync for two browser tabs (4-6 hours, copy/paste only)
+   - Problem: Precise cross-folder positioning requires navigation
+   - Impact: 10% power-user case; 90% covered by drag-to-folder-tree
 
-   - **Key risks to preserve:**
-     - Drag performance uses refs to avoid re-renders - must preserve
-     - `loadLibrary()` handles multiple JSON formats - complex parsing
-     - 8 filters must stay coordinated
-     - State sync between books array and column.books IDs
-   - **Alternative: Thorough split (12 files)** with components + custom hooks - cleaner but 2-3 days work
-   - Problem: Large monolithic file hard to navigate and maintain
-   - Impact: Better code organization, easier future maintenance, testability
-   - **Implementation order:**
-     1. Extract `uiHelpers.js` (no dependencies)
-     2. Extract `storage.js` (only localStorage/IndexedDB)
-     3. Extract `dataProcessing.js` (uses above)
-     4. Extract `dragDrop.js` (uses uiHelpers)
-     5. Update main component imports
-   - **Context Menu IIFE** - The context menu positioning (v4.1.0.e) uses an IIFE in JSX to calculate viewport bounds before rendering. Consider extracting to a custom hook or component for cleaner code.
-
-**6. Multi-Store Architecture** #Architecture - LOW/VERY HIGH (60-80 hours)
+**4. Multi-Store Architecture** #Architecture - LOW/VERY HIGH (60-80 hours)
    - See [docs/design/MULTI-STORE-ARCHITECTURE.md](docs/design/MULTI-STORE-ARCHITECTURE.md) for full spec
    - Status: Future enhancement (Amazon first, other stores later)
    - Covers: File naming, bookmarklet detection, data structure, migration path
@@ -154,29 +212,15 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 📚 Priority 5: Nice-to-Have Features
+### 📚 Priority 8: Nice-to-Have Features
 
-**1. 📖 Enhanced Series Management** - MEDIUM/MEDIUM (6-10 hours)
-   - Expand current "Group Series Books" button
-   - Automatic series detection
-   - Series reading order visualization
-   - Missing book detection ("You have books 1, 2, and 4 of this series")
-   - Problem: Series books scattered across library
-   - Impact: Better management for series readers
-
-**2. 🏷️ Color-Coding/Tagging System** - MEDIUM/MEDIUM (8-10 hours)
-   - Visual distinction beyond columns
-   - Tag-based organization
-   - Problem: Columns alone may not capture all organizational needs
-   - Impact: More flexible organization
-
-**3. 🤖 Smart Collections (Rule-Based)** #Optional - LOW/HIGH (12-16 hours)
+**1. 🤖 Smart Collections (Rule-Based)** #Optional - LOW/HIGH (12-16 hours)
    - "All unread books rated 4.5+"
    - Requires complex rule engine
    - Problem: Manual organization is tedious
    - Impact: Automation for power users
 
-**4. 🎯 Wishlist Integration - Series Gap Detection** #Optional - MEDIUM/VERY HIGH (20-30 hours)
+**2. 🎯 Wishlist Integration - Series Gap Detection** #Optional - MEDIUM/VERY HIGH (20-30 hours)
    - Automatic series detection for owned books (requires series metadata)
    - Identify missing books in series (e.g., own books 1, 2, 4 but not 3)
    - Fetch metadata for missing books via Amazon API or series page scraping
@@ -187,35 +231,15 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
      - Amazon's inconsistent series tagging may limit effectiveness
    - Problem: Series readers often have incomplete sets, no easy way to identify gaps
    - Impact: Automatic discovery of missing series books, targeted purchasing
-   - **Investigation tasks:**
-     - Research Amazon API for series metadata (GraphQL? Product Advertising API?)
-     - Test series detection accuracy across sample of 50+ series books
-     - Determine if series page scraping is feasible fallback
-     - Measure API rate limits for series metadata queries
-   - **Subtasks:**
-     - Series detection algorithm (pattern matching on titles, author clustering)
-     - Series gap identification logic
-     - Amazon API integration for missing book metadata
-     - Wishlist auto-population workflow
-     - Series column UI for gap visualization
 
-**5. 📚 Collections Filtering Enhancements** - LOW/LOW (1-2 hours each)
+**3. 📚 Collections Filtering Enhancements** - LOW/LOW (1-2 hours each)
    - **Filter by read status** - Filter by READ/UNREAD/UNKNOWN
    - **Filter by collection name** - Dropdown to filter by specific Amazon collection
    - **"Uncollected" pseudo-collection** - Filter for books with no collections
 
-**6. ✨ UX Quick Wins** - MEDIUM/LOW (1-3 hours each)
-   - Tooltips for control buttons (Backup, Restore, Reset, Clear)
-   - First-run Welcome dialog explaining what ReaderWrangler is
-   - **Keyboard shortcuts help** - "?" icon or Ctrl+? to show shortcuts dialog (Undo/Redo, multi-select, etc.)
-   - Column name filtering (search by column name)
-   - Make status dialog draggable/movable (modal → draggable)
-   - **Drag Divider by Title Area** - Click-drag on divider title text (not just ⋮ handle) to reposition. Must not conflict with double-click to rename.
-   - **More Auto-Divide Helpers** - Auto-Divide by Author, by Acquisition Date (Year groups), by Page Count (Short/Medium/Long). All use same divider infrastructure.
-
 ---
 
-### 📊 Priority 6: Analytics & Export (MEDIUM Priority, LOW-MEDIUM Complexity)
+### 📊 Priority 9: Analytics & Export
 
 **1. 📈 Reading Stats Dashboard** - MEDIUM/MEDIUM (8-12 hours)
    - Books acquired by month/year
@@ -234,7 +258,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 🔧 Priority 7: Technical Improvements (MEDIUM-LOW Priority, MEDIUM-HIGH Complexity)
+### 🔧 Priority 10: Technical Improvements
 
 **1. Phase 3: UI Error Handling** #FetcherImprovements - MEDIUM/LOW (2-3 hours)
    - Warning banners for missing descriptions
@@ -242,9 +266,24 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Users unaware of missing enrichment data
    - Impact: Transparency about data quality
 
+**2. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
+   - Current state: 3,862-line monolithic file with 50+ state variables, 80+ functions
+   - **Recommended: Minimal Split (4 modules)**
+
+   | Module | ~Lines | Contents |
+   |--------|--------|----------|
+   | `storage.js` | 150 | IndexedDB, localStorage operations |
+   | `dataProcessing.js` | 400 | Import, merge, filter logic |
+   | `dragDrop.js` | 500 | Drag handlers, binary search optimization |
+   | `uiHelpers.js` | 200 | Formatters, display helpers, constants |
+   | `readerwrangler.js` | 1,500 | State, hooks, orchestration, JSX |
+
+   - Problem: Large monolithic file hard to navigate and maintain
+   - Impact: Better code organization, easier future maintenance, testability
+
 ---
 
-### 🌐 Priority 8: Integrations & Advanced Features (LOW Priority, HIGH-VERY HIGH Complexity)
+### 🌐 Priority 11: Integrations & Advanced Features
 
 **1. 🔗 Third-Party Integrations** - LOW/HIGH (20-30 hours)
    - Goodreads sync (import ratings, mark as read)
@@ -253,19 +292,12 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Complex API work, authentication, rate limits
    - Impact: Niche feature for users of these services
 
-**2. 🧠 Smart Recommendations** - LOW/HIGH (30-40 hours)
-   - "You own these similar books you haven't read yet"
-   - "Others who loved [this book] also read [these books] from your library"
-   - Highlight forgotten purchases based on high ratings
-   - Problem: Requires recommendation engine, ML/AI complexity
-   - Impact: Book discovery from existing library
-
-**3. Live reflow drag-and-drop animation** #Optional - LOW/MEDIUM (4-6 hours)
+**2. Live reflow drag-and-drop animation** #Optional - LOW/MEDIUM (4-6 hours)
    - Smooth visual feedback during drag operations
    - Problem: Current drag-and-drop feels abrupt
    - Impact: Polish and visual appeal
 
-**4. Multi-User Support** #Architecture - LOW/VERY HIGH (40-60 hours)
+**3. Multi-User Support** #Architecture - LOW/VERY HIGH (40-60 hours)
    - Not really needed with Export and Import
    - See [docs/design/MULTI-USER-DESIGN.md](docs/design/MULTI-USER-DESIGN.md) for full spec
    - Status: Low priority - workaround sufficient for most users
@@ -273,3 +305,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Multiple Amazon accounts on same device
    - Impact: Household/family sharing
    - **Workaround Available**: See [USER-GUIDE.md FAQ](USER-GUIDE.md#faq) "Can I maintain separate organizational states?" for Backup/Restore method to swap between different organizational states (demo vs. actual collection, testing vs. production, etc.)
+
+
+
+

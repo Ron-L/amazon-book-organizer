@@ -2,7 +2,7 @@
 
 ## Content Update Tracker
 
-**Last Updated**: 2026-01-24
+**Last Updated**: 2026-02-02
 
 Before producing/updating videos, review this list of changes since the plan was written:
 
@@ -43,6 +43,63 @@ When re-recording, add mentions of:
 - **Filter Panel** (v4.15.5): Compact inline layout with three-state toggle (Filters/More Filters/Hide)
 - **Date Filter** (v4.15.6): Simplified preset dropdown replaces two date pickers
 - **Mobile Landing Page** (v4.15.8): Hero scrolls on mobile, mobile-specific sync instructions
+
+### Book Explorer (v5.0.0) - NEW Paradigm
+
+**Major Interface Change:** v4 Columns → v5 Book Explorer (File Explorer paradigm)
+
+**Training Scenarios Documented:** [BOOK-EXPLORER-VIDEO-SCENARIOS.md](BOOK-EXPLORER-VIDEO-SCENARIOS.md)
+
+**Completed Features:**
+- [x] **Left Panel Context Menu** (alpha.133-145, ~18 hours)
+  - Right-click operations: Open, Rename, Move to, Create Subfolder, Cut/Copy/Paste, Delete, Properties
+  - Keyboard shortcuts: F2, Ctrl+X/C/V, Delete, Esc
+  - Edge cases: Circular reference prevention, special folders protection, viewport-aware positioning
+  - 7 comprehensive training scenarios documented
+
+- [x] **Right Panel Context Menu** (alpha.167.6-168.4, ~8 hours)
+  - Right-click operations: Move to, Copy to, Cut/Copy/Paste, Open in Amazon, Copy Titles, Add Note, Set Price Goal, Hide Book, Remove from Folder
+  - Keyboard shortcuts: Ctrl+X/C/V for books
+  - Visual feedback: 50% opacity for cut books (list and cover views)
+  - Undo/redo support for paste operations
+  - Amazon column added for quick single-book access (popup blocker workaround)
+  - Menu layout matches v4 interface grouping conventions
+
+- [x] **Series Columns** (alpha.171)
+  - Series name and # (position) columns in list view
+  - Sortable, resizable, hidden by default
+
+- [x] **Column Reordering** (alpha.172-172.3)
+  - Drag column headers to reorder
+  - Ghost preview and drop indicator
+  - Global persistence (same order in all folders)
+  - Performance optimized (reduced re-renders from 400 to 10 per drag)
+
+- [x] **Menu Bar + Toolbar Redesign** (alpha.175.1-175.49, ~40 hours)
+  - **Menu bar (32px):** File/View/Help menus with hover-to-switch behavior
+  - **About dialog:** Logo, version, tagline, copyright with AlloidLabs.com link
+  - **Keyboard Shortcuts dialog:** Comprehensive shortcut reference (Ctrl+Z/Y/A/X/C/V, arrows, ESC)
+  - **How To Use dialog:** Usage guide placeholder
+  - **Toolbar (36px):** Search box + Tier 1 filters (Read Status, Tags, Source)
+  - **More panel:** Tier 2 filters (Collections, Amazon Rating, My Rating, Series, Date)
+  - **Personal Rating:** 0-5 star system (star picker in dialog, column in list view, sortable)
+  - **Filter status banner:** Shows active filters with "Clear All" button
+  - **View controls:** List/Grid toggle, Show Hidden checkbox, Deals checkbox with badge
+  - **Space savings:** 68px chrome vs. ~100px in v4 (32% improvement)
+  - **Removed:** Hero banner, old expandable filter bar, Settings gear, Help ? button
+  - 6 training scenarios documented in [BOOK-EXPLORER-VIDEO-SCENARIOS.md](BOOK-EXPLORER-VIDEO-SCENARIOS.md)
+
+**Pending Features:**
+- [ ] Filtered Folder View - Auto-hide empty, auto-expand matches
+
+**Video Recommendations:**
+- Video 1: "Book Explorer - Context Menu Basics" (2-3 min)
+- Video 2: "Book Explorer - Moving & Organizing" (2-3 min)
+- Video 3: "Book Explorer - Power User Tips" (2 min)
+- Video 4: "Book Explorer - Multi-Column Sorting" (2-3 min)
+- Video 5: "Book Explorer - Menu Bar & Toolbar" (3-4 min) **NEW**
+
+See [BOOK-EXPLORER-VIDEO-SCENARIOS.md](BOOK-EXPLORER-VIDEO-SCENARIOS.md) for complete scenario details, visual highlights, voiceover guidelines, and scene prep checklists.
 
 ---
 

@@ -7,6 +7,116 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.0] - 2026-02-05
+
+### Major Release: Book Explorer
+
+**v4 → v5 Paradigm Shift:** Horizontal Columns → Windows File Explorer
+
+ReaderWrangler v5 replaces the flat horizontal column interface with a familiar two-pane Book Explorer: folder tree (left) + content view (right). Organize your library using the same patterns you use for files on your desktop.
+
+#### Book Explorer Features
+
+**Folder Management:**
+- Create unlimited nested folder hierarchies (Category > Author > Series)
+- Right-click context menus for folders (7 operations) and books (9 operations)
+- Cut/Copy/Paste with keyboard shortcuts (Ctrl+X/C/V)
+- Drag-drop books and folders to organize
+- Special folders: "All Books" (library-wide view), "Inbox" (new imports)
+- Undo/Redo support (Ctrl+Z/Y) for all operations
+- Folder properties show book counts (direct + recursive)
+
+**List View:**
+- Sortable columns: Title, Author, Rating, Series, Series #, Date Added, Pages, and more
+- Multi-column sorting: Shift+Click to add secondary/tertiary sort levels (e.g., Series ▲ → # ▲)
+- Column chooser: Show/hide columns, drag to reorder
+- Manual sort mode for custom book ordering within folders
+
+**Cover View:**
+- Grid layout with book covers
+- Same selection and organization capabilities as list view
+- Toggle between List/Cover views per folder or globally
+
+**Migration:**
+- Automatic migration from v4 Columns interface
+- Columns become root-level folders
+- Dividers become subfolders
+- All organization and book data preserved
+
+#### Menu Bar + Toolbar (Chrome Redesign)
+
+After implementing Book Explorer, we redesigned the header chrome to better fit the new paradigm:
+
+**Space-Efficient Interface:**
+- Menu bar (32px): File/View/Help menus with About, Keyboard Shortcuts, and How To Use dialogs
+- Compact toolbar (36px): Search + integrated filters
+- **68px total chrome** (down from ~100px in v4) = **32% more screen space** for books
+- Removed: Hero banner, old expandable filter panel
+
+**Advanced Filtering:**
+- **Tier 1 (Toolbar):** Read Status, Tags, Source (Purchased/KU/Prime/etc.)
+- **Tier 2 (More Panel):** Collections, Amazon Rating, My Rating, Series, Date ranges
+- Active filter status banner with "Clear All" button
+- All filters persist across sessions
+
+**Personal Rating System:**
+- Rate books 0-5 stars based on your personal opinion (separate from Amazon ratings)
+- Star picker in book details dialog (blue stars vs. yellow Amazon stars)
+- "My Rating" column in list view (optional, hideable)
+- Sort by personal rating
+- Ratings preserved in backup/restore
+
+**Tag Management:**
+- Enhanced tag system with color coding
+- Computed tag counts (always accurate)
+- Tag Manager dialog for organizing tags
+
+**View Controls:**
+- List/Grid view toggle in toolbar
+- "Show Hidden" and "Deals" toggles with visual badges
+- View menu sync (toolbar ↔ menu bar)
+
+#### Technical
+
+- All user metadata preserved in backup/restore (tags, notes, price triggers, ratings)
+- localStorage and IndexedDB persistence
+- Full keyboard shortcut support maintained
+- Data migration automatic and seamless
+
+#### Upgrade Notes
+
+Users upgrading from v4:
+- Library automatically migrates on first load (Columns → Folders)
+- All books, organization, and metadata preserved
+- Backup recommended before upgrade (File → Export Backup)
+
+---
+
+For detailed implementation history, see:
+- [BOOK-EXPLORER-SESSION-LOG.md](docs/design/BOOK-EXPLORER-SESSION-LOG.md) - Folder tree implementation
+- [MENUBAR-TOOLBAR-IMPLEMENTATION.md](docs/design/MENUBAR-TOOLBAR-IMPLEMENTATION.md) - Chrome redesign
+
+## [5.0.0-alpha.174.4] - 2026-02-03
+
+### Added
+- **Book Explorer (Phase 1 Complete)** - Windows File Explorer paradigm for organizing 2500+ books
+  - Folder tree sidebar with unlimited nesting depth
+  - Nested folder creation via drag-and-drop
+  - List view with multi-level sortable columns (shift-click for secondary sort)
+  - Drag-and-drop books and folders with visual feedback
+  - Breadcrumb navigation with clickable folder links
+  - Context menus for books and folders (right-click)
+  - Folder tooltips show full path and book count
+  - Migration from Column Organizer: columns → folders, dividers → subfolders
+  - Manual sort mode preserves user-defined order
+  - Inbox folder for new/unsorted books
+  - All Books view for library-wide operations
+  - Ctrl+A select all within current folder
+  - Multi-book operations: hide, move, copy, delete
+  - Session log: [BOOK-EXPLORER-SESSION-LOG.md](docs/design/BOOK-EXPLORER-SESSION-LOG.md)
+  - Replaces: Column Organizer, Column Carousel, Desktop & Folders designs
+  - **Impact**: Scalable organization for large libraries using familiar desktop paradigm
+
 ## [4.27.0] - 2026-01-25
 
 ### Added

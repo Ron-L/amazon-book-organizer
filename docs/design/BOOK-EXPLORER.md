@@ -134,7 +134,7 @@ Sortable table with configurable columns.
 **Column Chooser:**
 - Right-click column header to show/hide columns
 - Drag columns to reorder
-- Available columns: Cover, Title, Author, Rating, Series, Pages, Acquisition Date, Collections, Read Status, Price, Review Count
+- Available columns: Cover, Title, Author, Rating, Series, Series Position, Pages, Acquisition Date, Collections, Read Status, Price, Review Count
 
 ### Cover View
 Grid of book covers, similar to current column app.
@@ -149,6 +149,66 @@ Grid of book covers, similar to current column app.
 - Button in toolbar: [List] [Covers]
 - Keyboard shortcut: Ctrl+1 (list), Ctrl+2 (covers)
 - View preference persisted per folder (optional) or global
+
+### Sorting vs. Custom Order
+
+Two distinct modes with different behaviors:
+
+| Mode | Column Header Click | Drag to Reorder | Use Case |
+|------|---------------------|-----------------|----------|
+| **Sorted View** (Title, Author, Rating, etc.) | Changes sort direction | Disabled | Quick browsing, finding books |
+| **Custom View** | **Reorders books permanently** | Enabled | Organizing, manual arrangement |
+
+**Custom View workflow:**
+1. Open folder (shows custom order - typically acquisition date initially)
+2. Click column header (e.g., "Series Position") → books reorder permanently
+3. Drag to adjust (e.g., insert omnibus at position 1, move anthology between #3 and #4)
+4. Undo captures reorder operations
+
+**Benefits:**
+- Immediate visual feedback when reordering
+- Consistent mental model: Custom = editable workspace, Sorted = read-only lens
+- One-step operation (no separate "Apply" action)
+- Column headers are already interactive and discoverable
+
+**Visual cues:**
+- Tooltip on Custom view headers: "Click to reorder"
+- Animation when reordering so user sees change
+- Sort indicator (▲/▼) only shown in Sorted views, not Custom
+
+### Right Pane Content (Folders + Books)
+
+The right pane shows **both subfolders and books** for the selected folder, following OS file explorer conventions.
+
+**Display order:** Subfolders first, then books (standard Windows/macOS behavior)
+
+**List View:**
+```
+│ Type │ Title              │ Author        │ Rating │ Series   │
+│──────┼────────────────────┼───────────────┼────────┼──────────│
+│ 📁   │ Dresden Files      │               │        │          │
+│ 📁   │ Codex Alera        │               │        │          │
+│ 📁   │ Miscellaneous      │               │        │          │
+│ 📖   │ Standalone Novel 1 │ Jim Butcher   │ ★★★★☆  │ -        │
+│ 📖   │ Standalone Novel 2 │ Jim Butcher   │ ★★★★★  │ -        │
+```
+
+**Cover View:**
+- Folder tiles: 📁 icon with folder name below
+- Book tiles: Cover image with title below
+- Folders appear first in grid, then books
+
+**Interactions:**
+| Action | On Folder | On Book |
+|--------|-----------|---------|
+| Single-click | Select (highlight) | Select (highlight) |
+| Double-click | Navigate into folder, sync tree selection | Open book detail modal |
+| Drag | Move folder (future) | Move book to another folder |
+
+**Benefits:**
+- Empty parent folders (e.g., "Jim Butcher" with 0 direct books) show subfolders instead of blank pane
+- Consistent with OS file explorer mental model
+- Enables navigation without using the tree
 
 ---
 
@@ -230,22 +290,20 @@ Two distinct modes with different purposes:
 
 ## Context Menus
 
-### Right-Click on Book
-- Open Details
-- Copy / Cut / Paste
-- Move to... (folder picker)
-- Remove from Folder
-- Add to Next Reads
-- [Tags submenu]
+**See [FOLDER-DRAG-DROP.md - Right-Click Context Menus section](FOLDER-DRAG-DROP.md#right-click-context-menus) for complete specifications.**
 
-### Right-Click on Folder (in Tree)
-- Rename
-- New Subfolder
-- Delete (moves books to Unorganized)
-- Move to... (folder picker)
-- Expand All / Collapse All
+### Summary
 
-### Right-Click on Column Header (List View)
+**Book context menu** (right-click on book):
+- Move to, Copy to, Open in Amazon, Copy Title, Add Note, Set Price Goal
+- Cut/Copy/Paste (Ctrl+X/C/V)
+- Hide Book, Delete Book
+
+**Folder context menu** (right-click on folder):
+- **Left panel:** Navigation & organization (Open, Rename, Move to, Create Subfolder, Cut/Copy/Paste, Delete, Properties)
+- **Right panel:** Full parity with left panel + bulk operations (Open Books in Amazon, Copy Book Titles, Set Price Goal for Books, Hide/Delete Books in Folder)
+
+**Column header context menu** (list view):
 - Sort Ascending / Descending
 - Show/Hide Columns submenu
 - Reset Column Widths
@@ -328,11 +386,14 @@ Filter by tag shows matching books across all folders.
 - Basic folder operations (create, rename, delete)
 
 ### Phase 2: Enhanced Features
+- Show subfolders in right panel (folders + books view)
+- Resizable left pane (drag divider)
 - Cover view toggle
 - Column chooser
 - Search (jump-to)
 - Keyboard navigation
 - Cut/copy/paste
+- All Books: Hover tooltip showing folder location(s) with links that navigate to book in that folder
 
 ### Phase 3: Polish
 - Drag to reorder folders
@@ -360,13 +421,18 @@ Filter by tag shows matching books across all folders.
 ### Dual-Pane Split
 - Two folder views side by side
 - **Deferred to v2**: Tree + drag-to-folder covers 90% of use cases
+- **Design options:** See [DUAL-PANE-SPLIT.md](DUAL-PANE-SPLIT.md) for full analysis
+  - Option A: Built-in split pane (8-12 hours, native drag works)
+  - Option B: BroadcastChannel sync for two browser tabs (4-6 hours, copy/paste only)
 
 ---
 
 ## Related Documents
 
+- `WIZARD-MODE.md` - Auto-organize by author/series (Phase 5)
+- `TAGS.md` - Tag system design (complementary feature)
+- `DUAL-PANE-SPLIT.md` - V2 dual-pane design options (deferred)
+- `TODO.md` - Priority 1 task list
 - `DESKTOP-FOLDERS.md` - Previous virtual desktop design (superseded)
 - `COLUMN-ARRANGER.md` - Previous split-pane design (superseded)
 - `COLUMN-CAROUSEL.md` - Previous carousel design (superseded)
-- `TAGS.md` - Tag system design (complementary feature)
-- `TODO.md` - Priority 1 task list

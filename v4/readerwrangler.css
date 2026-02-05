@@ -1,0 +1,327 @@
+/* Style Guide CSS Variables (v4.6.0 - Blue palette) */
+:root {
+    /* Primary colors - Blue palette */
+    --color-primary: #2563eb;
+    --color-primary-light: #3b82f6;
+    --color-primary-lighter: #60a5fa;
+    --color-primary-dark: #1d4ed8;
+
+    /* Accent */
+    --color-accent: #c9a227;
+
+    /* Text */
+    --color-text: #1a1a2e;
+    --color-text-muted: #64748b;
+
+    /* Status */
+    --color-success: #16a34a;
+    --color-danger: #dc2626;
+
+    /* Background */
+    --color-background: #f8fafc;
+
+    /* Borders */
+    --color-border: #e2e8f0;
+
+    /* Gradients - Blue */
+    --gradient-hero: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
+
+    /* Shadows */
+    --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.1);
+    --shadow-elevated: 0 10px 15px -3px rgba(0,0,0,0.1);
+    --shadow-modal: 0 25px 50px -12px rgba(0,0,0,0.25);
+
+    /* Typography */
+    --font-heading: 'Libre Baskerville', Georgia, serif;
+    --font-body: 'Lato', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-mono: system-ui, monospace;
+}
+
+body { margin: 0; padding: 0; overflow: hidden; }
+
+/* App title styling - Alloid Labs branding */
+.app-title {
+  font-family: 'Libre Baskerville', Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.tagline {
+  font-size: 0.95rem;
+  color: #333;
+}
+
+.attribution {
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+}
+.dragging { opacity: 0.3; }
+.drop-target { background-color: rgba(59, 130, 246, 0.1); }
+.drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.9;
+}
+/* v3.14.0.l - Drag ghost border - bottom/side glow only (no top edge that looks like drop indicator) */
+.drag-ghost-border {
+    box-shadow:
+        0 4px 6px -1px rgba(0, 0, 0, 0.3),
+        0 8px 15px -3px rgba(37, 99, 235, 0.4),
+        3px 0 0 0 rgba(37, 99, 235, 0.5),
+        -3px 0 0 0 rgba(37, 99, 235, 0.5),
+        0 3px 0 0 rgba(37, 99, 235, 0.5);
+}
+.drop-indicator {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: #3b82f6;
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 10;
+}
+.drop-indicator::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: -4px;
+    width: 10px;
+    height: 10px;
+    background-color: #3b82f6;
+    border-radius: 50%;
+}
+/* v3.14.0.k - Debug colors for drop indicators */
+.drop-indicator-divider {
+    background-color: #dc2626; /* Red for dividers */
+}
+.drop-indicator-divider::before {
+    background-color: #dc2626;
+}
+.drop-indicator-book {
+    background-color: #16a34a; /* Green for books */
+}
+.drop-indicator-book::before {
+    background-color: #16a34a;
+}
+.column-drop-indicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background-color: #3b82f6;
+    z-index: 100;
+    pointer-events: none;
+}
+.editable-title-container {
+    cursor: pointer;
+}
+.editable-title {
+    cursor: pointer;
+}
+.editable-title:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-radius: 4px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+}
+.pencil-icon {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+.editable-title-container:hover .pencil-icon {
+    opacity: 1;
+}
+.column-dragging {
+    opacity: 0.5;
+}
+.book-clickable {
+    cursor: pointer;
+    transition: transform 0.2s, outline 0.15s;
+}
+.book-clickable:hover {
+    transform: scale(1.05);
+}
+.book-clickable.selected {
+    outline: 3px solid #2563eb;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    transform: scale(1.02);
+}
+.book-clickable.selected:hover {
+    outline-color: #1d4ed8;
+    transform: scale(1.05);
+}
+/* v4.16.0.a - Cut/Copy visual feedback (higher specificity to override selected/hover) */
+.book-clickable.cut-pending,
+.book-clickable.cut-pending.selected,
+.book-clickable.cut-pending:hover,
+.book-clickable.cut-pending.selected:hover {
+    opacity: 0.5;
+    outline: 2px dashed #f97316 !important;
+    outline-offset: 2px;
+    box-shadow: none;
+}
+.book-clickable.copy-pending,
+.book-clickable.copy-pending.selected,
+.book-clickable.copy-pending:hover,
+.book-clickable.copy-pending.selected:hover {
+    outline: 2px dashed #3b82f6 !important;
+    outline-offset: 2px;
+    box-shadow: none;
+}
+.status-indicator {
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+.status-indicator:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}
+@keyframes filter-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+    50% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+}
+.icon-spin {
+    animation: spin 1s linear infinite;
+}
+.icon-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+.status-icon {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    vertical-align: middle;
+    margin-right: 4px;
+}
+.read-ribbon {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 3px 8px;
+    transform: rotate(-45deg) translateX(25%) translateY(-25%);
+    transform-origin: bottom right;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.5px;
+    z-index: 10;
+}
+.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.filter-button-active {
+    animation: filter-pulse 5s infinite;
+}
+
+/* v4.6.0 - Always-visible scrollbar for columns container */
+/* Uses standard CSS scrollbar properties (Chrome 121+, Firefox, Safari) */
+.columns-scroll-container {
+    scrollbar-width: thin;              /* Standard: thin scrollbar */
+    scrollbar-color: #94a3b8 #e2e8f0;   /* Standard: thumb and track colors */
+    scrollbar-gutter: stable;           /* Reserve space for scrollbar */
+}
+
+/* v4.21.0.a - Book Notes sticky note styling */
+.book-note {
+    position: relative;
+    background: linear-gradient(135deg, #fff9c4 0%, #fffde7 100%);
+    color: #5d4037;
+    padding: 24px 16px 16px 16px;
+    border-radius: 2px;
+    box-shadow:
+        3px 3px 0px rgba(0,0,0,0.1),
+        6px 6px 0px rgba(0,0,0,0.08),
+        0 4px 8px rgba(0,0,0,0.15);
+    margin-bottom: 1rem;
+}
+
+/* Red thumbtack at top */
+.book-note::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 16px;
+    background: radial-gradient(circle, #dc143c 0%, #8b0000 100%);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Pin shadow/attachment point for 3D effect */
+.book-note::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: rgba(0,0,0,0.15);
+    border-radius: 50%;
+}
+
+.book-note-text {
+    white-space: pre-wrap;
+    line-height: 1.5;
+}
+
+.book-note-edit-btn {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #8d6e63;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background-color 0.15s;
+}
+
+.book-note-edit-btn:hover {
+    background-color: rgba(0,0,0,0.1);
+}
+
+.book-note-editor {
+    width: 100%;
+    min-height: 80px;
+    padding: 12px;
+    border: 2px solid #c9a227;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    resize: vertical;
+    background: #fffef5;
+}
+
+.book-note-editor:focus {
+    outline: none;
+    border-color: #2563eb;
+}

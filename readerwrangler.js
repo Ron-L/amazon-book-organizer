@@ -1,356 +1,112 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "4.27.0";  // Release version shown to users
-        const ORGANIZER_VERSION = "4.27.0";  // Build version for this file
+        const APP_VERSION = "5.0.0";  // Release version shown to users
+        const ORGANIZER_VERSION = "5.0.0";  // Build version for this file
+
+        // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
+        const COLUMN_CONFIG = {
+            title: { label: 'Name', sortKey: 'title', defaultDir: 'asc', cssVar: '--col-title', alwaysVisible: true },
+            author: { label: 'Author', sortKey: 'author', defaultDir: 'asc', cssVar: '--col-author' },
+            series: { label: 'Series', sortKey: 'series', defaultDir: 'asc', cssVar: '--col-series' },
+            seriesNum: { label: '#', sortKey: 'seriesNum', defaultDir: 'asc', cssVar: '--col-seriesNum', textCenter: true },
+            rating: { label: 'Rating', sortKey: 'rating', defaultDir: 'asc', cssVar: '--col-rating' },
+            myRating: { label: 'My Rating', sortKey: 'myRating', defaultDir: 'desc', cssVar: '--col-myRating' },
+            dateAdded: { label: 'Date Added', sortKey: 'dateAdded', defaultDir: 'desc', cssVar: '--col-dateAdded' },
+            price: { label: 'Price', sortKey: 'price', defaultDir: 'asc', cssVar: '--col-price' },
+            priceGoal: { label: 'Goal', sortKey: 'priceGoal', defaultDir: 'asc', cssVar: '--col-priceGoal' },
+            delta: { label: 'Under', sortKey: 'delta', defaultDir: 'desc', cssVar: '--col-delta' },
+            amazon: { label: 'Amazon', sortKey: null, cssVar: '--col-amazon', textCenter: true, noResize: true }
+        };
         document.title = "ReaderWrangler";
-        const STORAGE_KEY = "readerwrangler-state";
-        const CACHE_KEY = "readerwrangler-enriched-cache";
-        const SETTINGS_KEY = "readerwrangler-settings";
-        const STATUS_KEY = "readerwrangler-status"; // v3.7.0.n - persist library/collections status
-        const FILTERS_KEY = "readerwrangler-filters"; // v3.8.0.f - persist filter state
-        const DB_NAME = "ReaderWranglerDB";
-        const DB_VERSION = 1;
-        const BOOKS_STORE = "books";
-        // MANIFEST_CHECK_INTERVAL removed in v3.6.1 - replaced with IndexedDB manifests
+        // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
+        // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
+        // normalizeBook, parsePrice, getAmazonUrl, calculateFreshness, formatRelativeTime - see uiHelpers.js
+        // buildCoverUrlMap, populateCoverCache - see storage.js
 
-        // Amazon Associates affiliate tag (v4.4.0)
-        const AMAZON_AFFILIATE_TAG = 'rclewent-20';
+        // v5.0.0-alpha.130: Reusable info dialog for large messages (avoids alert() scrollbar issues)
+        function showInfoDialog(title, message) {
+            return new Promise((resolve) => {
+                // Create overlay
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                `;
 
-        // Parse price string (e.g., "$5.99") to number, returns null if invalid
-        const parsePrice = (price) => {
-            if (price == null) return null;
-            if (typeof price === 'number') return price;
-            if (typeof price === 'string') {
-                const cleaned = price.replace(/[$,\s]/g, '');
-                const num = parseFloat(cleaned);
-                return isNaN(num) ? null : num;
-            }
-            return null;
-        };
+                // Create dialog
+                const dialog = document.createElement('div');
+                dialog.style.cssText = `
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 600px;
+                    width: 90%;
+                    max-height: 80vh;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                `;
 
-        // TODO: DEPRECATION 2026-07-20 - Remove legacy isOwned/isWishlist field handling after 6 months
-        // Legacy format: isOwned: true/false (from fetcher), isWishlist: 0/1 (internal derived)
-        // New format: onWishlist: true/false, ownershipType includes 'wishlist' for wishlist-only items
-        const normalizeBook = (book) => {
-            const normalized = { ...book };
+                // Create title
+                const titleEl = document.createElement('h2');
+                titleEl.textContent = title;
+                titleEl.style.cssText = `
+                    margin: 0 0 16px 0;
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #333;
+                `;
 
-            // Handle legacy isOwned field from JSON files
-            if ('isOwned' in book) {
-                if (book.isOwned === false) {
-                    // Legacy wishlist item
-                    normalized.onWishlist = true;
-                    normalized.ownershipType = normalized.ownershipType || 'wishlist';
-                } else {
-                    // Legacy owned item
-                    normalized.onWishlist = book.onWishlist ?? false;
-                }
-                delete normalized.isOwned;
-            }
+                // Create message
+                const messageEl = document.createElement('div');
+                messageEl.style.cssText = `
+                    margin-bottom: 24px;
+                    font-size: 14px;
+                    line-height: 1.6;
+                    color: #555;
+                    white-space: pre-line;
+                `;
+                messageEl.textContent = message;
 
-            // Handle legacy isWishlist field (internal format)
-            if ('isWishlist' in book) {
-                normalized.onWishlist = !!book.isWishlist;
-                delete normalized.isWishlist;
-            }
+                // Create OK button
+                const button = document.createElement('button');
+                button.textContent = 'OK';
+                button.style.cssText = `
+                    background: #007bff;
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 10px 24px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    float: right;
+                `;
+                button.onmouseover = () => button.style.background = '#0056b3';
+                button.onmouseout = () => button.style.background = '#007bff';
 
-            // Ensure defaults
-            normalized.onWishlist = normalized.onWishlist ?? false;
-            normalized.ownershipType = normalized.ownershipType || 'purchased';
-
-            return normalized;
-        };
-
-        // Build Amazon URL with affiliate tag (v4.4.0)
-        const getAmazonUrl = (asin) => `https://www.amazon.com/dp/${asin}?tag=${AMAZON_AFFILIATE_TAG}`;
-
-        // IndexedDB Helper Functions
-        const openDB = () => {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-                
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => resolve(request.result);
-                
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains(BOOKS_STORE)) {
-                        db.createObjectStore(BOOKS_STORE, { keyPath: 'id' });
-                    }
+                button.onclick = () => {
+                    document.body.removeChild(overlay);
+                    resolve();
                 };
+
+                // Assemble dialog
+                dialog.appendChild(titleEl);
+                dialog.appendChild(messageEl);
+                dialog.appendChild(button);
+                overlay.appendChild(dialog);
+
+                // Show dialog
+                document.body.appendChild(overlay);
             });
-        };
-        
-        // v4.18.0.a - Merge logic: preserve orphan wishlist items on import
-        // Uses onWishlist field (normalized from legacy isWishlist/isOwned)
-        const saveBooksToIndexedDB = async (books) => {
-            try {
-                console.log(`🔄 Saving ${books.length} books to IndexedDB...`);
-
-                const db = await openDB();
-
-                // Step 1: Load existing books BEFORE clearing (to preserve orphan wishlists)
-                const existingBooks = await new Promise((resolve, reject) => {
-                    const readTxn = db.transaction([BOOKS_STORE], 'readonly');
-                    const readStore = readTxn.objectStore(BOOKS_STORE);
-                    const request = readStore.getAll();
-                    request.onsuccess = () => resolve(request.result || []);
-                    request.onerror = () => reject(request.error);
-                });
-
-                // Build map of existing books by ASIN (normalize to handle legacy isWishlist field)
-                const existingByAsin = new Map();
-                for (const book of existingBooks) {
-                    existingByAsin.set(book.asin, normalizeBook(book));
-                }
-
-                // Build set of ASINs in the new import
-                const newAsins = new Set(books.map(b => b.asin));
-
-                // Step 2: Find orphan wishlist items (in existing but not in new import)
-                const orphanWishlists = [];
-                for (const [asin, existingBook] of existingByAsin) {
-                    if (!newAsins.has(asin) && existingBook.onWishlist) {
-                        orphanWishlists.push(existingBook);
-                    }
-                }
-
-                if (orphanWishlists.length > 0) {
-                    console.log(`📋 Preserving ${orphanWishlists.length} orphan wishlist items`);
-                }
-
-                // Step 3: Combine new books with orphan wishlists
-                const allBooks = [...books, ...orphanWishlists];
-
-                // Step 4: Deduplicate by ASIN (owned books take priority, preserve user metadata)
-                const booksByAsin = new Map();
-                const duplicates = [];
-                const wishlistToOwned = [];
-
-                for (const book of allBooks) {
-                    const existing = booksByAsin.get(book.asin);
-                    if (existing) {
-                        duplicates.push(book.asin);
-                        // Owned books (onWishlist falsy) take priority over wishlist
-                        if (existing.onWishlist && !book.onWishlist) {
-                            // New book is owned, replace wishlist entry
-                            // Preserve user metadata from wishlist entry (column assignment preserved via localStorage)
-                            wishlistToOwned.push(book.asin);
-                            booksByAsin.set(book.asin, {
-                                ...book,
-                                addedToWishlist: existing.addedToWishlist,
-                                // Clear price goal since book is now owned
-                                priceTrigger: null,
-                                targetPrice: null
-                            });
-                        } else if (!existing.onWishlist && book.onWishlist) {
-                            // Existing is owned, new is wishlist - keep existing
-                            // but preserve addedToWishlist if new book has it
-                            if (book.addedToWishlist && !existing.addedToWishlist) {
-                                booksByAsin.set(book.asin, {
-                                    ...existing,
-                                    addedToWishlist: book.addedToWishlist
-                                });
-                            }
-                            // else keep existing as-is
-                        }
-                        // If both same ownership status, keep first occurrence (existing)
-                    } else {
-                        // Check if this ASIN existed before and was a wishlist item now becoming owned
-                        const previousBook = existingByAsin.get(book.asin);
-                        if (previousBook && previousBook.onWishlist && !book.onWishlist) {
-                            wishlistToOwned.push(book.asin);
-                            booksByAsin.set(book.asin, {
-                                ...book,
-                                addedToWishlist: previousBook.addedToWishlist,
-                                // Clear price goal since book is now owned
-                                priceTrigger: null,
-                                targetPrice: null
-                            });
-                        } else {
-                            booksByAsin.set(book.asin, book);
-                        }
-                    }
-                }
-
-                const uniqueBooks = Array.from(booksByAsin.values());
-
-                if (duplicates.length > 0) {
-                    console.warn(`⚠️  Found ${duplicates.length} duplicate ASINs, owned books take priority`);
-                    console.warn(`   Sample duplicates:`, duplicates.slice(0, 5));
-                }
-
-                if (wishlistToOwned.length > 0) {
-                    console.log(`🎉 ${wishlistToOwned.length} wishlist items now owned (price goals cleared)`);
-                }
-
-                // Step 5: Clear and save
-                await new Promise((resolve, reject) => {
-                    const clearTxn = db.transaction([BOOKS_STORE], 'readwrite');
-                    const clearStore = clearTxn.objectStore(BOOKS_STORE);
-                    clearStore.clear();
-                    clearTxn.oncomplete = () => {
-                        console.log('✅ Cleared existing IndexedDB books');
-                        resolve();
-                    };
-                    clearTxn.onerror = () => reject(clearTxn.error || new Error('Failed to clear IndexedDB'));
-                });
-
-                // Step 6: Add all unique books
-                return new Promise((resolve, reject) => {
-                    const addTxn = db.transaction([BOOKS_STORE], 'readwrite');
-                    const addStore = addTxn.objectStore(BOOKS_STORE);
-
-                    // Add all unique books
-                    for (const book of uniqueBooks) {
-                        addStore.add(book);
-                    }
-
-                    addTxn.oncomplete = () => {
-                        console.log('✅ Saved', uniqueBooks.length, 'unique books to IndexedDB');
-                        resolve(uniqueBooks);  // Return merged books for UI state
-                    };
-                    addTxn.onerror = () => {
-                        const error = addTxn.error || new Error('IndexedDB transaction failed with no error details');
-                        console.error('❌ IndexedDB save failed:', error);
-                        reject(error);
-                    };
-                });
-            } catch (error) {
-                console.error('❌ IndexedDB save exception:', error);
-                throw error || new Error('IndexedDB save failed');
-            }
-        };
-        
-        // v4.18.0.a - Apply normalizeBook to handle legacy isWishlist/isOwned fields
-        const loadBooksFromIndexedDB = async () => {
-            const db = await openDB();
-            const transaction = db.transaction([BOOKS_STORE], 'readonly');
-            const store = transaction.objectStore(BOOKS_STORE);
-            const request = store.getAll();
-
-            return new Promise((resolve, reject) => {
-                request.onsuccess = () => {
-                    // Normalize all books to handle any legacy field formats
-                    const books = (request.result || []).map(normalizeBook);
-                    console.log('✅ Loaded', books.length, 'books from IndexedDB');
-                    resolve(books);
-                };
-                request.onerror = () => reject(request.error);
-            });
-        };
-        
-        const clearIndexedDB = async () => {
-            const db = await openDB();
-            const transaction = db.transaction([BOOKS_STORE], 'readwrite');
-            const store = transaction.objectStore(BOOKS_STORE);
-            await store.clear();
-            console.log('✅ Cleared IndexedDB');
-        };
-
-
-        // Calculate freshness status from fetchDate
-        const calculateFreshness = (fetchDate) => {
-            if (!fetchDate) return 'unknown';
-
-            const now = new Date();
-            const fetchTime = new Date(fetchDate);
-            const daysSinceFetch = (now - fetchTime) / (1000 * 60 * 60 * 24);
-
-            if (daysSinceFetch < 7) return 'fresh';
-            if (daysSinceFetch <= 30) return 'stale';
-            return 'obsolete';
-        };
-
-        // ===== Cover Image Caching (v4.13.0) =====
-        const COVER_CACHE_NAME = 'rw-covers';
-
-        // Build URL map from cached covers (synchronous lookup after async init)
-        const buildCoverUrlMap = async (books) => {
-            const startTime = performance.now();
-            const urlMap = {};
-            try {
-                const cache = await caches.open(COVER_CACHE_NAME);
-                for (const book of books) {
-                    if (book.coverUrl) {
-                        const cached = await cache.match(book.coverUrl);
-                        if (cached) {
-                            const blob = await cached.blob();
-                            urlMap[book.coverUrl] = URL.createObjectURL(blob);
-                        }
-                    }
-                }
-                const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-                console.log(`📷 Cover cache: ${Object.keys(urlMap).length}/${books.length} covers loaded from cache in ${elapsed}s`);
-            } catch (e) {
-                console.error('Cover cache read failed:', e);
-            }
-            return urlMap;
-        };
-
-        // Populate cache in background (non-blocking) with parallel fetching
-        const populateCoverCache = async (books) => {
-            const CONCURRENCY = 20; // Number of parallel fetches
-            const startTime = performance.now();
-            try {
-                const cache = await caches.open(COVER_CACHE_NAME);
-                let cached = 0, fetched = 0, failed = 0;
-
-                // First pass: identify uncached books
-                const uncachedBooks = [];
-                for (const book of books) {
-                    if (!book.coverUrl) continue;
-                    const existing = await cache.match(book.coverUrl);
-                    if (existing) {
-                        cached++;
-                    } else {
-                        uncachedBooks.push(book);
-                    }
-                }
-
-                // Second pass: fetch uncached in parallel batches
-                for (let i = 0; i < uncachedBooks.length; i += CONCURRENCY) {
-                    const batch = uncachedBooks.slice(i, i + CONCURRENCY);
-                    const results = await Promise.allSettled(
-                        batch.map(async (book) => {
-                            const response = await fetch(book.coverUrl);
-                            if (response.ok) {
-                                await cache.put(book.coverUrl, response);
-                                return 'fetched';
-                            }
-                            return 'failed';
-                        })
-                    );
-                    results.forEach(r => {
-                        if (r.status === 'fulfilled' && r.value === 'fetched') fetched++;
-                        else failed++;
-                    });
-                }
-
-                const elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
-                console.log(`📷 Cover cache populated: ${cached} already cached, ${fetched} newly fetched, ${failed} failed in ${elapsed}s`);
-            } catch (e) {
-                console.error('Cover cache population failed:', e);
-            }
-        };
-
-        // Format relative time for display
-        const formatRelativeTime = (dateString) => {
-            if (!dateString) return 'Unknown';
-
-            const now = new Date();
-            const date = new Date(dateString);
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / (1000 * 60));
-            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-            if (diffMins < 60) return `${diffMins}m ago`;
-            if (diffHours < 24) return `${diffHours}h ago`;
-            if (diffDays === 1) return 'Yesterday';
-            if (diffDays < 7) return `${diffDays}d ago`;
-            if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-            return `${diffDays}d ago`;
-        };
+        }
 
         function ReaderWrangler() {
             const [books, setBooks] = useState([]);
@@ -379,8 +135,28 @@
             const [insertDividerOpen, setInsertDividerOpen] = useState(null); // v3.11.0 - columnId for Insert Divider modal
             const [newDividerLabel, setNewDividerLabel] = useState(''); // v3.11.0
             const [hoveringDivider, setHoveringDivider] = useState(null); // v3.11.0 - {columnId, dividerId}
-            const [helpOpen, setHelpOpen] = useState(false);
-            const [settingsOpen, setSettingsOpen] = useState(false);
+            // v5.0.0-alpha.175.48 - Removed helpOpen and settingsOpen (dead code)
+            // v5.0.0-alpha.175.1 - Menu bar state
+            const [openMenuBar, setOpenMenuBar] = useState(null); // 'file' | 'view' | 'help' | null
+            const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
+            const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false);
+            const [howToDialogOpen, setHowToDialogOpen] = useState(false);
+            // v5.0.0-alpha.175.4 - Toolbar filter dropdown state
+            const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+            const [tagsDropdownOpen, setTagsDropdownOpen] = useState(false);
+            const [typesDropdownOpen, setTypesDropdownOpen] = useState(false);
+            // v5.0.0-alpha.175.40 - Phase 5.1: More panel state
+            const [morePanelOpen, setMorePanelOpen] = useState(false);
+            // v5.0.0-alpha.175.41 - Phase 5.2: More panel filter dropdowns
+            const [collectionsDropdownOpen, setCollectionsDropdownOpen] = useState(false);
+            // v5.0.0-alpha.175.42 - Phase 5.3: Amazon Rating dropdown
+            const [amazonRatingDropdownOpen, setAmazonRatingDropdownOpen] = useState(false);
+            // v5.0.0-alpha.175.43 - Phase 5.4: My Rating dropdown
+            const [myRatingDropdownOpen, setMyRatingDropdownOpen] = useState(false);
+            // v5.0.0-alpha.175.44 - Phase 5.5: Series dropdown
+            const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false);
+            // v5.0.0-alpha.175.45 - Phase 5.6: Date dropdown
+            const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
             const [deleteDialogOpen, setDeleteDialogOpen] = useState(null);
             const [deleteDestination, setDeleteDestination] = useState('');
             // v4.16.0.aq - State for "last copy" delete warning dialog
@@ -390,6 +166,7 @@
             const [showCustomPriceInput, setShowCustomPriceInput] = useState(false); // v4.17.0
             const [showBulkPriceModal, setShowBulkPriceModal] = useState(false); // v4.20.0.a - bulk price goal modal
             const [bulkPriceInput, setBulkPriceInput] = useState(''); // v4.20.0.a - bulk price goal input
+            const [bulkPriceBookIds, setBulkPriceBookIds] = useState([]); // v5.0.0-alpha.169.8 - store book IDs when modal opens
             const [isEditingNote, setIsEditingNote] = useState(false); // v4.21.0.a - book note edit mode
             const [noteEditContent, setNoteEditContent] = useState(''); // v4.21.0.a - book note editor content
             const [tagInputValue, setTagInputValue] = useState(''); // v4.27.0 - tag input autocomplete value
@@ -429,8 +206,11 @@
             const [datePreset, setDatePreset] = useState(''); // Date filter preset: '' | 'last30' | 'last90' | 'lastYear' | '2025' | '2024' | '2023' | 'custom' (NEW v4.15.6)
             const [tagFilter, setTagFilter] = useState([]); // v4.27.0 - Filter by tags (array of tag names, OR logic)
             const [tagRegistry, setTagRegistry] = useState({}); // v4.27.0 - Central tag registry {tagName: {label, count}}
-            const [filterPanelOpen, setFilterPanelOpen] = useState(false); // Collapsible filter panel state (NEW v3.8.0)
-            const [showAdvancedFilters, setShowAdvancedFilters] = useState(false); // Show advanced filters section (NEW v4.14.0.a, v4.14.0.b - no persistence, resets when panel closes)
+            const [selectedCollections, setSelectedCollections] = useState([]); // v5.0.0-alpha.175.41 - Phase 5.2: Collections filter (array, OR logic)
+            const [minAmazonRating, setMinAmazonRating] = useState(''); // v5.0.0-alpha.175.42 - Phase 5.3: Amazon Rating filter (single-select, minimum rating)
+            const [minMyRating, setMinMyRating] = useState(''); // v5.0.0-alpha.175.43 - Phase 5.4: My Rating filter (single-select, '' = all, 'unrated' = 0, '1'-'5' = minimum rating)
+            const [selectedSeries, setSelectedSeries] = useState([]); // v5.0.0-alpha.175.44 - Phase 5.5: Series filter (array, OR logic, NOT_IN_SERIES special value)
+            // v5.0.0-alpha.175.47 - Phase 7: Removed filterPanelOpen and showAdvancedFilters (old filter bar removed)
             const [showHidden, setShowHidden] = useState(false); // Show hidden books toggle (NEW v4.1.0.d)
             const [, forceUpdate] = useState({});
             const [coverUrlMap, setCoverUrlMap] = useState({}); // Cover image cache URL map (v4.13.0)
@@ -447,6 +227,87 @@
             const [footerClipboardVisible, setFooterClipboardVisible] = useState(false);
             // v4.16.0.s - Per-instance hidden state (Set of instanceIds)
             const [hiddenInstances, setHiddenInstances] = useState(new Set());
+
+            // v5.0.0 - Book Explorer state
+            const [viewMode, setViewMode] = useState('columns'); // 'columns' | 'explorer'
+            const [folders, setFolders] = useState([]); // User-created folders
+            const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
+            // v5.0.0-alpha.174 - Multi-column sorting: array of sort criteria (max 3)
+            const [explorerSort, setExplorerSort] = useState([{ column: 'dateAdded', direction: 'desc' }]);
+            const [folderSortSettings, setFolderSortSettings] = useState({}); // v5.0.0-alpha.100 - Per-folder sort settings map {folderId: sort array}
+            const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
+            const [explorerCoverCols, setExplorerCoverCols] = useState(56); // Slider value (4-60), actual cols = 64-value
+            const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed (left panel)
+            const [editingFolderName, setEditingFolderName] = useState(''); // Folder rename input (left panel)
+            const [isPlaceholderMode, setIsPlaceholderMode] = useState(false); // v5.0.0-alpha.134 - Placeholder text mode for new folder rename (left panel)
+            const [rightPanelEditingId, setRightPanelEditingId] = useState(null); // v5.0.0-alpha.156 - Folder being renamed (right panel)
+            const [rightPanelEditingName, setRightPanelEditingName] = useState(''); // v5.0.0-alpha.156 - Folder rename input (right panel)
+            const [rightPanelPlaceholderMode, setRightPanelPlaceholderMode] = useState(false); // v5.0.0-alpha.156 - Placeholder mode (right panel)
+            const [explorerDragBookId, setExplorerDragBookId] = useState(null); // Book being dragged in Explorer
+            const [explorerDropTargetId, setExplorerDropTargetId] = useState(null); // Folder being dragged over
+            const [explorerSelectedBooks, setExplorerSelectedBooks] = useState(new Set()); // Multi-select in Explorer
+            const [explorerSelectedFolders, setExplorerSelectedFolders] = useState(new Set()); // v5.0.0-alpha.54 - Folder selection in right pane
+            const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select
+            const [explorerBookContextMenu, setExplorerBookContextMenu] = useState(null); // v5.0.0-alpha.165 - Book context menu in Explorer (separate from Columns App menu)
+            const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
+            const [explorerFolderDragTarget, setExplorerFolderDragTarget] = useState(null); // v5.0.0-alpha.69 - { type: 'reorder'|'reparent', index?, position?, folderId? }
+            const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
+            const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
+            const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
+            const [sidebarFolderDragTarget, setSidebarFolderDragTarget] = useState(null); // v5.0.0-alpha.86 - { type: 'reorder'|'reparent', folderId, position? }
+            const [showMigrationDialog, setShowMigrationDialog] = useState(false); // v5.0.0 - Migration prompt
+            const [leftPaneWidth, setLeftPaneWidth] = useState(256); // v5.0.0-alpha.91 - Resizable left pane width (px)
+            const [isResizingPane, setIsResizingPane] = useState(false); // v5.0.0-alpha.91 - Pane resize in progress
+            const [navHistory, setNavHistory] = useState(['__all__']); // v5.0.0-alpha.92 - Navigation history stack
+            const [navHistoryIndex, setNavHistoryIndex] = useState(0); // v5.0.0-alpha.92 - Current position in history
+            const [bookTooltip, setBookTooltip] = useState(null); // v5.0.0-alpha.98 - Tooltip for All Books view { bookId, x, y }
+            const [folderContextMenu, setFolderContextMenu] = useState(null); // v5.0.0-alpha.133 - Folder context menu { folderId, x, y }
+            const [submenuExpandedFolders, setSubmenuExpandedFolders] = useState(new Set()); // v5.0.0-alpha.138 - Expanded folders in Move to submenu
+            const [folderClipboard, setFolderClipboard] = useState({ items: [], operation: null }); // v5.0.0-alpha.141 - Clipboard for cut/copy/paste
+            const [folderPropertiesDialog, setFolderPropertiesDialog] = useState(null); // v5.0.0-alpha.142 - Folder properties dialog { folderId }
+            const [folderPropertiesEditedName, setFolderPropertiesEditedName] = useState(''); // v5.0.0-alpha.143 - Edited name in properties dialog
+            const [dialogDrag, setDialogDrag] = useState(null); // v5.0.0-alpha.144 - Dragging state { isDragging, offsetX, offsetY, dialogX, dialogY }
+            const [showAllFoldersOverride, setShowAllFoldersOverride] = useState(false); // v5.0.0-alpha.169 - Override auto-hide when filter active
+            const [savedExpansionState, setSavedExpansionState] = useState(null); // v5.0.0-alpha.169 - Saved folder expansion state (Map of folderId → collapsed)
+            const [visibleColumns, setVisibleColumns] = useState({ // v5.0.0-alpha.104 - Column visibility (Name always visible)
+                author: true,
+                series: false, // v5.0.0-alpha.171 - Series name column (hidden by default)
+                seriesNum: false, // v5.0.0-alpha.171 - Series position column (hidden by default)
+                rating: true,
+                myRating: false, // v5.0.0-alpha.175.31 - Personal rating column (hidden by default)
+                dateAdded: true,
+                price: true,
+                priceGoal: true,
+                delta: true,
+                amazon: false // v5.0.0-alpha.167.6 - Amazon link column (hidden by default)
+            });
+            const [explorerColumnMenuOpen, setExplorerColumnMenuOpen] = useState(false); // v5.0.0-alpha.104 - Explorer column chooser menu
+            const [explorerColumnMenuPos, setExplorerColumnMenuPos] = useState(null); // v5.0.0-alpha.107 - Context menu position { x, y } or null
+            const [columnWidths, setColumnWidths] = useState({ // v5.0.0-alpha.109 - Column widths (px)
+                title: 200,
+                author: 150,
+                series: 150, // v5.0.0-alpha.171 - Series name column width
+                seriesNum: 50, // v5.0.0-alpha.171 - Series position column width
+                rating: 96,
+                myRating: 100, // v5.0.0-alpha.175.31 - Personal rating column width
+                dateAdded: 112,
+                price: 80,
+                priceGoal: 80,
+                delta: 80,
+                amazon: 70 // v5.0.0-alpha.167.6 - Amazon link column width
+            });
+            const [resizingColumn, setResizingColumn] = useState(null); // v5.0.0-alpha.109 - { columnId, startX, startWidth }
+            const [columnOrder, setColumnOrder] = useState([ // v5.0.0-alpha.172 - Column display order (drag to reorder)
+                'title', 'author', 'series', 'seriesNum', 'rating', 'myRating',
+                'dateAdded', 'price', 'priceGoal', 'delta', 'amazon'
+            ]);
+            const [draggingColumn, setDraggingColumn] = useState(null); // v5.0.0-alpha.172 - Column header being dragged
+            const [headerDropTarget, setHeaderDropTarget] = useState(null); // v5.0.0-alpha.172 - { column, side: 'left'|'right' }
+
+            // v5.0.0 - Special folders
+            const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
+            const FOLDER_LIBRARY = { id: '__library__', name: 'My Library', virtual: true, icon: '📚' }; // v5.0.0-alpha.63
+            const FOLDER_INBOX = { id: '__inbox__', name: 'Inbox', virtual: false, icon: '📥', isInbox: true };
 
             // v4.16.0.s - Helper to extract bookId from column entry (handles legacy string and new object format)
             // Entry types: string (legacy bookId), {type:'divider',...}, {instanceId, bookId} (new format)
@@ -499,6 +360,561 @@
                 return columnBooks.findIndex(entry => getBookIdFromEntry(entry) === bookId);
             };
 
+            // v5.0.0 - Book Explorer folder helpers
+            // Get all book IDs that are in any user folder (not Inbox)
+            const getBooksInUserFolders = () => {
+                const inFolders = new Set();
+                folders.forEach(folder => {
+                    if (folder.id !== '__inbox__') {
+                        (folder.bookIds || []).forEach(id => inFolders.add(id));
+                    }
+                });
+                return inFolders;
+            };
+
+            // Get the Inbox folder from folders array
+            const getInboxFolder = () => folders.find(f => f.id === '__inbox__');
+
+            // v5.0.0-alpha.175.9 - Compute tag count on-the-fly (replaces stored counts)
+            const getTagCount = (tagId) => {
+                return books.filter(b => b.tags?.includes(tagId)).length;
+            };
+
+            // Get books for a folder (handles All Books and My Library virtual folders)
+            const getFolderBookIds = (folderId) => {
+                if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first
+                if (folderId === '__library__') return []; // v5.0.0-alpha.63 - My Library shows folders, not books
+                const folder = folders.find(f => f.id === folderId);
+                return folder?.bookIds || [];
+            };
+
+            // Filter a single book for Explorer view (applies all active filters)
+            const filterBookForExplorer = (book) => {
+                if (!book) return false;
+
+                // Text search filter
+                const matchesSearch = !searchTerm ||
+                    book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    book.author.toLowerCase().includes(searchTerm.toLowerCase());
+
+                // Read status filter
+                const matchesReadStatus = !readStatusFilter || book.readStatus === readStatusFilter;
+
+                // Collection filter
+                let matchesCollection = true;
+                if (collectionFilter) {
+                    if (collectionFilter === 'UNCOLLECTED') {
+                        matchesCollection = !book.collections || book.collections.length === 0;
+                    } else {
+                        matchesCollection = book.collections &&
+                            book.collections.some(c => c.name === collectionFilter);
+                    }
+                }
+
+                // Collections filter (v5.0.0-alpha.175.41 - Phase 5.2: Multi-select)
+                let matchesCollections = true;
+                if (selectedCollections.length > 0) {
+                    const hasUncollected = selectedCollections.includes('UNCOLLECTED');
+                    const otherCollections = selectedCollections.filter(c => c !== 'UNCOLLECTED');
+
+                    const bookCollections = book.collections || [];
+                    const isInCollection = otherCollections.some(c =>
+                        bookCollections.some(bc => bc.name === c)
+                    );
+                    const isUncollected = bookCollections.length === 0;
+
+                    matchesCollections = (hasUncollected && isUncollected) || isInCollection;
+                }
+
+                // Amazon Rating filter (v5.0.0-alpha.175.42 - Phase 5.3: Minimum rating)
+                const matchesAmazonRating = !minAmazonRating ||
+                    (book.rating !== undefined && book.rating >= parseFloat(minAmazonRating));
+
+                // My Rating filter (v5.0.0-alpha.175.43 - Phase 5.4: Personal rating with Unrated option)
+                let matchesMyRating = true;
+                if (minMyRating) {
+                    if (minMyRating === 'unrated') {
+                        matchesMyRating = (book.myRating || 0) === 0;
+                    } else {
+                        const minRating = parseFloat(minMyRating);
+                        matchesMyRating = (book.myRating || 0) >= minRating;
+                    }
+                }
+
+                // Rating filter
+                const matchesRating = !ratingFilter || (book.rating >= parseFloat(ratingFilter));
+
+                // Wishlist filter
+                const matchesWishlist = !wishlistFilter ||
+                    (wishlistFilter === 'wishlist' && book.onWishlist) ||
+                    (wishlistFilter === 'owned' && !book.onWishlist);
+
+                // Ownership type filter
+                const matchesOwnership = !ownershipFilter ||
+                    (book.ownershipType || 'purchased') === ownershipFilter;
+
+                // Hidden filter (book-level for Explorer)
+                const matchesHidden = showHidden || !book.isHidden;
+
+                // Series filter
+                let matchesSeries = true;
+                if (seriesFilter) {
+                    if (seriesFilter === 'NOT_IN_SERIES') {
+                        matchesSeries = !book.series || book.series.trim() === '';
+                    } else {
+                        matchesSeries = book.series && book.series === seriesFilter;
+                    }
+                }
+
+                // Date range filter
+                let matchesDateRange = true;
+                if (dateFrom || dateTo) {
+                    if (book.acquired) {
+                        const bookDate = new Date(parseInt(book.acquired)).toISOString().split('T')[0];
+                        const fromDate = dateFrom || '0000-01-01';
+                        const toDate = dateTo || new Date().toISOString().split('T')[0];
+                        if (bookDate < fromDate || bookDate > toDate) {
+                            matchesDateRange = false;
+                        }
+                    } else {
+                        matchesDateRange = false;
+                    }
+                }
+
+                // Deals filter (v5.0.0-alpha.163 - works for all books, not just wishlist)
+                const matchesDeals = !dealsFilterActive ||
+                    (book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger);
+
+                // Tag filter
+                const matchesTags = !tagFilter || tagFilter.length === 0 ||
+                    tagFilter.some(tag => book.tags?.includes(tag));
+
+                // Series filter (v5.0.0-alpha.175.44 - Phase 5.5: Multi-select with NOT_IN_SERIES)
+                let matchesSeriesMulti = true;
+                if (selectedSeries.length > 0) {
+                    const hasNotInSeries = selectedSeries.includes('NOT_IN_SERIES');
+                    const otherSeries = selectedSeries.filter(s => s !== 'NOT_IN_SERIES');
+
+                    const bookSeries = book.series || '';
+                    const isInSeries = otherSeries.includes(bookSeries);
+                    const isNotInSeries = !bookSeries || bookSeries.trim() === '';
+
+                    matchesSeriesMulti = (hasNotInSeries && isNotInSeries) || isInSeries;
+                }
+
+                return matchesSearch && matchesReadStatus && matchesCollection && matchesCollections && matchesAmazonRating &&
+                    matchesMyRating && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries &&
+                    matchesSeriesMulti && matchesDateRange && matchesDeals && matchesTags;
+            };
+
+            // Get folder by ID (handles All Books and My Library virtual folders)
+            const getFolderById = (folderId) => {
+                if (folderId === '__all__') return FOLDER_ALL_BOOKS;
+                if (folderId === '__library__') return FOLDER_LIBRARY; // v5.0.0-alpha.63
+                const folder = folders.find(f => f.id === folderId);
+                if (folder?.id === '__inbox__') return { ...folder, ...FOLDER_INBOX };
+                return folder;
+            };
+
+            // v5.0.0-alpha.80 - Get folder path (breadcrumb) from root to current folder
+            const getFolderPath = (folderId) => {
+                if (folderId === '__all__') return [FOLDER_ALL_BOOKS];
+                if (folderId === '__library__') return [FOLDER_LIBRARY];
+
+                const path = [];
+                let current = getFolderById(folderId);
+                while (current) {
+                    path.unshift(current);
+                    if (current.parentId === null || current.parentId === undefined) {
+                        // At root level, prepend My Library
+                        path.unshift(FOLDER_LIBRARY);
+                        break;
+                    }
+                    current = getFolderById(current.parentId);
+                }
+                return path;
+            };
+
+            // v5.0.0-alpha.98 - Get all folders containing a book (for All Books tooltip)
+            const getFoldersContainingBook = (bookId) => {
+                return folders.filter(f => {
+                    // Skip virtual folders
+                    if (f.id === '__all__' || f.id === '__library__') return false;
+                    // Check if folder's bookIds includes this book
+                    return (f.bookIds || []).includes(bookId);
+                });
+            };
+
+            // v5.0.0 - Toast notification helper (reusable for all feedback messages)
+            // Shows toast at position, animates to footer, persists 10s, then fades
+            const showToast = (message, x, y) => {
+                setClipboardMessage(message);
+                setToastPosition({ x, y });
+                setFooterClipboardVisible(false);
+                setToastVisible(true);
+                setToastAnimating(false);
+                setTimeout(() => {
+                    setToastAnimating(true);
+                    setTimeout(() => {
+                        setToastVisible(false);
+                        setToastAnimating(false);
+                        setFooterClipboardVisible(true);
+                        // Fade out footer after 10 seconds
+                        setTimeout(() => {
+                            setFooterClipboardVisible(false);
+                        }, 10000);
+                    }, 1000); // Animation duration
+                }, 1500); // Wait before animating
+            };
+
+            // Get child folders of a parent (null = root level)
+            // v5.0.0-alpha.66 - Respects custom order from parent's childFolderIds or sortIndex
+            const getChildFolders = (parentId) => {
+                const children = folders.filter(f => f.parentId === parentId);
+
+                if (parentId === null) {
+                    // Root level folders - use sortIndex property if available
+                    const hasSortIndex = children.some(f => f.sortIndex !== undefined);
+                    if (hasSortIndex) {
+                        return [...children].sort((a, b) => {
+                            const idxA = a.sortIndex ?? Infinity;
+                            const idxB = b.sortIndex ?? Infinity;
+                            if (idxA !== idxB) return idxA - idxB;
+                            return a.name.localeCompare(b.name);
+                        });
+                    }
+                } else {
+                    // Nested folders - use parent's childFolderIds
+                    const parentFolder = folders.find(f => f.id === parentId);
+                    const customOrder = parentFolder?.childFolderIds || [];
+
+                    if (customOrder.length > 0) {
+                        const orderMap = new Map(customOrder.map((id, i) => [id, i]));
+                        return [...children].sort((a, b) => {
+                            const posA = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+                            const posB = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+                            if (posA !== posB) return posA - posB;
+                            return a.name.localeCompare(b.name);
+                        });
+                    }
+                }
+
+                return children; // No custom order, return as-is (will be sorted alphabetically later)
+            };
+
+            // v5.0.0 - Get total book count for a folder including all subfolders recursively
+            const getFolderTotalCount = (folderId) => {
+                const folder = folders.find(f => f.id === folderId);
+                if (!folder) return { direct: 0, subfolder: 0, total: 0 };
+
+                const direct = (folder.bookIds || []).length;
+                let subfolder = 0;
+
+                const countChildren = (parentId) => {
+                    const children = folders.filter(f => f.parentId === parentId);
+                    children.forEach(child => {
+                        subfolder += (child.bookIds || []).length;
+                        countChildren(child.id); // Recurse
+                    });
+                };
+                countChildren(folderId);
+
+                return { direct, subfolder, total: direct + subfolder };
+            };
+
+            // v5.0.0-alpha.169 - Get filtered book count for a folder (matching/total) including subfolders
+            // v5.0.0-alpha.169.3 - Also returns directMatching for "inside" badge display
+            const getFilteredFolderCount = (folderId) => {
+                const folder = folders.find(f => f.id === folderId);
+                if (!folder) return { matching: 0, total: 0, directMatching: 0 };
+
+                // Count direct books
+                const directBooks = (folder.bookIds || [])
+                    .map(id => books.find(b => b.id === id))
+                    .filter(Boolean);
+                const directMatching = directBooks.filter(filterBookForExplorer).length;
+                const directTotal = directBooks.length;
+
+                // Count books in subfolders (recursive)
+                let subfolderMatching = 0;
+                let subfolderTotal = 0;
+                const countChildren = (parentId) => {
+                    folders.filter(f => f.parentId === parentId).forEach(child => {
+                        const childBooks = (child.bookIds || [])
+                            .map(id => books.find(b => b.id === id))
+                            .filter(Boolean);
+                        subfolderMatching += childBooks.filter(filterBookForExplorer).length;
+                        subfolderTotal += childBooks.length;
+                        countChildren(child.id);
+                    });
+                };
+                countChildren(folderId);
+
+                return {
+                    matching: directMatching + subfolderMatching,
+                    total: directTotal + subfolderTotal,
+                    directMatching: directMatching
+                };
+            };
+
+            // Reorder a book within a folder's bookIds array
+            // Reorder books within a folder (supports single or multiple books)
+            // v5.0.0-alpha.46 - Added undo support
+            const reorderBooksInFolder = (folderId, bookIdsToMove, targetIndex) => {
+                // Capture fromIndices BEFORE modifying state (for undo)
+                const currentFolder = folders.find(f => f.id === folderId);
+                const currentBookIds = currentFolder?.bookIds || [];
+                const fromIndices = bookIdsToMove.map(id => currentBookIds.indexOf(id));
+
+                setFolders(prev => prev.map(folder => {
+                    if (folder.id !== folderId) return folder;
+                    const bookIds = [...(folder.bookIds || [])];
+                    const moveSet = new Set(bookIdsToMove);
+
+                    // Find the minimum current index of books being moved
+                    const minCurrentIndex = Math.min(...bookIdsToMove.map(id => bookIds.indexOf(id)).filter(i => i >= 0));
+
+                    // Remove all books being moved
+                    const remaining = bookIds.filter(id => !moveSet.has(id));
+
+                    // Adjust target index based on how many items were removed before it
+                    const removedBefore = bookIds.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
+                    const adjustedIndex = targetIndex - removedBefore;
+
+                    // Insert all books at target position (maintaining their relative order)
+                    const orderedBooksToMove = bookIdsToMove.filter(id => bookIds.includes(id));
+                    remaining.splice(adjustedIndex, 0, ...orderedBooksToMove);
+
+                    return { ...folder, bookIds: remaining };
+                }));
+
+                // Record action for undo
+                recordAction({
+                    type: 'REORDER_BOOKS_FOLDER',
+                    folderId: folderId,
+                    bookIds: bookIdsToMove,
+                    fromIndices: fromIndices,
+                    toIndex: targetIndex
+                });
+                console.log(`🔄 Reordered ${bookIdsToMove.length} book(s) in folder`);
+            };
+
+            // v5.0.0-alpha.79 - Reorder folders within their parent (with undo)
+            // Updates parent's childFolderIds array to persist custom order
+            // v5.0.0-alpha.90 - Changed to use targetFolderId + position instead of index
+            // This fixes off-by-one issues when display order differs from getChildFolders order
+            const reorderFoldersInParent = (parentId, folderIdsToMove, targetFolderId, position) => {
+                // Get current child folders in their current order
+                const currentChildren = getChildFolders(parentId);
+                const currentOrder = currentChildren.map(f => f.id);
+
+                // Find target index based on folder ID (not visual index)
+                let targetIndex = currentOrder.indexOf(targetFolderId);
+                if (targetIndex === -1) return; // Target not found
+                if (position === 'after') targetIndex++;
+
+                // Capture fromIndices BEFORE modifying (for undo)
+                const fromIndices = folderIdsToMove.map(id => currentOrder.indexOf(id));
+
+                // Build new order
+                const moveSet = new Set(folderIdsToMove);
+                const remaining = currentOrder.filter(id => !moveSet.has(id));
+
+                // Adjust target index based on how many items were removed before it
+                const removedBefore = currentOrder.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
+                const adjustedIndex = targetIndex - removedBefore;
+
+                // Insert at target position (maintaining relative order of moved items)
+                const orderedToMove = folderIdsToMove.filter(id => currentOrder.includes(id));
+                remaining.splice(adjustedIndex, 0, ...orderedToMove);
+
+                // Update parent's childFolderIds (or create virtual parent tracking for root level)
+                if (parentId) {
+                    setFolders(prev => prev.map(folder => {
+                        if (folder.id !== parentId) return folder;
+                        return { ...folder, childFolderIds: remaining };
+                    }));
+                } else {
+                    // Root level folders - store order in a special way
+                    // For now, we'll store this in localStorage as root folder order
+                    // Actually, we need to update each folder's parentId order somehow...
+                    // Simpler: Add a "rootFolderOrder" to explorer state
+                    // For now, let's update folders to include a sort index
+                    setFolders(prev => {
+                        const updated = [...prev];
+                        remaining.forEach((folderId, idx) => {
+                            const folderIdx = updated.findIndex(f => f.id === folderId);
+                            if (folderIdx >= 0) {
+                                updated[folderIdx] = { ...updated[folderIdx], sortIndex: idx };
+                            }
+                        });
+                        return updated;
+                    });
+                }
+
+                // Record for undo
+                const folderNames = folderIdsToMove.map(id => folders.find(f => f.id === id)?.name || id).join(', ');
+                recordAction({
+                    type: 'REORDER_FOLDER',
+                    parentId,
+                    folderIds: folderIdsToMove,
+                    fromIndices,
+                    toIndex: adjustedIndex,
+                    oldOrder: currentOrder,
+                    newOrder: remaining,
+                    description: `Reorder "${folderNames}"`
+                });
+
+                console.log(`🔄 Reordered ${folderIdsToMove.length} folder(s) in parent ${parentId || 'root'}`);
+            };
+
+            // v5.0.0-alpha.78 - Phase D: Reparent folder (move into another folder) with undo
+            const reparentFolder = (folderIds, newParentId) => {
+                // Helper: Check if targetId is a descendant of folderId
+                const isDescendant = (folderId, targetId) => {
+                    if (folderId === targetId) return true;
+                    const children = folders.filter(f => f.parentId === folderId);
+                    return children.some(child => isDescendant(child.id, targetId));
+                };
+
+                // Validate: can't move folder into itself or its descendants
+                for (const folderId of folderIds) {
+                    if (folderId === newParentId || isDescendant(folderId, newParentId)) {
+                        showToast("Can't move folder into itself or its subfolder", 'error');
+                        return false;
+                    }
+                    // Can't reparent Inbox
+                    if (folderId === '__inbox__') {
+                        showToast("Inbox cannot be moved", 'error');
+                        return false;
+                    }
+                }
+
+                // Can't move into Inbox
+                if (newParentId === '__inbox__') {
+                    showToast("Can't move folders into Inbox", 'error');
+                    return false;
+                }
+
+                // Save old parentIds for undo
+                const oldParentIds = folderIds.map(id => {
+                    const folder = folders.find(f => f.id === id);
+                    return { folderId: id, oldParentId: folder?.parentId };
+                });
+
+                setFolders(prev => prev.map(folder => {
+                    if (folderIds.includes(folder.id)) {
+                        return { ...folder, parentId: newParentId };
+                    }
+                    return folder;
+                }));
+
+                // Record for undo
+                const folderNames = folderIds.map(id => folders.find(f => f.id === id)?.name || id).join(', ');
+                const targetName = newParentId ? folders.find(f => f.id === newParentId)?.name : 'root';
+                recordAction({
+                    type: 'REPARENT_FOLDER',
+                    folderIds,
+                    oldParentIds,
+                    newParentId,
+                    description: `Move "${folderNames}" into "${targetName}"`
+                });
+
+                showToast(`Moved "${folderNames}" into "${targetName}"`, 'success');
+                console.log(`📁 Moved ${folderIds.length} folder(s) into ${newParentId || 'root'}`);
+                return true;
+            };
+
+            // v5.0.0 - Migrate columns/dividers to folders
+            // Columns become root folders, dividers become subfolders
+            const migrateColumnsToFolders = () => {
+                const newFolders = [];
+
+                console.log('📁 Migration starting. Columns:', columns.length);
+
+                columns.forEach(column => {
+                    // Skip empty columns
+                    const hasContent = column.books && column.books.length > 0;
+                    if (!hasContent) {
+                        console.log(`📁 Skipping empty column: ${column.name}`);
+                        return;
+                    }
+
+                    console.log(`📁 Processing column: ${column.name} with ${column.books.length} entries`);
+                    // DEBUG: Log first few entries to see format
+                    console.log(`📁 First 3 entries:`, column.books.slice(0, 3));
+
+                    // Create root folder for this column
+                    const rootFolderId = `folder-${column.id}`;
+                    const rootFolder = {
+                        id: rootFolderId,
+                        name: column.name,
+                        parentId: null,
+                        bookIds: [],
+                        collapsed: false
+                    };
+
+                    let currentFolder = rootFolder;
+
+                    column.books.forEach((entry, idx) => {
+                        if (entry && entry.type === 'divider') {
+                            // Divider becomes a subfolder
+                            // First, push current folder if it has books
+                            if (currentFolder.bookIds.length > 0 || currentFolder === rootFolder) {
+                                // Only add root folder once
+                                if (!newFolders.find(f => f.id === rootFolder.id)) {
+                                    newFolders.push(rootFolder);
+                                }
+                            }
+
+                            // Create subfolder for divider (dividers use 'label' not 'name')
+                            const subfolder = {
+                                id: `folder-${entry.id}`,
+                                name: entry.label || 'Untitled',
+                                parentId: rootFolderId,
+                                bookIds: [],
+                                collapsed: false
+                            };
+                            newFolders.push(subfolder);
+                            currentFolder = subfolder;
+                            console.log(`📁 Created subfolder: ${entry.label}`);
+                        } else {
+                            // Book entry - add to current folder
+                            const bookId = getBookIdFromEntry(entry);
+                            if (bookId) {
+                                currentFolder.bookIds.push(bookId);
+                            } else if (idx < 5) {
+                                // DEBUG: Log entries that don't yield bookIds
+                                console.log(`📁 Entry ${idx} yielded no bookId:`, entry);
+                            }
+                        }
+                    });
+
+                    // Ensure root folder is added (even if no dividers)
+                    if (!newFolders.find(f => f.id === rootFolder.id)) {
+                        newFolders.push(rootFolder);
+                    }
+
+                    console.log(`📁 Column ${column.name} → folder with ${rootFolder.bookIds.length} books`);
+                });
+
+                // Add Inbox folder at the end
+                newFolders.push({
+                    id: '__inbox__',
+                    name: 'Inbox',
+                    parentId: null,
+                    bookIds: [],
+                    collapsed: false
+                });
+
+                console.log('📁 Migration complete. Folders created:', newFolders.map(f => `${f.name}(${f.bookIds.length})`));
+                setFolders(newFolders);
+                setShowMigrationDialog(false);
+                setViewMode('explorer'); // Switch to explorer view to show result
+                setSelectedFolderId('__all__'); // Start with All Books
+                console.log(`📁 Migrated ${columns.length} columns to ${newFolders.length} folders`);
+            };
+
             // v3.11.0.d - Ref for column menu click-outside detection
             const columnMenuRef = useRef(null);
 
@@ -516,6 +932,9 @@
             // v4.16.0.au - Copy-drag tracking (Ctrl+Drag to copy instead of move)
             const isCopyDragRef = useRef(false);
             const dragTooltipRef = useRef(null);
+
+            // v5.0.0-alpha.132 - Tooltip hide delay (prevents tooltip from disappearing when moving cursor to it)
+            const tooltipHideTimeoutRef = useRef(null);
 
             // v3.14.0.r - Row-based grid index for O(log R) drop position lookup
             // Structure: { columnId: { rowBoundaries: [y1, y2, ...], rows: [{type, startIndex, items, top, bottom}, ...], columnRect } }
@@ -541,13 +960,53 @@
             const setSyncStatus = (newStatus) => {
                 setSyncStatusInternal(newStatus);
             };
-            const [settings, setSettings] = useState({
-                cacheExpirationDays: 30
-            });
+            // v5.0.0-alpha.175.48 - Removed settings state (dead code, cacheExpirationDays not used)
             const dragThreshold = 50;
+
+            // v5.0.0-alpha.92 - Navigation history functions
+            const navigateToFolder = (folderId, addToHistory = true) => {
+                setSelectedFolderId(folderId);
+                // v5.0.0-alpha.161 - Clear right panel selections when navigating
+                setExplorerSelectedFolders(new Set());
+                setExplorerSelectedBooks(new Set());
+                if (addToHistory) {
+                    // Truncate forward history and add new entry
+                    setNavHistory(prev => [...prev.slice(0, navHistoryIndex + 1), folderId]);
+                    setNavHistoryIndex(prev => prev + 1);
+                }
+            };
+
+            const canGoBack = navHistoryIndex > 0;
+            const canGoForward = navHistoryIndex < navHistory.length - 1;
+
+            const goBack = () => {
+                if (canGoBack) {
+                    const newIndex = navHistoryIndex - 1;
+                    setNavHistoryIndex(newIndex);
+                    setSelectedFolderId(navHistory[newIndex]);
+                    // v5.0.0-alpha.161 - Clear right panel selections when navigating
+                    setExplorerSelectedFolders(new Set());
+                    setExplorerSelectedBooks(new Set());
+                }
+            };
+
+            const goForward = () => {
+                if (canGoForward) {
+                    const newIndex = navHistoryIndex + 1;
+                    setNavHistoryIndex(newIndex);
+                    setSelectedFolderId(navHistory[newIndex]);
+                    // v5.0.0-alpha.161 - Clear right panel selections when navigating
+                    setExplorerSelectedFolders(new Set());
+                    setExplorerSelectedBooks(new Set());
+                }
+            };
 
             // v4.15.6: Track initial mount to prevent save effect from overwriting loaded values
             const filtersLoadedRef = useRef(false);
+            const explorerSettingsLoadedRef = useRef(false); // v5.0.0-alpha.169.10 - Track Explorer settings load
+
+            // v5.0.0-alpha.82 - Timeout for auto-expanding folder on drag hover
+            const dragHoverExpandTimeoutRef = useRef(null);
 
             // Load saved filters from localStorage on mount (v3.8.0.f, updated v3.8.0.k, v4.15.6)
             React.useEffect(() => {
@@ -585,6 +1044,22 @@
                         if (filters.tagFilter && Array.isArray(filters.tagFilter)) {
                             setTagFilter(filters.tagFilter);
                         }
+                        // v5.0.0-alpha.175.41: Load Collections filter
+                        if (filters.selectedCollections && Array.isArray(filters.selectedCollections)) {
+                            setSelectedCollections(filters.selectedCollections);
+                        }
+                        // v5.0.0-alpha.175.42: Load Amazon Rating filter
+                        if (filters.minAmazonRating) {
+                            setMinAmazonRating(filters.minAmazonRating);
+                        }
+                        // v5.0.0-alpha.175.43: Load My Rating filter
+                        if (filters.minMyRating) {
+                            setMinMyRating(filters.minMyRating);
+                        }
+                        // v5.0.0-alpha.175.44: Load Series filter
+                        if (filters.selectedSeries && Array.isArray(filters.selectedSeries)) {
+                            setSelectedSeries(filters.selectedSeries);
+                        }
                     }
                 } catch (e) {
                     console.error('Failed to load filters from localStorage:', e);
@@ -612,13 +1087,17 @@
                         dateFrom: datePreset === 'custom' ? dateFrom : '',  // Only save dates for custom preset
                         dateTo: datePreset === 'custom' ? dateTo : '',
                         showHidden,
-                        tagFilter  // v4.27.0 - Tag filter
+                        tagFilter,  // v4.27.0 - Tag filter
+                        selectedCollections,  // v5.0.0-alpha.175.41 - Collections filter
+                        minAmazonRating,  // v5.0.0-alpha.175.42 - Amazon Rating filter
+                        minMyRating,  // v5.0.0-alpha.175.43 - My Rating filter
+                        selectedSeries  // v5.0.0-alpha.175.44 - Series filter
                     };
                     localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
                 } catch (e) {
                     console.error('Failed to save filters to localStorage:', e);
                 }
-            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden, tagFilter]);
+            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden, tagFilter, selectedCollections, minAmazonRating, minMyRating, selectedSeries]);
 
             // Compute dateFrom/dateTo from datePreset selection (v4.15.6)
             React.useEffect(() => {
@@ -663,15 +1142,30 @@
                 setDateTo(to);
             }, [datePreset]);
 
-            const formatAcquisitionDate = (timestamp) => {
-                if (!timestamp) return '';
-                const ts = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp;
-                const date = new Date(ts > 9999999999 ? ts : ts * 1000);
-                if (isNaN(date.getTime())) return timestamp;
-                return date.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
+            // v5.0.0-alpha.169.5 - Unified date parsing for sorting
+            // Handles both numeric timestamps and string dates (e.g., "January 15, 2024")
+            const parseBookDate = (dateStr) => {
+                if (!dateStr) return new Date(0);
+                // Try as numeric timestamp first
+                const ts = typeof dateStr === 'string' ? parseInt(dateStr) : dateStr;
+                if (!isNaN(ts) && ts > 1000000000) {
+                    return new Date(ts > 9999999999 ? ts : ts * 1000);
+                }
+                // Try as date string (handles "January 15, 2024", "2024-01-15", etc.)
+                const d = new Date(dateStr);
+                return isNaN(d.getTime()) ? new Date(0) : d;
+            };
+
+            // v5.0.0-alpha.169.5 - Unified date formatting for display
+            // Uses parseBookDate to handle any format, returns consistent display
+            const formatAcquisitionDate = (dateStr) => {
+                if (!dateStr) return '';
+                const d = parseBookDate(dateStr);
+                if (d.getTime() === 0) return String(dateStr); // Fallback to raw value if unparseable
+                return d.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
                 });
             };
 
@@ -682,7 +1176,7 @@
                 const minutes = Math.floor(diff / 60000);
                 const hours = Math.floor(diff / 3600000);
                 const days = Math.floor(diff / 86400000);
-                
+
                 if (minutes < 1) return 'just now';
                 if (minutes < 60) return `${minutes}m ago`;
                 if (hours < 24) return `${hours}h ago`;
@@ -696,11 +1190,7 @@
             useEffect(() => {
                 const loadData = async () => {
                     try {
-                        // Load settings
-                        const savedSettings = localStorage.getItem(SETTINGS_KEY);
-                        if (savedSettings) {
-                            setSettings(JSON.parse(savedSettings));
-                        }
+                        // v5.0.0-alpha.175.49.1 - Removed settings load (dead code, settings state removed in v175.48)
 
                         // Restore libraryStatus and collectionsStatus from localStorage (v3.7.0.n)
                         const savedStatus = localStorage.getItem(STATUS_KEY);
@@ -714,6 +1204,44 @@
                                 setCollectionsStatus(statusData.collectionsStatus);
                                 console.log('📦 Restored collectionsStatus from localStorage:', statusData.collectionsStatus.loadStatus);
                             }
+                        }
+
+                        // v5.0.0 - Load Explorer settings
+                        const savedExplorer = localStorage.getItem(EXPLORER_KEY);
+                        if (savedExplorer) {
+                            const explorerData = JSON.parse(savedExplorer);
+                            if (explorerData.viewMode) setViewMode(explorerData.viewMode);
+                            if (explorerData.selectedFolderId) setSelectedFolderId(explorerData.selectedFolderId);
+                            if (explorerData.explorerView) setExplorerView(explorerData.explorerView);
+                            // v5.0.0-alpha.169.11 - Use per-folder sort if available, else fall back to explorerSort
+                            // v5.0.0-alpha.174 - Migrate legacy single-object format to array
+                            const folderId = explorerData.selectedFolderId || '__all__';
+                            const perFolderSort = explorerData.folderSortSettings?.[folderId];
+                            if (perFolderSort) {
+                                // Migrate to array if needed
+                                const sortArray = Array.isArray(perFolderSort) ? perFolderSort : [perFolderSort];
+                                setExplorerSort(sortArray);
+                            } else if (explorerData.explorerSort) {
+                                // Migrate to array if needed
+                                const sortArray = Array.isArray(explorerData.explorerSort) ? explorerData.explorerSort : [explorerData.explorerSort];
+                                setExplorerSort(sortArray);
+                            }
+                            if (explorerData.explorerCoverCols) setExplorerCoverCols(explorerData.explorerCoverCols);
+                            if (explorerData.leftPaneWidth) setLeftPaneWidth(explorerData.leftPaneWidth); // v5.0.0-alpha.91
+                            if (explorerData.folderSortSettings) setFolderSortSettings(explorerData.folderSortSettings); // v5.0.0-alpha.100
+                            if (explorerData.visibleColumns) setVisibleColumns(explorerData.visibleColumns); // v5.0.0-alpha.104
+                            if (explorerData.columnWidths) setColumnWidths(explorerData.columnWidths); // v5.0.0-alpha.109
+                            if (explorerData.columnOrder) setColumnOrder(explorerData.columnOrder); // v5.0.0-alpha.172
+                            console.log('📁 Restored Explorer settings from localStorage');
+                        }
+                        // v5.0.0-alpha.169.10 - Mark settings loaded (even if no saved data)
+                        explorerSettingsLoadedRef.current = true;
+
+                        // v5.0.0 - Load folders
+                        const savedFolders = localStorage.getItem(FOLDERS_KEY);
+                        if (savedFolders) {
+                            setFolders(JSON.parse(savedFolders));
+                            console.log('📁 Restored folders from localStorage');
                         }
 
                         // Load books from IndexedDB
@@ -737,7 +1265,7 @@
                         let effectiveLastSync = null;
 
                         if (loadedBooks.length > 0) {
-                            
+
                             // Load organization from localStorage
                             const saved = localStorage.getItem(STORAGE_KEY);
                             if (saved) {
@@ -752,6 +1280,7 @@
                                     setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
                                     setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
                                     setTagRegistry(state.organization.tagRegistry || {}); // v4.27.0
+                                    setFolders(state.organization.folders || []); // v5.0.0
                                     setDataSource(state.organization.dataSource || 'enriched');
                                     effectiveLastSync = state.lastSyncTime || Date.now();
                                     setLastSyncTime(effectiveLastSync);
@@ -781,8 +1310,44 @@
                         setSyncStatus('none');
                     }
                 };
-                
+
                 loadData();
+            }, []);
+
+            // v5.0.0 - Auto-detect migration opportunity (columns → folders)
+            // Trigger: columns have content, but folders are empty or just Inbox
+            useEffect(() => {
+                if (syncStatus === 'loading') return;
+                if (books.length === 0) return; // No data loaded yet
+
+                // Check if columns have meaningful content
+                const columnsHaveContent = columns.some(col => {
+                    if (!col.books || col.books.length === 0) return false;
+                    // Check for actual books or dividers (not just empty)
+                    return col.books.some(entry => {
+                        if (entry && entry.type === 'divider') return true;
+                        return getBookIdFromEntry(entry) !== null;
+                    });
+                });
+
+                // Check if no user-created folders exist (Inbox doesn't count - it's auto-created)
+                // Inbox may have books from auto-sync, but that's not user organization
+                const noUserFolders = !folders.some(f => f.id !== '__inbox__');
+
+                // Show migration dialog if columns have content but no user folders exist
+                if (columnsHaveContent && noUserFolders && !showMigrationDialog) {
+                    console.log('📁 Migration opportunity detected: columns have content, folders empty');
+                    setShowMigrationDialog(true);
+                }
+            }, [syncStatus, books.length, columns, folders]);
+
+            // v5.0.0-alpha.132 - Cleanup tooltip timeout on unmount
+            useEffect(() => {
+                return () => {
+                    if (tooltipHideTimeoutRef.current) {
+                        clearTimeout(tooltipHideTimeoutRef.current);
+                    }
+                };
             }, []);
 
             // Auto-save organization
@@ -798,6 +1363,7 @@
                                     name: col.name,
                                     bookIds: col.books
                                 })),
+                                folders,  // v5.0.0 - Book Explorer folders
                                 dataSource,
                                 blankImageBooks: Array.from(blankImageBooks),
                                 hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
@@ -811,11 +1377,54 @@
                         console.warn('Could not auto-save organization:', e);
                     }
                 }
-            }, [syncStatus, columns, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
+            }, [syncStatus, columns, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
 
+            // v5.0.0-alpha.175.28 - Expose state for console debugging
             useEffect(() => {
-                localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-            }, [settings]);
+                window.DEBUG = {
+                    tagRegistry,
+                    books,
+                    columns,
+                    folders
+                };
+            }, [tagRegistry, books, columns, folders]);
+
+            // v5.0.0 - Sync Inbox folder: add books not in ANY folder to Inbox
+            // Note: Only adds, doesn't remove (removal happens via move drop handler)
+            useEffect(() => {
+                if (syncStatus === 'loading' || books.length === 0) return;
+
+                const inbox = getInboxFolder();
+                // Get all book IDs in ANY folder (including Inbox)
+                const booksInAnyFolder = new Set();
+                folders.forEach(folder => {
+                    (folder.bookIds || []).forEach(id => booksInAnyFolder.add(id));
+                });
+                const booksNotInAnyFolder = books.map(b => b.id).filter(id => !booksInAnyFolder.has(id));
+
+                if (!inbox) {
+                    // Create Inbox with all books not in any folder (newest first)
+                    console.log('📥 Creating Inbox folder with', booksNotInAnyFolder.length, 'books');
+                    setFolders(prev => [{
+                        id: '__inbox__',
+                        name: 'Inbox',
+                        parentId: null,
+                        bookIds: [...booksNotInAnyFolder].reverse(),
+                        childFolderIds: [],
+                        collapsed: false,
+                        isInbox: true
+                    }, ...prev]);
+                } else if (booksNotInAnyFolder.length > 0) {
+                    // Add new books to Inbox (books imported that aren't in any folder yet)
+                    console.log('📥 Adding', booksNotInAnyFolder.length, 'new books to Inbox');
+                    setFolders(prev => prev.map(f => {
+                        if (f.id !== '__inbox__') return f;
+                        return { ...f, bookIds: [...booksNotInAnyFolder.reverse(), ...(f.bookIds || [])] };
+                    }));
+                }
+            }, [books, folders, syncStatus]);
+
+            // v5.0.0-alpha.175.49.1 - Removed settings save useEffect (dead code, settings state removed in v175.48)
 
             // Save libraryStatus and collectionsStatus to localStorage (v3.7.0.n)
             useEffect(() => {
@@ -823,10 +1432,193 @@
                 localStorage.setItem(STATUS_KEY, JSON.stringify(statusData));
             }, [libraryStatus, collectionsStatus]);
 
+            // v5.0.0 - Save Explorer settings to localStorage
+            useEffect(() => {
+                const explorerData = {
+                    viewMode,
+                    selectedFolderId,
+                    explorerView,
+                    explorerSort,
+                    explorerCoverCols,
+                    leftPaneWidth, // v5.0.0-alpha.91
+                    folderSortSettings, // v5.0.0-alpha.100 - Per-folder sort settings
+                    visibleColumns, // v5.0.0-alpha.104 - Column visibility
+                    columnWidths, // v5.0.0-alpha.109 - Column widths
+                    columnOrder // v5.0.0-alpha.172 - Column display order
+                };
+                localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
+            }, [viewMode, selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, visibleColumns, columnWidths, columnOrder]);
+
+            // v5.0.0 - Save folders to localStorage
+            useEffect(() => {
+                localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
+            }, [folders]);
+
+            // v5.0.0-alpha.175.2 - Close menus on outside click, close dialogs on ESC
+            // v5.0.0-alpha.175.4 - Extended to close filter dropdowns
+            // v5.0.0-alpha.175.40 - Extended to close More panel
+            useEffect(() => {
+                const handleClickOutside = (e) => {
+                    // Close menus if clicking outside (not on menu button or dropdown)
+                    if (openMenuBar && !e.target.closest('[data-menu-area]')) {
+                        setOpenMenuBar(null);
+                    }
+                    // Close filter dropdowns if clicking outside
+                    if (statusDropdownOpen && !e.target.closest('[data-status-dropdown]')) {
+                        setStatusDropdownOpen(false);
+                    }
+                    if (tagsDropdownOpen && !e.target.closest('[data-tags-dropdown]')) {
+                        setTagsDropdownOpen(false);
+                    }
+                    if (typesDropdownOpen && !e.target.closest('[data-types-dropdown]')) {
+                        setTypesDropdownOpen(false);
+                    }
+                    // Close More panel if clicking outside (v5.0.0-alpha.175.47.2 - Fixed to close when clicking Tier 1 filters)
+                    if (morePanelOpen && !e.target.closest('[data-morepanel]')) {
+                        setMorePanelOpen(false);
+                    }
+                    // v5.0.0-alpha.175.41 - Phase 5.2: Close Collections dropdown
+                    if (collectionsDropdownOpen && !e.target.closest('[data-collections-dropdown]')) {
+                        setCollectionsDropdownOpen(false);
+                    }
+                    // v5.0.0-alpha.175.42 - Phase 5.3: Close Amazon Rating dropdown
+                    if (amazonRatingDropdownOpen && !e.target.closest('[data-amazon-rating-dropdown]')) {
+                        setAmazonRatingDropdownOpen(false);
+                    }
+                    // v5.0.0-alpha.175.43 - Phase 5.4: Close My Rating dropdown
+                    if (myRatingDropdownOpen && !e.target.closest('[data-my-rating-dropdown]')) {
+                        setMyRatingDropdownOpen(false);
+                    }
+                    // v5.0.0-alpha.175.44 - Phase 5.5: Close Series dropdown
+                    if (seriesDropdownOpen && !e.target.closest('[data-series-dropdown]')) {
+                        setSeriesDropdownOpen(false);
+                    }
+                    // v5.0.0-alpha.175.45 - Phase 5.6: Close Date dropdown
+                    if (dateDropdownOpen && !e.target.closest('[data-date-dropdown]')) {
+                        setDateDropdownOpen(false);
+                    }
+                };
+
+                const handleEscKey = (e) => {
+                    if (e.key === 'Escape') {
+                        setOpenMenuBar(null);
+                        setAboutDialogOpen(false);
+                        setShortcutsDialogOpen(false);
+                        setHowToDialogOpen(false);
+                        setStatusDropdownOpen(false);
+                        setTagsDropdownOpen(false);
+                        setTypesDropdownOpen(false);
+                        setMorePanelOpen(false);
+                        setCollectionsDropdownOpen(false);
+                        setAmazonRatingDropdownOpen(false); // v5.0.0-alpha.175.42 - Phase 5.3: Close Amazon Rating dropdown
+                        setMyRatingDropdownOpen(false); // v5.0.0-alpha.175.43 - Phase 5.4: Close My Rating dropdown
+                        setSeriesDropdownOpen(false); // v5.0.0-alpha.175.44 - Phase 5.5: Close Series dropdown
+                        setDateDropdownOpen(false); // v5.0.0-alpha.175.45 - Phase 5.6: Close Date dropdown
+                    }
+                };
+
+                document.addEventListener('mousedown', handleClickOutside);
+                document.addEventListener('keydown', handleEscKey);
+
+                return () => {
+                    document.removeEventListener('mousedown', handleClickOutside);
+                    document.removeEventListener('keydown', handleEscKey);
+                };
+            }, [openMenuBar, statusDropdownOpen, tagsDropdownOpen, typesDropdownOpen, morePanelOpen, collectionsDropdownOpen]);
+
+            // v5.0.0-alpha.100 - Restore per-folder sort when folder changes
+            useEffect(() => {
+                // v5.0.0-alpha.169.12 - Skip if folderSortSettings is still empty (initial state)
+                // State updates are async, so effect may run before setFolderSortSettings propagates
+                if (Object.keys(folderSortSettings).length === 0) {
+                    return;
+                }
+
+                // Check if we have saved sort for this folder
+                const savedSort = folderSortSettings[selectedFolderId];
+
+                if (savedSort) {
+                    // Restore saved sort for this folder
+                    // v5.0.0-alpha.174 - Migrate to array if needed
+                    const sortArray = Array.isArray(savedSort) ? savedSort : [savedSort];
+                    setExplorerSort(sortArray);
+                } else if (explorerSettingsLoadedRef.current) {
+                    // v5.0.0-alpha.169.10 - Only apply defaults AFTER initial load completes
+                    // No saved sort - use sensible defaults
+                    if (selectedFolderId === '__all__') {
+                        setExplorerSort([{ column: 'dateAdded', direction: 'desc' }]);
+                    } else if (selectedFolderId === '__library__') {
+                        setExplorerSort([{ column: 'title', direction: 'asc' }]);
+                    } else {
+                        setExplorerSort([{ column: 'custom', direction: 'asc' }]);
+                    }
+                }
+                // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, [selectedFolderId]); // Only re-run when folder changes, not when settings change
+
+            // v5.0.0-alpha.100 - Save sort settings for current folder when sort changes
+            // v5.0.0-alpha.174 - Save array format
+            useEffect(() => {
+                // v5.0.0-alpha.169.10 - Skip save during initial load to prevent overwriting saved settings
+                if (!explorerSettingsLoadedRef.current) return;
+
+                // Only save if sort is different from what's saved for this folder
+                const savedSort = folderSortSettings[selectedFolderId];
+                const sortChanged = !savedSort || JSON.stringify(savedSort) !== JSON.stringify(explorerSort);
+
+                if (sortChanged) {
+                    setFolderSortSettings(prev => ({
+                        ...prev,
+                        [selectedFolderId]: explorerSort
+                    }));
+                }
+            }, [explorerSort, selectedFolderId, folderSortSettings]);
+
+            // v5.0.0-alpha.104 - Close Explorer column menu when clicking outside
+            useEffect(() => {
+                if (!explorerColumnMenuOpen) return;
+
+                const handleClickOutside = (e) => {
+                    // Close menu if clicking outside (not on the gear button or menu)
+                    if (!e.target.closest('.column-chooser-menu') && !e.target.closest('.column-chooser-button')) {
+                        setExplorerColumnMenuOpen(false);
+                        setExplorerColumnMenuPos(null); // v5.0.0-alpha.107 - Clear context menu position
+                    }
+                };
+
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, [explorerColumnMenuOpen]);
+
+            // v5.0.0-alpha.82 - Auto-expand tree to show selected folder
+            useEffect(() => {
+                // Skip virtual folders (All Books, My Library)
+                if (!selectedFolderId || selectedFolderId === '__all__' || selectedFolderId === '__library__') return;
+
+                // Get path from root to selected folder
+                const path = getFolderPath(selectedFolderId);
+                // Extract ancestor IDs (skip virtual root and current folder - only expand parents)
+                const ancestorIds = path
+                    .filter(f => f.id !== '__library__' && f.id !== selectedFolderId)
+                    .map(f => f.id);
+
+                if (ancestorIds.length > 0) {
+                    setFolders(prev => prev.map(f =>
+                        ancestorIds.includes(f.id) ? { ...f, collapsed: false } : f
+                    ));
+                }
+            }, [selectedFolderId]);
+
             // Expose books to window for debugging
             useEffect(() => {
                 window.books = books;
             }, [books]);
+
+            // Expose folders to window for debugging
+            useEffect(() => {
+                window.folders = folders;
+                window.setFolders = setFolders;
+            }, [folders]);
 
             // ESC key to clear selection, Ctrl+A to select all in active column
             useEffect(() => {
@@ -861,6 +1653,16 @@
                     if (modalBookRef.current && (e.ctrlKey || e.metaKey) && e.key === 'a') {
                         e.preventDefault(); // Don't select entire page or books
                         return;
+                    }
+
+                    // v5.0.0-alpha.92 - Alt+Left: Back, Alt+Right: Forward (only in Explorer view)
+                    if (viewMode === 'explorer' && e.altKey && e.key === 'ArrowLeft') {
+                        e.preventDefault();
+                        goBack();
+                    }
+                    if (viewMode === 'explorer' && e.altKey && e.key === 'ArrowRight') {
+                        e.preventDefault();
+                        goForward();
                     }
 
                     // v4.8.0 - Ctrl+Z: Undo (v4.21.0.g - use ref to check modal state, consume keystroke)
@@ -901,6 +1703,167 @@
                                 setSelectedDivider({ columnId: activeColumnId, dividerId: firstDividerId });
                             }
                         }
+                    }
+
+                    // v5.0.0-alpha.102 - Ctrl+A in Explorer view: Select all visible books/folders
+                    // v5.0.0-alpha.103 - Fixed: Check viewMode first (activeColumnId is set even in Explorer view)
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && viewMode === 'explorer') {
+                        e.preventDefault(); // Prevent browser's select-all
+
+                        // Determine what to select based on current view
+                        if (selectedFolderId === '__all__' || (selectedFolderId !== '__library__' && getFolderBookIds(selectedFolderId).length > 0)) {
+                            // Viewing books - select all visible (filtered) books
+                            const allVisibleBookIds = getFolderBookIds(selectedFolderId)
+                                .map(id => books.find(b => b.id === id))
+                                .filter(book => filterBookForExplorer(book))
+                                .map(book => book.id);
+
+                            setExplorerSelectedBooks(new Set(allVisibleBookIds));
+                            setExplorerSelectedFolders(new Set()); // Clear folder selection
+                            console.log(`✅ Selected ${allVisibleBookIds.length} book(s) in Explorer`);
+                        } else {
+                            // Viewing folders (My Library or folder with subfolders) - select all visible folders
+                            const childFolders = selectedFolderId === '__library__'
+                                ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                                : getChildFolders(selectedFolderId);
+
+                            const allVisibleFolderIds = childFolders.map(f => f.id);
+
+                            setExplorerSelectedFolders(new Set(allVisibleFolderIds));
+                            setExplorerSelectedBooks(new Set()); // Clear book selection
+                            console.log(`✅ Selected ${allVisibleFolderIds.length} folder(s) in Explorer`);
+                        }
+                    }
+
+                    // v5.0.0-alpha.168 - Ctrl+X in Explorer view: Cut selected books
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'x' && viewMode === 'explorer' && explorerSelectedBooks.size > 0) {
+                        e.preventDefault();
+                        // Can't cut from special folders
+                        if (['__all__', '__library__', '__inbox__'].includes(selectedFolderId)) {
+                            console.log('⚠️ Cannot cut books from virtual folders');
+                            return;
+                        }
+                        const bookIds = Array.from(explorerSelectedBooks);
+                        const sourcePositions = bookIds.map(bookId => ({
+                            bookId,
+                            folderId: selectedFolderId
+                        }));
+                        setClipboard({ type: 'cut', bookIds, sourcePositions });
+                        const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} cut`;
+                        setClipboardMessage(message);
+                        setFooterClipboardVisible(false);
+                        setToastVisible(true);
+                        setToastAnimating(false);
+                        setTimeout(() => {
+                            setToastAnimating(true);
+                            setTimeout(() => {
+                                setToastVisible(false);
+                                setToastAnimating(false);
+                                setFooterClipboardVisible(true);
+                            }, 1000);
+                        }, 1500);
+                        console.log(`✂️ Cut ${bookIds.length} book(s) to clipboard (Explorer)`);
+                        return; // Don't fall through to Columns App handler
+                    }
+
+                    // v5.0.0-alpha.168 - Ctrl+C in Explorer view: Copy selected books
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'c' && viewMode === 'explorer' && explorerSelectedBooks.size > 0) {
+                        e.preventDefault();
+                        const bookIds = Array.from(explorerSelectedBooks);
+                        const sourcePositions = bookIds.map(bookId => ({
+                            bookId,
+                            folderId: selectedFolderId
+                        }));
+                        setClipboard({ type: 'copy', bookIds, sourcePositions });
+                        const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} copied`;
+                        setClipboardMessage(message);
+                        setFooterClipboardVisible(false);
+                        setToastVisible(true);
+                        setToastAnimating(false);
+                        setTimeout(() => {
+                            setToastAnimating(true);
+                            setTimeout(() => {
+                                setToastVisible(false);
+                                setToastAnimating(false);
+                                setFooterClipboardVisible(true);
+                            }, 1000);
+                        }, 1500);
+                        console.log(`📋 Copied ${bookIds.length} book(s) to clipboard (Explorer)`);
+                        return; // Don't fall through to Columns App handler
+                    }
+
+                    // v5.0.0-alpha.168 - Ctrl+V in Explorer view: Paste books to current folder
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'v' && viewMode === 'explorer' && clipboard && clipboard.bookIds && clipboard.bookIds.length > 0) {
+                        e.preventDefault();
+                        // Can't paste to special folders
+                        if (['__all__', '__library__', '__inbox__'].includes(selectedFolderId)) {
+                            console.log('⚠️ Cannot paste into virtual folders');
+                            return;
+                        }
+                        const targetFolderId = selectedFolderId;
+
+                        if (clipboard.type === 'cut') {
+                            // Cut: Remove from source folders, add to target
+                            const sourcesByFolder = {};
+                            clipboard.sourcePositions.forEach(pos => {
+                                if (!sourcesByFolder[pos.folderId]) sourcesByFolder[pos.folderId] = [];
+                                sourcesByFolder[pos.folderId].push(pos.bookId);
+                            });
+
+                            setFolders(prev => prev.map(folder => {
+                                // Remove from source folders
+                                if (sourcesByFolder[folder.id]) {
+                                    return {
+                                        ...folder,
+                                        bookIds: folder.bookIds.filter(id => !sourcesByFolder[folder.id].includes(id))
+                                    };
+                                }
+                                // Add to target folder
+                                if (folder.id === targetFolderId) {
+                                    const newBookIds = clipboard.bookIds.filter(id => !folder.bookIds.includes(id));
+                                    return {
+                                        ...folder,
+                                        bookIds: [...folder.bookIds, ...newBookIds]
+                                    };
+                                }
+                                return folder;
+                            }));
+
+                            recordAction({
+                                type: 'PASTE_BOOKS_CUT',
+                                bookIds: clipboard.bookIds,
+                                sourcePositions: clipboard.sourcePositions,
+                                targetFolderId
+                            });
+
+                            // Clear clipboard after cut-paste
+                            setClipboard(null);
+                            setClipboardMessage(null);
+                            setFooterClipboardVisible(false);
+                            console.log(`📥 Pasted ${clipboard.bookIds.length} book(s) (cut) to folder`);
+                        } else {
+                            // Copy: Just add to target folder
+                            setFolders(prev => prev.map(folder => {
+                                if (folder.id === targetFolderId) {
+                                    const newBookIds = clipboard.bookIds.filter(id => !folder.bookIds.includes(id));
+                                    return {
+                                        ...folder,
+                                        bookIds: [...folder.bookIds, ...newBookIds]
+                                    };
+                                }
+                                return folder;
+                            }));
+
+                            recordAction({
+                                type: 'PASTE_BOOKS_COPY',
+                                bookIds: clipboard.bookIds,
+                                targetFolderId
+                            });
+
+                            // Clipboard persists after copy-paste
+                            console.log(`📥 Pasted ${clipboard.bookIds.length} book(s) (copy) to folder`);
+                        }
+                        return; // Don't fall through to Columns App handler
                     }
 
                     // v4.16.0 - Ctrl+X: Cut selected books
@@ -1105,6 +2068,41 @@
                         }
                     }
 
+                    // v5.0.0-alpha.46 - DEL key in Explorer: Remove selected books from current folder
+                    if (e.key === 'Delete' && viewMode === 'explorer' && explorerSelectedBooks.size > 0) {
+                        e.preventDefault();
+                        // Can't remove from All Books (view-only) or Inbox
+                        if (selectedFolderId === '__all__' || selectedFolderId === '__inbox__') {
+                            console.log('🚫 Cannot remove books from All Books or Inbox');
+                            return;
+                        }
+                        const folder = folders.find(f => f.id === selectedFolderId);
+                        if (!folder) return;
+
+                        const bookIdsToRemove = [...explorerSelectedBooks];
+                        const fromIndices = bookIdsToRemove.map(id => (folder.bookIds || []).indexOf(id));
+
+                        // Remove books from folder
+                        setFolders(prev => prev.map(f => {
+                            if (f.id === selectedFolderId) {
+                                return { ...f, bookIds: (f.bookIds || []).filter(id => !explorerSelectedBooks.has(id)) };
+                            }
+                            return f;
+                        }));
+
+                        // Record for undo
+                        recordAction({
+                            type: 'REMOVE_BOOKS_FOLDER',
+                            folderId: selectedFolderId,
+                            bookIds: bookIdsToRemove,
+                            fromIndices: fromIndices
+                        });
+
+                        console.log(`🗑️ Removed ${bookIdsToRemove.length} book(s) from "${folder.name}"`);
+                        setExplorerSelectedBooks(new Set());
+                        return; // Don't fall through to column delete
+                    }
+
                     // v4.16.0.bd - DEL key: Delete selected books (with last-copy protection)
                     if (e.key === 'Delete' && selectedBooks.size > 0) {
                         e.preventDefault();
@@ -1178,7 +2176,7 @@
 
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [activeColumnId, columns, selectedBooks, clipboard, hiddenInstances]);
+            }, [activeColumnId, columns, selectedBooks, clipboard, hiddenInstances, viewMode, explorerSelectedBooks, selectedFolderId, folders]);
 
             // Initialize activeColumnId to first column when columns are loaded
             useEffect(() => {
@@ -1238,10 +2236,287 @@
                 }
             }, [columnMenuOpen]);
 
-            const saveSettings = (newSettings) => {
-                setSettings(newSettings);
-                setSettingsOpen(false);
-            };
+            // v5.0.0-alpha.133 - Close folder context menu on Esc key
+            useEffect(() => {
+                const handleEsc = (e) => {
+                    if (e.key === 'Escape' && folderContextMenu) {
+                        setFolderContextMenu(null);
+                    }
+                    // v5.0.0-alpha.165 - Close Explorer book context menu on Esc
+                    if (e.key === 'Escape' && explorerBookContextMenu) {
+                        setExplorerBookContextMenu(null);
+                    }
+                };
+                window.addEventListener('keydown', handleEsc);
+                return () => window.removeEventListener('keydown', handleEsc);
+            }, [folderContextMenu, explorerBookContextMenu]);
+
+            // v5.0.0-alpha.141 - Clear clipboard on Esc
+            useEffect(() => {
+                const handleEsc = (e) => {
+                    if (e.key === 'Escape' && folderClipboard.items.length > 0) {
+                        setFolderClipboard({ items: [], operation: null });
+                        console.log('📋 Clipboard cleared');
+                    }
+                };
+                window.addEventListener('keydown', handleEsc);
+                return () => window.removeEventListener('keydown', handleEsc);
+            }, [folderClipboard]);
+
+            // v5.0.0-alpha.144 - Handle dialog dragging
+            useEffect(() => {
+                if (!dialogDrag?.isDragging) return;
+
+                const handleMouseMove = (e) => {
+                    setDialogDrag(prev => ({
+                        ...prev,
+                        dialogX: e.clientX - prev.offsetX,
+                        dialogY: e.clientY - prev.offsetY
+                    }));
+                };
+
+                const handleMouseUp = () => {
+                    setDialogDrag(prev => ({ ...prev, isDragging: false }));
+                };
+
+                window.addEventListener('mousemove', handleMouseMove);
+                window.addEventListener('mouseup', handleMouseUp);
+                return () => {
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    window.removeEventListener('mouseup', handleMouseUp);
+                };
+            }, [dialogDrag?.isDragging]);
+
+            // v5.0.0-alpha.133 - Close folder context menu on click outside
+            useEffect(() => {
+                const handleClickOutside = (e) => {
+                    if (folderContextMenu && !e.target.closest('.fixed')) {
+                        setFolderContextMenu(null);
+                    }
+                    // v5.0.0-alpha.165 - Close Explorer book context menu when clicking outside
+                    if (explorerBookContextMenu && !e.target.closest('.fixed')) {
+                        setExplorerBookContextMenu(null);
+                    }
+                };
+                if (folderContextMenu || explorerBookContextMenu) {
+                    document.addEventListener('mousedown', handleClickOutside);
+                    return () => document.removeEventListener('mousedown', handleClickOutside);
+                }
+            }, [folderContextMenu, explorerBookContextMenu]);
+
+            // v5.0.0-alpha.145 - Keyboard shortcuts for folder operations (Phase 6)
+            useEffect(() => {
+                const handleKeyboard = (e) => {
+                    // Skip if user is typing in an input/textarea
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+                    // Skip if dialog or context menu is open
+                    if (folderContextMenu || folderPropertiesDialog) return;
+
+                    const currentFolder = folders.find(f => f.id === selectedFolderId);
+                    if (!currentFolder) return;
+
+                    const isSpecialFolder = ['__all__', '__inbox__', '__library__'].includes(currentFolder.id);
+
+                    // Ctrl+X - Cut folder
+                    if (e.ctrlKey && e.key === 'x' && !isSpecialFolder) {
+                        e.preventDefault();
+                        setFolderClipboard({ items: [currentFolder.id], operation: 'cut' });
+                        console.log(`✂️ Cut folder "${currentFolder.name}"`);
+                    }
+
+                    // Ctrl+C - Copy folder
+                    if (e.ctrlKey && e.key === 'c' && !isSpecialFolder) {
+                        e.preventDefault();
+                        setFolderClipboard({ items: [currentFolder.id], operation: 'copy' });
+                        console.log(`📋 Copied folder "${currentFolder.name}"`);
+                    }
+
+                    // Ctrl+V - Paste into current folder
+                    if (e.ctrlKey && e.key === 'v' && folderClipboard.items.length > 0 && !isSpecialFolder) {
+                        e.preventDefault();
+
+                        const folderId = folderClipboard.items[0];
+                        const folderToPaste = folders.find(f => f.id === folderId);
+                        if (!folderToPaste) return;
+
+                        // Check for circular reference
+                        const isDescendantOf = (targetId, ancestorId) => {
+                            if (!targetId || !ancestorId) return false;
+                            let current = folders.find(f => f.id === targetId);
+                            while (current) {
+                                if (current.id === ancestorId) return true;
+                                current = folders.find(f => f.id === current.parentId);
+                            }
+                            return false;
+                        };
+
+                        if (currentFolder.id === folderId || isDescendantOf(currentFolder.id, folderId)) {
+                            alert("Cannot paste folder into itself or its descendants");
+                            return;
+                        }
+
+                        if (folderClipboard.operation === 'cut') {
+                            // Move folder
+                            recordAction({
+                                type: 'CUT_PASTE_FOLDER',
+                                folderId: folderId,
+                                oldParentId: folderToPaste.parentId,
+                                newParentId: currentFolder.id
+                            });
+                            setFolders(prev => prev.map(f =>
+                                f.id === folderId ? { ...f, parentId: currentFolder.id } : f
+                            ));
+                            setFolderClipboard({ items: [], operation: null });
+                            console.log(`📌 Pasted (moved) "${folderToPaste.name}" into "${currentFolder.name}"`);
+                        } else if (folderClipboard.operation === 'copy') {
+                            // Deep copy folder
+                            const copyFolderRecursive = (sourceFolderId, newParentId) => {
+                                const sourceFolder = folders.find(f => f.id === sourceFolderId);
+                                if (!sourceFolder) return null;
+
+                                const newId = '__folder__' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                                const newFolder = {
+                                    ...sourceFolder,
+                                    id: newId,
+                                    name: sourceFolder.name + ' (Copy)',
+                                    parentId: newParentId,
+                                    created: Date.now()
+                                };
+
+                                const children = folders.filter(f => f.parentId === sourceFolderId);
+                                return { folder: newFolder, children: children.map(child => copyFolderRecursive(child.id, newId)) };
+                            };
+
+                            const copyTree = copyFolderRecursive(folderId, currentFolder.id);
+                            if (copyTree) {
+                                const flattenCopyTree = (tree) => {
+                                    const result = [tree.folder];
+                                    tree.children.forEach(child => {
+                                        if (child) result.push(...flattenCopyTree(child));
+                                    });
+                                    return result;
+                                };
+                                const newFolders = flattenCopyTree(copyTree);
+
+                                recordAction({
+                                    type: 'COPY_PASTE_FOLDER',
+                                    newFolderIds: newFolders.map(f => f.id)
+                                });
+                                setFolders(prev => [...prev, ...newFolders]);
+                                console.log(`📌 Pasted (copied) "${folderToPaste.name}" into "${currentFolder.name}"`);
+                            }
+                        }
+                    }
+
+                    // v5.0.0-alpha.160 - F2 - Rename folder (simplified logic)
+                    if (e.key === 'F2') {
+                        e.preventDefault();
+
+                        // Priority 1: If exactly one folder is selected in right panel, rename it there
+                        if (explorerSelectedFolders.size === 1) {
+                            const folderId = Array.from(explorerSelectedFolders)[0];
+                            const folder = folders.find(f => f.id === folderId);
+                            if (folder && !['__all__', '__inbox__', '__library__'].includes(folder.id)) {
+                                setRightPanelEditingId(folder.id);
+                                setRightPanelEditingName(folder.name);
+                                setRightPanelPlaceholderMode(false);
+                                console.log(`✏️ F2: Renaming "${folder.name}" in right panel`);
+                            }
+                        }
+                        // Priority 2: Otherwise rename currently viewed folder in left panel
+                        else if (currentFolder && !isSpecialFolder) {
+                            setEditingFolderId(currentFolder.id);
+                            setEditingFolderName(currentFolder.name);
+                            setIsPlaceholderMode(false);
+                            console.log(`✏️ F2: Renaming "${currentFolder.name}" in left panel`);
+                        }
+                    }
+
+                    // Delete - Delete current folder
+                    if (e.key === 'Delete' && !isSpecialFolder) {
+                        e.preventDefault();
+
+                        const hasChildren = folders.some(f => f.parentId === currentFolder.id);
+                        const hasBooks = currentFolder.bookIds && currentFolder.bookIds.length > 0;
+
+                        let confirmMsg = `Delete folder "${currentFolder.name}"?`;
+                        if (hasBooks && hasChildren) {
+                            confirmMsg = `Delete folder "${currentFolder.name}" and its ${currentFolder.bookIds.length} book(s) and subfolders? Books will move to parent folder.`;
+                        } else if (hasBooks) {
+                            confirmMsg = `Delete folder "${currentFolder.name}" and its ${currentFolder.bookIds.length} book(s)? Books will move to parent folder.`;
+                        } else if (hasChildren) {
+                            confirmMsg = `Delete folder "${currentFolder.name}" and all its subfolders?`;
+                        }
+
+                        if (!confirm(confirmMsg)) return;
+
+                        // Collect all folders to delete (folder + descendants)
+                        const getAllDescendantIds = (folderId) => {
+                            const children = folders.filter(f => f.parentId === folderId);
+                            let allIds = children.map(c => c.id);
+                            children.forEach(child => {
+                                allIds = [...allIds, ...getAllDescendantIds(child.id)];
+                            });
+                            return allIds;
+                        };
+
+                        const descendantIds = getAllDescendantIds(currentFolder.id);
+                        const foldersToDelete = [currentFolder, ...folders.filter(f => descendantIds.includes(f.id))];
+
+                        // Move orphaned books to parent
+                        const orphanedBookIds = [];
+                        foldersToDelete.forEach(folder => {
+                            if (folder.bookIds) orphanedBookIds.push(...folder.bookIds);
+                        });
+
+                        recordAction({
+                            type: 'DELETE_FOLDER',
+                            folderId: currentFolder.id,
+                            deletedFolders: foldersToDelete,
+                            orphanedBookIds: orphanedBookIds,
+                            newParentId: currentFolder.parentId
+                        });
+
+                        const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
+
+                        // Move orphaned books to parent folder
+                        if (orphanedBookIds.length > 0) {
+                            setFolders(prev => {
+                                const updated = prev.filter(f => !folderIdsToDelete.has(f.id));
+                                const parentFolder = updated.find(f => f.id === currentFolder.parentId);
+                                if (parentFolder) {
+                                    return updated.map(f =>
+                                        f.id === parentFolder.id
+                                            ? { ...f, bookIds: [...new Set([...(f.bookIds || []), ...orphanedBookIds])] }
+                                            : f
+                                    );
+                                }
+                                return updated;
+                            });
+                        } else {
+                            setFolders(prev => prev.filter(f => !folderIdsToDelete.has(f.id)));
+                        }
+
+                        // Navigate to parent or All Books
+                        if (selectedFolderId === currentFolder.id || folderIdsToDelete.has(selectedFolderId)) {
+                            navigateToFolder(currentFolder.parentId || '__all__');
+                        }
+
+                        console.log(`🗑️ Deleted folder "${currentFolder.name}" and ${foldersToDelete.length - 1} descendants`);
+                    }
+
+                    // Enter - Open/navigate to folder (if not already viewing it)
+                    // This is useful when focused on a folder in the tree but viewing a different folder
+                    // For now, skipping this as it's not as clear when it would be useful
+                    // Users can click or use context menu "Open" instead
+                };
+
+                window.addEventListener('keydown', handleKeyboard);
+                return () => window.removeEventListener('keydown', handleKeyboard);
+            }, [selectedFolderId, folders, folderClipboard, folderContextMenu, folderPropertiesDialog, explorerSelectedFolders]); // v5.0.0-alpha.157 - Added explorerSelectedFolders for F2
+
+            // v5.0.0-alpha.175.48 - Removed saveSettings function (dead code)
 
             const importLibrary = async () => {
                 // Close the dialog immediately when file picker opens
@@ -1324,14 +2599,14 @@
 
             const openCollectSeriesDialog = () => {
                 if (!modalBook || !modalBook.series || !modalColumnId) return;
-                
+
                 const currentColumn = columns.find(c => c.id === modalColumnId);
                 if (!currentColumn) return;
-                
-                const allSeriesBooks = books.filter(b => 
+
+                const allSeriesBooks = books.filter(b =>
                     b.series && b.series === modalBook.series && b.id !== modalBook.id
                 );
-                
+
                 // v4.16.0.s - Use helper for both legacy and new entry formats
                 const inCurrentColumn = allSeriesBooks.filter(b =>
                     columnHasBook(currentColumn.books, b.id)
@@ -1343,45 +2618,45 @@
                     const col = columns.find(c => columnHasBook(c.books, b.id));
                     return { ...b, columnName: col?.name || 'Unknown' };
                 });
-                
+
                 const sortByPosition = (a, b) => {
                     const posA = parseInt(a.seriesPosition) || 999;
                     const posB = parseInt(b.seriesPosition) || 999;
                     return posA - posB;
                 };
-                
+
                 inCurrentColumn.sort(sortByPosition);
                 inOtherColumns.sort(sortByPosition);
-                
+
                 setSeriesBooks({
                     current: inCurrentColumn,
                     other: inOtherColumns
                 });
-                
+
                 setCollectSeriesOpen(true);
             };
 
             const collectSeriesBooks = (includeAllColumns) => {
                 if (!modalBook || !modalColumnId) return;
-                
+
                 const targetColumn = columns.find(c => c.id === modalColumnId);
                 if (!targetColumn) return;
-                
-                const booksToCollect = includeAllColumns 
+
+                const booksToCollect = includeAllColumns
                     ? [...seriesBooks.current, ...seriesBooks.other]
                     : seriesBooks.current;
-                
+
                 if (booksToCollect.length === 0) {
                     setCollectSeriesOpen(false);
                     return;
                 }
-                
+
                 const allBooksInSeries = [modalBook, ...booksToCollect].sort((a, b) => {
                     const posA = parseInt(a.seriesPosition) || 999;
                     const posB = parseInt(b.seriesPosition) || 999;
                     return posA - posB;
                 });
-                
+
                 // v4.16.0.s - Use helper for index lookup with both entry formats
                 const currentBookIndexInTarget = findBookIndexInColumn(targetColumn.books, modalBook.id);
 
@@ -1414,7 +2689,7 @@
                     }
                     return col;
                 });
-                
+
                 setColumns(newColumns);
                 setCollectSeriesOpen(false);
             };
@@ -1423,7 +2698,7 @@
                 const fullStars = Math.floor(rating);
                 const hasHalfStar = rating % 1 >= 0.5;
                 const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-                
+
                 return (
                     <span className="text-yellow-500 text-2xl">
                         {'★'.repeat(fullStars)}
@@ -1464,7 +2739,12 @@
                         priceAsOf: book.priceAsOf,
                         targetPrice: book.targetPrice,
                         genres: book.genres,
-                        genresAsOf: book.genresAsOf
+                        genresAsOf: book.genresAsOf,
+                        // v5.0.0-alpha.175.28 - User metadata (tags, notes, price alerts)
+                        tags: book.tags,
+                        note: book.userNote,
+                        priceTrigger: book.priceTrigger,
+                        myRating: book.myRating || 0  // v5.0.0-alpha.175.31 - Personal rating (0=unrated, 1-5=rated)
                     }));
 
                     // Build collections.items from books that have collection data
@@ -1480,7 +2760,7 @@
                     // v4.15.1.b: Only include collections section if we have real collections data
                     const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
                     const exportData = {
-                        schemaVersion: "2.1",
+                        schemaVersion: "2.3",
                         isBackup: true,
                         books: {
                             fetchDate: libraryStatus.loadDate || new Date().toISOString(),
@@ -1496,7 +2776,28 @@
                             })),
                             columnOrder: columns.map(col => col.id),
                             blankImageBooks: Array.from(blankImageBooks),
+                            // v5.0.0-alpha.99 - Include folder organization for Explorer view
+                            folders: folders.map(folder => ({
+                                id: folder.id,
+                                name: folder.name,
+                                bookIds: folder.bookIds || [],
+                                parentId: folder.parentId,
+                                collapsed: folder.collapsed,
+                                childFolderIds: folder.childFolderIds
+                            })),
+                            // v5.0.0-alpha.101 - Include Explorer view settings
+                            explorerSettings: {
+                                viewMode,
+                                folderSortSettings,
+                                explorerView,
+                                explorerCoverCols,
+                                leftPaneWidth,
+                                visibleColumns, // v5.0.0-alpha.109
+                                columnWidths // v5.0.0-alpha.109
+                            },
                             exportDate: new Date().toISOString(),
+                            tagRegistry, // v5.0.0-alpha.175 - Tag registry
+                            hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
                             appVersion: ORGANIZER_VERSION
                         }
                     };
@@ -1542,6 +2843,8 @@
                     localStorage.removeItem(CACHE_KEY);
                     localStorage.removeItem(STATUS_KEY); // v3.7.0.n - clear saved status
                     localStorage.removeItem(FILTERS_KEY); // v3.8.0.h - clear saved filters
+                    localStorage.removeItem(EXPLORER_KEY); // v5.0.0-alpha.99 - clear Explorer view settings
+                    localStorage.removeItem(FOLDERS_KEY); // v5.0.0-alpha.99 - clear folder organization
 
                     // Reset all filters (v3.8.0.h, updated v3.8.0.k, v4.1.0.d)
                     setSearchTerm('');
@@ -1569,6 +2872,16 @@
                         loadStatus: 'empty',
                         loadDate: null
                     });
+
+                    // v5.0.0-alpha.99 - Reset Explorer view state (folders and view settings)
+                    setFolders([{ id: '__inbox__', name: 'Inbox', bookIds: [], parentId: null }]);
+                    setSelectedFolderId('__all__');
+                    setExplorerSort([{ column: 'dateAdded', direction: 'desc' }]);
+                    setFolderSortSettings({}); // v5.0.0-alpha.100 - Clear per-folder sort settings
+                    setTagRegistry({}); // v5.0.0-alpha.175.28 - Clear tag registry on reset
+                    setExplorerView('list');
+                    setViewMode('columns'); // Reset to Columns view
+
                     console.log('✅ Cleared library - app reset to initial state');
                     new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/app-reset';
                 } catch (error) {
@@ -1580,9 +2893,9 @@
             const handleFileUpload = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                
+
                 const text = await file.text();
-                
+
                 if (file.name.endsWith('.json')) {
                     await loadLibrary(text);
                 } else if (file.name.endsWith('.csv')) {
@@ -1594,20 +2907,20 @@
             const loadBooksFromCSV = (csvContent) => {
                 const lines = csvContent.split('\n');
                 const parsedBooks = [];
-                
+
                 const startLine = lines[0].includes('ASIN') ? 1 : 0;
-                
+
                 for (let i = startLine; i < lines.length && parsedBooks.length < 100; i++) {
                     const line = lines[i].trim();
                     if (!line) continue;
-                    
+
                     const parts = line.split(',');
                     let asin = parts[0]?.trim().replace(/[="']/g, '');
-                    
+
                     if (asin && asin.length < 10 && /^[0-9]+$/.test(asin)) {
                         asin = asin.padStart(10, '0');
                     }
-                    
+
                     if (asin && asin.length === 10) {
                         parsedBooks.push({
                             id: asin,  // Use ASIN as stable ID instead of sequential number
@@ -1621,7 +2934,7 @@
                         });
                     }
                 }
-                
+
                 setBooks(parsedBooks);
                 setColumns([{ id: 'unorganized', name: 'Unorganized', books: parsedBooks.map(b => b.id) }]);
                 setDataSource('csv');
@@ -1753,11 +3066,11 @@
 
                 const extractDescription = (descData) => {
                     if (!descData?.sections?.[0]?.content) return '';
-                    
+
                     const content = descData.sections[0].content;
-                    
+
                     if (content.text) return content.text;
-                    
+
                     if (content.fragments) {
                         const texts = [];
                         content.fragments.forEach(frag => {
@@ -1776,10 +3089,10 @@
                         });
                         return texts.join(' ').trim();
                     }
-                    
+
                     return '';
                 };
-                
+
                 const processedBooks = data.map((item) => {
                     const isNewFormat = !item.amazonData;
 
@@ -1822,7 +3135,11 @@
                             priceFetchedAt: item.priceFetchedAt || null,
                             priceTrigger: item.priceTrigger ?? null,
                             // Genre data (v4.17.0.a)
-                            genres: item.genres || []
+                            genres: item.genres || [],
+                            // v5.0.0-alpha.175.28 - User metadata (tags, notes)
+                            tags: item.tags,
+                            userNote: item.note,
+                            myRating: item.myRating || 0  // v5.0.0-alpha.175.31 - Personal rating
                         };
                     } else {
                         // Legacy format with amazonData (v1.x format)
@@ -1875,7 +3192,11 @@
                             priceFetchedAt: item.priceFetchedAt || null,
                             priceTrigger: item.priceTrigger ?? null,
                             // Genre data (v4.17.0.a)
-                            genres: item.genres || []
+                            genres: item.genres || [],
+                            // v5.0.0-alpha.175.28 - User metadata (tags, notes)
+                            tags: item.tags,
+                            userNote: item.note,
+                            myRating: item.myRating || 0  // v5.0.0-alpha.175.31 - Personal rating
                         };
                     }
                 });
@@ -1920,9 +3241,126 @@
                     console.log(`   - ${readBooks} READ, ${unreadBooks} UNREAD, ${processedBooks.length - readBooks - unreadBooks} UNKNOWN`);
                 }
 
+                // v5.0.0-alpha.175.28 - Debug: Log tags and notes data
+                const booksWithTags = processedBooks.filter(b => b.tags && b.tags.length > 0).length;
+                const booksWithNotes = processedBooks.filter(b => b.userNote).length;
+                if (booksWithTags > 0 || booksWithNotes > 0) {
+                    console.log(`🏷️ User metadata imported:`);
+                    console.log(`   - ${booksWithTags} books have tags`);
+                    console.log(`   - ${booksWithNotes} books have notes`);
+                    const sampleTagged = processedBooks.find(b => b.tags && b.tags.length > 0);
+                    if (sampleTagged) {
+                        console.log(`   - Sample tagged: "${sampleTagged.title}" has tags:`, sampleTagged.tags);
+                    }
+                    const sampleNoted = processedBooks.find(b => b.userNote);
+                    if (sampleNoted) {
+                        console.log(`   - Sample noted: "${sampleNoted.title}" has note:`, sampleNoted.userNote);
+                    }
+                }
+
                 // Save to IndexedDB (returns merged books including preserved orphan wishlists)
-                const mergedBooks = await saveBooksToIndexedDB(processedBooks);
+                // v5.0.0-alpha.173.1 - Pass preserveUserData=true for imports to merge with existing
+                const mergedBooks = await saveBooksToIndexedDB(processedBooks, true);
                 setBooks(mergedBooks);
+
+                // v5.0.0-alpha.126: When restoring backup, trigger download of amazon-library.json
+                // This ensures future fetcher runs can update all books (fixes orphaned wishlist data hole)
+                if (organizationFromFile !== null) {
+                    // Build amazon-library.json format from restored books
+                    const libraryData = {
+                        schemaVersion: "2.3",
+                        books: {
+                            fetchDate: metadata.fetchDate || new Date().toISOString(),
+                            fetcherVersion: metadata.fetcherVersion || "backup-restore",
+                            totalBooks: mergedBooks.length,
+                            items: mergedBooks.map(book => ({
+                                asin: book.asin,
+                                onWishlist: book.onWishlist || false,
+                                ownershipType: book.ownershipType || 'purchased',
+                                isHidden: book.isHidden || false,
+                                addedToWishlist: book.addedToWishlist || '',
+                                title: book.title,
+                                authors: book.author,
+                                coverUrl: book.coverUrl,
+                                rating: book.rating,
+                                reviewCount: book.ratingCount,
+                                series: book.series,
+                                seriesPosition: book.seriesPosition,
+                                acquisitionDate: book.acquired,
+                                description: book.description,
+                                topReviews: book.topReviews,
+                                binding: book.binding,
+                                currentPrice: book.currentPrice,
+                                listPrice: book.listPrice,
+                                priceFetchedAt: book.priceFetchedAt,
+                                targetPrice: book.targetPrice,
+                                priceTrigger: book.priceTrigger,
+                                genres: book.genres
+                            }))
+                        }
+                    };
+
+                    // Add collections if available
+                    if (collections && collections.size > 0) {
+                        const collectionItems = mergedBooks
+                            .filter(book => book.collections || book.readStatus)
+                            .map(book => ({
+                                asin: book.asin,
+                                readStatus: book.readStatus || 'UNKNOWN',
+                                collections: book.collections || []
+                            }));
+
+                        libraryData.collections = {
+                            fetchDate: parsedData.collections?.fetchDate || new Date().toISOString(),
+                            fetcherVersion: parsedData.collections?.fetcherVersion || "backup-restore",
+                            totalBooksScanned: collectionItems.length,
+                            booksWithCollections: collectionItems.filter(b => b.collections.length > 0).length,
+                            items: collectionItems
+                        };
+                    }
+
+                    // Show GUI notification FIRST (before file picker appears) - v5.0.0-alpha.130
+                    await showInfoDialog(
+                        '✅ Backup Restored!',
+                        `📥 Library file regenerated (${mergedBooks.length} books)\n\n` +
+                        `⚠️ IMPORTANT: Replace your existing amazon-library.json file\n\n` +
+                        `When the save dialog appears:\n` +
+                        `   • Navigate to where you keep amazon-library.json\n` +
+                        `   • If browser suggests "amazon-library (1).json",\n` +
+                        `     change it back to "amazon-library.json"\n` +
+                        `   • Save to replace the existing file\n\n` +
+                        `💡 Why this matters:\n\n` +
+                        `This regenerated file contains ALL your books (owned + wishlist). ` +
+                        `Using it for future Library Fetcher runs ensures ALL your books get updated, ` +
+                        `preventing stale data for wishlist items.`
+                    );
+
+                    // Trigger download AFTER user acknowledges
+                    const blob = new Blob([JSON.stringify(libraryData, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'amazon-library.json';
+                    a.click();
+                    URL.revokeObjectURL(url);
+
+                    // Show helpful guidance (console backup)
+                    console.log('\n========================================');
+                    console.log('📥 LIBRARY FILE REGENERATED');
+                    console.log('========================================');
+                    console.log(`   ✅ amazon-library.json (${mergedBooks.length} books)`);
+                    console.log('');
+                    console.log('👉 Next steps:');
+                    console.log('   1. Find amazon-library.json in your Downloads folder');
+                    console.log('   2. Keep it somewhere you can find it (Desktop, Documents, etc.)');
+                    console.log('   3. Use this file for future Library Fetcher runs');
+                    console.log('');
+                    console.log('💡 Why this file matters:');
+                    console.log('   - Ensures future fetcher runs update ALL your books');
+                    console.log('   - Includes wishlist books that may not be in fresh fetches');
+                    console.log('   - Prevents stale price data for orphaned wishlist items');
+                    console.log('========================================\n');
+                }
 
                 // Reset all filters when loading new library (v3.8.0.g, updated v3.8.0.k)
                 setSearchTerm('');
@@ -2000,6 +3438,54 @@
 
                     setColumns(restoredColumns);
                     setBlankImageBooks(new Set(orgToRestore.blankImageBooks || []));
+                    setTagRegistry(orgToRestore.tagRegistry || {}); // v5.0.0-alpha.175.17
+
+                    // v5.0.0-alpha.99 - Restore folders from backup (if present)
+                    if (orgToRestore.folders && Array.isArray(orgToRestore.folders)) {
+                        const restoredFolders = orgToRestore.folders.map(folder => ({
+                            id: folder.id,
+                            name: folder.name,
+                            bookIds: folder.bookIds || [],
+                            parentId: folder.parentId,
+                            collapsed: folder.collapsed,
+                            childFolderIds: folder.childFolderIds
+                        }));
+
+                        // Ensure Inbox exists (for backward compatibility with old backups)
+                        const hasInbox = restoredFolders.some(f => f.id === '__inbox__');
+                        if (!hasInbox) {
+                            restoredFolders.push({
+                                id: '__inbox__',
+                                name: 'Inbox',
+                                bookIds: [],
+                                parentId: null
+                            });
+                        }
+
+                        setFolders(restoredFolders);
+                        localStorage.setItem(FOLDERS_KEY, JSON.stringify(restoredFolders));
+                        console.log(`✅ Restored ${restoredFolders.length} folders from ${orgSource}`);
+                    } else {
+                        // No folders in backup - preserve existing folders from localStorage (backward compatibility)
+                        console.log('📁 No folders in backup - keeping existing folder structure');
+                    }
+
+                    // v5.0.0-alpha.101 - Restore Explorer settings from backup (if present)
+                    if (orgToRestore.explorerSettings) {
+                        const settings = orgToRestore.explorerSettings;
+                        if (settings.viewMode) setViewMode(settings.viewMode);
+                        if (settings.folderSortSettings) setFolderSortSettings(settings.folderSortSettings);
+                        if (settings.explorerView) setExplorerView(settings.explorerView);
+                        if (settings.explorerCoverCols) setExplorerCoverCols(settings.explorerCoverCols);
+                        if (settings.leftPaneWidth) setLeftPaneWidth(settings.leftPaneWidth);
+                        if (settings.visibleColumns) setVisibleColumns(settings.visibleColumns); // v5.0.0-alpha.109
+                        if (settings.columnWidths) setColumnWidths(settings.columnWidths); // v5.0.0-alpha.109
+                        console.log('✅ Restored Explorer view settings from backup');
+                    } else {
+                        // No explorer settings in backup - preserve existing from localStorage (backward compatibility)
+                        console.log('📁 No explorer settings in backup - keeping existing preferences');
+                    }
+
                     console.log(`✅ Restored organization from ${orgSource}`);
                     setDataSource('enriched');
                     setLastSyncTime(Date.now());
@@ -2048,7 +3534,7 @@
 
             const finishEditingColumn = (columnId) => {
                 if (editingName.trim()) {
-                    setColumns(columns.map(col => 
+                    setColumns(columns.map(col =>
                         col.id === columnId ? { ...col, name: editingName.trim() } : col
                     ));
                 }
@@ -2077,7 +3563,7 @@
                         const a = books.find(b => b.id === aId);
                         const b = books.find(b => b.id === bId);
                         if (!a || !b) return 0;
-                        
+
                         switch(sortType) {
                             case 'title-asc':
                                 return a.title.localeCompare(b.title);
@@ -2092,9 +3578,10 @@
                             case 'rating-asc':
                                 return (a.rating || 0) - (b.rating || 0);
                             case 'acquired-desc':
-                                return (b.acquired || '').localeCompare(a.acquired || '');
+                                // v5.0.0-alpha.169.5 - Use parseBookDate for proper date comparison
+                                return parseBookDate(b.acquired || b.addedToWishlist) - parseBookDate(a.acquired || a.addedToWishlist);
                             case 'acquired-asc':
-                                return (a.acquired || '').localeCompare(b.acquired || '');
+                                return parseBookDate(a.acquired || a.addedToWishlist) - parseBookDate(b.acquired || b.addedToWishlist);
                             case 'published-desc':
                                 // Books without publication date go to end
                                 if (!a.publicationDate && !b.publicationDate) return 0;
@@ -2141,7 +3628,7 @@
                                 return 0;
                         }
                     });
-                    
+
                     return { ...col, books: sortedBookIds };
                 }));
                 setSortMenuOpen(null);
@@ -2464,7 +3951,7 @@
                 } catch (e) {
                     console.error('Cache read error:', e);
                 }
-                
+
                 setModalBook(book);
                 setModalColumnId(columnId);
                 setShowAllReviews(false);
@@ -2591,6 +4078,7 @@
                 setRedoStack([]); // Clear redo on new action
             };
 
+            // TODO - Delete verbose console.log statements in executeUndo/executeRedo before release
             const executeUndo = (action) => {
                 switch (action.type) {
                     case 'MOVE_BOOKS':
@@ -2814,6 +4302,241 @@
                             return col;
                         }));
                         break;
+                    // v5.0.0-alpha.46 - Explorer folder operations
+                    case 'MOVE_BOOKS_FOLDER':
+                        // Undo move: remove from target folder, add back to source folder
+                        console.log('[UNDO MOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.toFolderId) {
+                                // Remove books from target
+                                return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
+                            }
+                            if (folder.id === action.fromFolderId) {
+                                // Re-insert at original positions
+                                const newBookIds = [...(folder.bookIds || [])];
+                                const sortedPairs = action.bookIds
+                                    .map((id, i) => ({ id, index: action.fromIndices[i] }))
+                                    .sort((a, b) => a.index - b.index);
+                                sortedPairs.forEach(({ id, index }) => {
+                                    newBookIds.splice(index, 0, id);
+                                });
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'COPY_BOOKS_FOLDER':
+                        // Undo copy: just remove from target folder
+                        console.log('[UNDO COPY_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.toFolderId) {
+                                return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'REMOVE_BOOKS_FOLDER':
+                        // Undo remove: add books back to folder at original positions
+                        console.log('[UNDO REMOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                const newBookIds = [...(folder.bookIds || [])];
+                                const sortedPairs = action.bookIds
+                                    .map((id, i) => ({ id, index: action.fromIndices[i] }))
+                                    .sort((a, b) => a.index - b.index);
+                                sortedPairs.forEach(({ id, index }) => {
+                                    newBookIds.splice(index, 0, id);
+                                });
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'REORDER_BOOKS_FOLDER':
+                        // Undo reorder: restore original positions
+                        console.log('[UNDO REORDER_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                const newBookIds = [...(folder.bookIds || [])];
+                                // Remove the moved books
+                                action.bookIds.forEach(id => {
+                                    const idx = newBookIds.indexOf(id);
+                                    if (idx !== -1) newBookIds.splice(idx, 1);
+                                });
+                                // Re-insert at original positions (sorted ascending)
+                                const sortedPairs = action.bookIds
+                                    .map((id, i) => ({ id, index: action.fromIndices[i] }))
+                                    .sort((a, b) => a.index - b.index);
+                                sortedPairs.forEach(({ id, index }) => {
+                                    newBookIds.splice(index, 0, id);
+                                });
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'DELETE_FOLDERS':
+                        // Undo delete: restore folders with their bookIds and hierarchy
+                        // v5.0.0-alpha.56 - Also remove orphaned books from destination and restore selection
+                        console.log('[UNDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => {
+                            let newFolders = [...prev];
+
+                            // Remove orphaned books from destination folder (if any were moved)
+                            if (action.orphanedBooks?.length > 0 && action.orphanDestination) {
+                                const orphanedSet = new Set(action.orphanedBooks);
+                                newFolders = newFolders.map(f => {
+                                    if (f.id === action.orphanDestination) {
+                                        return { ...f, bookIds: (f.bookIds || []).filter(id => !orphanedSet.has(id)) };
+                                    }
+                                    return f;
+                                });
+                            }
+
+                            // Re-insert folders at their original indices (sorted ascending)
+                            const sortedFolders = action.deletedFolders
+                                .map((f, i) => ({ folder: f, index: action.folderIndices[i] }))
+                                .sort((a, b) => a.index - b.index);
+                            sortedFolders.forEach(({ folder, index }) => {
+                                newFolders.splice(index, 0, folder);
+                            });
+                            return newFolders;
+                        });
+                        // Restore selection to first restored folder
+                        if (action.deletedFolders?.length > 0) {
+                            setSelectedFolderId(action.deletedFolders[0].id);
+                        }
+                        break;
+                    case 'CREATE_FOLDER':
+                        // v5.0.0-alpha.51 - Undo folder creation: remove the created folder
+                        console.log('[UNDO CREATE_FOLDER] Removing folder:', action.folderId);
+                        setFolders(prev => prev.filter(f => f.id !== action.folderId));
+                        if (selectedFolderId === action.folderId) {
+                            setSelectedFolderId(action.parentId || '__all__');
+                        }
+                        break;
+                    case 'REPARENT_FOLDER':
+                        // v5.0.0-alpha.78 - Undo reparent: restore old parentIds
+                        console.log('[UNDO REPARENT_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            const oldData = action.oldParentIds.find(o => o.folderId === folder.id);
+                            if (oldData) {
+                                return { ...folder, parentId: oldData.oldParentId };
+                            }
+                            return folder;
+                        }));
+                        showToast(`Undo: ${action.description}`, 'info');
+                        break;
+                    case 'MOVE_FOLDER':
+                        // v5.0.0-alpha.135 - Undo single folder move: restore old parent
+                        console.log('[UNDO MOVE_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                return { ...folder, parentId: action.oldParentId };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'CUT_PASTE_FOLDER':
+                        // v5.0.0-alpha.141 - Undo cut/paste: restore old parent
+                        console.log('[UNDO CUT_PASTE_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                return { ...folder, parentId: action.oldParentId };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'COPY_PASTE_FOLDER':
+                        // v5.0.0-alpha.141 - Undo copy/paste: delete copied folders
+                        console.log('[UNDO COPY_PASTE_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.filter(folder => !action.newFolderIds.includes(folder.id)));
+                        break;
+                    case 'MOVE_BOOKS_TO_FOLDER':
+                        // v5.0.0-alpha.166 - Undo book move: restore books to original folder
+                        console.log('[UNDO MOVE_BOOKS_TO_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.fromFolderId) {
+                                // Add books back to source folder (at top)
+                                return { ...folder, bookIds: [...action.bookIds, ...folder.bookIds] };
+                            }
+                            if (folder.id === action.toFolderId) {
+                                // Remove books from target folder
+                                return { ...folder, bookIds: folder.bookIds.filter(id => !action.bookIds.includes(id)) };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'COPY_BOOKS_TO_FOLDER':
+                        // v5.0.0-alpha.166 - Undo book copy: remove books from target folder
+                        console.log('[UNDO COPY_BOOKS_TO_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.toFolderId) {
+                                // Remove books from target folder
+                                return { ...folder, bookIds: folder.bookIds.filter(id => !action.bookIds.includes(id)) };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'PASTE_BOOKS_CUT':
+                        // v5.0.0-alpha.168 - Undo cut-paste: restore books to source folders, remove from target
+                        console.log('[UNDO PASTE_BOOKS_CUT] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => {
+                            // Group books by source folder
+                            const sourcesByFolder = {};
+                            action.sourcePositions.forEach(pos => {
+                                if (!sourcesByFolder[pos.folderId]) sourcesByFolder[pos.folderId] = [];
+                                sourcesByFolder[pos.folderId].push(pos.bookId);
+                            });
+
+                            return prev.map(folder => {
+                                // Add books back to source folders
+                                if (sourcesByFolder[folder.id]) {
+                                    return { ...folder, bookIds: [...sourcesByFolder[folder.id], ...folder.bookIds] };
+                                }
+                                // Remove books from target folder
+                                if (folder.id === action.targetFolderId) {
+                                    return { ...folder, bookIds: folder.bookIds.filter(id => !action.bookIds.includes(id)) };
+                                }
+                                return folder;
+                            });
+                        });
+                        break;
+                    case 'PASTE_BOOKS_COPY':
+                        // v5.0.0-alpha.168 - Undo copy-paste: remove books from target folder
+                        console.log('[UNDO PASTE_BOOKS_COPY] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.targetFolderId) {
+                                return { ...folder, bookIds: folder.bookIds.filter(id => !action.bookIds.includes(id)) };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'REORDER_FOLDER':
+                        // v5.0.0-alpha.79 - Undo folder reorder: restore old order
+                        console.log('[UNDO REORDER_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        if (action.parentId) {
+                            setFolders(prev => prev.map(folder => {
+                                if (folder.id === action.parentId) {
+                                    return { ...folder, childFolderIds: action.oldOrder };
+                                }
+                                return folder;
+                            }));
+                        } else {
+                            // Root level - restore sortIndex
+                            setFolders(prev => {
+                                const updated = [...prev];
+                                action.oldOrder.forEach((folderId, idx) => {
+                                    const folderIdx = updated.findIndex(f => f.id === folderId);
+                                    if (folderIdx >= 0) {
+                                        updated[folderIdx] = { ...updated[folderIdx], sortIndex: idx };
+                                    }
+                                });
+                                return updated;
+                            });
+                        }
+                        showToast(`Undo: ${action.description}`, 'info');
+                        break;
                     default:
                         console.warn('Unknown action type for undo:', action.type);
                 }
@@ -2983,6 +4706,229 @@
                             return col;
                         }));
                         break;
+                    // v5.0.0-alpha.46 - Explorer folder operations
+                    case 'MOVE_BOOKS_FOLDER':
+                        // Redo move: remove from source, add to target
+                        console.log('[REDO MOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.fromFolderId) {
+                                return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
+                            }
+                            if (folder.id === action.toFolderId) {
+                                const newBookIds = [...(folder.bookIds || [])];
+                                newBookIds.splice(action.toIndex, 0, ...action.bookIds);
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'COPY_BOOKS_FOLDER':
+                        // Redo copy: add to target folder
+                        console.log('[REDO COPY_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.toFolderId) {
+                                const newBookIds = [...(folder.bookIds || [])];
+                                newBookIds.splice(action.toIndex, 0, ...action.bookIds);
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'REMOVE_BOOKS_FOLDER':
+                        // Redo remove: remove books from folder
+                        console.log('[REDO REMOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'REORDER_BOOKS_FOLDER':
+                        // Redo reorder: apply the reorder again
+                        console.log('[REDO REORDER_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                const newBookIds = [...(folder.bookIds || [])];
+                                // Remove by indices (descending to maintain positions)
+                                const sortedIndices = [...action.fromIndices].sort((a, b) => b - a);
+                                sortedIndices.forEach(idx => {
+                                    if (idx >= 0 && idx < newBookIds.length) newBookIds.splice(idx, 1);
+                                });
+                                // Calculate adjusted insert index
+                                let adjustedIndex = action.toIndex;
+                                action.fromIndices.forEach(origIdx => {
+                                    if (origIdx < action.toIndex) adjustedIndex--;
+                                });
+                                // Insert books at target position
+                                newBookIds.splice(adjustedIndex, 0, ...action.bookIds);
+                                return { ...folder, bookIds: newBookIds };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'DELETE_FOLDERS':
+                        // Redo delete: move orphaned books to destination, then remove folders
+                        // v5.0.0-alpha.56 - Handle orphaned books on redo and update selection
+                        console.log('[REDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
+                        const folderIdsToDeleteRedo = new Set(action.deletedFolders.map(f => f.id));
+                        setFolders(prev => {
+                            let updated = prev;
+                            // Move orphaned books to destination (if any)
+                            if (action.orphanedBooks?.length > 0 && action.orphanDestination) {
+                                updated = updated.map(f => {
+                                    if (f.id === action.orphanDestination) {
+                                        const existingIds = new Set(f.bookIds || []);
+                                        const newBookIds = action.orphanedBooks.filter(id => !existingIds.has(id));
+                                        return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                    }
+                                    return f;
+                                });
+                            }
+                            // Remove deleted folders
+                            return updated.filter(f => !folderIdsToDeleteRedo.has(f.id));
+                        });
+                        // v5.0.0-alpha.58 - Navigate to parent folder instead of All Books
+                        if (folderIdsToDeleteRedo.has(selectedFolderId)) {
+                            setSelectedFolderId(action.orphanDestination || '__all__');
+                        }
+                        break;
+                    case 'CREATE_FOLDER':
+                        // v5.0.0-alpha.51 - Redo folder creation: re-add the folder
+                        console.log('[REDO CREATE_FOLDER] Re-adding folder:', action.folder.name);
+                        setFolders(prev => [...prev, { ...action.folder }]);
+                        setSelectedFolderId(action.folderId);
+                        break;
+                    case 'REPARENT_FOLDER':
+                        // v5.0.0-alpha.78 - Redo reparent: apply the new parentId again
+                        console.log('[REDO REPARENT_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (action.folderIds.includes(folder.id)) {
+                                return { ...folder, parentId: action.newParentId };
+                            }
+                            return folder;
+                        }));
+                        showToast(`Redo: ${action.description}`, 'info');
+                        break;
+                    case 'MOVE_FOLDER':
+                        // v5.0.0-alpha.135 - Redo single folder move: apply new parent
+                        console.log('[REDO MOVE_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                return { ...folder, parentId: action.newParentId };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'CUT_PASTE_FOLDER':
+                        // v5.0.0-alpha.141 - Redo cut/paste: apply new parent
+                        console.log('[REDO CUT_PASTE_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.folderId) {
+                                return { ...folder, parentId: action.newParentId };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'COPY_PASTE_FOLDER':
+                        // v5.0.0-alpha.141 - Redo copy/paste: re-add copied folders
+                        console.log('[REDO COPY_PASTE_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        // Note: We need to store the copied folders in the action to redo properly
+                        // For now, this is a limitation - we can't redo copy operations
+                        // TODO: Store copied folder data in action for proper redo
+                        showToast('Cannot redo copy operation', 'warning');
+                        break;
+                    case 'MOVE_BOOKS_TO_FOLDER':
+                        // v5.0.0-alpha.166 - Redo book move: move books to target folder again
+                        console.log('[REDO MOVE_BOOKS_TO_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.fromFolderId) {
+                                // Remove books from source folder
+                                return { ...folder, bookIds: folder.bookIds.filter(id => !action.bookIds.includes(id)) };
+                            }
+                            if (folder.id === action.toFolderId) {
+                                // Add books to target folder (at top)
+                                return { ...folder, bookIds: [...action.bookIds, ...folder.bookIds] };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'COPY_BOOKS_TO_FOLDER':
+                        // v5.0.0-alpha.166 - Redo book copy: add books to target folder again
+                        console.log('[REDO COPY_BOOKS_TO_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.toFolderId) {
+                                // Add books to target folder (filter out duplicates first)
+                                const existingIds = new Set(folder.bookIds);
+                                const newBooks = action.bookIds.filter(id => !existingIds.has(id));
+                                return { ...folder, bookIds: [...newBooks, ...folder.bookIds] };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'PASTE_BOOKS_CUT':
+                        // v5.0.0-alpha.168 - Redo cut-paste: remove from source folders, add to target
+                        console.log('[REDO PASTE_BOOKS_CUT] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => {
+                            // Group books by source folder
+                            const sourcesByFolder = {};
+                            action.sourcePositions.forEach(pos => {
+                                if (!sourcesByFolder[pos.folderId]) sourcesByFolder[pos.folderId] = [];
+                                sourcesByFolder[pos.folderId].push(pos.bookId);
+                            });
+
+                            return prev.map(folder => {
+                                // Remove books from source folders
+                                if (sourcesByFolder[folder.id]) {
+                                    return { ...folder, bookIds: folder.bookIds.filter(id => !sourcesByFolder[folder.id].includes(id)) };
+                                }
+                                // Add books to target folder
+                                if (folder.id === action.targetFolderId) {
+                                    const existingIds = new Set(folder.bookIds);
+                                    const newBooks = action.bookIds.filter(id => !existingIds.has(id));
+                                    return { ...folder, bookIds: [...folder.bookIds, ...newBooks] };
+                                }
+                                return folder;
+                            });
+                        });
+                        break;
+                    case 'PASTE_BOOKS_COPY':
+                        // v5.0.0-alpha.168 - Redo copy-paste: add books to target folder
+                        console.log('[REDO PASTE_BOOKS_COPY] Action:', JSON.stringify(action, null, 2));
+                        setFolders(prev => prev.map(folder => {
+                            if (folder.id === action.targetFolderId) {
+                                const existingIds = new Set(folder.bookIds);
+                                const newBooks = action.bookIds.filter(id => !existingIds.has(id));
+                                return { ...folder, bookIds: [...folder.bookIds, ...newBooks] };
+                            }
+                            return folder;
+                        }));
+                        break;
+                    case 'REORDER_FOLDER':
+                        // v5.0.0-alpha.79 - Redo folder reorder: apply new order
+                        console.log('[REDO REORDER_FOLDER] Action:', JSON.stringify(action, null, 2));
+                        if (action.parentId) {
+                            setFolders(prev => prev.map(folder => {
+                                if (folder.id === action.parentId) {
+                                    return { ...folder, childFolderIds: action.newOrder };
+                                }
+                                return folder;
+                            }));
+                        } else {
+                            // Root level - apply new sortIndex
+                            setFolders(prev => {
+                                const updated = [...prev];
+                                action.newOrder.forEach((folderId, idx) => {
+                                    const folderIdx = updated.findIndex(f => f.id === folderId);
+                                    if (folderIdx >= 0) {
+                                        updated[folderIdx] = { ...updated[folderIdx], sortIndex: idx };
+                                    }
+                                });
+                                return updated;
+                            });
+                        }
+                        showToast(`Redo: ${action.description}`, 'info');
+                        break;
                     default:
                         console.warn('Unknown action type for redo:', action.type);
                 }
@@ -3054,20 +5000,20 @@
 
             const navigateBook = (direction) => {
                 if (!modalBook || !modalColumnId) return;
-                
+
                 const column = columns.find(c => c.id === modalColumnId);
                 if (!column) return;
-                
+
                 const visibleBooks = filteredBooks(column.books);
                 const currentIndex = visibleBooks.findIndex(b => b.id === modalBook.id);
                 if (currentIndex === -1) return;
-                
+
                 let newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
-                
+
                 if (newIndex < 0 || newIndex >= visibleBooks.length) return;
-                
+
                 const newBook = visibleBooks[newIndex];
-                
+
                 if (newBook) {
                     setModalBook(newBook);
                 }
@@ -3075,15 +5021,15 @@
 
             const getBookPosition = () => {
                 if (!modalBook || !modalColumnId) return { current: 0, total: 0 };
-                
+
                 const column = columns.find(c => c.id === modalColumnId);
                 if (!column) return { current: 0, total: 0 };
-                
+
                 const visibleBooks = filteredBooks(column.books);
                 const currentIndex = visibleBooks.findIndex(b => b.id === modalBook.id);
-                
+
                 if (currentIndex === -1) return { current: 0, total: 0 };
-                
+
                 return {
                     current: currentIndex + 1,
                     total: visibleBooks.length,
@@ -3111,7 +5057,7 @@
                 for (let i = 0; i < columnElements.length; i++) {
                     const rect = columnElements[i].getBoundingClientRect();
                     const midpoint = rect.left + rect.width / 2;
-                    
+
                     if (mouseX < midpoint) {
                         return i;
                     }
@@ -3594,6 +5540,26 @@
             };
 
             const handleMouseMove = (e) => {
+                // v5.0.0-alpha.111 - Handle column resizing (min width 35px, table-layout fixed)
+                if (resizingColumn) {
+                    const deltaX = e.clientX - resizingColumn.startX;
+                    const newWidth = Math.max(35, resizingColumn.startWidth + deltaX);
+
+                    // Update CSS custom property directly (no React re-render)
+                    document.documentElement.style.setProperty(`--col-${resizingColumn.columnId}`, `${newWidth}px`);
+
+                    // Store current width for mouseup commit
+                    resizingColumn.currentWidth = newWidth;
+                    return;
+                }
+
+                // v5.0.0-alpha.91 - Handle pane resizing
+                if (isResizingPane) {
+                    const newWidth = Math.max(200, Math.min(600, e.clientX));
+                    setLeftPaneWidth(newWidth);
+                    return;
+                }
+
                 if (draggedColumn) {
                     setDragCurrentPos({ x: e.clientX, y: e.clientY }); // Column drag still uses state (low volume)
 
@@ -3723,6 +5689,29 @@
             };
 
             const handleMouseUp = (e) => {
+                // v5.0.0-alpha.110 - Stop column resizing and commit final width
+                if (resizingColumn) {
+                    // Commit final width to React state
+                    if (resizingColumn.currentWidth !== undefined) {
+                        setColumnWidths(prev => ({
+                            ...prev,
+                            [resizingColumn.columnId]: resizingColumn.currentWidth
+                        }));
+                    }
+
+                    // Clear CSS custom property
+                    document.documentElement.style.removeProperty(`--col-${resizingColumn.columnId}`);
+
+                    setResizingColumn(null);
+                    return;
+                }
+
+                // v5.0.0-alpha.91 - Stop pane resizing
+                if (isResizingPane) {
+                    setIsResizingPane(false);
+                    return;
+                }
+
                 // v3.12.0 - Clear auto-scroll interval when drag ends
                 if (autoScrollInterval) {
                     clearInterval(autoScrollInterval);
@@ -4220,9 +6209,9 @@
                         }
                     }
 
-                    // Deals filter (v4.17.0.j, v4.18.0.a - onWishlist replaces isWishlist)
+                    // Deals filter (v5.0.0-alpha.163 - works for all books, not just wishlist)
                     const matchesDeals = !dealsFilterActive ||
-                        (book.onWishlist && book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger);
+                        (book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger);
 
                     // Tag filter (v4.27.0 - OR logic: book matches if it has ANY of the selected tags)
                     // Check both explicit tags and inherited tags from dividers
@@ -4273,6 +6262,56 @@
                 ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo ||
                 (tagFilter && tagFilter.length > 0));
 
+            // v5.0.0-alpha.169 - Filtered Folder View: Save/restore expansion state when filters change
+            useEffect(() => {
+                if (hasActiveFilters) {
+                    // Save current expansion state before modifying (only once when filter becomes active)
+                    if (!savedExpansionState) {
+                        const currentState = new Map();
+                        folders.forEach(f => currentState.set(f.id, f.collapsed));
+                        setSavedExpansionState(currentState);
+                    }
+
+                    // Auto-expand folders with matching books
+                    const foldersToExpand = new Set();
+                    folders.forEach(folder => {
+                        const { matching } = getFilteredFolderCount(folder.id);
+                        if (matching > 0) {
+                            // Expand this folder and all ancestors
+                            let current = folder;
+                            while (current) {
+                                foldersToExpand.add(current.id);
+                                current = folders.find(f => f.id === current.parentId);
+                            }
+                        }
+                    });
+
+                    if (foldersToExpand.size > 0) {
+                        setFolders(prev => prev.map(f =>
+                            foldersToExpand.has(f.id) ? { ...f, collapsed: false } : f
+                        ));
+                    }
+                } else {
+                    // Restore saved expansion state when filter is cleared
+                    if (savedExpansionState) {
+                        setFolders(prev => prev.map(f => ({
+                            ...f,
+                            collapsed: savedExpansionState.get(f.id) ?? f.collapsed
+                        })));
+                        setSavedExpansionState(null);
+                    }
+                    // Reset show all override
+                    setShowAllFoldersOverride(false);
+                }
+                // eslint-disable-next-line react-hooks/exhaustive-deps
+            }, [hasActiveFilters]);
+
+            // v5.0.0-alpha.169 - Reset "show all" override when any filter changes
+            useEffect(() => {
+                setShowAllFoldersOverride(false);
+            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter,
+                ownershipFilter, seriesFilter, dateFrom, dateTo, tagFilter, dealsFilterActive]);
+
             // Calculate combined urgency from Library and Collections status
             // Urgency is based ONLY on Load status (what's in the app right now)
             const getUrgencyInfo = () => {
@@ -4319,6 +6358,20 @@
                 );
             };
 
+            // v5.0.0-alpha.175.30 - Helper for status ball indicator in File menu
+            const getStatusBall = () => {
+                if (syncStatus === 'loading') return '⏳';
+                const urgency = getUrgencyInfo();
+                const ballMap = {
+                    'Must act': '🔴',
+                    'Obsolete': '🔴',
+                    'Stale': '🟡',
+                    'Unknown': '⚪',
+                    'Fresh': '🟢'
+                };
+                return ballMap[urgency.text] || '⚪';
+            };
+
             return (
                 <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 text-gray-900"
                      onMouseMove={handleMouseMove}
@@ -4348,519 +6401,1251 @@
                             padding: 0;
                         }
                     `}</style>
-                    <div className="bg-white border-b border-gray-300 p-4 shadow-sm">
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex items-start gap-3">
-                                <img src="icons/ReaderWranglerWordlessXparent.png" alt="" style={{ width: '84px', height: 'auto', marginTop: '2px' }} />
-                                <div>
-                                    <h1 className="app-title">
-                                        <a href="index.html" style={{ color: 'inherit', textDecoration: 'none' }} title="Wrangle your reader chaos">
-                                            ReaderWrangler™
-                                        </a>
-                                        <span style={{ fontFamily: "'Lato', sans-serif", fontWeight: 300, color: '#64748b', fontSize: '0.875rem', marginLeft: '0.75rem' }}>v{APP_VERSION}</span>
-                                    </h1>
-                                    <p className="attribution">A product of Alloid Labs™</p>
-                                    <p className="tagline">Your books, your order</p>
-                                </div>
+                    {/* v5.0.0-alpha.175.1 - Menu Bar (Phase 1 foundation) */}
+                    <div style={{
+                        height: '32px',
+                        background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
+                        borderBottom: '1px solid #e2e8f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 8px',
+                        gap: '2px'
+                    }}>
+                        {/* Logo + App Name */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '12px', marginRight: '4px', borderRight: '1px solid #cbd5e1' }}>
+                            <img src="icons/ReaderWranglerWordlessXparent32.png" alt="" style={{ width: '20px', height: '20px' }} />
+                            <span style={{ fontWeight: 700, fontSize: '13px', color: '#1e293b', letterSpacing: '-0.02em' }}>
+                                ReaderWrangler<span style={{ fontSize: '9px', verticalAlign: 'super', color: '#64748b' }}>™</span>
+                            </span>
+                        </div>
+                        {/* v5.0.0-alpha.175.2 - File/View/Help menus */}
+                        {['File', 'View', 'Help'].map(menuName => (
+                            <div key={menuName} style={{ position: 'relative' }} data-menu-area="true">
+                                <button
+                                    data-menu-area="true"
+                                    onMouseDown={() => setOpenMenuBar(openMenuBar === menuName.toLowerCase() ? null : menuName.toLowerCase())}
+                                    onMouseEnter={() => openMenuBar && setOpenMenuBar(menuName.toLowerCase())}
+                                    style={{
+                                        padding: '4px 10px',
+                                        fontSize: '13px',
+                                        fontWeight: 500,
+                                        color: openMenuBar === menuName.toLowerCase() ? '#1e3a8a' : '#475569',
+                                        background: openMenuBar === menuName.toLowerCase() ? '#dbeafe' : 'transparent',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer',
+                                        transition: 'background 0.1s'
+                                    }}
+                                >
+                                    {menuName === 'File' ? (
+                                        <>
+                                            File <span style={{ fontSize: '11px', marginLeft: '2px' }}>{getStatusBall()}</span>
+                                        </>
+                                    ) : menuName}
+                                </button>
+                                {openMenuBar === menuName.toLowerCase() && (
+                                    <div data-menu-area="true" style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: 0,
+                                        marginTop: '2px',
+                                        minWidth: '200px',
+                                        background: 'white',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '6px',
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                        zIndex: 1000,
+                                        padding: '4px 0'
+                                    }}>
+                                        {menuName === 'File' && (
+                                            <>
+                                                {/* v5.0.0-alpha.175.30 - Data Status in File menu */}
+                                                <button onClick={() => { setStatusModalOpen(true); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: getUrgencyInfo().color.replace('text-', '')
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    {getStatusBall()} Data Status: {getUrgencyInfo().text}
+                                                </button>
+                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                                <button onClick={() => { importLibrary(); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: '#1e293b'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    Import Library…
+                                                </button>
+                                                <button onClick={() => { exportLibrary(); setOpenMenuBar(null); }} disabled={books.length === 0} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: books.length === 0 ? 'not-allowed' : 'pointer',
+                                                    transition: 'background 0.1s', color: books.length === 0 ? '#94a3b8' : '#1e293b',
+                                                    opacity: books.length === 0 ? 0.5 : 1
+                                                }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = '#f1f5f9')} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    Export Library…
+                                                </button>
+                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                                <button onClick={() => { setResetConfirmOpen(true); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: '#dc2626'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    Reset App
+                                                </button>
+                                            </>
+                                        )}
+                                        {menuName === 'View' && (
+                                            <>
+                                                <button onClick={() => { setExplorerView('list'); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px 8px 32px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: '#1e293b', position: 'relative'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    {explorerView === 'list' && <span style={{ position: 'absolute', left: '12px' }}>✓</span>}
+                                                    List View
+                                                </button>
+                                                <button onClick={() => { setExplorerView('covers'); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px 8px 32px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: '#1e293b', position: 'relative'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    {explorerView === 'covers' && <span style={{ position: 'absolute', left: '12px' }}>✓</span>}
+                                                    Cover View
+                                                </button>
+                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                                <button onClick={() => { setShowHidden(!showHidden); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px 8px 32px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: '#1e293b', position: 'relative'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    {showHidden && <span style={{ position: 'absolute', left: '12px' }}>✓</span>}
+                                                    Show Hidden
+                                                </button>
+                                                <button onClick={() => { setDealsFilterActive(!dealsFilterActive); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px 8px 32px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: '#1e293b', position: 'relative'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    {dealsFilterActive && <span style={{ position: 'absolute', left: '12px' }}>✓</span>}
+                                                    Deals Only
+                                                </button>
+                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />                                                <button onClick={() => { setTagManagementOpen(true); setOpenMenuBar(null); }} style={{                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',                                                    border: 'none', background: 'white', cursor: 'pointer',                                                    transition: 'background 0.1s', color: '#1e293b'                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>                                                    Manage Tags...                                                </button>
+                                            </>
+                                        )}
+                                        {menuName === 'Help' && (
+                                            <>
+                                                <button onClick={() => { setHowToDialogOpen(true); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: '#1e293b'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    How To Use
+                                                </button>
+                                                <button onClick={() => { setShortcutsDialogOpen(true); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: '#1e293b'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    Keyboard Shortcuts
+                                                </button>
+                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                                <button onClick={() => { setAboutDialogOpen(true); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: '#1e293b'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    About ReaderWrangler™
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex gap-2 items-center">
-                                {renderStatusIndicator()}
-                                <span className="text-gray-300 mx-1">|</span>
-                                {/* v4.17.0.j - Deals filter button */}
-                                {(() => {
-                                    const dealsCount = books.filter(b => b.onWishlist && b.priceTrigger != null && b.currentPrice != null && b.currentPrice <= b.priceTrigger).length;
-                                    return dealsCount > 0 ? (
-                                        <button
-                                            onClick={() => setDealsFilterActive(!dealsFilterActive)}
-                                            className={`px-3 py-2 rounded-lg text-sm font-medium ${dealsFilterActive
-                                                ? 'bg-green-500 text-white border border-green-600'
-                                                : 'bg-white hover:bg-gray-50 text-green-700 border border-green-300'}`}
-                                            title={dealsFilterActive ? 'Click to show all books' : 'Click to show only deals (wishlist books at or below your target price)'}>
-                                            🏷️ Deals ({dealsCount})
-                                        </button>
-                                    ) : null;
-                                })()}
-                                {/* v4.16.0.q - Subtle button styling (Option 3) */}
-                                <button onClick={importLibrary}
-                                        className="px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg text-sm font-medium"
-                                        title="Import library file - merges with existing books, preserving your organization. Also restores from backup files.">
-                                    📥 Import
+                        ))}
+                    </div>
+
+                    {/* v5.0.0-alpha.175.3 - Toolbar (Phase 3 foundation) */}
+                    <div style={{
+                        height: '36px',
+                        background: 'white',
+                        borderBottom: '1px solid #e2e8f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '0 12px',
+                        gap: '12px'
+                    }}>
+                        {/* Search input */}
+                        <div style={{ position: 'relative', flex: '0 0 300px' }}>
+                            <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' }}>🔍</span>
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Title or author..."
+                                style={{
+                                    width: '100%',
+                                    height: '28px',
+                                    padding: '0 28px 0 28px',
+                                    fontSize: '13px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    outline: 'none'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                                onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                            />
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    style={{
+                                        position: 'absolute',
+                                        right: '6px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#64748b',
+                                        fontSize: '16px',
+                                        cursor: 'pointer',
+                                        padding: '0 4px',
+                                        lineHeight: '1'
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.color = '#1e293b'}
+                                    onMouseLeave={(e) => e.target.style.color = '#64748b'}
+                                >
+                                    ×
                                 </button>
-                                <button onClick={exportLibrary}
-                                        className="px-3 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg text-sm font-medium"
-                                        disabled={books.length === 0}
-                                        title="Save backup with your organization">
-                                    💾 Export
-                                </button>
-                                <button onClick={clearLibrary}
-                                        className="px-3 py-2 bg-white hover:bg-gray-50 text-red-700 border border-gray-300 rounded-lg text-sm font-medium"
-                                        title="Click for details about what will be reset">
-                                    🗑️ Reset App
-                                </button>
-                                <button 
-                                    onClick={() => setSettingsOpen(!settingsOpen)}
-                                    className="text-gray-600 hover:text-gray-700 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300"
-                                    title="Settings">
-                                    ⚙️
-                                </button>
-                                <button 
-                                    onClick={() => setHelpOpen(!helpOpen)}
-                                    className="text-blue-700 hover:text-blue-800 text-2xl font-bold w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 hover:bg-blue-200"
-                                    title="Help & Instructions">
-                                    ?
-                                </button>
-                            </div>
+                            )}
                         </div>
 
-                        {/* Filter Panel (v4.15.5.e - Three-state toggle: Filters → More Filters → Hide) */}
-                        <div className="flex flex-wrap gap-2 items-start mb-4">
-                            {/* Three-State Filter Toggle Button - fixed width to prevent jumping */}
-                            <button
-                                onClick={() => {
-                                    // v4.15.5.e - Three-state cycle: closed → primary → advanced → closed
-                                    if (!filterPanelOpen) {
-                                        setFilterPanelOpen(true);
-                                        setShowAdvancedFilters(false);
-                                    } else if (!showAdvancedFilters) {
-                                        setShowAdvancedFilters(true);
-                                    } else {
-                                        setFilterPanelOpen(false);
-                                        setShowAdvancedFilters(false);
-                                    }
-                                }}
-                                className={`px-4 py-2 border rounded-lg flex items-center justify-start gap-2 min-w-[150px] ${
-                                    (searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || dateFrom || dateTo || (tagFilter && tagFilter.length > 0))
-                                    ? `border-blue-500 text-blue-700 font-semibold ${!filterPanelOpen ? 'filter-button-active' : ''}`
-                                    : 'border-gray-300 text-gray-700'
-                                }`}
-                                title={!filterPanelOpen ? 'Show filters' : !showAdvancedFilters ? 'Show more filters' : 'Hide filters'}>
-                                🔍 {!filterPanelOpen ? 'Filters' : !showAdvancedFilters ? 'More Filters' : 'Hide'}
-                                {/* v4.15.6.g: Use datePreset for count instead of dateFrom/dateTo, v4.27.0: add tagFilter */}
-                                {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset || (tagFilter && tagFilter.length > 0)) &&
-                                    ` (${[searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, seriesFilter, datePreset, tagFilter?.length > 0].filter(Boolean).length})`}
-                            </button>
+                        {/* v5.0.0-alpha.175.4 - Toolbar Tier 1 Filters */}
 
-                            {/* Book count + Show Hidden - always visible when panel closed (v4.22.0.a) */}
-                            {books.length > 0 && !filterPanelOpen && (
-                                <div className="flex items-center gap-4 py-2">
-                                    <span className="text-sm text-gray-600">
-                                        {(() => {
-                                            // Calculate filtered count (same logic as expanded view)
-                                            const filteredResults = columns.flatMap(col =>
-                                                filteredBooks(col.books).filter(item => !(item && item.type === 'divider'))
-                                            );
-                                            const filteredBookIds = new Set(filteredResults.map(book => book.id));
-                                            const filteredUniqueCount = filteredBookIds.size;
-                                            return `Showing: ${filteredUniqueCount} of ${books.length}`;
-                                        })()}
-                                    </span>
-                                    <label className="flex items-center gap-2 cursor-pointer text-sm">
-                                        <input
-                                            type="checkbox"
-                                            checked={showHidden}
-                                            onChange={(e) => setShowHidden(e.target.checked)}
-                                            className="w-4 h-4 rounded border-gray-300 text-blue-700 focus:ring-blue-500"
-                                        />
-                                        <span className="text-gray-600">Show Hidden</span>
-                                    </label>
+                        {/* Status Filter */}
+                        <div style={{ position: 'relative' }} data-status-dropdown="">
+                            <button
+                                onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                                style={{
+                                    height: '28px',
+                                    padding: '0 10px',
+                                    fontSize: '13px',
+                                    border: '1px solid',
+                                    borderColor: readStatusFilter ? '#93c5fd' : '#cbd5e1',
+                                    borderRadius: '4px',
+                                    background: readStatusFilter ? '#dbeafe' : 'white',
+                                    color: readStatusFilter ? '#1e40af' : '#475569',
+                                    cursor: 'pointer',
+                                    fontWeight: readStatusFilter ? 500 : 400,
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                {readStatusFilter === 'READ' && '✓ Read'}
+                                {readStatusFilter === 'UNREAD' && '○ Unread'}
+                                {readStatusFilter === 'UNKNOWN' && '? Unknown'}
+                                {!readStatusFilter && 'Read Status'}
+                            </button>
+                            {statusDropdownOpen && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '32px',
+                                    left: 0,
+                                    background: 'white',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                    zIndex: 1000,
+                                    minWidth: '140px'
+                                }}>
+                                    <div
+                                        onClick={() => { setReadStatusFilter(''); setStatusDropdownOpen(false); }}
+                                        style={{
+                                            padding: '8px 12px',
+                                            fontSize: '13px',
+                                            cursor: 'pointer',
+                                            background: !readStatusFilter ? '#f1f5f9' : 'white'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                        onMouseLeave={(e) => e.target.style.background = !readStatusFilter ? '#f1f5f9' : 'white'}
+                                    >
+                                        All Status
+                                    </div>
+                                    <div
+                                        onClick={() => { setReadStatusFilter('READ'); setStatusDropdownOpen(false); }}
+                                        style={{
+                                            padding: '8px 12px',
+                                            fontSize: '13px',
+                                            cursor: 'pointer',
+                                            background: readStatusFilter === 'READ' ? '#f1f5f9' : 'white'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                        onMouseLeave={(e) => e.target.style.background = readStatusFilter === 'READ' ? '#f1f5f9' : 'white'}
+                                    >
+                                        ✓ Read
+                                    </div>
+                                    <div
+                                        onClick={() => { setReadStatusFilter('UNREAD'); setStatusDropdownOpen(false); }}
+                                        style={{
+                                            padding: '8px 12px',
+                                            fontSize: '13px',
+                                            cursor: 'pointer',
+                                            background: readStatusFilter === 'UNREAD' ? '#f1f5f9' : 'white'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                        onMouseLeave={(e) => e.target.style.background = readStatusFilter === 'UNREAD' ? '#f1f5f9' : 'white'}
+                                    >
+                                        ○ Unread
+                                    </div>
+                                    <div
+                                        onClick={() => { setReadStatusFilter('UNKNOWN'); setStatusDropdownOpen(false); }}
+                                        style={{
+                                            padding: '8px 12px',
+                                            fontSize: '13px',
+                                            cursor: 'pointer',
+                                            background: readStatusFilter === 'UNKNOWN' ? '#f1f5f9' : 'white'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                        onMouseLeave={(e) => e.target.style.background = readStatusFilter === 'UNKNOWN' ? '#f1f5f9' : 'white'}
+                                    >
+                                        ? Unknown
+                                    </div>
                                 </div>
                             )}
+                        </div>
 
-                            {/* FILTER TABLE - v4.15.5.j - HTML table with tuned column widths */}
-                            {filterPanelOpen && (
-                                <table className="border-collapse" style={{borderSpacing: '4px'}}>
-                                    <colgroup>
-                                        <col /> {/* Column 1: Search/Rating - auto width */}
-                                        <col style={{width: '148px'}} /> {/* Column 2: Status/Series */}
-                                        <col style={{width: '188px'}} /> {/* Column 3: Collection/Wishlist */}
-                                        <col style={{width: '140px'}} /> {/* Column 4: Type */}
-                                        <col /> {/* Column 5: Date From - auto */}
-                                        <col /> {/* Column 6: Date To - auto */}
-                                    </colgroup>
-                                    <tbody>
-                                        {/* ROW 1: Primary Filters */}
-                                        <tr className="align-middle">
-                                            {/* Search with icon - 50px left padding to align box with Rating below */}
-                                            <td className="pr-2 py-1" style={{paddingLeft: '50px'}}>
-                                                <div className="relative flex items-center">
-                                                    <span className="absolute left-3 text-gray-400" title="Search for Title, Author, Column or Divider">🔍</span>
-                                                    <input type="text"
-                                                           placeholder="Title or author..."
-                                                           value={searchTerm}
-                                                           onChange={(e) => setSearchTerm(e.target.value)}
-                                                           title="Search for Title, Author, Column or Divider"
-                                                           aria-label="Search by title, author, column or divider"
-                                                           className="w-full pl-10 pr-8 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-                                                    {searchTerm && (
-                                                        <button
-                                                            onClick={() => setSearchTerm('')}
-                                                            className="absolute right-2 text-gray-400 hover:text-gray-600 text-lg"
-                                                            title="Clear search">
-                                                            ×
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-
-                                            {/* Read Status */}
-                                            <td className="px-2 py-1">
-                                                <div className="flex items-center gap-1">
-                                                    <span title="Read Status">📖</span>
-                                                    <select
-                                                        value={readStatusFilter}
-                                                        onChange={(e) => setReadStatusFilter(e.target.value)}
-                                                        aria-label="Filter by read status"
-                                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                                                        <option value="">All Status</option>
-                                                        <option value="READ">✓ Read</option>
-                                                        <option value="UNREAD">○ Unread</option>
-                                                        <option value="UNKNOWN">? Unknown</option>
-                                                    </select>
-                                                </div>
-                                            </td>
-
-                                            {/* Collection */}
-                                            <td className="px-2 py-1">
-                                                <div className="flex items-center gap-1">
-                                                    <span title="Collection">🗂️</span>
-                                                    <select
-                                                        value={collectionFilter}
-                                                        onChange={(e) => setCollectionFilter(e.target.value)}
-                                                        aria-label="Filter by collection"
-                                                        className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                                                        <option value="">All Collections</option>
-                                                        <option value="UNCOLLECTED">📚 Uncollected</option>
-                                                        {getAllCollectionNames().map(name => (
-                                                            <option key={name} value={name}>{name}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            </td>
-
-                                            {/* Tag filter - v4.27.0 */}
-                                            <td className="px-2 py-1">
-                                                {Object.keys(tagRegistry).length > 0 && (
-                                                    <div className="flex items-center gap-1 relative">
-                                                        <span title="Tags">🏷️</span>
-                                                        <div className="relative">
-                                                            <button
-                                                                onClick={() => setContextSubmenu(contextSubmenu === 'tagFilter' ? null : 'tagFilter')}
-                                                                className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-left flex items-center justify-between gap-2 ${
-                                                                    tagFilter.length > 0 ? 'border-blue-500 text-blue-700' : 'border-gray-300 text-gray-700'
-                                                                }`}
-                                                                style={{minWidth: '120px'}}>
-                                                                <span>{tagFilter.length > 0 ? `${tagFilter.length} tag${tagFilter.length > 1 ? 's' : ''}` : 'All Tags'}</span>
-                                                                <span className="text-gray-400">▼</span>
-                                                            </button>
-                                                            {contextSubmenu === 'tagFilter' && (
-                                                                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-[180px] max-h-[300px] overflow-y-auto">
-                                                                    {Object.entries(tagRegistry).sort((a, b) => a[1].label.localeCompare(b[1].label)).map(([tagId, tagData]) => (
-                                                                        <label key={tagId} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer">
-                                                                            <input
-                                                                                type="checkbox"
-                                                                                checked={tagFilter.includes(tagId)}
-                                                                                onChange={() => {
-                                                                                    setTagFilter(prev =>
-                                                                                        prev.includes(tagId)
-                                                                                            ? prev.filter(t => t !== tagId)
-                                                                                            : [...prev, tagId]
-                                                                                    );
-                                                                                }}
-                                                                                className="w-4 h-4 rounded border-gray-300 text-blue-600"
-                                                                            />
-                                                                            <span className="text-sm">{tagData.label} ({tagData.count})</span>
-                                                                        </label>
-                                                                    ))}
-                                                                    {tagFilter.length > 0 && (
-                                                                        <>
-                                                                            <div className="border-t border-gray-200 my-1"></div>
-                                                                            <button
-                                                                                onClick={() => setTagFilter([])}
-                                                                                className="w-full px-3 py-2 text-sm text-blue-600 hover:bg-gray-100 text-left">
-                                                                                Clear All
-                                                                            </button>
-                                                                        </>
-                                                                    )}
-                                                                    <div className="border-t border-gray-200 my-1"></div>
-                                                                    <button
-                                                                        onClick={() => { setTagManagementOpen(true); setContextSubmenu(null); }}
-                                                                        className="w-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 text-left flex items-center gap-2">
-                                                                        ⚙️ Manage Tags...
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                        </div>
+                        {/* Tags Filter */}
+                        <div style={{ position: 'relative' }} data-tags-dropdown="">
+                            <button
+                                onClick={() => setTagsDropdownOpen(!tagsDropdownOpen)}
+                                style={{
+                                    height: '28px',
+                                    padding: '0 10px',
+                                    fontSize: '13px',
+                                    border: '1px solid',
+                                    borderColor: tagFilter.length > 0 ? '#93c5fd' : '#cbd5e1',
+                                    borderRadius: '4px',
+                                    background: tagFilter.length > 0 ? '#dbeafe' : 'white',
+                                    color: tagFilter.length > 0 ? '#1e40af' : '#475569',
+                                    cursor: 'pointer',
+                                    fontWeight: tagFilter.length > 0 ? 500 : 400,
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                {tagFilter.length > 0 ? `Tags (${tagFilter.length})` : 'Tags'}
+                            </button>
+                            {tagsDropdownOpen && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '32px',
+                                    left: 0,
+                                    background: 'white',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                    zIndex: 1000,
+                                    minWidth: '200px',
+                                    maxHeight: '300px',
+                                    overflowY: 'auto'
+                                }}>
+                                    {Object.keys(tagRegistry).length === 0 ? (
+                                        <div style={{ padding: '8px 12px', fontSize: '13px', color: '#94a3b8' }}>
+                                            No tags available
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div
+                                                onClick={() => setTagFilter([])}
+                                                style={{
+                                                    padding: '8px 12px',
+                                                    fontSize: '13px',
+                                                    cursor: 'pointer',
+                                                    background: tagFilter.length === 0 ? '#f1f5f9' : 'white',
+                                                    borderBottom: '1px solid #e2e8f0'
+                                                }}
+                                                onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                                onMouseLeave={(e) => e.target.style.background = tagFilter.length === 0 ? '#f1f5f9' : 'white'}
+                                            >
+                                                Clear All
+                                            </div>
+                                            {Object.entries(tagRegistry)
+                                                .sort(([a], [b]) => a.localeCompare(b))
+                                                .map(([tagName, tagData]) => (
+                                                    <div
+                                                        key={tagName}
+                                                        onClick={() => {
+                                                            if (tagFilter.includes(tagName)) {
+                                                                setTagFilter(tagFilter.filter(t => t !== tagName));
+                                                            } else {
+                                                                setTagFilter([...tagFilter, tagName]);
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            padding: '8px 12px',
+                                                            fontSize: '13px',
+                                                            cursor: 'pointer',
+                                                            background: 'white',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '8px'
+                                                        }}
+                                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                                        onMouseLeave={(e) => e.target.style.background = 'white'}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={tagFilter.includes(tagName)}
+                                                            onChange={() => {}}
+                                                            style={{ cursor: 'pointer' }}
+                                                        />
+                                                        <span style={{ flex: 1 }}>{tagData.label}</span>
+                                                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                                                            {getTagCount(tagName)}
+                                                        </span>
                                                     </div>
-                                                )}
-                                            </td>
-                                            {/* Empty cells for columns 5-6 in row 1 */}
-                                            <td></td>
-                                            <td></td>
-                                        </tr>
+                                                ))
+                                            }
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
-                                        {/* ROW 2: Advanced Filters (only shown when expanded) */}
-                                        {showAdvancedFilters && (
-                                            <tr className="align-middle">
-                                                {/* Rating - left padding to match Search above */}
-                                                <td className="pr-2 py-1 pl-6">
-                                                    <div className="flex items-center gap-1">
-                                                        <span title="Rating">⭐</span>
-                                                        <select
-                                                            value={ratingFilter}
-                                                            onChange={(e) => setRatingFilter(e.target.value)}
-                                                            aria-label="Filter by rating"
-                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                                                            <option value="">All Ratings</option>
-                                                            <option value="5">5★</option>
-                                                            <option value="4">4+★</option>
-                                                            <option value="3">3+★</option>
-                                                            <option value="2">2+★</option>
-                                                            <option value="1">1+★</option>
-                                                        </select>
-                                                    </div>
-                                                </td>
+                        {/* Types Filter */}
+                        <div style={{ position: 'relative' }} data-types-dropdown="">
+                            <button
+                                onClick={() => setTypesDropdownOpen(!typesDropdownOpen)}
+                                style={{
+                                    height: '28px',
+                                    padding: '0 10px',
+                                    fontSize: '13px',
+                                    border: '1px solid',
+                                    borderColor: ownershipFilter ? '#93c5fd' : '#cbd5e1',
+                                    borderRadius: '4px',
+                                    background: ownershipFilter ? '#dbeafe' : 'white',
+                                    color: ownershipFilter ? '#1e40af' : '#475569',
+                                    cursor: 'pointer',
+                                    fontWeight: ownershipFilter ? 500 : 400,
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                {ownershipFilter ?
+                                    (() => {
+                                        const labels = {
+                                            'purchased': 'Purchased',
+                                            'sample': 'Sample',
+                                            'borrowed': 'Borrowed',
+                                            'prime': 'Prime',
+                                            'kindleUnlimited': 'Kindle Unlimited',
+                                            'koll': 'KOLL',
+                                            'comixology': 'Comixology'
+                                        };
+                                        return labels[ownershipFilter] || ownershipFilter;
+                                    })()
+                                    : 'Source'
+                                }
+                            </button>
+                            {typesDropdownOpen && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '32px',
+                                    left: 0,
+                                    background: 'white',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                    zIndex: 1000,
+                                    minWidth: '160px'
+                                }}>
+                                    <div
+                                        onClick={() => { setOwnershipFilter(''); setTypesDropdownOpen(false); }}
+                                        style={{
+                                            padding: '8px 12px',
+                                            fontSize: '13px',
+                                            cursor: 'pointer',
+                                            background: !ownershipFilter ? '#f1f5f9' : 'white'
+                                        }}
+                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                        onMouseLeave={(e) => e.target.style.background = !ownershipFilter ? '#f1f5f9' : 'white'}
+                                    >
+                                        All Types
+                                    </div>
+                                    {[
+                                        { value: 'purchased', label: 'Purchased' },
+                                        { value: 'sample', label: 'Sample' },
+                                        { value: 'borrowed', label: 'Borrowed' },
+                                        { value: 'prime', label: 'Prime' },
+                                        { value: 'kindleUnlimited', label: 'Kindle Unlimited' },
+                                        { value: 'koll', label: 'KOLL' },
+                                        { value: 'comixology', label: 'Comixology' }
+                                    ].map(type => (
+                                        <div
+                                            key={type.value}
+                                            onClick={() => { setOwnershipFilter(type.value); setTypesDropdownOpen(false); }}
+                                            style={{
+                                                padding: '8px 12px',
+                                                fontSize: '13px',
+                                                cursor: 'pointer',
+                                                background: ownershipFilter === type.value ? '#f1f5f9' : 'white'
+                                            }}
+                                            onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                            onMouseLeave={(e) => e.target.style.background = ownershipFilter === type.value ? '#f1f5f9' : 'white'}
+                                        >
+                                            {type.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
-                                                {/* Series */}
-                                                <td className="px-2 py-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <span title="Series">📚</span>
-                                                        <select
-                                                            value={seriesFilter}
-                                                            onChange={(e) => setSeriesFilter(e.target.value)}
-                                                            aria-label="Filter by series"
-                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                                                            <option value="">All Series</option>
-                                                            <option value="NOT_IN_SERIES">📖 Not in Series</option>
-                                                            {getAllSeriesNames().map(name => (
-                                                                <option key={name} value={name}>{name}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                </td>
+                        {/* v5.0.0-alpha.175.40 - Phase 5.1: More button */}
+                        <button
+                            data-morepanel="true"
+                            onClick={() => setMorePanelOpen(!morePanelOpen)}
+                            className={`px-3 py-1.5 rounded border ${morePanelOpen
+                                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
+                            style={{
+                                fontSize: '13px',
+                                height: '28px',
+                                marginLeft: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                            More {morePanelOpen ? '▲' : '▼'}
+                        </button>
 
-                                                {/* Wishlist */}
-                                                <td className="px-2 py-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <span title="Wishlist">❤️</span>
-                                                        <select
-                                                            value={wishlistFilter}
-                                                            onChange={(e) => setWishlistFilter(e.target.value)}
-                                                            aria-label="Filter by wishlist status"
-                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                                                            <option value="">All Books</option>
-                                                            <option value="owned">Owned Only</option>
-                                                            <option value="wishlist">Wishlist Only</option>
-                                                        </select>
-                                                    </div>
-                                                </td>
+                        {/* Book count - positioned next to filters for immediate visual feedback */}
+                        <div style={{ fontSize: '13px', color: '#475569', fontWeight: 500, marginLeft: '12px' }}>
+                            {(() => {
+                                // Compute filtered book count based on all active filters
+                                let filtered = books;
 
-                                                {/* Ownership Type */}
-                                                <td className="px-2 py-1">
-                                                    <div className="flex items-center gap-1">
-                                                        <span title="Ownership">🏷️</span>
-                                                        <select
-                                                            value={ownershipFilter}
-                                                            onChange={(e) => setOwnershipFilter(e.target.value)}
-                                                            aria-label="Filter by ownership type"
-                                                            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                                                            <option value="">All Types</option>
-                                                            <option value="purchased">Purchased</option>
-                                                            <option value="sample">Sample</option>
-                                                            <option value="borrowed">Borrowed</option>
-                                                            <option value="prime">Prime</option>
-                                                            <option value="kindleUnlimited">Kindle Unlimited</option>
-                                                            <option value="koll">KOLL</option>
-                                                            <option value="comixology">Comixology</option>
-                                                        </select>
-                                                    </div>
-                                                </td>
+                                // Search filter
+                                if (searchTerm) {
+                                    const term = searchTerm.toLowerCase();
+                                    filtered = filtered.filter(book =>
+                                        book.title?.toLowerCase().includes(term) ||
+                                        book.author?.toLowerCase().includes(term)
+                                    );
+                                }
 
-                                                {/* Date Preset with Clear button (v4.15.6.c) */}
-                                                <td className="px-2 py-1" colSpan="2">
-                                                    <div className="flex items-center gap-2">
-                                                        <span title="Acquisition Date">📅</span>
-                                                        <select
-                                                            value={datePreset}
-                                                            onChange={(e) => {
-                                                                const newPreset = e.target.value;
-                                                                // v4.15.6.g: Clear dates when switching to Custom (fresh start)
-                                                                if (newPreset === 'custom') {
-                                                                    setDateFrom('');
-                                                                    setDateTo('');
-                                                                }
-                                                                setDatePreset(newPreset);
-                                                            }}
-                                                            aria-label="Filter by acquisition date"
-                                                            style={{maxWidth: '150px'}}
-                                                            className="px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                                                            <option value="">All Dates</option>
-                                                            <option value="last30">Last 30 Days</option>
-                                                            <option value="last90">Last 90 Days</option>
-                                                            <option value="lastYear">Last 12 Months</option>
-                                                            {/* Dynamic year options: current year and 2 previous years (v4.15.6.d) */}
-                                                            {[0, 1, 2].map(offset => {
-                                                                const year = new Date().getFullYear() - offset;
-                                                                return <option key={year} value={`year${year}`}>{year}</option>;
-                                                            })}
-                                                            <option value="custom">Custom...</option>
-                                                        </select>
-                                                        {datePreset && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    setDatePreset('');
-                                                                    setDateFrom('');
-                                                                    setDateTo('');
-                                                                }}
-                                                                className="text-blue-700 hover:text-blue-900 font-semibold text-sm whitespace-nowrap"
-                                                                title="Clear date filter">
-                                                                Clear
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
+                                // Read status filter
+                                if (readStatusFilter) {
+                                    filtered = filtered.filter(book => {
+                                        const status = book.readStatus || 'unknown';
+                                        return status === readStatusFilter;
+                                    });
+                                }
 
-                                        {/* ROW 3: Showing count, Show Hidden, and Custom date pickers (v4.15.6.c) */}
-                                        {/* v4.16.0.bf - Show unique books + copies count */}
-                                        <tr className="align-middle">
-                                            {/* Showing - 50px left padding to align with boxes above */}
-                                            <td className="pr-2 py-1" style={{paddingLeft: '50px'}}>
-                                                <span className="text-sm text-gray-600">
-                                                    {(() => {
-                                                        // v4.16.0.bf - Calculate unique books and copies for filtered and total
-                                                        // v4.16.0.bg - Fix: filteredBooks() returns enriched book objects with .id, not raw entries
-                                                        const filteredResults = columns.flatMap(col =>
-                                                            filteredBooks(col.books).filter(item => !(item && item.type === 'divider'))
-                                                        );
-                                                        // Use book.id for filtered results (enriched book objects)
-                                                        const filteredBookIds = new Set(filteredResults.map(book => book.id));
-                                                        const filteredUniqueCount = filteredBookIds.size;
-                                                        const filteredCopyCount = filteredResults.length - filteredUniqueCount;
+                                // Collection filter
+                                if (collectionFilter) {
+                                    filtered = filtered.filter(book => {
+                                        if (collectionFilter === 'UNCOLLECTED') {
+                                            return !book.collections || book.collections.length === 0;
+                                        }
+                                        return book.collections?.includes(collectionFilter);
+                                    });
+                                }
 
-                                                        // Use getBookIdFromEntry for raw column entries
-                                                        const allEntries = columns.flatMap(col =>
-                                                            col.books.filter(item => !(item && item.type === 'divider'))
-                                                        );
-                                                        const allBookIds = new Set(allEntries.map(entry => getBookIdFromEntry(entry)));
-                                                        const totalCopyCount = allEntries.length - allBookIds.size;
+                                // Collections filter (v5.0.0-alpha.175.41 - Phase 5.2: Multi-select)
+                                if (selectedCollections.length > 0) {
+                                    filtered = filtered.filter(book => {
+                                        const hasUncollected = selectedCollections.includes('UNCOLLECTED');
+                                        const otherCollections = selectedCollections.filter(c => c !== 'UNCOLLECTED');
 
-                                                        const filteredCopyText = filteredCopyCount > 0
-                                                            ? ` (+${filteredCopyCount} ${filteredCopyCount === 1 ? 'copy' : 'copies'})`
-                                                            : '';
-                                                        const totalCopyText = totalCopyCount > 0
-                                                            ? ` (+${totalCopyCount} ${totalCopyCount === 1 ? 'copy' : 'copies'})`
-                                                            : '';
+                                        const bookCollections = book.collections || [];
+                                        const isInCollection = otherCollections.some(c =>
+                                            bookCollections.some(bc => bc.name === c)
+                                        );
+                                        const isUncollected = bookCollections.length === 0;
 
-                                                        return `Showing: ${filteredUniqueCount}${filteredCopyText} of ${books.length}${totalCopyText} books`;
-                                                    })()}
+                                        return (hasUncollected && isUncollected) || isInCollection;
+                                    });
+                                }
+
+                                // Amazon Rating filter (v5.0.0-alpha.175.42 - Phase 5.3: Minimum rating)
+                                if (minAmazonRating) {
+                                    filtered = filtered.filter(book => {
+                                        return book.rating !== undefined && book.rating >= parseFloat(minAmazonRating);
+                                    });
+                                }
+
+                                // My Rating filter (v5.0.0-alpha.175.43 - Phase 5.4: Personal rating with Unrated option)
+                                if (minMyRating) {
+                                    filtered = filtered.filter(book => {
+                                        if (minMyRating === 'unrated') {
+                                            return (book.myRating || 0) === 0;
+                                        } else {
+                                            const minRating = parseFloat(minMyRating);
+                                            return (book.myRating || 0) >= minRating;
+                                        }
+                                    });
+                                }
+
+                                // Rating filter
+                                if (ratingFilter) {
+                                    filtered = filtered.filter(book => {
+                                        const rating = book.rating || 0;
+                                        return rating >= parseInt(ratingFilter);
+                                    });
+                                }
+
+                                // Wishlist filter
+                                if (wishlistFilter) {
+                                    filtered = filtered.filter(book => {
+                                        const isWishlist = book.owned === 'No';
+                                        return wishlistFilter === 'wishlist' ? isWishlist : !isWishlist;
+                                    });
+                                }
+
+                                // Ownership filter
+                                if (ownershipFilter) {
+                                    filtered = filtered.filter(book => {
+                                        return book.ownershipType === ownershipFilter || book.ownership === ownershipFilter;
+                                    });
+                                }
+
+                                // Series filter
+                                if (seriesFilter) {
+                                    filtered = filtered.filter(book => {
+                                        if (seriesFilter === 'NOT_IN_SERIES') {
+                                            return !book.series || book.series === '';
+                                        }
+                                        return book.series === seriesFilter;
+                                    });
+                                }
+
+                                // Tag filter (v4.27.0)
+                                if (tagFilter && tagFilter.length > 0) {
+                                    filtered = filtered.filter(book => {
+                                        return tagFilter.some(tag => book.tags?.includes(tag));
+                                    });
+                                }
+
+                                // Series filter (v5.0.0-alpha.175.44 - Phase 5.5: Multi-select with NOT_IN_SERIES)
+                                if (selectedSeries.length > 0) {
+                                    filtered = filtered.filter(book => {
+                                        const hasNotInSeries = selectedSeries.includes('NOT_IN_SERIES');
+                                        const otherSeries = selectedSeries.filter(s => s !== 'NOT_IN_SERIES');
+
+                                        const bookSeries = book.series || '';
+                                        const isInSeries = otherSeries.includes(bookSeries);
+                                        const isNotInSeries = !bookSeries || bookSeries.trim() === '';
+
+                                        return (hasNotInSeries && isNotInSeries) || isInSeries;
+                                    });
+                                }
+
+                                // Date filter
+                                if (dateFrom || dateTo) {
+                                    filtered = filtered.filter(book => {
+                                        const purchaseDate = book.purchaseDate ? new Date(book.purchaseDate) : null;
+                                        if (!purchaseDate) return false;
+                                        if (dateFrom && purchaseDate < new Date(dateFrom)) return false;
+                                        if (dateTo && purchaseDate > new Date(dateTo)) return false;
+                                        return true;
+                                    });
+                                }
+
+                                // Show hidden filter
+                                if (!showHidden) {
+                                    filtered = filtered.filter(book => !book.hidden);
+                                }
+
+                                // Deals filter (v4.17.0.j)
+                                if (dealsFilterActive) {
+                                    filtered = filtered.filter(book => book.isDeal);
+                                }
+
+                                return `${filtered.length} of ${books.length}`;
+                            })()}
+                        </div>
+
+                        {/* v5.0.0-alpha.175.46 - Phase 6: Toolbar View Controls */}
+
+                        {/* Show Hidden toggle */}
+                        <label
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded border cursor-pointer ${
+                                showHidden
+                                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                            }`}
+                            style={{ fontSize: '13px', height: '28px', marginLeft: '12px', whiteSpace: 'nowrap' }}>
+                            <input
+                                type="checkbox"
+                                checked={showHidden}
+                                onChange={(e) => setShowHidden(e.target.checked)}
+                                style={{ marginRight: '2px' }}
+                            />
+                            <span>Show Hidden</span>
+                        </label>
+
+                        {/* Deals toggle with badge count */}
+                        <label
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded border cursor-pointer ${
+                                dealsFilterActive
+                                    ? 'bg-green-50 border-green-300 text-green-700'
+                                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                            }`}
+                            style={{ fontSize: '13px', height: '28px', marginLeft: '8px', whiteSpace: 'nowrap' }}
+                            title="Show only books at or below your target price">
+                            <input
+                                type="checkbox"
+                                checked={dealsFilterActive}
+                                onChange={(e) => setDealsFilterActive(e.target.checked)}
+                                style={{ marginRight: '2px' }}
+                            />
+                            <span>
+                                Deals only ({books.filter(b => b.priceTrigger != null && b.currentPrice != null && b.currentPrice <= b.priceTrigger).length})
+                            </span>
+                        </label>
+
+                        {/* List/Covers toggle - segmented button */}
+                        <div
+                            style={{
+                                display: 'inline-flex',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '4px',
+                                overflow: 'hidden',
+                                marginLeft: '8px',
+                                height: '28px'
+                            }}>
+                            <button
+                                onClick={() => setExplorerView('list')}
+                                className={`px-3 py-1 border-r border-gray-300 ${
+                                    explorerView === 'list'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                                style={{ fontSize: '18px', cursor: 'pointer', lineHeight: '1' }}
+                                title="List view">
+                                ≡
+                            </button>
+                            <button
+                                onClick={() => setExplorerView('covers')}
+                                className={`px-3 py-1 ${
+                                    explorerView === 'covers'
+                                        ? 'bg-blue-500 text-white'
+                                        : 'bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                                style={{ fontSize: '18px', cursor: 'pointer', lineHeight: '1' }}
+                                title="Cover view">
+                                ⊞
+                            </button>
+                        </div>
+
+                        {/* Spacer */}
+                        <div style={{ flex: 1 }} />
+                    </div>
+
+                    {/* v5.0.0-alpha.175.40 - Phase 5.1: More panel (Tier 2 filters) */}
+                    {morePanelOpen && (
+                        <div
+                            data-morepanel="true"
+                            style={{
+                                position: 'absolute',
+                                top: '64px',  // Below toolbar (32px menu + 36px toolbar - 4px overlap)
+                                left: '16px',
+                                minWidth: '500px',
+                                background: 'white',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '6px',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                padding: '16px',
+                                zIndex: 1000
+                            }}>
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: 'repeat(3, 1fr)',
+                                gap: '16px'
+                            }}>
+                                {/* v5.0.0-alpha.175.41 - Phase 5.2: Collections Filter */}
+                                <div style={{ position: 'relative' }} data-collections-dropdown="">
+                                    <button
+                                        onClick={() => setCollectionsDropdownOpen(!collectionsDropdownOpen)}
+                                        className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
+                                            selectedCollections.length > 0
+                                                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                        }`}
+                                        style={{ fontSize: '13px', height: '28px' }}>
+                                        <span>
+                                            Collections
+                                            {selectedCollections.length > 0 && ` (${selectedCollections.length})`}
+                                        </span>
+                                        <span>{collectionsDropdownOpen ? '▲' : '▼'}</span>
+                                    </button>
+
+                                    {collectionsDropdownOpen && (
+                                        <div
+                                            data-morepanel="true"
+                                            style={{
+                                                position: 'absolute',
+                                                top: '32px',
+                                                left: 0,
+                                                minWidth: '200px',
+                                                maxHeight: '300px',
+                                                overflowY: 'auto',
+                                                background: 'white',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                padding: '8px',
+                                                zIndex: 1001
+                                            }}>
+                                            {/* UNCOLLECTED option */}
+                                            <label style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                padding: '6px 8px',
+                                                cursor: 'pointer',
+                                                fontSize: '13px'
+                                            }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedCollections.includes('UNCOLLECTED')}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedCollections([...selectedCollections, 'UNCOLLECTED']);
+                                                        } else {
+                                                            setSelectedCollections(selectedCollections.filter(c => c !== 'UNCOLLECTED'));
+                                                        }
+                                                    }}
+                                                    style={{ marginRight: '8px' }}
+                                                />
+                                                <span style={{ fontStyle: 'italic', color: '#64748b' }}>
+                                                    (Not in collection)
                                                 </span>
-                                            </td>
-                                            <td className="px-2 py-1">
-                                                <label className="flex items-center gap-2 cursor-pointer text-sm">
+                                            </label>
+
+                                            {/* Collection options */}
+                                            {getAllCollectionNames().map(collection => (
+                                                <label
+                                                    key={collection}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        padding: '6px 8px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '13px'
+                                                    }}>
                                                     <input
                                                         type="checkbox"
-                                                        checked={showHidden}
-                                                        onChange={(e) => setShowHidden(e.target.checked)}
-                                                        className="w-4 h-4 rounded border-gray-300 text-blue-700 focus:ring-blue-500"
+                                                        checked={selectedCollections.includes(collection)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedCollections([...selectedCollections, collection]);
+                                                            } else {
+                                                                setSelectedCollections(selectedCollections.filter(c => c !== collection));
+                                                            }
+                                                        }}
+                                                        style={{ marginRight: '8px' }}
                                                     />
-                                                    <span className="text-gray-600">Show Hidden</span>
+                                                    {collection}
                                                 </label>
-                                            </td>
-                                            {/* Custom date pickers - only when Custom preset selected (columns 3-6) */}
-                                            {showAdvancedFilters && datePreset === 'custom' ? (
-                                                <>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td className="px-2 py-1">
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="text-sm text-gray-500">From:</span>
-                                                            <input
-                                                                type="date"
-                                                                value={dateFrom}
-                                                                onChange={(e) => setDateFrom(e.target.value)}
-                                                                aria-label="Acquisition date from"
-                                                                className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                            />
-                                                        </div>
-                                                    </td>
-                                                    <td className="pl-2 py-1">
-                                                        <div className="flex items-center gap-1">
-                                                            <span className="text-sm text-gray-500">To:</span>
-                                                            <input
-                                                                type="date"
-                                                                value={dateTo}
-                                                                onChange={(e) => setDateTo(e.target.value)}
-                                                                aria-label="Acquisition date to"
-                                                                className="px-2 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                                            />
-                                                        </div>
-                                                    </td>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </>
-                                            )}
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
-
-                        {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel, v4.15.6.m - use datePreset, v4.27.0 - add tagFilter) */}
-                        {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || datePreset || (tagFilter && tagFilter.length > 0)) && (
-                            <div className="bg-blue-100 border border-blue-300 rounded-lg px-4 py-2 mb-4 flex items-center justify-between">
-                                <div className="flex items-center gap-2 flex-wrap text-sm">
-                                    <span className="font-semibold">🔍 Active:</span>
-                                    {searchTerm && <span>Search: "{searchTerm}"</span>}
-                                    {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
-                                    {readStatusFilter && <span>Read: {readStatusFilter}</span>}
-                                    {readStatusFilter && (collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
-                                    {collectionFilter && <span>Collection: {collectionFilter === 'UNCOLLECTED' ? 'Uncollected' : collectionFilter}</span>}
-                                    {collectionFilter && (ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
-                                    {ratingFilter && <span>Rating: {ratingFilter}+★</span>}
-                                    {ratingFilter && (wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
-                                    {wishlistFilter && <span>Wishlist: {wishlistFilter === 'owned' ? 'Owned Only' : 'Wishlist Only'}</span>}
-                                    {wishlistFilter && (ownershipFilter || seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
-                                    {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
-                                    {ownershipFilter && (seriesFilter || datePreset || tagFilter?.length > 0) && <span>|</span>}
-                                    {seriesFilter && <span>Series: {seriesFilter === 'NOT_IN_SERIES' ? 'Not in Series' : seriesFilter}</span>}
-                                    {seriesFilter && (datePreset || tagFilter?.length > 0) && <span>|</span>}
-                                    {datePreset && <span>Date: {
-                                        datePreset === 'custom' ? `${dateFrom || '...'} to ${dateTo || '...'}` :
-                                        datePreset === 'last30' ? 'Last 30 Days' :
-                                        datePreset === 'last90' ? 'Last 90 Days' :
-                                        datePreset === 'lastYear' ? 'Last 12 Months' :
-                                        datePreset.startsWith('year') ? datePreset.substring(4) :
-                                        datePreset
-                                    }</span>}
-                                    {datePreset && tagFilter?.length > 0 && <span>|</span>}
-                                    {tagFilter && tagFilter.length > 0 && <span>Tags: {tagFilter.map(t => tagRegistry[t]?.label || t).join(', ')}</span>}
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                                <button
-                                    onClick={() => {
-                                        setSearchTerm('');
-                                        setReadStatusFilter('');
-                                        setCollectionFilter('');
-                                        setRatingFilter('');
-                                        setWishlistFilter('');
-                                        setOwnershipFilter('');
-                                        setSeriesFilter('');
-                                        setDatePreset('');
-                                        setDateFrom('');
-                                        setDateTo('');
-                                        setTagFilter([]);
-                                    }}
-                                    className="text-blue-700 hover:text-blue-900 font-semibold text-sm whitespace-nowrap">
-                                    Clear All ×
-                                </button>
+
+                                {/* v5.0.0-alpha.175.42 - Phase 5.3: Amazon Rating Filter */}
+                                <div style={{ position: 'relative' }} data-amazon-rating-dropdown="">
+                                    <button
+                                        onClick={() => setAmazonRatingDropdownOpen(!amazonRatingDropdownOpen)}
+                                        className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
+                                            minAmazonRating
+                                                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                        }`}
+                                        style={{ fontSize: '13px', height: '28px' }}>
+                                        <span>
+                                            {minAmazonRating ? `Amazon ${minAmazonRating}+★` : 'Amazon Rating'}
+                                        </span>
+                                        <span>{amazonRatingDropdownOpen ? '▲' : '▼'}</span>
+                                    </button>
+
+                                    {amazonRatingDropdownOpen && (
+                                        <div
+                                            data-morepanel="true"
+                                            style={{
+                                                position: 'absolute',
+                                                top: '32px',
+                                                left: 0,
+                                                minWidth: '160px',
+                                                background: 'white',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                padding: '4px',
+                                                zIndex: 1001
+                                            }}>
+                                            {['', '5', '4', '3', '2', '1'].map(rating => (
+                                                <button
+                                                    key={rating}
+                                                    onClick={() => {
+                                                        setMinAmazonRating(rating);
+                                                        setAmazonRatingDropdownOpen(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-1.5 hover:bg-gray-50 rounded"
+                                                    style={{ fontSize: '13px' }}>
+                                                    {rating ? `${rating}+ Stars` : 'All Ratings'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* v5.0.0-alpha.175.43 - Phase 5.4: My Rating Filter */}
+                                <div style={{ position: 'relative' }} data-my-rating-dropdown="">
+                                    <button
+                                        onClick={() => setMyRatingDropdownOpen(!myRatingDropdownOpen)}
+                                        className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
+                                            minMyRating
+                                                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                        }`}
+                                        style={{ fontSize: '13px', height: '28px' }}>
+                                        <span>
+                                            {minMyRating === 'unrated' ? 'My: Unrated' : minMyRating ? `My ${minMyRating}+★` : 'My Rating'}
+                                        </span>
+                                        <span>{myRatingDropdownOpen ? '▲' : '▼'}</span>
+                                    </button>
+
+                                    {myRatingDropdownOpen && (
+                                        <div
+                                            data-morepanel="true"
+                                            style={{
+                                                position: 'absolute',
+                                                top: '32px',
+                                                left: 0,
+                                                minWidth: '160px',
+                                                background: 'white',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                padding: '4px',
+                                                zIndex: 1001
+                                            }}>
+                                            <button
+                                                onClick={() => {
+                                                    setMinMyRating('');
+                                                    setMyRatingDropdownOpen(false);
+                                                }}
+                                                className="w-full text-left px-3 py-1.5 hover:bg-gray-50 rounded"
+                                                style={{ fontSize: '13px' }}>
+                                                All
+                                            </button>
+                                            {['5', '4', '3', '2', '1'].map(rating => (
+                                                <button
+                                                    key={rating}
+                                                    onClick={() => {
+                                                        setMinMyRating(rating);
+                                                        setMyRatingDropdownOpen(false);
+                                                    }}
+                                                    className="w-full text-left px-3 py-1.5 hover:bg-gray-50 rounded"
+                                                    style={{ fontSize: '13px' }}>
+                                                    {rating}+ Stars
+                                                </button>
+                                            ))}
+                                            <button
+                                                onClick={() => {
+                                                    setMinMyRating('unrated');
+                                                    setMyRatingDropdownOpen(false);
+                                                }}
+                                                className="w-full text-left px-3 py-1.5 hover:bg-gray-50 rounded"
+                                                style={{ fontSize: '13px', fontStyle: 'italic', color: '#64748b' }}>
+                                                Unrated
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* v5.0.0-alpha.175.44 - Phase 5.5: Series Filter (column 1, row 2) */}
+                                <div style={{ position: 'relative' }} data-series-dropdown="">
+                                    <button
+                                        onClick={() => setSeriesDropdownOpen(!seriesDropdownOpen)}
+                                        className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
+                                            selectedSeries.length > 0
+                                                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                        }`}
+                                        style={{ fontSize: '13px', height: '28px' }}>
+                                        <span>
+                                            Series{selectedSeries.length > 0 && ` (${selectedSeries.length})`}
+                                        </span>
+                                        <span>{seriesDropdownOpen ? '▲' : '▼'}</span>
+                                    </button>
+
+                                    {seriesDropdownOpen && (
+                                        <div
+                                            data-morepanel="true"
+                                            style={{
+                                                position: 'absolute',
+                                                top: '32px',
+                                                left: 0,
+                                                minWidth: '250px',
+                                                maxHeight: '300px',
+                                                overflowY: 'auto',
+                                                background: 'white',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                padding: '8px',
+                                                zIndex: 1001
+                                            }}>
+                                            {/* NOT_IN_SERIES option */}
+                                            <label style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                padding: '6px 8px',
+                                                cursor: 'pointer',
+                                                fontSize: '13px'
+                                            }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedSeries.includes('NOT_IN_SERIES')}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) {
+                                                            setSelectedSeries([...selectedSeries, 'NOT_IN_SERIES']);
+                                                        } else {
+                                                            setSelectedSeries(selectedSeries.filter(s => s !== 'NOT_IN_SERIES'));
+                                                        }
+                                                    }}
+                                                    style={{ marginRight: '8px' }}
+                                                />
+                                                <span style={{ fontStyle: 'italic', color: '#64748b' }}>
+                                                    (Not in series)
+                                                </span>
+                                            </label>
+
+                                            {/* Series options */}
+                                            {getAllSeriesNames().map(series => (
+                                                <label
+                                                    key={series}
+                                                    style={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        padding: '6px 8px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '13px'
+                                                    }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedSeries.includes(series)}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedSeries([...selectedSeries, series]);
+                                                            } else {
+                                                                setSelectedSeries(selectedSeries.filter(s => s !== series));
+                                                            }
+                                                        }}
+                                                        style={{ marginRight: '8px' }}
+                                                    />
+                                                    {series}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* v5.0.0-alpha.175.45 - Phase 5.6: Date Filter (spans columns 2-3, row 2) */}
+                                <div style={{ position: 'relative', gridColumn: '2 / 4' }} data-date-dropdown="">
+                                    <button
+                                        onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
+                                        className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
+                                            datePreset
+                                                ? 'bg-blue-50 border-blue-300 text-blue-700'
+                                                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                        }`}
+                                        style={{ fontSize: '13px', height: '28px' }}>
+                                        <span>
+                                            {datePreset === 'custom' && (dateFrom || dateTo)
+                                                ? `${dateFrom || '...'} to ${dateTo || '...'}`
+                                                : datePreset === 'last30' ? 'Last 30 days'
+                                                : datePreset === 'last90' ? 'Last 90 days'
+                                                : datePreset === 'lastYear' ? 'Last 12 months'
+                                                : datePreset === 'year2026' ? 'This year (2026)'
+                                                : datePreset === 'year2025' ? 'Last year (2025)'
+                                                : datePreset === 'year2024' ? '2024'
+                                                : datePreset === 'year2023' ? '2023'
+                                                : 'Date Added'}
+                                        </span>
+                                        <span>{dateDropdownOpen ? '▲' : '▼'}</span>
+                                    </button>
+
+                                    {dateDropdownOpen && (
+                                        <div
+                                            data-morepanel="true"
+                                            style={{
+                                                position: 'absolute',
+                                                top: '32px',
+                                                left: 0,
+                                                right: 0,
+                                                background: 'white',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                boxShadow: '0 2px 8px rgba(0,0,1,0.1)',
+                                                padding: '8px',
+                                                zIndex: 1001
+                                            }}>
+                                            {/* Preset options */}
+                                            {[
+                                                { value: 'last30', label: 'Last 30 days' },
+                                                { value: 'last90', label: 'Last 90 days' },
+                                                { value: 'lastYear', label: 'Last 12 months' },
+                                                { value: 'year2026', label: 'This year (2026)' },
+                                                { value: 'year2025', label: 'Last year (2025)' },
+                                                { value: 'year2024', label: '2024' },
+                                                { value: 'year2023', label: '2023' },
+                                                { value: 'custom', label: 'Custom range...' }
+                                            ].map(option => (
+                                                <button
+                                                    key={option.value}
+                                                    onClick={() => {
+                                                        setDatePreset(option.value);
+                                                        if (option.value !== 'custom') {
+                                                            setDateDropdownOpen(false);
+                                                        }
+                                                    }}
+                                                    className="w-full text-left px-3 py-1.5 hover:bg-gray-50 rounded"
+                                                    style={{ fontSize: '13px' }}>
+                                                    {option.label}
+                                                </button>
+                                            ))}
+
+                                            {/* Custom date inputs */}
+                                            {datePreset === 'custom' && (
+                                                <div style={{
+                                                    marginTop: '8px',
+                                                    padding: '8px',
+                                                    borderTop: '1px solid #e2e8f0'
+                                                }}>
+                                                    <div style={{ marginBottom: '8px' }}>
+                                                        <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>From:</label>
+                                                        <input
+                                                            type="date"
+                                                            value={dateFrom}
+                                                            onChange={(e) => setDateFrom(e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '4px 8px',
+                                                                border: '1px solid #cbd5e1',
+                                                                borderRadius: '4px',
+                                                                fontSize: '13px'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>To:</label>
+                                                        <input
+                                                            type="date"
+                                                            value={dateTo}
+                                                            onChange={(e) => setDateTo(e.target.value)}
+                                                            style={{
+                                                                width: '100%',
+                                                                padding: '4px 8px',
+                                                                border: '1px solid #cbd5e1',
+                                                                borderRadius: '4px',
+                                                                fontSize: '13px'
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div style={{
+                                                        marginTop: '8px',
+                                                        display: 'flex',
+                                                        gap: '8px'
+                                                    }}>
+                                                        <button
+                                                            onClick={() => setDateDropdownOpen(false)}
+                                                            className="flex-1 px-3 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                            style={{ fontSize: '12px' }}>
+                                                            Apply
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setDatePreset('');
+                                                                setDateFrom('');
+                                                                setDateTo('');
+                                                                setDateDropdownOpen(false);
+                                                            }}
+                                                            className="px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50"
+                                                            style={{ fontSize: '12px' }}>
+                                                            Clear
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
+
+                    {/* v5.0.0-alpha.175.47 - Phase 7: Old filter panel removed (replaced by toolbar in Phases 3-6) */}
+
+                    {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel, v4.15.6.m - use datePreset, v4.27.0 - add tagFilter, v5.0.0-alpha.175.41 - add selectedCollections, v5.0.0-alpha.175.42 - add minAmazonRating, v5.0.0-alpha.175.43 - add minMyRating, v5.0.0-alpha.175.44 - add selectedSeries, v5.0.0-alpha.175.47 - restored after Phase 7 cleanup, v5.0.0-alpha.175.49.2 - Clear All button floats near filters instead of far right) */}
+                    {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || datePreset || (tagFilter && tagFilter.length > 0) || selectedCollections.length > 0 || minAmazonRating || minMyRating || selectedSeries.length > 0) && (
+                        <div className="bg-blue-100 border border-blue-300 rounded-lg px-4 py-2 mb-4 flex items-center gap-2 flex-wrap text-sm">
+                            <span className="font-semibold">🔍 Active:</span>
+                                {searchTerm && <span>Search: "{searchTerm}"</span>}
+                                {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {readStatusFilter && <span>Read: {readStatusFilter}</span>}
+                                {readStatusFilter && (collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {collectionFilter && <span>Collection: {collectionFilter === 'UNCOLLECTED' ? 'Uncollected' : collectionFilter}</span>}
+                                {collectionFilter && (ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {ratingFilter && <span>Rating: {ratingFilter}+★</span>}
+                                {ratingFilter && (wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {wishlistFilter && <span>Wishlist: {wishlistFilter === 'owned' ? 'Owned Only' : 'Wishlist Only'}</span>}
+                                {wishlistFilter && (ownershipFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
+                                {ownershipFilter && (seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {seriesFilter && <span>Series: {seriesFilter === 'NOT_IN_SERIES' ? 'Not in Series' : seriesFilter}</span>}
+                                {seriesFilter && (datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {datePreset && <span>Date: {
+                                    datePreset === 'custom' ? `${dateFrom || '...'} to ${dateTo || '...'}` :
+                                    datePreset === 'last30' ? 'Last 30 Days' :
+                                    datePreset === 'last90' ? 'Last 90 Days' :
+                                    datePreset === 'lastYear' ? 'Last 12 Months' :
+                                    datePreset.startsWith('year') ? datePreset.substring(4) :
+                                    datePreset
+                                }</span>}
+                                {datePreset && (tagFilter?.length > 0 || selectedCollections.length > 0 || minAmazonRating || minMyRating || selectedSeries.length > 0) && <span>|</span>}
+                                {tagFilter && tagFilter.length > 0 && <span>Tags: {tagFilter.map(t => tagRegistry[t]?.label || t).join(', ')}</span>}
+                                {/* v5.0.0-alpha.175.41 - Phase 5.2: More panel filters */}
+                                {tagFilter?.length > 0 && (selectedCollections.length > 0 || minAmazonRating) && <span>|</span>}
+                                {selectedCollections.length > 0 && <span>Collections: {selectedCollections.map(c => c === 'UNCOLLECTED' ? 'Uncollected' : c).join(', ')}</span>}
+                                {/* v5.0.0-alpha.175.42 - Phase 5.3: Amazon Rating filter */}
+                                {selectedCollections.length > 0 && (minAmazonRating || minMyRating) && <span>|</span>}
+                                {minAmazonRating && <span>Amazon Rating: {minAmazonRating}+★</span>}
+                                {/* v5.0.0-alpha.175.43 - Phase 5.4: My Rating filter */}
+                                {minAmazonRating && minMyRating && <span>|</span>}
+                                {minMyRating && <span>My Rating: {minMyRating === 'unrated' ? 'Unrated' : `${minMyRating}+★`}</span>}
+                                {/* v5.0.0-alpha.175.44 - Phase 5.5: Series filter */}
+                                {minMyRating && selectedSeries.length > 0 && <span>|</span>}
+                                {selectedSeries.length > 0 && <span>Series: {selectedSeries.map(s => s === 'NOT_IN_SERIES' ? 'Not in series' : s).join(', ')}</span>}
+                            <button
+                                onClick={() => {
+                                    setSearchTerm('');
+                                    setReadStatusFilter('');
+                                    setCollectionFilter('');
+                                    setRatingFilter('');
+                                    setWishlistFilter('');
+                                    setOwnershipFilter('');
+                                    setSeriesFilter('');
+                                    setDatePreset('');
+                                    setDateFrom('');
+                                    setDateTo('');
+                                    setTagFilter([]);
+                                    setSelectedCollections([]); // v5.0.0-alpha.175.41 - Clear Collections filter
+                                    setMinAmazonRating(''); // v5.0.0-alpha.175.42 - Clear Amazon Rating filter
+                                    setMinMyRating(''); // v5.0.0-alpha.175.43 - Clear My Rating filter
+                                    setSelectedSeries([]); // v5.0.0-alpha.175.44 - Clear Series filter
+                                }}
+                                className="text-blue-700 hover:text-white hover:bg-blue-600 font-semibold text-sm whitespace-nowrap px-2 py-1 rounded border border-blue-400 bg-white"
+                                style={{ marginLeft: '12px' }}>
+                                Clear All ×
+                            </button>
+                        </div>
+                    )}
 
                     {statusModalOpen && (() => {
                         // Schema v2.0: Simplified informational modal (no action buttons)
@@ -4967,6 +7752,141 @@
                         </div>
                     )}
 
+                    {/* v5.0.0-alpha.175.2 - About Dialog */}
+                    {aboutDialogOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setAboutDialogOpen(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
+                                    <h2 className="text-xl font-bold text-gray-900">About ReaderWrangler™</h2>
+                                    <button onClick={() => setAboutDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                </div>
+                                <div className="p-6 space-y-4 text-center">
+                                    <img src="icons/ReaderWranglerXparent.png" alt="ReaderWrangler" style={{ width: '200px', height: '200px', margin: '0 auto' }} />
+                                    <p className="text-sm text-gray-600">Wrangle your Kindle library with power and precision</p>
+                                    <div className="text-sm text-gray-700 border-t border-gray-200 pt-4">
+                                        <p className="font-semibold">Version {APP_VERSION}</p>
+                                        <p className="mt-2">Copyright © 2025, 2026 <a href="https://AlloidLabs.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">AlloidLabs.com</a></p>
+                                    </div>
+                                    <div className="text-sm text-gray-600 border-t border-gray-200 pt-4 text-left">
+                                        <p>ReaderWrangler is a powerful organizer for your Kindle library. Import your library from Amazon, organize books into folders and collections, and filter by status/rating/tags.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* v5.0.0-alpha.175.2 - Keyboard Shortcuts Dialog */}
+                    {shortcutsDialogOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShortcutsDialogOpen(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
+                                    <h2 className="text-xl font-bold text-gray-900">Keyboard Shortcuts</h2>
+                                    <button onClick={() => setShortcutsDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                </div>
+                                <div className="p-6 space-y-3">
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                        <div className="font-semibold text-gray-700">Ctrl+Z</div>
+                                        <div className="text-gray-600">Undo last action</div>
+
+                                        <div className="font-semibold text-gray-700">Ctrl+Y</div>
+                                        <div className="text-gray-600">Redo action</div>
+
+                                        <div className="font-semibold text-gray-700">Ctrl+A</div>
+                                        <div className="text-gray-600">Select all books</div>
+
+                                        <div className="font-semibold text-gray-700">Ctrl+X</div>
+                                        <div className="text-gray-600">Cut selected books</div>
+
+                                        <div className="font-semibold text-gray-700">Ctrl+C</div>
+                                        <div className="text-gray-600">Copy selected books</div>
+
+                                        <div className="font-semibold text-gray-700">Ctrl+V</div>
+                                        <div className="text-gray-600">Paste books</div>
+
+                                        <div className="font-semibold text-gray-700">↑ / ↓ Arrows</div>
+                                        <div className="text-gray-600">Navigate books in list</div>
+
+                                        <div className="font-semibold text-gray-700">Shift+Click</div>
+                                        <div className="text-gray-600">Select range of books</div>
+
+                                        <div className="font-semibold text-gray-700">Ctrl+Click</div>
+                                        <div className="text-gray-600">Multi-select books</div>
+
+                                        <div className="font-semibold text-gray-700">ESC</div>
+                                        <div className="text-gray-600">Close dialogs / Clear selection</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* v5.0.0-alpha.175.2 - How To Use Dialog */}
+                    {howToDialogOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setHowToDialogOpen(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
+                                    <h2 className="text-xl font-bold text-gray-900">How To Use ReaderWrangler</h2>
+                                    <button onClick={() => setHowToDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-gray-700">
+                                        <p className="font-semibold mb-2">Getting Started:</p>
+                                        <ol className="list-decimal list-inside space-y-1 ml-2">
+                                            <li>Use File → Import Library to load your Kindle library from Amazon</li>
+                                            <li>Organize books into folders and collections</li>
+                                            <li>Use filters to find books by status, tags, type, rating, etc.</li>
+                                            <li>Export your organization back to Amazon to sync with devices</li>
+                                        </ol>
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                        <p>For detailed instructions, see the User Guide documentation.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* v5.0.0 - Migration Dialog */}
+                    {showMigrationDialog && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowMigrationDialog(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-start p-4 bg-blue-600 rounded-t-lg">
+                                    <h2 className="text-xl font-bold text-white">📁 Import Column Organization?</h2>
+                                    <button onClick={() => setShowMigrationDialog(false)} className="text-white hover:text-gray-200 text-2xl font-bold">×</button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <p className="text-gray-800">
+                                        You have books organized in <strong>{columns.length} columns</strong> with dividers.
+                                        Would you like to import this organization into the new Book Explorer?
+                                    </p>
+                                    <div className="bg-gray-50 border border-gray-200 rounded p-4 text-sm text-gray-700">
+                                        <p className="font-semibold mb-2">Migration will:</p>
+                                        <ul className="list-disc list-inside space-y-1 ml-2">
+                                            <li>Convert each <strong>column</strong> → folder</li>
+                                            <li>Convert each <strong>divider</strong> → subfolder</li>
+                                            <li>Preserve book order within each folder</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
+                                        <p>Your original column organization will remain intact. You can switch between Column View and Explorer View anytime.</p>
+                                    </div>
+                                    <div className="flex gap-3 justify-end pt-2">
+                                        <button
+                                            onClick={() => setShowMigrationDialog(false)}
+                                            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium">
+                                            Not Now
+                                        </button>
+                                        <button
+                                            onClick={migrateColumnsToFolders}
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium">
+                                            Import to Explorer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {insertDividerOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setInsertDividerOpen(null)}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
@@ -5008,126 +7928,18 @@
                         </div>
                     )}
 
-                    {settingsOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setSettingsOpen(false)}>
-                            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex justify-between items-start mb-4">
-                                    <h2 className="text-xl font-bold text-gray-900">Settings</h2>
-                                    <button onClick={() => setSettingsOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
-                                </div>
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                            Cache Expiration for Ratings/Reviews (days)
-                                        </label>
-                                        <p className="text-xs text-gray-600 mb-2">
-                                            Descriptions are cached forever. Ratings and reviews expire after this many days to stay fresh.
-                                        </p>
-                                        <input 
-                                            type="number"
-                                            min="1"
-                                            max="365"
-                                            value={settings.cacheExpirationDays}
-                                            onChange={(e) => setSettings({...settings, cacheExpirationDays: parseInt(e.target.value) || 30})}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Current: {settings.cacheExpirationDays} days
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2 justify-end mt-6">
-                                    <button 
-                                        onClick={() => setSettingsOpen(false)}
-                                        className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">
-                                        Cancel
-                                    </button>
-                                    <button 
-                                        onClick={() => saveSettings(settings)}
-                                        className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg">
-                                        Save
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {helpOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setHelpOpen(false)}>
-                            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-2xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex justify-between items-start mb-4">
-                                    <h2 className="text-xl font-bold text-gray-900">How to Use</h2>
-                                    <button onClick={() => setHelpOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
-                                </div>
-                                <div className="space-y-4 text-sm text-gray-700">
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">📚 Getting Your Books</h3>
-                                        <ul className="list-disc list-inside space-y-1 ml-2">
-                                            <li><strong>Install Bookmarklet:</strong> Visit the installer page (see README) and drag the bookmarklet to your toolbar</li>
-                                            <li><strong>Run Fetcher:</strong> Go to your online library page and click the bookmarklet</li>
-                                            <li><strong>Auto-saves:</strong> Fetcher creates library JSON in your Downloads</li>
-                                            <li><strong>First Load:</strong> Click status indicator to load library</li>
-                                            <li><strong>Updates:</strong> Run fetcher again, then sync when you see Stale indicator</li>
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">Status Indicator</h3>
-                                        <ul className="list-disc list-inside space-y-1 ml-2">
-                                            <li><strong>Fresh:</strong> Your library is up to date</li>
-                                            <li><strong>Stale:</strong> New books available - click to load updated library</li>
-                                            <li><strong>Click here to load library:</strong> Click to load your first library</li>
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">📚 Organizing Books</h3>
-                                        <ul className="list-disc list-inside space-y-1 ml-2">
-                                            <li><strong>View Details:</strong> Click a book cover to see full details</li>
-                                            <li><strong>Move/Reorder:</strong> Drag a book to move it to another column or reorder within same column</li>
-                                            <li><strong>Navigate:</strong> Use ← → arrows in book details to browse prev/next books</li>
-                                            <li><strong>Group Series:</strong> Click "📚 Group Series Books" in book details</li>
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">📋 Managing Columns</h3>
-                                        <ul className="list-disc list-inside space-y-1 ml-2">
-                                            <li><strong>Create:</strong> Type name in field and click ➕ (or press Enter)</li>
-                                            <li><strong>Rename:</strong> Double-click any column name to edit</li>
-                                            <li><strong>Reorder:</strong> Drag any column header left/right</li>
-                                            <li><strong>Sort:</strong> Click ⬆ button to sort books</li>
-                                            <li><strong>Delete:</strong> Click ⌫ and choose where to move the books</li>
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">💾 Data Management</h3>
-                                        <ul className="list-disc list-inside space-y-1 ml-2">
-                                            <li><strong>Auto-saves:</strong> Everything persists automatically in your browser</li>
-                                            <li><strong>Export:</strong> Download complete backup for safekeeping</li>
-                                            <li><strong>Import:</strong> Merges library file with existing books, preserving organization. Also restores backups.</li>
-                                            <li><strong>Reset App:</strong> Complete app reset to initial state (files on disk not affected)</li>
-                                        </ul>
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">💰 Affiliate Links</h3>
-                                        <ul className="list-disc list-inside space-y-1 ml-2">
-                                            <li><strong>Amazon links:</strong> All "Open in Amazon" links use affiliate tracking</li>
-                                            <li><strong>Supports development:</strong> If you purchase anything within 24 hours, it helps fund ReaderWrangler</li>
-                                            <li><strong>No cost to you:</strong> Same prices, just helps keep the app free</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {/* v5.0.0-alpha.175.48 - Removed Settings modal (dead code: no button, cacheExpirationDays not used) */}
+                    {/* v5.0.0-alpha.175.48 - Removed helpOpen modal (dead code: replaced by howToDialogOpen in Help menu) */}
 
                     {deleteDialogOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                             <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md" onClick={(e) => e.stopPropagation()}>
                                 <h2 className="text-xl font-bold text-gray-900 mb-4">Delete Column</h2>
                                 <p className="text-sm text-gray-700 mb-4">
-                                    Where should the {columns.find(c => c.id === deleteDialogOpen)?.books.length || 0} books from 
+                                    Where should the {columns.find(c => c.id === deleteDialogOpen)?.books.length || 0} books from
                                     "<strong>{columns.find(c => c.id === deleteDialogOpen)?.name}</strong>" be moved?
                                 </p>
-                                <select 
+                                <select
                                     value={deleteDestination}
                                     onChange={(e) => setDeleteDestination(e.target.value)}
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -5136,7 +7948,7 @@
                                     ))}
                                 </select>
                                 <div className="flex gap-2 justify-end">
-                                    <button 
+                                    <button
                                         onClick={() => { setDeleteDialogOpen(null); setDeleteDestination(''); }}
                                         className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">
                                         Cancel
@@ -5151,25 +7963,24 @@
                         </div>
                     )}
 
-                    {/* v4.20.0.a - Bulk price goal modal */}
+                    {/* v4.20.0.a - Bulk price goal modal (v5.0.0-alpha.169.8 - use bulkPriceBookIds) */}
                     {showBulkPriceModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                             onClick={() => { setShowBulkPriceModal(false); setBulkPriceInput(''); }}>
+                             onClick={() => { setShowBulkPriceModal(false); setBulkPriceInput(''); setBulkPriceBookIds([]); }}>
                             <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm" onClick={(e) => e.stopPropagation()}>
                                 <h2 className="text-lg font-bold text-gray-900 mb-4">Set Custom Price Goal</h2>
                                 <p className="text-sm text-gray-600 mb-4">
-                                    Set price goal for {selectedBooks.size} selected book{selectedBooks.size !== 1 ? 's' : ''}
+                                    Set price goal for {bulkPriceBookIds.length} selected book{bulkPriceBookIds.length !== 1 ? 's' : ''}
                                 </p>
                                 <form
                                     onSubmit={async (e) => {
                                         e.preventDefault();
                                         const price = parseFloat(bulkPriceInput);
                                         if (!isNaN(price) && price > 0) {
-                                            const selectedBookIds = getSelectedBookIds();
-                                            const count = selectedBookIds.length;
+                                            const count = bulkPriceBookIds.length;
                                             setBooks(prev => {
                                                 const updated = prev.map(b =>
-                                                    selectedBookIds.includes(b.id) ? { ...b, priceTrigger: price } : b
+                                                    bulkPriceBookIds.includes(b.id) ? { ...b, priceTrigger: price } : b
                                                 );
                                                 saveBooksToIndexedDB(updated);
                                                 return updated;
@@ -5190,6 +8001,7 @@
                                         }
                                         setShowBulkPriceModal(false);
                                         setBulkPriceInput('');
+                                        setBulkPriceBookIds([]);
                                     }}
                                     className="flex flex-col gap-4"
                                 >
@@ -5342,13 +8154,13 @@
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onClick={() => setCollectSeriesOpen(false)}>
                             <div className="bg-white rounded-lg shadow-2xl p-6 max-w-2xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                                 <h2 className="text-xl font-bold text-gray-900 mb-4">Group Series Books</h2>
-                                
+
                                 {modalBook && (
                                     <p className="text-sm text-gray-700 mb-4">
                                         Collecting books from: <strong style={{ color: '#621e31' }}>{modalBook.series}</strong>
                                     </p>
                                 )}
-                                
+
                                 {seriesBooks.current.length > 0 && (
                                     <div className="mb-4">
                                         <h3 className="text-sm font-semibold text-gray-900 mb-2">
@@ -5363,7 +8175,7 @@
                                         </ul>
                                     </div>
                                 )}
-                                
+
                                 {seriesBooks.other.length > 0 && (
                                     <div className="mb-6">
                                         <h3 className="text-sm font-semibold text-gray-900 mb-2">
@@ -5372,22 +8184,22 @@
                                         <ul className="space-y-1 ml-4">
                                             {seriesBooks.other.map(book => (
                                                 <li key={book.id} className="text-sm text-gray-700">
-                                                    • {book.seriesPosition ? `Book ${book.seriesPosition}: ` : ''}{book.title} 
+                                                    • {book.seriesPosition ? `Book ${book.seriesPosition}: ` : ''}{book.title}
                                                     <span className="text-gray-500 ml-2">({book.columnName})</span>
                                                 </li>
                                             ))}
                                         </ul>
                                     </div>
                                 )}
-                                
+
                                 {seriesBooks.current.length === 0 && seriesBooks.other.length === 0 && (
                                     <p className="text-sm text-gray-600 mb-6 italic">
                                         No other books from this series found in your library.
                                     </p>
                                 )}
-                                
+
                                 <div className="flex gap-2 justify-end">
-                                    <button 
+                                    <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setCollectSeriesOpen(false);
@@ -5396,7 +8208,7 @@
                                         Cancel
                                     </button>
                                     {seriesBooks.current.length > 0 && (
-                                        <button 
+                                        <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 collectSeriesBooks(false);
@@ -5406,7 +8218,7 @@
                                         </button>
                                     )}
                                     {seriesBooks.other.length > 0 && (
-                                        <button 
+                                        <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 collectSeriesBooks(true);
@@ -5425,17 +8237,17 @@
                             <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-4">
-                                        <button 
+                                        <button
                                             onClick={() => navigateBook('prev')}
                                             disabled={!getBookPosition().hasPrev}
                                             className="p-2 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
                                             title="Previous book">
-                                            ← 
+                                            ←
                                         </button>
                                         <span className="text-sm text-gray-600">
                                             Book {getBookPosition().current} of {getBookPosition().total}
                                         </span>
-                                        <button 
+                                        <button
                                             onClick={() => navigateBook('next')}
                                             disabled={!getBookPosition().hasNext}
                                             className="p-2 hover:bg-gray-100 rounded disabled:opacity-30 disabled:cursor-not-allowed"
@@ -5445,11 +8257,11 @@
                                     </div>
                                     <button onClick={closeBookModal} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                                 </div>
-                                
+
                                 <div className="p-6">
                                     <div className="flex gap-6 mb-6">
                                         {blankImageBooks.has(modalBook.id) ? (
-                                            <div className="w-48 h-72 rounded shadow-lg overflow-hidden flex flex-col flex-shrink-0" 
+                                            <div className="w-48 h-72 rounded shadow-lg overflow-hidden flex flex-col flex-shrink-0"
                                                  style={{ backgroundColor: '#d4c5a9' }}>
                                                 <div className="flex-1 flex items-center justify-center px-4">
                                                     <div className="text-center">
@@ -5488,7 +8300,7 @@
                                                 </div>
                                             )}
                                             <p className="text-xl text-gray-700 mb-4">by {modalBook.author}</p>
-                                            
+
                                             {modalBook.rating > 0 && (
                                                 <div className="flex items-center gap-3 mb-4">
                                                     {renderStars(modalBook.rating)}
@@ -5498,13 +8310,79 @@
                                                     )}
                                                 </div>
                                             )}
-                                            
+
+                                            {/* v5.0.0-alpha.175.31 - My Rating (personal rating) */}
+                                            <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
+                                                <span className="text-sm font-semibold text-gray-700">My Rating:</span>
+                                                <div className="flex items-center gap-1">
+                                                    {[1, 2, 3, 4, 5].map(rating => (
+                                                        <button
+                                                            key={rating}
+                                                            onClick={() => {
+                                                                setBooks(prev => {
+                                                                    const updated = prev.map(b =>
+                                                                        b.id === modalBook.id ? { ...b, myRating: rating } : b
+                                                                    );
+                                                                    saveBooksToIndexedDB(updated);
+                                                                    return updated;
+                                                                });
+                                                                setModalBook(prev => ({ ...prev, myRating: rating }));
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.color = '#3b82f6';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.color = rating <= (modalBook.myRating || 0) ? '#3b82f6' : '#cbd5e1';
+                                                            }}
+                                                            style={{
+                                                                fontSize: '24px',
+                                                                cursor: 'pointer',
+                                                                color: rating <= (modalBook.myRating || 0) ? '#3b82f6' : '#cbd5e1',
+                                                                transition: 'color 0.1s',
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                padding: '0'
+                                                            }}
+                                                            title={`Rate ${rating} star${rating > 1 ? 's' : ''}`}
+                                                        >
+                                                            {rating <= (modalBook.myRating || 0) ? '★' : '☆'}
+                                                        </button>
+                                                    ))}
+                                                    {modalBook.myRating > 0 && (
+                                                        <button
+                                                            onClick={() => {
+                                                                setBooks(prev => {
+                                                                    const updated = prev.map(b =>
+                                                                        b.id === modalBook.id ? { ...b, myRating: 0 } : b
+                                                                    );
+                                                                    saveBooksToIndexedDB(updated);
+                                                                    return updated;
+                                                                });
+                                                                setModalBook(prev => ({ ...prev, myRating: 0 }));
+                                                            }}
+                                                            style={{
+                                                                marginLeft: '8px',
+                                                                fontSize: '11px',
+                                                                color: '#94a3b8',
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                textDecoration: 'underline'
+                                                            }}
+                                                            title="Clear rating"
+                                                        >
+                                                            Clear
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+
                                             {modalBook.series && (
                                                 <div className="mb-3">
                                                     <p className="text-lg mb-2" style={{ color: '#621e31' }}>
                                                         {(modalBook.seriesPosition && modalBook.seriesTotal)
                                                             ? `Book ${modalBook.seriesPosition} of ${modalBook.seriesTotal}: ${modalBook.series}`
-                                                            : modalBook.seriesPosition 
+                                                            : modalBook.seriesPosition
                                                                 ? `Book ${modalBook.seriesPosition}: ${modalBook.series}`
                                                                 : modalBook.series
                                                         }
@@ -5516,7 +8394,7 @@
                                                     </button>
                                                 </div>
                                             )}
-                                            
+
                                             <div className="space-y-2 text-sm">
                                                 {modalBook.binding && (
                                                     <div className="flex items-center gap-2">
@@ -5589,15 +8467,8 @@
                                                                                         );
                                                                                         saveBooksToIndexedDB(updated);
                                                                                         return updated;
-                                                                                    });
+                                                                                     });
                                                                                     setModalBook(prev => ({ ...prev, tags: newTags }));
-                                                                                    setTagRegistry(prev => {
-                                                                                        const updated = { ...prev };
-                                                                                        if (updated[tagId]) {
-                                                                                            updated[tagId] = { ...updated[tagId], count: Math.max(0, updated[tagId].count - 1) };
-                                                                                        }
-                                                                                        return updated;
-                                                                                    });
                                                                                 }}
                                                                                 className="text-blue-600 hover:text-blue-800 font-bold"
                                                                                 title="Remove tag">×</button>
@@ -5662,14 +8533,9 @@
                                                                                                 b.id === modalBook.id ? { ...b, tags: newTags } : b
                                                                                             );
                                                                                             saveBooksToIndexedDB(updated);
-                                                                                            return updated;
+                                                                                             return updated;
                                                                                         });
                                                                                         setModalBook(prev => ({ ...prev, tags: newTags }));
-                                                                                        setTagRegistry(prev => ({
-                                                                                            ...prev,
-                                                                                            [tagId]: { ...prev[tagId], count: prev[tagId].count + 1 }
-                                                                                        }));
-                                                                                        setContextSubmenu(null);
                                                                                         setTagInputValue('');
                                                                                     } else if (!allTagsExactMatch) {
                                                                                         // Create new tag
@@ -5764,18 +8630,13 @@
                                                                                                     );
                                                                                                     saveBooksToIndexedDB(updated);
                                                                                                     return updated;
-                                                                                                });
+                                                                                                 });
                                                                                                 setModalBook(prev => ({ ...prev, tags: newTags }));
                                                                                                 // Update tag registry count
-                                                                                                setTagRegistry(prev => ({
-                                                                                                    ...prev,
-                                                                                                    [tagId]: { ...prev[tagId], count: prev[tagId].count + 1 }
-                                                                                                }));
-                                                                                                setContextSubmenu(null);
                                                                                                 setTagInputValue('');
                                                                                             }}>
                                                                                             <span>{tagData.label}</span>
-                                                                                            <span className="text-gray-400 text-xs">({tagData.count})</span>
+                                                                                            <span className="text-gray-400 text-xs">({getTagCount(tagId)})</span>
                                                                                         </button>
                                                                                     ))}
                                                                                     {existingTags.length === 0 && !showCreate && (
@@ -5798,10 +8659,9 @@
                                                 </div>
                                             </div>
 
-                                            {/* Price section for wishlist books (v4.17.0, v4.18.0.b - show for all wishlist, not just those with price) */}
-                                            {modalBook.onWishlist && (
-                                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                                    <div className="flex items-center gap-2 mb-2">
+                                            {/* Price section (v5.0.0-alpha.163 - show for all books, not just wishlist) */}
+                                            <div className="mt-4 pt-4 border-t border-gray-200">
+                                                <div className="flex items-center gap-2 mb-2">
                                                         <span className="font-semibold text-gray-700">Current Price:</span>
                                                         {modalBook.currentPrice != null ? (
                                                             <>
@@ -5908,8 +8768,8 @@
                                                             ✓ Goal: {'$'}{modalBook.priceTrigger.toFixed(2)} or less
                                                         </p>
                                                     )}
-                                                </div>
-                                            )}
+                                            </div>
+
                                         </div>
                                     </div>
 
@@ -6014,7 +8874,7 @@
                                             </div>
                                         </div>
                                     )}
-                                    
+
                                     {modalBook.description && (
                                         <div className="mb-6 pb-6 border-b border-gray-200">
                                             <h3 className="text-lg font-semibold text-gray-900 mb-3">Description</h3>
@@ -6023,7 +8883,7 @@
                                             </p>
                                         </div>
                                     )}
-                                    
+
                                     {modalBook.topReviews && modalBook.topReviews.length > 0 && (
                                         <div>
                                             <h3 className="text-lg font-semibold text-gray-900 mb-3">Top Reviews</h3>
@@ -6033,7 +8893,7 @@
                                                     const title = review.title || '';
                                                     const text = review.text || review.contentAbstract?.textAbstract || '';
                                                     const reviewer = review.reviewer || review.contributor?.publicProfile?.publicProfile?.publicName?.displayString || '';
-                                                    
+
                                                     return (
                                                         <div key={idx} className="bg-gray-50 rounded-lg p-4">
                                                             <div className="flex items-center gap-3 mb-2">
@@ -6057,7 +8917,7 @@
                                                 })}
                                             </div>
                                             {!showAllReviews && modalBook.topReviews.length > 3 && (
-                                                <button 
+                                                <button
                                                     onClick={() => setShowAllReviews(true)}
                                                     className="mt-4 px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm">
                                                     Show More Reviews ({modalBook.topReviews.length - 3} more)
@@ -6070,6 +8930,8 @@
                         </div>
                     )}
 
+                    {/* v5.0.0 - Conditional rendering: Columns view or Explorer view */}
+                    {viewMode === 'columns' && (
                     <div className="flex-1 min-h-0 overflow-x-scroll overflow-y-hidden mb-6 columns-scroll-container" onClick={(e) => {
                         // Clear selection if clicking on empty space (not on books or columns)
                         if (e.target === e.currentTarget || e.target.classList.contains('columns-container')) {
@@ -6431,7 +9293,7 @@
                                                                 : '📭 No collections'}>
                                                             <div className="relative">
                                                                 {blankImageBooks.has(book.id) ? (
-                                                                    <div className="w-full aspect-[2/3] rounded shadow-lg overflow-hidden flex flex-col" 
+                                                                    <div className="w-full aspect-[2/3] rounded shadow-lg overflow-hidden flex flex-col"
                                                                          style={{ backgroundColor: '#d4c5a9' }}>
                                                                         <div className="flex-1 flex items-center justify-center px-4">
                                                                             <div className="text-center">
@@ -6463,8 +9325,8 @@
                                                                         </svg>
                                                                     </div>
                                                                 )}
-                                                                {/* Bottom-left: Price tag (wishlist) or Ownership badge (non-purchased owned) */}
-                                                                {book.onWishlist && book.currentPrice != null ? (
+                                                                {/* Bottom-left: Price tag (any book with price) or Ownership badge (non-purchased owned) */}
+                                                                {book.currentPrice != null ? (
                                                                     <div
                                                                         className={`absolute bottom-1 left-1 ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'bg-green-500' : 'bg-gray-500'} bg-opacity-90 text-xs font-bold text-white`}
                                                                         style={{
@@ -6535,6 +9397,2199 @@
                             {/* v4.12.0.b - Floating Add Column button removed; use column dropdown menu instead */}
                         </div>
                     </div>
+                    )}
+
+                    {/* v5.0.0 - Book Explorer view */}
+                    {viewMode === 'explorer' && (
+                        <div className="flex-1 min-h-0 flex mb-6">
+                            {/* Left pane: Folder tree */}
+                            {/* v5.0.0-alpha.49 - onDragOver prevents browser "split view" prompt */}
+                            {/* v5.0.0-alpha.91 - Resizable left pane */}
+                            {/* v5.0.0-alpha.95 - Sticky header and virtual folders */}
+                            <div className="bg-white border-r border-gray-200 flex flex-col flex-shrink-0"
+                                style={{ width: `${leftPaneWidth}px` }}
+                                onDragOver={(e) => e.preventDefault()}>
+                                {/* Sticky section: Header + virtual folders */}
+                                {/* v5.0.0-alpha.97 - Border-bottom separates sticky from scrollable */}
+                                <div className="sticky top-0 bg-white z-10 border-b border-gray-300">
+                                <div className="p-3 border-b border-gray-200 font-medium text-gray-700 flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span>Folders</span>
+                                        {/* v5.0.0-alpha.125 - Navigation buttons with proper chevron icons */}
+                                        <div className="flex gap-1 border-x border-gray-300 px-2">
+                                            <button
+                                                onClick={goBack}
+                                                disabled={!canGoBack}
+                                                className={`w-6 h-6 rounded flex items-center justify-center transition-colors border ${
+                                                    canGoBack
+                                                        ? 'text-gray-700 hover:bg-blue-50 hover:border-blue-300 border-gray-300'
+                                                        : 'text-gray-300 cursor-not-allowed border-gray-200'
+                                                }`}
+                                                title="Back (Alt+Left)">
+                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={canGoBack ? '' : 'opacity-40'}>
+                                                    <path d="M7.5 2L3.5 6L7.5 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                            </button>
+                                            <button
+                                                onClick={goForward}
+                                                disabled={!canGoForward}
+                                                className={`w-6 h-6 rounded flex items-center justify-center transition-colors border ${
+                                                    canGoForward
+                                                        ? 'text-gray-700 hover:bg-blue-50 hover:border-blue-300 border-gray-300'
+                                                        : 'text-gray-300 cursor-not-allowed border-gray-200'
+                                                }`}
+                                                title="Forward (Alt+Right)">
+                                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={canGoForward ? '' : 'opacity-40'}>
+                                                    <path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    {/* Expand/Collapse All toggle */}
+                                    <button
+                                        onClick={() => {
+                                            // Check if any folder is expanded
+                                            const anyExpanded = folders.some(f => !f.collapsed && getChildFolders(f.id).length > 0);
+                                            // Toggle all: if any expanded, collapse all; else expand all
+                                            setFolders(prev => prev.map(f => ({ ...f, collapsed: anyExpanded })));
+                                        }}
+                                        className="text-gray-400 hover:text-gray-600 text-sm px-1"
+                                        title={folders.some(f => !f.collapsed && getChildFolders(f.id).length > 0) ? 'Collapse all folders' : 'Expand all folders'}>
+                                        {folders.some(f => !f.collapsed && getChildFolders(f.id).length > 0) ? '▼' : '▶'}
+                                    </button>
+                                </div>
+                                {/* v5.0.0-alpha.169 - Filtered folder indicator */}
+                                {hasActiveFilters && (
+                                    <div className="px-3 py-1.5 text-xs text-gray-600 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                                        <span>
+                                            {(() => {
+                                                // v5.0.0-alpha.169.2 - Exclude Inbox from count (it's rendered separately)
+                                                const userFolders = folders.filter(f => f.id !== '__inbox__');
+                                                const visibleCount = userFolders.filter(f => {
+                                                    const { matching } = getFilteredFolderCount(f.id);
+                                                    // Folder is visible if it has matches OR has descendant with matches
+                                                    const hasMatchingDescendant = (folderId) => {
+                                                        const childFolders = folders.filter(c => c.parentId === folderId);
+                                                        return childFolders.some(child => {
+                                                            const { matching: childMatching } = getFilteredFolderCount(child.id);
+                                                            return childMatching > 0 || hasMatchingDescendant(child.id);
+                                                        });
+                                                    };
+                                                    return matching > 0 || hasMatchingDescendant(f.id);
+                                                }).length;
+                                                const totalCount = userFolders.length;
+                                                // v5.0.0-alpha.169.3 - Changed wording to remove "Showing" implication
+                                                return visibleCount === 0
+                                                    ? 'No folders match'
+                                                    : `${visibleCount} of ${totalCount} folders match`;
+                                            })()}
+                                        </span>
+                                        <button
+                                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                                            onClick={() => setShowAllFoldersOverride(prev => !prev)}>
+                                            {showAllFoldersOverride ? 'Hide empty' : 'Show all'}
+                                        </button>
+                                    </div>
+                                )}
+                                <div className="p-2">
+                                    {/* All Books (virtual, view-only) - v5.0.0-alpha.52 added "+" for new root folder */}
+                                    <div
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        onClick={() => navigateToFolder('__all__')}>
+                                        <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
+                                        <span className="flex-1 pointer-events-none">{FOLDER_ALL_BOOKS.name}</span>
+                                        <span className="text-xs text-gray-500 pointer-events-none">({books.length})</span>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const newFolder = {
+                                                    id: `folder-${Date.now()}`,
+                                                    name: 'New Folder',
+                                                    parentId: null,
+                                                    bookIds: [],
+                                                    childFolderIds: [],
+                                                    collapsed: false
+                                                };
+                                                recordAction({
+                                                    type: 'CREATE_FOLDER',
+                                                    folderId: newFolder.id,
+                                                    parentId: null,
+                                                    folder: { ...newFolder }
+                                                });
+                                                setFolders(prev => [...prev, newFolder]);
+                                                navigateToFolder(newFolder.id);
+                                                setEditingFolderId(newFolder.id);
+                                                setEditingFolderName('New Folder');
+                                            }}
+                                            className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 px-1"
+                                            title="New folder">
+                                            +
+                                        </button>
+                                    </div>
+                                    {/* Divider line to separate All Books from folders */}
+                                    <div className="border-b border-gray-200 my-1 mx-2"></div>
+                                    {/* v5.0.0-alpha.63 - My Library (organizational root container) */}
+                                    <div
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        onClick={() => navigateToFolder('__library__')}>
+                                        <span className="pointer-events-none">{FOLDER_LIBRARY.icon}</span>
+                                        <span className="flex-1 pointer-events-none">{FOLDER_LIBRARY.name}</span>
+                                        <span className="text-xs text-gray-500 pointer-events-none">
+                                            ({getChildFolders(null).length} folders)
+                                        </span>
+                                    </div>
+                                    {/* Inbox - indented as part of folder hierarchy */}
+                                    <div
+                                        className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__inbox__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                        onClick={() => navigateToFolder('__inbox__')}
+                                        onDragOver={(e) => {
+                                            e.preventDefault();
+                                            e.dataTransfer.dropEffect = 'move';
+                                            setExplorerDropTargetId('__inbox__');
+                                        }}
+                                        onDragLeave={(e) => {
+                                            // Only clear if actually leaving container, not moving to child element
+                                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                setExplorerDropTargetId(null);
+                                            }
+                                        }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
+                                            const { sourceFolder, bookIds } = dragData;
+
+                                            // Check if dragging from All Books (view-only)
+                                            if (sourceFolder === '__all__') {
+                                                setClipboardMessage('All Books is view-only. Organize from folders.');
+                                                setToastPosition({ x: e.clientX, y: e.clientY });
+                                                setFooterClipboardVisible(false);
+                                                setToastVisible(true);
+                                                setToastAnimating(false);
+                                                setTimeout(() => {
+                                                    setToastAnimating(true);
+                                                    setTimeout(() => {
+                                                        setToastVisible(false);
+                                                        setToastAnimating(false);
+                                                    }, 1000);
+                                                }, 1500);
+                                                setExplorerDropTargetId(null);
+                                                setExplorerSelectedBooks(new Set());
+                                                return;
+                                            }
+
+                                            // Remove these books from all user folders
+                                            setFolders(prev => prev.map(folder => ({
+                                                ...folder,
+                                                bookIds: (folder.bookIds || []).filter(id => !bookIds.includes(id))
+                                            })));
+                                            setExplorerDropTargetId(null);
+                                            setExplorerSelectedBooks(new Set());
+                                        }}>
+                                        <span className="pointer-events-none">{FOLDER_INBOX.icon}</span>
+                                        <span className="flex-1 pointer-events-none">{FOLDER_INBOX.name}</span>
+                                        {/* v5.0.0-alpha.169.2 - Show filtered count (X/Y) when filter active */}
+                                        {hasActiveFilters ? (() => {
+                                            const { matching, total } = getFilteredFolderCount('__inbox__');
+                                            const colorClass = matching === 0 ? 'text-gray-400' : 'text-green-600';
+                                            return <span className={`text-xs pointer-events-none ${colorClass}`}>({matching}/{total})</span>;
+                                        })() : (
+                                            <span className="text-xs text-gray-500 pointer-events-none">({getFolderBookIds('__inbox__').length})</span>
+                                        )}
+                                    </div>
+                                </div>
+                                </div>
+                                {/* Scrollable section: User folders */}
+                                <div className="flex-1 overflow-y-auto p-2">
+                                    {/* User folders with recursive subfolder rendering */}
+                                    {(() => {
+                                        // Recursive folder renderer
+                                        const renderFolder = (folder, depth = 0) => {
+                                            // v5.0.0-alpha.169 - Hide folders with no matches when filter active
+                                            if (hasActiveFilters && !showAllFoldersOverride) {
+                                                const { matching } = getFilteredFolderCount(folder.id);
+                                                // Also check if any descendant has matches (show parent if child matches)
+                                                const hasMatchingDescendant = (folderId) => {
+                                                    const childFolders = folders.filter(f => f.parentId === folderId);
+                                                    return childFolders.some(child => {
+                                                        const { matching: childMatching } = getFilteredFolderCount(child.id);
+                                                        return childMatching > 0 || hasMatchingDescendant(child.id);
+                                                    });
+                                                };
+                                                if (matching === 0 && !hasMatchingDescendant(folder.id)) {
+                                                    return null; // Hide folder with no matches
+                                                }
+                                            }
+
+                                            const children = getChildFolders(folder.id);
+                                            const hasChildren = children.length > 0;
+                                            const isExpanded = !folder.collapsed;
+
+                                            return (
+                                                <React.Fragment key={folder.id}>
+                                                    <div
+                                                        className={`w-full flex items-center gap-1 pr-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id || (sidebarFolderDragTarget?.type === 'reparent' && sidebarFolderDragTarget?.folderId === folder.id) ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                                        style={{
+                                                            paddingLeft: `${16 + depth * 16}px`,
+                                                            // v5.0.0-alpha.86 - Visual feedback for folder reorder
+                                                            ...(sidebarFolderDragTarget?.type === 'reorder' && sidebarFolderDragTarget?.folderId === folder.id
+                                                                ? sidebarFolderDragTarget.position === 'before'
+                                                                    ? { borderTop: '3px solid #3b82f6' }
+                                                                    : { borderBottom: '3px solid #3b82f6' }
+                                                                : {}),
+                                                            // v5.0.0-alpha.141 - Dim cut folders
+                                                            ...(folderClipboard.operation === 'cut' && folderClipboard.items.includes(folder.id)
+                                                                ? { opacity: 0.5 }
+                                                                : {})
+                                                        }}
+                                                        draggable={true}
+                                                        onDragStart={(e) => {
+                                                            // v5.0.0-alpha.86 - Enable folder dragging in sidebar
+                                                            e.dataTransfer.effectAllowed = 'move';
+                                                            e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
+                                                                folderIds: [folder.id],
+                                                                sourceFolderId: selectedFolderId
+                                                            }));
+                                                        }}
+                                                        onDragEnd={() => {
+                                                            setSidebarFolderDragTarget(null);
+                                                            setBreadcrumbDropTargetId(null);
+                                                        }}
+                                                        onClick={() => navigateToFolder(folder.id)}
+                                                        onDoubleClick={() => {
+                                                            setEditingFolderId(folder.id);
+                                                            setEditingFolderName(folder.name);
+                                                        }}
+                                                        onDragOver={(e) => {
+                                                            e.preventDefault();
+                                                            const types = Array.from(e.dataTransfer.types);
+                                                            const isFolderDrag = types.includes('application/x-folder-reorder');
+                                                            const isBookDrag = types.includes('application/x-readerwrangler');
+
+                                                            if (isBookDrag) {
+                                                                // Book drag - existing behavior
+                                                                const isCopy = e.ctrlKey;
+                                                                setExplorerIsCopyDrag(isCopy);
+                                                                e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
+                                                                setExplorerDropTargetId(folder.id);
+                                                            } else if (isFolderDrag) {
+                                                                // v5.0.0-alpha.86 - Folder drag with zone detection
+                                                                e.dataTransfer.dropEffect = 'move';
+                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                const y = e.clientY - rect.top;
+                                                                const height = rect.height;
+                                                                const edgeZone = height * 0.25;
+
+                                                                let newTarget;
+                                                                if (y < edgeZone) {
+                                                                    newTarget = { type: 'reorder', folderId: folder.id, position: 'before' };
+                                                                } else if (y > height - edgeZone) {
+                                                                    newTarget = { type: 'reorder', folderId: folder.id, position: 'after' };
+                                                                } else {
+                                                                    newTarget = { type: 'reparent', folderId: folder.id };
+                                                                }
+                                                                // Only update if changed
+                                                                const current = sidebarFolderDragTarget;
+                                                                if (!current || current.type !== newTarget.type ||
+                                                                    current.folderId !== newTarget.folderId ||
+                                                                    current.position !== newTarget.position) {
+                                                                    setSidebarFolderDragTarget(newTarget);
+                                                                }
+                                                            }
+
+                                                            // v5.0.0-alpha.82 - Auto-expand collapsed folder after 500ms hover
+                                                            if (hasChildren && folder.collapsed) {
+                                                                if (!dragHoverExpandTimeoutRef.current) {
+                                                                    dragHoverExpandTimeoutRef.current = setTimeout(() => {
+                                                                        setFolders(prev => prev.map(f =>
+                                                                            f.id === folder.id ? { ...f, collapsed: false } : f
+                                                                        ));
+                                                                        dragHoverExpandTimeoutRef.current = null;
+                                                                    }, 500);
+                                                                }
+                                                            }
+                                                        }}
+                                                        onDragLeave={(e) => {
+                                                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                                setExplorerDropTargetId(null);
+                                                                setSidebarFolderDragTarget(null);
+                                                                // v5.0.0-alpha.82 - Clear auto-expand timeout
+                                                                if (dragHoverExpandTimeoutRef.current) {
+                                                                    clearTimeout(dragHoverExpandTimeoutRef.current);
+                                                                    dragHoverExpandTimeoutRef.current = null;
+                                                                }
+                                                            }
+                                                        }}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            // v5.0.0-alpha.82 - Clear auto-expand timeout on drop
+                                                            if (dragHoverExpandTimeoutRef.current) {
+                                                                clearTimeout(dragHoverExpandTimeoutRef.current);
+                                                                dragHoverExpandTimeoutRef.current = null;
+                                                            }
+
+                                                            // v5.0.0-alpha.86 - Handle folder drops first
+                                                            const folderData = e.dataTransfer.getData('application/x-folder-reorder');
+                                                            if (folderData) {
+                                                                try {
+                                                                    const { folderIds } = JSON.parse(folderData);
+                                                                    const target = sidebarFolderDragTarget;
+                                                                    setSidebarFolderDragTarget(null);
+
+                                                                    if (target?.type === 'reparent') {
+                                                                        reparentFolder(folderIds, folder.id);
+                                                                    } else if (target?.type === 'reorder') {
+                                                                        // Reorder among siblings
+                                                                        const draggedFolder = folders.find(f => f.id === folderIds[0]);
+                                                                        if (!draggedFolder) return;
+
+                                                                        // Only reorder if same parent level
+                                                                        if (draggedFolder.parentId !== folder.parentId) {
+                                                                            // Different parent - reparent to this folder's parent first
+                                                                            reparentFolder(folderIds, folder.parentId);
+                                                                        }
+
+                                                                        // Get siblings at this level
+                                                                        const siblings = getChildFolders(folder.parentId);
+                                                                        const fromIndex = siblings.findIndex(f => f.id === folderIds[0]);
+                                                                        let toIndex = siblings.findIndex(f => f.id === folder.id);
+                                                                        if (target.position === 'after') toIndex++;
+                                                                        if (fromIndex < toIndex) toIndex--;
+
+                                                                        if (fromIndex !== -1 && fromIndex !== toIndex) {
+                                                                            // Build new order
+                                                                            const newOrder = siblings.filter(f => f.id !== folderIds[0]);
+                                                                            newOrder.splice(toIndex, 0, draggedFolder);
+
+                                                                            // Update sortIndex or childFolderIds
+                                                                            if (folder.parentId === null) {
+                                                                                // Root level - update sortIndex
+                                                                                setFolders(prev => prev.map(f => {
+                                                                                    const idx = newOrder.findIndex(s => s.id === f.id);
+                                                                                    if (idx !== -1) {
+                                                                                        return { ...f, sortIndex: idx };
+                                                                                    }
+                                                                                    return f;
+                                                                                }));
+                                                                            } else {
+                                                                                // Nested - update parent's childFolderIds
+                                                                                const newChildIds = newOrder.map(f => f.id);
+                                                                                setFolders(prev => prev.map(f =>
+                                                                                    f.id === folder.parentId
+                                                                                        ? { ...f, childFolderIds: newChildIds }
+                                                                                        : f
+                                                                                ));
+                                                                            }
+
+                                                                            recordAction({
+                                                                                type: 'REORDER_FOLDER',
+                                                                                folderId: folderIds[0],
+                                                                                fromIndex,
+                                                                                toIndex,
+                                                                                parentId: folder.parentId
+                                                                            });
+                                                                            console.log(`📁 Reordered folder in sidebar`);
+                                                                        }
+                                                                    }
+                                                                } catch (err) {
+                                                                    console.error('Sidebar folder drop error:', err);
+                                                                }
+                                                                return;
+                                                            }
+
+                                                            // Book drop - existing behavior
+                                                            const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                            if (!bookDataStr) return;
+                                                            const dragData = JSON.parse(bookDataStr);
+                                                            const { sourceFolder, bookIds } = dragData;
+
+                                                            const showToastLocal = (msg) => {
+                                                                setClipboardMessage(msg);
+                                                                setToastPosition({ x: e.clientX, y: e.clientY });
+                                                                setFooterClipboardVisible(false);
+                                                                setToastVisible(true);
+                                                                setToastAnimating(false);
+                                                                setTimeout(() => {
+                                                                    setToastAnimating(true);
+                                                                    setTimeout(() => {
+                                                                        setToastVisible(false);
+                                                                        setToastAnimating(false);
+                                                                    }, 1000);
+                                                                }, 1500);
+                                                            };
+
+                                                            if (sourceFolder === '__all__') {
+                                                                showToastLocal('All Books is view-only. Organize from folders.');
+                                                                setExplorerDropTargetId(null);
+                                                                setExplorerSelectedBooks(new Set());
+                                                                return;
+                                                            }
+
+                                                            const existing = new Set(folder.bookIds || []);
+                                                            const newBookIds = bookIds.filter(id => !existing.has(id));
+                                                            if (newBookIds.length === 0) {
+                                                                showToastLocal(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder');
+                                                            } else {
+                                                                // v5.0.0-alpha.46 - Capture fromIndices for undo before modifying
+                                                                const sourceFolderObj = folders.find(f => f.id === sourceFolder);
+                                                                const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
+
+                                                                setFolders(prev => prev.map(f => {
+                                                                    if (f.id === folder.id) {
+                                                                        return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                                    }
+                                                                    if (!explorerIsCopyDrag && f.id === sourceFolder) {
+                                                                        return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                                    }
+                                                                    return f;
+                                                                }));
+
+                                                                // v5.0.0-alpha.46 - Record action for undo
+                                                                if (explorerIsCopyDrag) {
+                                                                    recordAction({
+                                                                        type: 'COPY_BOOKS_FOLDER',
+                                                                        toFolderId: folder.id,
+                                                                        bookIds: newBookIds,
+                                                                        toIndex: 0 // Prepended to start
+                                                                    });
+                                                                    console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
+                                                                } else {
+                                                                    recordAction({
+                                                                        type: 'MOVE_BOOKS_FOLDER',
+                                                                        fromFolderId: sourceFolder,
+                                                                        toFolderId: folder.id,
+                                                                        bookIds: bookIds,
+                                                                        fromIndices: fromIndices,
+                                                                        toIndex: 0 // Prepended to start
+                                                                    });
+                                                                    console.log(`📦 Moved ${bookIds.length} book(s) to "${folder.name}"`);
+                                                                }
+                                                            }
+                                                            setExplorerDropTargetId(null);
+                                                            setExplorerSelectedBooks(new Set());
+                                                            setExplorerIsCopyDrag(false);
+                                                        }}
+                                                        onContextMenu={(e) => {
+                                                            // v5.0.0-alpha.133 - Show visual context menu (replaces prompt)
+                                                            e.preventDefault();
+                                                            setFolderContextMenu({
+                                                                folderId: folder.id,
+                                                                x: e.clientX,
+                                                                y: e.clientY,
+                                                                source: 'left' // v5.0.0-alpha.156 - Track which panel triggered menu
+                                                            });
+                                                        }}>
+                                                        {/* Expand/collapse chevron for folders with children */}
+                                                        {hasChildren ? (
+                                                            <span
+                                                                className="text-gray-400 hover:text-gray-600 cursor-pointer w-4 text-center"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setFolders(prev => prev.map(f =>
+                                                                        f.id === folder.id ? { ...f, collapsed: !f.collapsed } : f
+                                                                    ));
+                                                                }}>
+                                                                {isExpanded ? '▼' : '▶'}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="w-4"></span>
+                                                        )}
+                                                        <span className="pointer-events-none">📁</span>
+                                                        {editingFolderId === folder.id ? (
+                                                            <input
+                                                                type="text"
+                                                                value={editingFolderName}
+                                                                onChange={(e) => setEditingFolderName(e.target.value)}
+                                                                onBlur={() => {
+                                                                    // v5.0.0-alpha.134 - Keep placeholder text if user didn't type
+                                                                    const finalName = (isPlaceholderMode || !editingFolderName.trim())
+                                                                        ? editingFolderName
+                                                                        : editingFolderName.trim();
+                                                                    if (finalName) {
+                                                                        setFolders(prev => prev.map(f =>
+                                                                            f.id === folder.id ? { ...f, name: finalName } : f
+                                                                        ));
+                                                                    }
+                                                                    setEditingFolderId(null);
+                                                                    setEditingFolderName('');
+                                                                    setIsPlaceholderMode(false);
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    // v5.0.0-alpha.134 - Clear placeholder on first character typed
+                                                                    if (isPlaceholderMode && e.key.length === 1) {
+                                                                        // Printable character typed - clear placeholder first
+                                                                        setEditingFolderName('');
+                                                                        setIsPlaceholderMode(false);
+                                                                        // Let the character be inserted by default behavior
+                                                                        return;
+                                                                    }
+
+                                                                    if (e.key === 'Enter') {
+                                                                        // v5.0.0-alpha.134 - Keep placeholder text if user didn't type
+                                                                        const finalName = (isPlaceholderMode || !editingFolderName.trim())
+                                                                            ? editingFolderName
+                                                                            : editingFolderName.trim();
+                                                                        if (finalName) {
+                                                                            setFolders(prev => prev.map(f =>
+                                                                                f.id === folder.id ? { ...f, name: finalName } : f
+                                                                            ));
+                                                                        }
+                                                                        setEditingFolderId(null);
+                                                                        setEditingFolderName('');
+                                                                        setIsPlaceholderMode(false);
+                                                                    } else if (e.key === 'Escape') {
+                                                                        setEditingFolderId(null);
+                                                                        setEditingFolderName('');
+                                                                        setIsPlaceholderMode(false);
+                                                                    }
+                                                                }}
+                                                                onFocus={(e) => {
+                                                                    // v5.0.0-alpha.134 - Position cursor at start in placeholder mode
+                                                                    if (isPlaceholderMode) {
+                                                                        e.target.setSelectionRange(0, 0);
+                                                                    }
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                autoFocus
+                                                                className={`flex-1 px-1 py-0.5 text-sm border border-blue-400 rounded outline-none ${isPlaceholderMode ? 'text-gray-400' : ''}`}
+                                                            />
+                                                        ) : (
+                                                            <>
+                                                                <span className="flex-1 pointer-events-none">{folder.name}</span>
+                                                                {(() => {
+                                                                    // v5.0.0-alpha.169.3 - Show filtered count with "inside" badge
+                                                                    if (hasActiveFilters) {
+                                                                        const { matching, total, directMatching } = getFilteredFolderCount(folder.id);
+                                                                        // No matches anywhere - gray
+                                                                        if (matching === 0) {
+                                                                            return (
+                                                                                <span
+                                                                                    className="text-xs pointer-events-none text-gray-400"
+                                                                                    title={`${matching} matching • ${total} total`}>
+                                                                                    ({matching}/{total})
+                                                                                </span>
+                                                                            );
+                                                                        }
+                                                                        // Collapsed with no direct matches but children have matches - blue "inside"
+                                                                        if (folder.collapsed && directMatching === 0 && matching > 0) {
+                                                                            return (
+                                                                                <span
+                                                                                    className="text-xs pointer-events-none text-blue-600"
+                                                                                    title={`${matching} matching books in subfolders • expand to see`}>
+                                                                                    ({matching} books inside)
+                                                                                </span>
+                                                                            );
+                                                                        }
+                                                                        // Has direct matches or is expanded - green
+                                                                        return (
+                                                                            <span
+                                                                                className="text-xs pointer-events-none text-green-600"
+                                                                                title={`${matching} matching • ${total} total`}>
+                                                                                ({matching}/{total})
+                                                                            </span>
+                                                                        );
+                                                                    }
+                                                                    // Normal count display
+                                                                    const counts = getFolderTotalCount(folder.id);
+                                                                    const tooltip = counts.subfolder > 0
+                                                                        ? `${counts.direct} direct • ${counts.subfolder} in subfolders`
+                                                                        : `${counts.direct} books`;
+                                                                    return (
+                                                                        <span
+                                                                            className="text-xs text-gray-500 pointer-events-none"
+                                                                            title={tooltip}>
+                                                                            ({counts.total})
+                                                                        </span>
+                                                                    );
+                                                                })()}
+                                                                {/* v5.0.0-alpha.52 - New subfolder button */}
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const newFolder = {
+                                                                            id: `folder-${Date.now()}`,
+                                                                            name: 'New Subfolder',
+                                                                            parentId: folder.id,
+                                                                            bookIds: [],
+                                                                            childFolderIds: [],
+                                                                            collapsed: false
+                                                                        };
+                                                                        recordAction({
+                                                                            type: 'CREATE_FOLDER',
+                                                                            folderId: newFolder.id,
+                                                                            parentId: folder.id,
+                                                                            folder: { ...newFolder }
+                                                                        });
+                                                                        // Expand parent and add subfolder in single update
+                                                                        setFolders(prev => [
+                                                                            ...prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f),
+                                                                            newFolder
+                                                                        ]);
+                                                                        navigateToFolder(newFolder.id);
+                                                                        setEditingFolderId(newFolder.id);
+                                                                        setEditingFolderName('New Subfolder');
+                                                                        setIsPlaceholderMode(true); // v5.0.0-alpha.134 - Show as placeholder
+                                                                    }}
+                                                                    className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 px-1"
+                                                                    title="New subfolder">
+                                                                    +
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (window.confirm(`Delete folder "${folder.name}"?`)) {
+                                                                            // v5.0.0-alpha.55 - Move orphaned books up one level before deleting
+                                                                            const getAllDescendants = (folderId, allFolders) => {
+                                                                                const children = allFolders.filter(f => f.parentId === folderId);
+                                                                                let descendants = [...children];
+                                                                                children.forEach(child => {
+                                                                                    descendants = [...descendants, ...getAllDescendants(child.id, allFolders)];
+                                                                                });
+                                                                                return descendants;
+                                                                            };
+                                                                            const descendants = getAllDescendants(folder.id, folders);
+                                                                            const foldersToDelete = [folder, ...descendants];
+                                                                            const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
+                                                                            const folderIndices = foldersToDelete.map(f => folders.findIndex(x => x.id === f.id));
+
+                                                                            // Determine destination for orphaned books: parent folder or Inbox
+                                                                            const destinationId = folder.parentId || '__inbox__';
+                                                                            const destinationFolder = folders.find(f => f.id === destinationId);
+                                                                            const destinationName = destinationFolder?.name || 'Inbox';
+
+                                                                            // Collect all books from folders being deleted
+                                                                            const allOrphanedBookIds = foldersToDelete.flatMap(f => f.bookIds || []);
+                                                                            const uniqueOrphanedBookIds = [...new Set(allOrphanedBookIds)];
+
+                                                                            // Record action for undo (includes orphan relocation info)
+                                                                            recordAction({
+                                                                                type: 'DELETE_FOLDERS',
+                                                                                deletedFolders: foldersToDelete.map(f => ({ ...f })),
+                                                                                folderIndices: folderIndices,
+                                                                                orphanedBooks: uniqueOrphanedBookIds,
+                                                                                orphanDestination: destinationId
+                                                                            });
+
+                                                                            // Move orphaned books to destination, then delete folders
+                                                                            setFolders(prev => {
+                                                                                let updated = prev.map(f => {
+                                                                                    if (f.id === destinationId && uniqueOrphanedBookIds.length > 0) {
+                                                                                        const existingIds = new Set(f.bookIds || []);
+                                                                                        const newBookIds = uniqueOrphanedBookIds.filter(id => !existingIds.has(id));
+                                                                                        return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                                                    }
+                                                                                    return f;
+                                                                                });
+                                                                                return updated.filter(f => !folderIdsToDelete.has(f.id));
+                                                                            });
+
+                                                                            // v5.0.0-alpha.58 - Navigate to parent folder instead of All Books
+                                                                            if (selectedFolderId === folder.id || folderIdsToDelete.has(selectedFolderId)) {
+                                                                                setSelectedFolderId(destinationId);
+                                                                            }
+
+                                                                            // Show toast with result
+                                                                            if (uniqueOrphanedBookIds.length > 0) {
+                                                                                const bookWord = uniqueOrphanedBookIds.length === 1 ? 'book' : 'books';
+                                                                                showToast(`Deleted "${folder.name}" — ${uniqueOrphanedBookIds.length} ${bookWord} moved to ${destinationName}`, window.innerWidth / 2, 100);
+                                                                            } else {
+                                                                                showToast(`Deleted "${folder.name}"`, window.innerWidth / 2, 100);
+                                                                            }
+                                                                            console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}${uniqueOrphanedBookIds.length > 0 ? `, moved ${uniqueOrphanedBookIds.length} books to ${destinationName}` : ''}`);
+                                                                        }
+                                                                    }}
+                                                                    className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 px-1"
+                                                                    title="Delete folder">
+                                                                    ×
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    {/* Render children if expanded */}
+                                                    {hasChildren && isExpanded && children.map(child => renderFolder(child, depth + 1))}
+                                                </React.Fragment>
+                                            );
+                                        };
+
+                                        // Render root folders (parentId: null, excluding Inbox)
+                                        return getChildFolders(null).filter(f => f.id !== '__inbox__').map(folder => renderFolder(folder, 0));
+                                    })()}
+                                    {/* v5.0.0-alpha.52 - Removed bottom "New Folder" button; use "+" on All Books or folder rows instead */}
+                                </div>
+                            </div>
+
+                            {/* v5.0.0-alpha.91 - Resizable divider */}
+                            <div
+                                className={`w-1 bg-gray-200 hover:bg-blue-400 cursor-col-resize transition-colors ${isResizingPane ? 'bg-blue-500' : ''}`}
+                                onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    setIsResizingPane(true);
+                                }}
+                                title="Drag to resize sidebar"
+                            />
+
+                            {/* Right pane: Book list */}
+                            <div className="flex-1 bg-white overflow-hidden flex flex-col">
+                                <div className="p-3 border-b border-gray-200 flex items-center justify-between">
+                                    <div className="font-medium text-gray-700 flex items-center">
+                                        {/* v5.0.0-alpha.80 - Breadcrumb navigation, v5.0.0-alpha.83 - Drop target for folder reparenting */}
+                                        {getFolderPath(selectedFolderId).map((folder, idx, arr) => (
+                                            <span key={folder.id} className="flex items-center">
+                                                {idx > 0 && <span className="mx-1 text-gray-400">›</span>}
+                                                {idx === arr.length - 1 ? (
+                                                    <span>{folder.name}</span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => navigateToFolder(folder.id)}
+                                                        className={`text-blue-600 hover:text-blue-800 hover:underline px-1 rounded ${breadcrumbDropTargetId === folder.id ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                                        onDragOver={(e) => {
+                                                            // v5.0.0-alpha.85 - Accept folder drags and book drags (but not books on My Library)
+                                                            const types = Array.from(e.dataTransfer.types);
+                                                            const isFolderDrag = types.includes('application/x-folder-reorder');
+                                                            const isBookDrag = types.includes('application/x-readerwrangler');
+                                                            // Books can't go to root level (My Library)
+                                                            if (isFolderDrag || (isBookDrag && folder.id !== '__library__')) {
+                                                                e.preventDefault();
+                                                                e.dataTransfer.dropEffect = 'move';
+                                                                setBreadcrumbDropTargetId(folder.id);
+                                                            }
+                                                        }}
+                                                        onDragLeave={(e) => {
+                                                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                                setBreadcrumbDropTargetId(null);
+                                                            }
+                                                        }}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            setBreadcrumbDropTargetId(null);
+
+                                                            // Try folder drag first
+                                                            const folderData = e.dataTransfer.getData('application/x-folder-reorder');
+                                                            if (folderData) {
+                                                                try {
+                                                                    const { folderIds } = JSON.parse(folderData);
+                                                                    const newParentId = folder.id === '__library__' ? null : folder.id;
+                                                                    reparentFolder(folderIds, newParentId);
+                                                                } catch (err) {
+                                                                    console.error('Breadcrumb folder drop error:', err);
+                                                                }
+                                                                return;
+                                                            }
+
+                                                            // Try book drag
+                                                            const bookData = e.dataTransfer.getData('application/x-readerwrangler');
+                                                            if (bookData && folder.id !== '__library__') {
+                                                                try {
+                                                                    const { sourceFolder, bookIds } = JSON.parse(bookData);
+                                                                    const targetFolder = folders.find(f => f.id === folder.id);
+                                                                    if (!targetFolder) return;
+
+                                                                    const existing = new Set(targetFolder.bookIds || []);
+                                                                    const newBookIds = bookIds.filter(id => !existing.has(id));
+
+                                                                    if (newBookIds.length === 0) {
+                                                                        showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder', e.clientX, e.clientY);
+                                                                    } else {
+                                                                        // Move books: add to target, remove from source
+                                                                        const sourceFolderObj = folders.find(f => f.id === sourceFolder);
+                                                                        const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
+
+                                                                        setFolders(prev => prev.map(f => {
+                                                                            if (f.id === folder.id) {
+                                                                                return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                                            }
+                                                                            if (f.id === sourceFolder) {
+                                                                                return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                                            }
+                                                                            return f;
+                                                                        }));
+
+                                                                        recordAction({
+                                                                            type: 'MOVE_BOOKS_FOLDER',
+                                                                            fromFolderId: sourceFolder,
+                                                                            toFolderId: folder.id,
+                                                                            bookIds: bookIds,
+                                                                            fromIndices: fromIndices,
+                                                                            toIndex: 0
+                                                                        });
+                                                                        console.log(`📦 Moved ${bookIds.length} book(s) to "${folder.name}" via breadcrumb`);
+                                                                    }
+                                                                    setExplorerSelectedBooks(new Set());
+                                                                } catch (err) {
+                                                                    console.error('Breadcrumb book drop error:', err);
+                                                                }
+                                                            }
+                                                        }}
+                                                    >
+                                                        {folder.name}
+                                                    </button>
+                                                )}
+                                            </span>
+                                        ))}
+                                        <span className="text-sm text-gray-500 ml-2 font-normal">
+                                            {(() => {
+                                                // v5.0.0-alpha.54 - Show folder count + book count
+                                                // v5.0.0-alpha.63 - Handle My Library folder count
+                                                const childFolders = selectedFolderId === '__all__'
+                                                    ? []
+                                                    : selectedFolderId === '__library__'
+                                                        ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                                                        : getChildFolders(selectedFolderId);
+                                                const folderCount = childFolders.length;
+                                                const allBookIds = getFolderBookIds(selectedFolderId);
+                                                const filteredCount = allBookIds
+                                                    .map(id => books.find(b => b.id === id))
+                                                    .filter(book => filterBookForExplorer(book))
+                                                    .length;
+                                                const totalCount = allBookIds.length;
+                                                // v5.0.0-alpha.63 - My Library shows only folders, no books
+                                                if (selectedFolderId === '__library__') {
+                                                    return `(${folderCount} folders)`;
+                                                }
+                                                const bookPart = filteredCount === totalCount
+                                                    ? `${totalCount} books`
+                                                    : `${filteredCount} of ${totalCount} books`;
+                                                return folderCount > 0
+                                                    ? `(${folderCount} folders, ${bookPart})`
+                                                    : `(${bookPart})`;
+                                            })()}
+                                        </span>
+                                        {selectedFolderId === '__all__' && (
+                                            <span className="text-xs text-gray-400 ml-2 italic">
+                                                — view only, organize from folders
+                                            </span>
+                                        )}
+                                        {selectedFolderId === '__library__' && (
+                                            <span className="text-xs text-gray-400 ml-2 italic">
+                                                — double-click to open folder
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-4 items-center">
+                                        {/* v5.0.0-alpha.175.36 - Custom CSS icons for both list and grid */}
+                                        <div className="inline-flex rounded border border-gray-300 overflow-hidden">
+                                            <button
+                                                onClick={() => setExplorerView('list')}
+                                                title="List View"
+                                                className={`px-3 py-1.5 border-r border-gray-300 ${explorerView === 'list'
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-white hover:bg-gray-50 text-gray-600'}`}>
+                                                <div style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: '3px'
+                                                }}>
+                                                    {[...Array(3)].map((_, i) => (
+                                                        <div key={i} style={{
+                                                            display: 'flex',
+                                                            gap: '2px',
+                                                            alignItems: 'center'
+                                                        }}>
+                                                            <span style={{
+                                                                background: 'currentColor',
+                                                                width: '3px',
+                                                                height: '3px',
+                                                                borderRadius: '50%',
+                                                                display: 'block'
+                                                            }}></span>
+                                                            <span style={{
+                                                                background: 'currentColor',
+                                                                width: '11px',
+                                                                height: '3px',
+                                                                borderRadius: '2px',
+                                                                display: 'block'
+                                                            }}></span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </button>
+                                            <button
+                                                onClick={() => setExplorerView('covers')}
+                                                title="Grid View"
+                                                className={`px-3 py-1.5 flex items-center justify-center ${explorerView === 'covers'
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-white hover:bg-gray-50 text-gray-600'}`}>
+                                                <div style={{
+                                                    display: 'grid',
+                                                    gridTemplateColumns: 'repeat(3, 5px)',
+                                                    gap: '2px'
+                                                }}>
+                                                    {[...Array(9)].map((_, i) => (
+                                                        <span key={i} style={{
+                                                            background: 'currentColor',
+                                                            width: '5px',
+                                                            height: '5px',
+                                                            borderRadius: '1px',
+                                                            display: 'block'
+                                                        }}></span>
+                                                    ))}
+                                                </div>
+                                            </button>
+                                        </div>
+                                        {/* Cover size slider (only in cover view) */}
+                                        {explorerView === 'covers' && (
+                                            <div className="flex items-center gap-2 border-l pl-4">
+                                                <span className="text-xs text-gray-500">Size:</span>
+                                                <input
+                                                    type="range"
+                                                    min="4"
+                                                    max="60"
+                                                    value={explorerCoverCols}
+                                                    onChange={(e) => setExplorerCoverCols(parseInt(e.target.value))}
+                                                    className="w-24 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                                    title={`${64 - explorerCoverCols} columns`}
+                                                />
+                                            </div>
+                                        )}
+                                        {/* Sort status display (in both views) */}
+                                        <div className="flex items-center gap-1 border-l pl-4 text-sm">
+                                            <span className="text-gray-500">Sort:</span>
+                                            <span className="text-gray-700">
+                                                {/* v5.0.0-alpha.174 - Multi-column sort display */}
+                                                {explorerSort.map((s, i) => {
+                                                    const label = s.column === 'custom' ? 'Manual Order' :
+                                                                  s.column === 'title' ? 'Name' :
+                                                                  s.column === 'author' ? 'Author' :
+                                                                  s.column === 'series' ? 'Series' :
+                                                                  s.column === 'seriesNum' ? '#' :
+                                                                  s.column === 'rating' ? 'Rating' :
+                                                                  s.column === 'dateAdded' ? 'Date Added' :
+                                                                  s.column === 'price' ? 'Price' :
+                                                                  s.column === 'priceGoal' ? 'Goal' :
+                                                                  s.column === 'delta' ? 'Under' : s.column;
+                                                    const arrow = s.direction === 'asc' ? '▲' : '▼';
+                                                    return (i === 0 ? `${label} ${arrow}` : ` → ${label}${arrow}`);
+                                                }).join('')}
+                                            </span>
+                                            {explorerSort[0].column !== 'custom' && (
+                                                <>
+                                                    {(() => {
+                                                        const isReadOnlyView = selectedFolderId === '__all__' || selectedFolderId === '__library__';
+                                                        const viewName = selectedFolderId === '__all__' ? 'All Books' :
+                                                                        selectedFolderId === '__library__' ? 'My Library' : '';
+                                                        const tooltipText = isReadOnlyView
+                                                            ? `${viewName} is a read-only view - no manual ordering`
+                                                            : 'Return to Manual Order';
+
+                                                        return (
+                                                            <button
+                                                                onClick={() => !isReadOnlyView && setExplorerSort([{ column: 'custom', direction: 'asc' }])}
+                                                                className={`ml-1 text-base font-bold ${
+                                                                    isReadOnlyView
+                                                                        ? 'text-gray-300 cursor-not-allowed'
+                                                                        : 'text-gray-500 hover:text-red-500'
+                                                                }`}
+                                                                disabled={isReadOnlyView}
+                                                                title={tooltipText}>
+                                                                ✕
+                                                            </button>
+                                                        );
+                                                    })()}
+                                                </>
+                                            )}
+                                        </div>
+                                        {/* v5.0.0-alpha.104 - Column chooser gear icon */}
+                                        {explorerView === 'list' && (
+                                            <div className="relative ml-4">
+                                                <button
+                                                    onClick={() => {
+                                                        setExplorerColumnMenuOpen(!explorerColumnMenuOpen);
+                                                        setExplorerColumnMenuPos(null); // v5.0.0-alpha.107 - Clear context menu position when using gear
+                                                    }}
+                                                    className="column-chooser-button text-gray-500 hover:text-gray-700 text-lg"
+                                                    title="Choose columns">
+                                                    ⚙️
+                                                </button>
+                                                {/* Column chooser dropdown */}
+                                                {explorerColumnMenuOpen && (
+                                                    <div
+                                                        className={`column-chooser-menu bg-white border border-gray-300 rounded shadow-lg p-3 z-50 min-w-[200px] ${
+                                                            explorerColumnMenuPos ? 'fixed' : 'absolute right-0 mt-2'
+                                                        }`}
+                                                        style={explorerColumnMenuPos ? { left: `${explorerColumnMenuPos.x}px`, top: `${explorerColumnMenuPos.y}px` } : {}}>
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <div className="text-sm font-semibold text-gray-700">Show Columns</div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setExplorerColumnMenuOpen(false);
+                                                                    setExplorerColumnMenuPos(null); // v5.0.0-alpha.107
+                                                                }}
+                                                                className="text-gray-500 hover:text-gray-700 font-bold text-lg leading-none"
+                                                                title="Close">
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex flex-col gap-1.5">
+                                                            {/* v5.0.0-alpha.172 - Dynamic column checkboxes in columnOrder */}
+                                                            {(() => {
+                                                                const labels = {
+                                                                    title: 'Name', author: 'Author', series: 'Series', seriesNum: '#',
+                                                                    rating: 'Rating', myRating: 'My Rating', dateAdded: 'Date Added', price: 'Price',
+                                                                    priceGoal: 'Goal', delta: 'Under', amazon: 'Amazon'
+                                                                };
+                                                                return columnOrder.map(colKey => {
+                                                                    if (colKey === 'title') {
+                                                                        return (
+                                                                            <label key={colKey} className="flex items-center gap-2 text-sm text-gray-600 cursor-not-allowed opacity-50">
+                                                                                <input type="checkbox" checked={true} disabled className="cursor-not-allowed" />
+                                                                                {labels[colKey]} (always visible)
+                                                                            </label>
+                                                                        );
+                                                                    }
+                                                                    return (
+                                                                        <label key={colKey} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 px-1 rounded">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={visibleColumns[colKey]}
+                                                                                onChange={() => setVisibleColumns(prev => ({ ...prev, [colKey]: !prev[colKey] }))}
+                                                                                className="cursor-pointer"
+                                                                            />
+                                                                            {labels[colKey]}
+                                                                        </label>
+                                                                    );
+                                                                });
+                                                            })()}
+                                                        </div>
+                                                        <div className="mt-3 pt-2 border-t border-gray-200">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setVisibleColumns({
+                                                                        author: true,
+                                                                        series: true, // v5.0.0-alpha.171
+                                                                        seriesNum: true, // v5.0.0-alpha.171
+                                                                        rating: true,
+                                                                        dateAdded: true,
+                                                                        price: true,
+                                                                        priceGoal: true,
+                                                                        delta: true,
+                                                                        amazon: true
+                                                                    });
+                                                                }}
+                                                                className="text-xs text-blue-600 hover:text-blue-800">
+                                                                Show All
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex-1 overflow-auto px-4 pb-4">
+                                    {explorerView === 'list' ? (
+                                        (() => {
+                                            // v5.0.0-alpha.172.1 - Drag handlers for column reordering (config moved to COLUMN_CONFIG)
+                                            const handleColumnDragStart = (e, colKey) => {
+                                                setDraggingColumn(colKey);
+                                                e.dataTransfer.effectAllowed = 'move';
+                                                e.dataTransfer.setData('text/plain', colKey);
+                                            };
+
+                                            const handleColumnDragOver = (e, colKey) => {
+                                                e.preventDefault();
+                                                if (!draggingColumn || draggingColumn === colKey) {
+                                                    if (headerDropTarget) setHeaderDropTarget(null);
+                                                    return;
+                                                }
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                const midpoint = rect.left + rect.width / 2;
+                                                const side = e.clientX < midpoint ? 'left' : 'right';
+                                                // Only update if changed (avoid re-renders on every dragover event)
+                                                if (!headerDropTarget || headerDropTarget.column !== colKey || headerDropTarget.side !== side) {
+                                                    setHeaderDropTarget({ column: colKey, side });
+                                                }
+                                            };
+
+                                            const handleColumnDrop = (e, colKey) => {
+                                                e.preventDefault();
+                                                if (!draggingColumn || !headerDropTarget) return;
+                                                const newOrder = [...columnOrder];
+                                                const dragIndex = newOrder.indexOf(draggingColumn);
+                                                newOrder.splice(dragIndex, 1);
+                                                let insertIndex = newOrder.indexOf(colKey);
+                                                if (headerDropTarget.side === 'right') insertIndex++;
+                                                newOrder.splice(insertIndex, 0, draggingColumn);
+                                                setColumnOrder(newOrder);
+                                                setDraggingColumn(null);
+                                                setHeaderDropTarget(null);
+                                            };
+
+                                            const handleColumnDragEnd = () => {
+                                                setDraggingColumn(null);
+                                                setHeaderDropTarget(null);
+                                            };
+
+                                            // Calculate table width dynamically based on columnOrder
+                                            const tableWidth = 72 + columnOrder.reduce((sum, col) => {
+                                                if (col === 'title' || visibleColumns[col]) {
+                                                    return sum + columnWidths[col];
+                                                }
+                                                return sum;
+                                            }, 0);
+
+                                            return (
+                                        <table className="text-sm" style={{
+                                            tableLayout: 'fixed',
+                                            width: `${tableWidth}px`
+                                        }}>
+                                            <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
+                                                <tr className="text-left text-gray-600"
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault();
+                                                        // v5.0.0-alpha.108 - Smart positioning to avoid viewport overflow
+                                                        const menuWidth = 200;
+                                                        const menuHeight = 300;
+                                                        let x = e.clientX;
+                                                        let y = e.clientY;
+
+                                                        // Adjust if menu would overflow right edge
+                                                        if (x + menuWidth > window.innerWidth) {
+                                                            x = e.clientX - menuWidth;
+                                                        }
+
+                                                        // Adjust if menu would overflow bottom edge
+                                                        if (y + menuHeight > window.innerHeight) {
+                                                            y = e.clientY - menuHeight;
+                                                        }
+
+                                                        setExplorerColumnMenuPos({ x, y });
+                                                        setExplorerColumnMenuOpen(true);
+                                                    }}>
+                                                    {/* v5.0.0-alpha.121 - Checkbox column (styled div, not input) */}
+                                                    <th className="p-2" style={{ width: '24px' }}></th>
+                                                    <th className="p-2 w-12"></th>
+                                                    {/* v5.0.0-alpha.172 - Dynamic column headers (drag to reorder) */}
+                                                    {columnOrder.filter(colKey => colKey === 'title' || visibleColumns[colKey]).map(colKey => {
+                                                        const config = COLUMN_CONFIG[colKey];
+                                                        const isDragging = draggingColumn === colKey;
+                                                        const isDropTarget = headerDropTarget?.column === colKey;
+                                                        // v5.0.0-alpha.174.2 - Check all sort levels
+                                                        const sortIndex = explorerSort.findIndex(s => s.column === config.sortKey);
+                                                        const isSorted = sortIndex >= 0;
+
+                                                        return (
+                                                            <th
+                                                                key={colKey}
+                                                                draggable
+                                                                onDragStart={(e) => handleColumnDragStart(e, colKey)}
+                                                                onDragOver={(e) => handleColumnDragOver(e, colKey)}
+                                                                onDragLeave={() => setHeaderDropTarget(null)}
+                                                                onDrop={(e) => handleColumnDrop(e, colKey)}
+                                                                onDragEnd={handleColumnDragEnd}
+                                                                className={`p-2 relative select-none ${config.sortKey ? 'cursor-grab hover:bg-gray-100' : ''} ${config.textCenter ? 'text-center' : ''} ${isDragging ? 'opacity-50' : ''} ${isDropTarget ? 'bg-blue-50' : ''}`}
+                                                                style={{ width: `var(${config.cssVar}, ${columnWidths[colKey]}px)` }}
+                                                                title={config.sortKey ? "Click to sort • Shift+Click for secondary column sort" : undefined}
+                                                                onClick={config.sortKey ? (e) => {
+                                                                    e.stopPropagation();
+                                                                    // v5.0.0-alpha.174.4 - Ignore shift in manual mode (no ties to break)
+                                                                    const isShiftClick = e.shiftKey && explorerSort[0].column !== 'custom';
+
+                                                                    setExplorerSort(prev => {
+                                                                        if (!isShiftClick) {
+                                                                            // Normal click: single-column sort
+                                                                            const isPrimary = prev[0]?.column === config.sortKey;
+                                                                            return [{
+                                                                                column: config.sortKey,
+                                                                                direction: isPrimary
+                                                                                    ? (prev[0].direction === config.defaultDir ? (config.defaultDir === 'asc' ? 'desc' : 'asc') : config.defaultDir)
+                                                                                    : config.defaultDir
+                                                                            }];
+                                                                        } else {
+                                                                            // Shift-click: add/toggle secondary sort (max 3 levels)
+                                                                            const existingIndex = prev.findIndex(s => s.column === config.sortKey);
+
+                                                                            if (existingIndex >= 0) {
+                                                                                // Column already in sort list - toggle direction
+                                                                                const updated = [...prev];
+                                                                                updated[existingIndex] = {
+                                                                                    ...updated[existingIndex],
+                                                                                    direction: updated[existingIndex].direction === 'asc' ? 'desc' : 'asc'
+                                                                                };
+                                                                                return updated;
+                                                                            } else {
+                                                                                // Add as next priority (max 3 levels)
+                                                                                if (prev.length >= 3) {
+                                                                                    return [...prev.slice(0, 2), { column: config.sortKey, direction: config.defaultDir }];
+                                                                                } else {
+                                                                                    return [...prev, { column: config.sortKey, direction: config.defaultDir }];
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    });
+                                                                } : undefined}
+                                                            >
+                                                                {/* Drop indicator lines */}
+                                                                {isDropTarget && headerDropTarget.side === 'left' && (
+                                                                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500 z-20" />
+                                                                )}
+                                                                {isDropTarget && headerDropTarget.side === 'right' && (
+                                                                    <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-blue-500 z-20" />
+                                                                )}
+
+                                                                {config.label} {isSorted && (
+                                                                    <>
+                                                                        {/* v5.0.0-alpha.174.2 - Show arrow with priority indicator */}
+                                                                        <span className={sortIndex > 0 ? 'text-gray-400 text-sm' : ''}>
+                                                                            {explorerSort[sortIndex].direction === 'asc' ? '▲' : '▼'}
+                                                                            {sortIndex > 0 && <sub>{sortIndex + 1}</sub>}
+                                                                        </span>
+                                                                        {sortIndex === 0 && selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && (
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); setExplorerSort([{ column: 'custom', direction: 'asc' }]); }}
+                                                                                className="ml-2 text-gray-500 hover:text-red-500 font-bold"
+                                                                                title="Return to Manual Order"
+                                                                            >✕</button>
+                                                                        )}
+                                                                    </>
+                                                                )}
+
+                                                                {/* Resize handle */}
+                                                                {!config.noResize && (
+                                                                    <div
+                                                                        className={`absolute right-0 top-0 bottom-0 w-1 hover:bg-blue-400 cursor-col-resize ${resizingColumn?.columnId === colKey ? 'bg-blue-500' : 'bg-transparent'}`}
+                                                                        onMouseDown={(e) => {
+                                                                            e.preventDefault();
+                                                                            e.stopPropagation();
+                                                                            setResizingColumn({ columnId: colKey, startX: e.clientX, startWidth: columnWidths[colKey] });
+                                                                        }}
+                                                                        title="Drag to resize"
+                                                                    />
+                                                                )}
+                                                            </th>
+                                                        );
+                                                    })}
+                                                    {/* v5.0.0-alpha.113 - Spacer column to absorb extra space */}
+                                                    <th className="p-2"></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {/* v5.0.0-alpha.54 - Folder rows (before books) */}
+                                                {(() => {
+                                                    // Get child folders (only for user folders, not All Books)
+                                                    if (selectedFolderId === '__all__') return null;
+                                                    // v5.0.0-alpha.63 - My Library shows Inbox + root folders
+                                                    const childFolders = selectedFolderId === '__library__'
+                                                        ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                                                        : getChildFolders(selectedFolderId);
+                                                    if (childFolders.length === 0) return null;
+
+                                                    // v5.0.0-alpha.66 - In custom mode, use getChildFolders order (respects custom order)
+                                                    // In sorted mode, sort alphabetically
+                                                    const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
+                                                    let sortedFolders;
+                                                    if (selectedFolderId === '__library__') {
+                                                        // My Library: Inbox first (pinned), then alphabetical or custom
+                                                        const inbox = childFolders.find(f => f.id === '__inbox__');
+                                                        const others = childFolders.filter(f => f.id !== '__inbox__');
+                                                        // In custom mode, use order from getChildFolders; otherwise sort alphabetically
+                                                        const sortedOthers = explorerSort[0].column === 'custom'
+                                                            ? others
+                                                            : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                        sortedFolders = [inbox, ...sortedOthers].filter(Boolean);
+                                                    } else {
+                                                        // Regular folder view
+                                                        sortedFolders = explorerSort[0].column === 'custom'
+                                                            ? childFolders // Already in custom order from getChildFolders
+                                                            : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                    }
+
+                                                    // v5.0.0-alpha.88 - Allow folder reordering in My Library (Inbox protected by isDraggable=false)
+                                                    const canReorderFolders = explorerSort[0].column === 'custom' &&
+                                                        selectedFolderId !== '__all__';
+                                                    const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
+
+                                                    // v5.0.0-alpha.169.1 - Filter folders with no matches when filter active (right pane)
+                                                    const visibleFolders = hasActiveFilters && !showAllFoldersOverride
+                                                        ? sortedFolders.filter(folder => {
+                                                            const { matching } = getFilteredFolderCount(folder.id);
+                                                            const hasMatchingDescendant = (folderId) => {
+                                                                const childFldrs = folders.filter(f => f.parentId === folderId);
+                                                                return childFldrs.some(child => {
+                                                                    const { matching: childMatching } = getFilteredFolderCount(child.id);
+                                                                    return childMatching > 0 || hasMatchingDescendant(child.id);
+                                                                });
+                                                            };
+                                                            return matching > 0 || hasMatchingDescendant(folder.id);
+                                                        })
+                                                        : sortedFolders;
+
+                                                    // v5.0.0-alpha.65 - Use flatMap to add separator after Inbox in My Library view
+                                                    return visibleFolders.flatMap((folder, folderIndex) => {
+                                                        // v5.0.0-alpha.67 - Phase A: Enable dragging everywhere (drop determines validity)
+                                                        const isDraggable = folder.id !== '__inbox__';
+
+                                                        const row = (
+                                                            <tr
+                                                                key={`folder-${folder.id}`}
+                                                                className={`group cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                                style={(() => {
+                                                                    // v5.0.0-alpha.73 - Phase C: Visual feedback (blue=valid, red=invalid)
+                                                                    // v5.0.0-alpha.147 - Add cut opacity feedback
+                                                                    const styles = {};
+
+                                                                    // Drag target feedback
+                                                                    if (explorerFolderDragTarget) {
+                                                                        if (explorerFolderDragTarget.type === 'reorder' && explorerFolderDragTarget.index === folderIndex) {
+                                                                            // Reorder: blue if allowed (custom mode), red if not
+                                                                            const color = canReorderFolders ? '#3b82f6' : '#ef4444';
+                                                                            if (explorerFolderDragTarget.position === 'before') {
+                                                                                styles.borderTop = `3px solid ${color}`;
+                                                                            } else {
+                                                                                styles.borderBottom = `3px solid ${color}`;
+                                                                            }
+                                                                        }
+                                                                        if (explorerFolderDragTarget.type === 'reparent' && explorerFolderDragTarget.folderId === folder.id) {
+                                                                            styles.backgroundColor = '#dbeafe'; // blue-100 (reparent always valid)
+                                                                        }
+                                                                    }
+
+                                                                    // Cut folder visual feedback
+                                                                    if (folderClipboard.operation === 'cut' && folderClipboard.items.includes(folder.id)) {
+                                                                        styles.opacity = 0.5;
+                                                                    }
+
+                                                                    return styles;
+                                                                })()}
+                                                                draggable={isDraggable}
+                                                                onDragStart={isDraggable ? (e) => {
+                                                                    e.stopPropagation();
+                                                                    e.dataTransfer.effectAllowed = 'move';
+                                                                    e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
+                                                                        folderIds: explorerSelectedFolders.has(folder.id) && explorerSelectedFolders.size > 1
+                                                                            ? [...explorerSelectedFolders]
+                                                                            : [folder.id],
+                                                                        parentId: parentForReorder
+                                                                    }));
+                                                                    if (!explorerSelectedFolders.has(folder.id)) {
+                                                                        setExplorerSelectedFolders(new Set([folder.id]));
+                                                                    }
+                                                                } : undefined}
+                                                                onDragOver={(e) => {
+                                                                    // v5.0.0-alpha.70 - Phase B: Two-target zone detection (optimized)
+                                                                    e.preventDefault();
+                                                                    e.dataTransfer.dropEffect = 'move';
+                                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                                    const y = e.clientY - rect.top;
+                                                                    const height = rect.height;
+                                                                    const edgeZone = height * 0.25;
+
+                                                                    let newTarget;
+                                                                    if (y < edgeZone) {
+                                                                        newTarget = { type: 'reorder', index: folderIndex, position: 'before' };
+                                                                    } else if (y > height - edgeZone) {
+                                                                        newTarget = { type: 'reorder', index: folderIndex, position: 'after' };
+                                                                    } else {
+                                                                        newTarget = { type: 'reparent', folderId: folder.id };
+                                                                    }
+                                                                    // Only update state if target changed
+                                                                    const current = explorerFolderDragTarget;
+                                                                    if (!current || current.type !== newTarget.type ||
+                                                                        current.index !== newTarget.index ||
+                                                                        current.position !== newTarget.position ||
+                                                                        current.folderId !== newTarget.folderId) {
+                                                                        setExplorerFolderDragTarget(newTarget);
+                                                                    }
+                                                                }}
+                                                                onDragLeave={() => setExplorerFolderDragTarget(null)}
+                                                                onDrop={(e) => {
+                                                                    // v5.0.0-alpha.76 - Phase D: Handle reorder and reparent
+                                                                    e.preventDefault();
+                                                                    e.stopPropagation();
+                                                                    try {
+                                                                        const dragData = JSON.parse(e.dataTransfer.getData('application/x-folder-reorder'));
+                                                                        const target = explorerFolderDragTarget;
+
+                                                                        if (target?.type === 'reparent') {
+                                                                            // Move folder(s) INTO target folder
+                                                                            reparentFolder(dragData.folderIds, target.folderId);
+                                                                        } else if (target?.type === 'reorder') {
+                                                                            // Reorder within same parent
+                                                                            if (canReorderFolders) {
+                                                                                if (dragData.parentId === parentForReorder) {
+                                                                                    // v5.0.0-alpha.90 - Pass folder.id and position (not visual index)
+                                                                                    reorderFoldersInParent(parentForReorder, dragData.folderIds, folder.id, target.position);
+                                                                                }
+                                                                            } else {
+                                                                                showToast("Switch to Manual Order to reorder folders", e.clientX, e.clientY);
+                                                                            }
+                                                                        }
+                                                                    } catch (err) {
+                                                                        // Not a folder drag
+                                                                    }
+                                                                    setExplorerFolderDragTarget(null);
+                                                                }}
+                                                                onDragEnd={() => {
+                                                                    setExplorerFolderDragTarget(null);
+                                                                    setBreadcrumbDropTargetId(null); // v5.0.0-alpha.83
+                                                                }}
+                                                                onClick={(e) => {
+                                                                    // v5.0.0-alpha.151 - Skip selection when editing folder name
+                                                                    if (editingFolderId === folder.id) return;
+
+                                                                    // Clear book selection when selecting folder
+                                                                    setExplorerSelectedBooks(new Set());
+                                                                    if (e.ctrlKey || e.metaKey) {
+                                                                        setExplorerSelectedFolders(prev => {
+                                                                            const next = new Set(prev);
+                                                                            if (next.has(folder.id)) next.delete(folder.id);
+                                                                            else next.add(folder.id);
+                                                                            return next;
+                                                                        });
+                                                                    } else {
+                                                                        setExplorerSelectedFolders(new Set([folder.id]));
+                                                                    }
+                                                                }}
+                                                                onDoubleClick={() => {
+                                                                    // v5.0.0-alpha.151 - Skip navigation when editing folder name
+                                                                    if (editingFolderId === folder.id) return;
+
+                                                                    // Navigate into folder
+                                                                    navigateToFolder(folder.id);
+                                                                    // Expand parent if collapsed
+                                                                    setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f));
+                                                                    // Clear selections
+                                                                    setExplorerSelectedFolders(new Set());
+                                                                    setExplorerSelectedBooks(new Set());
+                                                                }}
+                                                                onContextMenu={(e) => {
+                                                                    // v5.0.0-alpha.146 - Right panel folder context menu
+                                                                    e.preventDefault();
+                                                                    setFolderContextMenu({
+                                                                        folderId: folder.id,
+                                                                        x: e.clientX,
+                                                                        y: e.clientY,
+                                                                        source: 'right' // v5.0.0-alpha.156 - Track which panel triggered menu
+                                                                    });
+                                                                }}>
+                                                                {/* v5.0.0-alpha.123 - Clickable checkbox */}
+                                                                <td
+                                                                    className="p-2 text-center cursor-pointer"
+                                                                    style={{ width: '24px' }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setExplorerSelectedFolders(prev => {
+                                                                            const next = new Set(prev);
+                                                                            if (next.has(folder.id)) next.delete(folder.id);
+                                                                            else next.add(folder.id);
+                                                                            return next;
+                                                                        });
+                                                                        setExplorerSelectedBooks(new Set());
+                                                                    }}>
+                                                                    <div className={`w-3.5 h-3.5 border rounded flex items-center justify-center text-xs ${
+                                                                        explorerSelectedFolders.has(folder.id)
+                                                                            ? 'opacity-100 bg-blue-500 border-blue-500 text-white'
+                                                                            : 'opacity-0 group-hover:opacity-100 border-gray-400'
+                                                                    }`}>
+                                                                        {explorerSelectedFolders.has(folder.id) && '✓'}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-2 text-center text-xl">{folder.id === '__inbox__' ? '📥' : '📁'}</td>
+                                                                <td className="p-2 font-medium" style={{ width: `var(--col-title, ${columnWidths.title}px)` }}>
+                                                                    {/* v5.0.0-alpha.156 - Right panel inline edit with separate state */}
+                                                                    {rightPanelEditingId === folder.id ? (
+                                                                        <input
+                                                                            type="text"
+                                                                            value={rightPanelEditingName}
+                                                                            onChange={(e) => setRightPanelEditingName(e.target.value)}
+                                                                            onBlur={() => {
+                                                                                const finalName = (rightPanelPlaceholderMode || !rightPanelEditingName.trim())
+                                                                                    ? rightPanelEditingName
+                                                                                    : rightPanelEditingName.trim();
+                                                                                if (finalName) {
+                                                                                    setFolders(prev => prev.map(f =>
+                                                                                        f.id === folder.id ? { ...f, name: finalName } : f
+                                                                                    ));
+                                                                                }
+                                                                                setRightPanelEditingId(null);
+                                                                                setRightPanelEditingName('');
+                                                                                setRightPanelPlaceholderMode(false);
+                                                                            }}
+                                                                            onKeyDown={(e) => {
+                                                                                if (rightPanelPlaceholderMode && e.key.length === 1) {
+                                                                                    setRightPanelEditingName('');
+                                                                                    setRightPanelPlaceholderMode(false);
+                                                                                    return;
+                                                                                }
+                                                                                if (e.key === 'Enter') {
+                                                                                    const finalName = (rightPanelPlaceholderMode || !rightPanelEditingName.trim())
+                                                                                        ? rightPanelEditingName
+                                                                                        : rightPanelEditingName.trim();
+                                                                                    if (finalName) {
+                                                                                        setFolders(prev => prev.map(f =>
+                                                                                            f.id === folder.id ? { ...f, name: finalName } : f
+                                                                                        ));
+                                                                                    }
+                                                                                    setRightPanelEditingId(null);
+                                                                                    setRightPanelEditingName('');
+                                                                                    setRightPanelPlaceholderMode(false);
+                                                                                } else if (e.key === 'Escape') {
+                                                                                    setRightPanelEditingId(null);
+                                                                                    setRightPanelEditingName('');
+                                                                                    setRightPanelPlaceholderMode(false);
+                                                                                }
+                                                                            }}
+                                                                            onFocus={(e) => {
+                                                                                if (rightPanelPlaceholderMode) {
+                                                                                    e.target.setSelectionRange(0, 0);
+                                                                                } else {
+                                                                                    e.target.select();
+                                                                                }
+                                                                            }}
+                                                                            autoFocus
+                                                                            className="w-full px-1 py-0.5 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                            style={{ color: rightPanelPlaceholderMode ? '#9ca3af' : 'inherit' }}
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        />
+                                                                    ) : (
+                                                                        folder.name
+                                                                    )}
+                                                                </td>
+                                                                {/* v5.0.0-alpha.172.1 - Dynamic placeholder cells for folder rows */}
+                                                                {columnOrder.filter(colKey => colKey !== 'title' && visibleColumns[colKey]).map(colKey => (
+                                                                    <td key={colKey} className="p-2 text-gray-400" style={{ width: `var(${COLUMN_CONFIG[colKey].cssVar}, ${columnWidths[colKey]}px)` }}>—</td>
+                                                                ))}
+                                                                <td className="p-2"></td>
+                                                            </tr>
+                                                        );
+                                                        // Add separator line after Inbox when in My Library view
+                                                        if (selectedFolderId === '__library__' && folder.id === '__inbox__') {
+                                                            return [row, (
+                                                                <tr key="inbox-separator" className="h-0">
+                                                                    <td colSpan="8" className="p-0"><div className="border-b-2 border-gray-300 my-1"></div></td>
+                                                                </tr>
+                                                            )];
+                                                        }
+                                                        return [row];
+                                                    });
+                                                })()}
+                                                {/* Book rows */}
+                                                {(() => {
+                                                    // Build sorted book list for range selection (with filtering)
+                                                    const sortedBooks = getFolderBookIds(selectedFolderId)
+                                                        .map(id => books.find(b => b.id === id))
+                                                        .filter(book => filterBookForExplorer(book))
+                                                        .sort((a, b) => {
+                                                            // v5.0.0-alpha.174.2 - Multi-level sorting
+                                                            // Special case: custom sort (manual order)
+                                                            if (explorerSort[0].column === 'custom') return 0;
+
+                                                            // Apply each sort level in priority order
+                                                            for (const sort of explorerSort) {
+                                                                const dir = sort.direction === 'asc' ? 1 : -1;
+                                                                let comparison = 0;
+
+                                                                if (sort.column === 'title') {
+                                                                    comparison = (a.title || '').localeCompare(b.title || '');
+                                                                } else if (sort.column === 'author') {
+                                                                    comparison = (a.author || '').localeCompare(b.author || '');
+                                                                } else if (sort.column === 'series') {
+                                                                    comparison = (a.series || '').localeCompare(b.series || '');
+                                                                } else if (sort.column === 'seriesNum') {
+                                                                    const posA = parseFloat(a.seriesPosition) || Infinity;
+                                                                    const posB = parseFloat(b.seriesPosition) || Infinity;
+                                                                    comparison = posA - posB;
+                                                                } else if (sort.column === 'rating') {
+                                                                    comparison = (a.rating || 0) - (b.rating || 0);
+                                                                } else if (sort.column === 'myRating') {
+                                                                    // v5.0.0-alpha.175.31 - Personal rating (unrated books always sort to end)
+                                                                    const ratingA = a.myRating || 0;
+                                                                    const ratingB = b.myRating || 0;
+                                                                    // Unrated (0) always at end
+                                                                    if (ratingA === 0 && ratingB > 0) comparison = 1;
+                                                                    else if (ratingB === 0 && ratingA > 0) comparison = -1;
+                                                                    else comparison = ratingA - ratingB;
+                                                                } else if (sort.column === 'dateAdded') {
+                                                                    const dateA = parseBookDate(a.acquired || a.addedToWishlist);
+                                                                    const dateB = parseBookDate(b.acquired || b.addedToWishlist);
+                                                                    comparison = dateA - dateB;
+                                                                } else if (sort.column === 'price') {
+                                                                    comparison = (a.currentPrice ?? Infinity) - (b.currentPrice ?? Infinity);
+                                                                } else if (sort.column === 'priceGoal') {
+                                                                    comparison = (a.priceTrigger ?? Infinity) - (b.priceTrigger ?? Infinity);
+                                                                } else if (sort.column === 'delta') {
+                                                                    const deltaA = (a.priceTrigger != null && a.currentPrice != null) ? (a.priceTrigger - a.currentPrice) : -Infinity;
+                                                                    const deltaB = (b.priceTrigger != null && b.currentPrice != null) ? (b.priceTrigger - b.currentPrice) : -Infinity;
+                                                                    comparison = deltaA - deltaB;
+                                                                }
+
+                                                                // If this level produces a non-zero result, use it
+                                                                if (comparison !== 0) {
+                                                                    return dir * comparison;
+                                                                }
+                                                                // Otherwise continue to next sort level
+                                                            }
+
+                                                            return 0; // All levels equal
+                                                        });
+                                                    return sortedBooks.map((book, index) => (
+                                                        <tr
+                                                            key={book.id}
+                                                            className={`group cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                            style={(() => {
+                                                                const styles = {};
+                                                                // Reorder target feedback
+                                                                if (explorerReorderTarget === index) {
+                                                                    styles.borderTop = `3px solid ${explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}`;
+                                                                }
+                                                                // v5.0.0-alpha.168 - Cut book visual feedback
+                                                                if (clipboard?.type === 'cut' && clipboard?.bookIds?.includes(book.id)) {
+                                                                    styles.opacity = 0.5;
+                                                                }
+                                                                return styles;
+                                                            })()}
+                                                            draggable="true"
+                                                            onMouseEnter={selectedFolderId === '__all__' ? (e) => {
+                                                                // Clear any pending hide timeout
+                                                                if (tooltipHideTimeoutRef.current) {
+                                                                    clearTimeout(tooltipHideTimeoutRef.current);
+                                                                    tooltipHideTimeoutRef.current = null;
+                                                                }
+                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top });
+                                                            } : undefined}
+                                                            onMouseLeave={selectedFolderId === '__all__' ? () => {
+                                                                // v5.0.0-alpha.132 - Delay hide to allow cursor to reach tooltip
+                                                                tooltipHideTimeoutRef.current = setTimeout(() => {
+                                                                    setBookTooltip(null);
+                                                                }, 150);
+                                                            } : undefined}
+                                                            onDragStart={(e) => {
+                                                                e.stopPropagation();
+                                                                e.dataTransfer.effectAllowed = 'copyMove';
+                                                                const dragData = {
+                                                                    sourceFolder: selectedFolderId, // '__all__' for All Books
+                                                                    bookIds: explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1
+                                                                        ? [...explorerSelectedBooks]
+                                                                        : [book.id]
+                                                                };
+                                                                e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
+                                                                setExplorerDragData(dragData); // Store for validity checks
+                                                                if (!explorerSelectedBooks.has(book.id)) {
+                                                                    setExplorerSelectedBooks(new Set([book.id]));
+                                                                }
+                                                                setExplorerDragBookId(book.id);
+                                                            }}
+                                                            onDragOver={(e) => {
+                                                                e.preventDefault(); // Allow drop event to fire
+                                                                e.dataTransfer.dropEffect = 'move'; // Must be 'move' for onDrop to fire
+                                                                setExplorerReorderTarget(index); // Always show target (styled by allowed state)
+                                                            }}
+                                                            onDragLeave={() => setExplorerReorderTarget(null)}
+                                                            onDrop={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__') {
+                                                                    const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
+                                                                    if (dragData.sourceFolder === selectedFolderId) {
+                                                                        reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
+                                                                    }
+                                                                } else if (selectedFolderId === '__all__') {
+                                                                    showToast('Cannot reorder in All Books', e.clientX, e.clientY);
+                                                                } else if (explorerSort[0].column !== 'custom') {
+                                                                    showToast('Clear sort to reorder', e.clientX, e.clientY);
+                                                                }
+                                                                setExplorerReorderTarget(null);
+                                                                setExplorerDragBookId(null);
+                                                            }}
+                                                            onDragEnd={() => {
+                                                                setExplorerDragBookId(null);
+                                                                setExplorerDropTargetId(null);
+                                                                setExplorerReorderTarget(null);
+                                                                setExplorerDragData(null);
+                                                            }}
+                                                            onClick={(e) => {
+                                                                // v5.0.0-alpha.124 - Clear folder selection when selecting book (matches folder row behavior)
+                                                                setExplorerSelectedFolders(new Set());
+                                                                if (e.shiftKey && explorerSelectionAnchor !== null) {
+                                                                    // Shift-click: select range from anchor to current
+                                                                    const start = Math.min(explorerSelectionAnchor, index);
+                                                                    const end = Math.max(explorerSelectionAnchor, index);
+                                                                    const rangeIds = sortedBooks.slice(start, end + 1).map(b => b.id);
+                                                                    setExplorerSelectedBooks(new Set(rangeIds));
+                                                                } else if (e.ctrlKey || e.metaKey) {
+                                                                    // Ctrl/Cmd-click: toggle selection, update anchor
+                                                                    setExplorerSelectedBooks(prev => {
+                                                                        const next = new Set(prev);
+                                                                        if (next.has(book.id)) next.delete(book.id);
+                                                                        else next.add(book.id);
+                                                                        return next;
+                                                                    });
+                                                                    setExplorerSelectionAnchor(index);
+                                                                } else {
+                                                                    // Regular click: select just this book, set anchor
+                                                                    setExplorerSelectedBooks(new Set([book.id]));
+                                                                    setExplorerSelectionAnchor(index);
+                                                                }
+                                                            }}
+                                                            onContextMenu={(e) => {
+                                                                // v5.0.0-alpha.165 - Right-click: If book not in selection, select it first
+                                                                e.preventDefault();
+                                                                if (!explorerSelectedBooks.has(book.id)) {
+                                                                    setExplorerSelectedBooks(new Set([book.id]));
+                                                                    setExplorerSelectionAnchor(index);
+                                                                }
+                                                                // Clear folder selection
+                                                                setExplorerSelectedFolders(new Set());
+                                                                setBookTooltip(null);  // v5.0.0-alpha.165.1 - Close tooltip when opening context menu
+                                                                setExplorerBookContextMenu({
+                                                                    x: e.clientX,
+                                                                    y: e.clientY
+                                                                });
+                                                            }}
+                                                            onDoubleClick={() => openBookModal(book, null)}>
+                                                            {/* v5.0.0-alpha.123 - Clickable checkbox */}
+                                                            <td
+                                                                className="p-2 text-center cursor-pointer"
+                                                                style={{ width: '24px' }}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setExplorerSelectedBooks(prev => {
+                                                                        const next = new Set(prev);
+                                                                        if (next.has(book.id)) next.delete(book.id);
+                                                                        else next.add(book.id);
+                                                                        return next;
+                                                                    });
+                                                                    setExplorerSelectedFolders(new Set());
+                                                                }}>
+                                                                <div className={`w-3.5 h-3.5 border rounded flex items-center justify-center text-xs ${
+                                                                    explorerSelectedBooks.has(book.id)
+                                                                        ? 'opacity-100 bg-blue-500 border-blue-500 text-white'
+                                                                        : 'opacity-0 group-hover:opacity-100 border-gray-400'
+                                                                }`}>
+                                                                    {explorerSelectedBooks.has(book.id) && '✓'}
+                                                                </div>
+                                                            </td>
+                                                            <td className="p-2">
+                                                                <img src={book.coverUrl} alt="" className={`h-12 object-contain rounded ${book.onWishlist ? 'opacity-40' : ''}`} style={{ minWidth: '32px', maxWidth: '48px' }} />
+                                                            </td>
+                                                            {/* v5.0.0-alpha.172.1 - Dynamic column cells with inline JSX (performance fix) */}
+                                                            {columnOrder.filter(colKey => colKey === 'title' || visibleColumns[colKey]).map(colKey => {
+                                                                const cfg = COLUMN_CONFIG[colKey];
+                                                                // Inline cell rendering - avoids function call overhead
+                                                                let content, cellClass = 'p-2';
+                                                                switch (colKey) {
+                                                                    case 'title':
+                                                                        content = book.title;
+                                                                        cellClass += ' font-medium';
+                                                                        break;
+                                                                    case 'author':
+                                                                        content = book.author;
+                                                                        cellClass += ' text-gray-600';
+                                                                        break;
+                                                                    case 'series':
+                                                                        content = book.series || '-';
+                                                                        cellClass += ' text-gray-600 text-xs';
+                                                                        break;
+                                                                    case 'seriesNum':
+                                                                        content = book.seriesPosition || '-';
+                                                                        cellClass += ' text-gray-600 text-xs text-center';
+                                                                        break;
+                                                                    case 'rating':
+                                                                        content = book.rating ? `${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5 - Math.floor(book.rating))}` : '-';
+                                                                        break;
+                                                                    case 'myRating':
+                                                                        // v5.0.0-alpha.175.31 - Personal rating (blue stars)
+                                                                        if (book.myRating && book.myRating > 0) {
+                                                                            content = <span style={{ color: '#3b82f6' }}>
+                                                                                {`${'★'.repeat(book.myRating)}${'☆'.repeat(5 - book.myRating)}`}
+                                                                            </span>;
+                                                                        } else {
+                                                                            content = <span style={{ color: '#cbd5e1' }}>—</span>;
+                                                                        }
+                                                                        break;
+                                                                    case 'dateAdded': {
+                                                                        const dateStr = book.acquired || book.addedToWishlist;
+                                                                        content = dateStr
+                                                                            ? (/^\d{8,}$/.test(dateStr) ? new Date(Number(dateStr)) : new Date(dateStr))
+                                                                                .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                                                            : '-';
+                                                                        cellClass += ' text-gray-500 text-xs';
+                                                                        break;
+                                                                    }
+                                                                    case 'price':
+                                                                        content = book.currentPrice != null ? `$${book.currentPrice.toFixed(2)}` : '-';
+                                                                        cellClass += book.priceTrigger && book.currentPrice <= book.priceTrigger
+                                                                            ? ' text-xs text-green-600 font-semibold'
+                                                                            : ' text-xs text-gray-600';
+                                                                        break;
+                                                                    case 'priceGoal':
+                                                                        content = book.priceTrigger != null ? `$${book.priceTrigger.toFixed(2)}` : '-';
+                                                                        cellClass += ' text-gray-500 text-xs';
+                                                                        break;
+                                                                    case 'delta': {
+                                                                        if (book.priceTrigger == null || book.currentPrice == null) {
+                                                                            content = '-';
+                                                                        } else {
+                                                                            const delta = book.priceTrigger - book.currentPrice;
+                                                                            const isUnder = delta >= 0;
+                                                                            content = <span className={isUnder ? 'text-green-600 font-semibold' : 'text-orange-500'}>
+                                                                                {isUnder ? `$${delta.toFixed(2)}` : `-$${Math.abs(delta).toFixed(2)}`}
+                                                                            </span>;
+                                                                        }
+                                                                        cellClass += ' text-xs';
+                                                                        break;
+                                                                    }
+                                                                    case 'amazon':
+                                                                        content = <a href={getAmazonUrl(book.asin)} target="_blank" rel="noopener noreferrer"
+                                                                            className="text-blue-600 hover:text-blue-800 hover:underline text-xs"
+                                                                            onClick={(e) => e.stopPropagation()}>Amazon</a>;
+                                                                        cellClass += ' text-center';
+                                                                        break;
+                                                                    default:
+                                                                        content = '-';
+                                                                }
+                                                                return (
+                                                                    <td key={colKey} className={cellClass}
+                                                                        style={{ width: `var(${cfg.cssVar}, ${columnWidths[colKey]}px)` }}>
+                                                                        {content}
+                                                                    </td>
+                                                                );
+                                                            })}
+                                                            <td className="p-2"></td>
+                                                        </tr>
+                                                    ));
+                                                })()}
+                                            </tbody>
+                                        </table>
+                                            );
+                                        })()
+                                    ) : (
+                                        <div className="grid gap-4 pt-1" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(40px, 1fr))` }}>
+                                            {/* v5.0.0-alpha.54 - Folder tiles (before books) */}
+                                            {(() => {
+                                                if (selectedFolderId === '__all__') return null;
+                                                // v5.0.0-alpha.63 - My Library shows Inbox + root folders
+                                                const childFolders = selectedFolderId === '__library__'
+                                                    ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                                                    : getChildFolders(selectedFolderId);
+                                                if (childFolders.length === 0) return null;
+
+                                                // v5.0.0-alpha.66 - In custom mode, use getChildFolders order (respects custom order)
+                                                const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
+                                                let sortedFolders;
+                                                if (selectedFolderId === '__library__') {
+                                                    const inbox = childFolders.find(f => f.id === '__inbox__');
+                                                    const others = childFolders.filter(f => f.id !== '__inbox__');
+                                                    const sortedOthers = explorerSort[0].column === 'custom'
+                                                        ? others
+                                                        : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                    sortedFolders = [inbox, ...sortedOthers].filter(Boolean);
+                                                } else {
+                                                    sortedFolders = explorerSort[0].column === 'custom'
+                                                        ? childFolders
+                                                        : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                }
+
+                                                // v5.0.0-alpha.88 - Allow folder reordering in My Library (Inbox protected by isDraggable=false)
+                                                const canReorderFolders = explorerSort[0].column === 'custom' &&
+                                                    selectedFolderId !== '__all__';
+                                                const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
+
+                                                // v5.0.0-alpha.169.1 - Filter folders with no matches when filter active (right pane cover view)
+                                                const visibleFolders = hasActiveFilters && !showAllFoldersOverride
+                                                    ? sortedFolders.filter(folder => {
+                                                        const { matching } = getFilteredFolderCount(folder.id);
+                                                        const hasMatchingDescendant = (folderId) => {
+                                                            const childFldrs = folders.filter(f => f.parentId === folderId);
+                                                            return childFldrs.some(child => {
+                                                                const { matching: childMatching } = getFilteredFolderCount(child.id);
+                                                                return childMatching > 0 || hasMatchingDescendant(child.id);
+                                                            });
+                                                        };
+                                                        return matching > 0 || hasMatchingDescendant(folder.id);
+                                                    })
+                                                    : sortedFolders;
+
+                                                // v5.0.0-alpha.62 - Scale folder icon responsively with container
+                                                return visibleFolders.map((folder, folderIndex) => {
+                                                    // v5.0.0-alpha.67 - Phase A: Enable dragging everywhere (drop determines validity)
+                                                    const isDraggable = folder.id !== '__inbox__';
+
+                                                    return (
+                                                    <div
+                                                        key={`folder-${folder.id}`}
+                                                        className={`cursor-pointer hover:opacity-80 ${!isDraggable ? 'select-none' : ''} ${explorerSelectedFolders.has(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
+                                                        style={(() => {
+                                                            // v5.0.0-alpha.73 - Phase C: Visual feedback (blue=valid, red=invalid)
+                                                            if (!explorerFolderDragTarget) return {};
+                                                            if (explorerFolderDragTarget.type === 'reorder' && explorerFolderDragTarget.index === folderIndex) {
+                                                                // Reorder: blue if allowed (custom mode), red if not
+                                                                const color = canReorderFolders ? '#3b82f6' : '#ef4444';
+                                                                return explorerFolderDragTarget.position === 'before'
+                                                                    ? { outline: `3px solid ${color}`, outlineOffset: '2px', borderTop: `3px solid ${color}` }
+                                                                    : { outline: `3px solid ${color}`, outlineOffset: '2px', borderBottom: `3px solid ${color}` };
+                                                            }
+                                                            if (explorerFolderDragTarget.type === 'reparent' && explorerFolderDragTarget.folderId === folder.id) {
+                                                                return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' }; // reparent always valid
+                                                            }
+                                                            return {};
+                                                        })()}
+                                                        draggable={isDraggable}
+                                                        onDragStart={isDraggable ? (e) => {
+                                                            e.stopPropagation();
+                                                            e.dataTransfer.effectAllowed = 'move';
+                                                            e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
+                                                                folderIds: explorerSelectedFolders.has(folder.id) && explorerSelectedFolders.size > 1
+                                                                    ? [...explorerSelectedFolders]
+                                                                    : [folder.id],
+                                                                parentId: parentForReorder
+                                                            }));
+                                                            if (!explorerSelectedFolders.has(folder.id)) {
+                                                                setExplorerSelectedFolders(new Set([folder.id]));
+                                                            }
+                                                        } : undefined}
+                                                        onDragOver={(e) => {
+                                                            // v5.0.0-alpha.70 - Phase B: Two-target zone detection (optimized)
+                                                            e.preventDefault();
+                                                            e.dataTransfer.dropEffect = 'move';
+                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                            const y = e.clientY - rect.top;
+                                                            const height = rect.height;
+                                                            const edgeZone = height * 0.25;
+
+                                                            let newTarget;
+                                                            if (y < edgeZone) {
+                                                                newTarget = { type: 'reorder', index: folderIndex, position: 'before' };
+                                                            } else if (y > height - edgeZone) {
+                                                                newTarget = { type: 'reorder', index: folderIndex, position: 'after' };
+                                                            } else {
+                                                                newTarget = { type: 'reparent', folderId: folder.id };
+                                                            }
+                                                            // Only update state if target changed
+                                                            const current = explorerFolderDragTarget;
+                                                            if (!current || current.type !== newTarget.type ||
+                                                                current.index !== newTarget.index ||
+                                                                current.position !== newTarget.position ||
+                                                                current.folderId !== newTarget.folderId) {
+                                                                setExplorerFolderDragTarget(newTarget);
+                                                            }
+                                                        }}
+                                                        onDragLeave={() => setExplorerFolderDragTarget(null)}
+                                                        onDrop={(e) => {
+                                                            // v5.0.0-alpha.76 - Phase D: Handle reorder and reparent
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            try {
+                                                                const dragData = JSON.parse(e.dataTransfer.getData('application/x-folder-reorder'));
+                                                                const target = explorerFolderDragTarget;
+
+                                                                if (target?.type === 'reparent') {
+                                                                    // Move folder(s) INTO target folder
+                                                                    reparentFolder(dragData.folderIds, target.folderId);
+                                                                } else if (target?.type === 'reorder') {
+                                                                    // Reorder within same parent
+                                                                    if (canReorderFolders) {
+                                                                        if (dragData.parentId === parentForReorder) {
+                                                                            // v5.0.0-alpha.90 - Pass folder.id and position (not visual index)
+                                                                            reorderFoldersInParent(parentForReorder, dragData.folderIds, folder.id, target.position);
+                                                                        }
+                                                                    } else {
+                                                                        showToast("Switch to Manual Order to reorder folders", e.clientX, e.clientY);
+                                                                    }
+                                                                }
+                                                            } catch (err) {
+                                                                // Not a folder drag
+                                                            }
+                                                            setExplorerFolderDragTarget(null);
+                                                        }}
+                                                        onDragEnd={() => {
+                                                            setExplorerFolderDragTarget(null);
+                                                            setBreadcrumbDropTargetId(null); // v5.0.0-alpha.83
+                                                        }}
+                                                        onClick={(e) => {
+                                                            setExplorerSelectedBooks(new Set());
+                                                            if (e.ctrlKey || e.metaKey) {
+                                                                setExplorerSelectedFolders(prev => {
+                                                                    const next = new Set(prev);
+                                                                    if (next.has(folder.id)) next.delete(folder.id);
+                                                                    else next.add(folder.id);
+                                                                    return next;
+                                                                });
+                                                            } else {
+                                                                setExplorerSelectedFolders(new Set([folder.id]));
+                                                            }
+                                                        }}
+                                                        onDoubleClick={() => {
+                                                            navigateToFolder(folder.id);
+                                                            setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f));
+                                                            setExplorerSelectedFolders(new Set());
+                                                            setExplorerSelectedBooks(new Set());
+                                                        }}>
+                                                        <div className={`aspect-[2/3] ${folder.id === '__inbox__' ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'} border-2 rounded shadow flex items-center justify-center relative`} style={{ containerType: 'inline-size' }}>
+                                                            {/* v5.0.0-alpha.65 - Pin icon for Inbox in My Library view */}
+                                                            {selectedFolderId === '__library__' && folder.id === '__inbox__' && (
+                                                                <span className="absolute top-1 right-1 text-xs">📌</span>
+                                                            )}
+                                                            <span style={{ fontSize: '50cqw' }}>{folder.id === '__inbox__' ? '📥' : '📁'}</span>
+                                                        </div>
+                                                        <div className="mt-1 text-xs text-gray-700 truncate text-center">{folder.name}</div>
+                                                    </div>
+                                                    );
+                                                });
+                                            })()}
+                                            {/* Book tiles */}
+                                            {(() => {
+                                                const sortedBooks = getFolderBookIds(selectedFolderId)
+                                                    .map(id => books.find(b => b.id === id))
+                                                    .filter(book => filterBookForExplorer(book))
+                                                    .sort((a, b) => {
+                                                        if (explorerSort[0].column === 'custom') return 0;
+                                                        const dir = explorerSort[0].direction === 'asc' ? 1 : -1;
+                                                        if (explorerSort[0].column === 'title') return dir * (a.title || '').localeCompare(b.title || '');
+                                                        if (explorerSort[0].column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
+                                                        // v5.0.0-alpha.171 - Series columns sorting
+                                                        if (explorerSort[0].column === 'series') return dir * (a.series || '').localeCompare(b.series || '');
+                                                        if (explorerSort[0].column === 'seriesNum') {
+                                                            const posA = parseFloat(a.seriesPosition) || Infinity;
+                                                            const posB = parseFloat(b.seriesPosition) || Infinity;
+                                                            return dir * (posA - posB);
+                                                        }
+                                                        if (explorerSort[0].column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
+                                                        if (explorerSort[0].column === 'dateAdded') {
+                                                            // v5.0.0-alpha.169.5 - Use parseBookDate for proper date comparison
+                                                            const dateA = parseBookDate(a.acquired || a.addedToWishlist);
+                                                            const dateB = parseBookDate(b.acquired || b.addedToWishlist);
+                                                            return dir * (dateA - dateB);
+                                                        }
+                                                        if (explorerSort[0].column === 'price') {
+                                                            const priceA = a.currentPrice ?? Infinity;
+                                                            const priceB = b.currentPrice ?? Infinity;
+                                                            return dir * (priceA - priceB);
+                                                        }
+                                                        if (explorerSort[0].column === 'priceGoal') {
+                                                            const goalA = a.priceTrigger ?? Infinity;
+                                                            const goalB = b.priceTrigger ?? Infinity;
+                                                            return dir * (goalA - goalB);
+                                                        }
+                                                        if (explorerSort[0].column === 'delta') {
+                                                            const deltaA = (a.priceTrigger != null && a.currentPrice != null) ? (a.priceTrigger - a.currentPrice) : -Infinity;
+                                                            const deltaB = (b.priceTrigger != null && b.currentPrice != null) ? (b.priceTrigger - b.currentPrice) : -Infinity;
+                                                            return dir * (deltaA - deltaB);
+                                                        }
+                                                        return 0;
+                                                    });
+                                                return sortedBooks.map((book, index) => (
+                                                    <div
+                                                        key={book.id}
+                                                        className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''}`}
+                                                        style={(() => {
+                                                            const styles = {};
+                                                            // Reorder target feedback
+                                                            if (explorerReorderTarget === index) {
+                                                                styles.outline = `3px solid ${explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}`;
+                                                                styles.outlineOffset = '2px';
+                                                            }
+                                                            // v5.0.0-alpha.168 - Cut book visual feedback
+                                                            if (clipboard?.type === 'cut' && clipboard?.bookIds?.includes(book.id)) {
+                                                                styles.opacity = 0.5;
+                                                            }
+                                                            return styles;
+                                                        })()}
+                                                        draggable="true"
+                                                        onMouseEnter={selectedFolderId === '__all__' ? (e) => {
+                                                            // Clear any pending hide timeout
+                                                            if (tooltipHideTimeoutRef.current) {
+                                                                clearTimeout(tooltipHideTimeoutRef.current);
+                                                                tooltipHideTimeoutRef.current = null;
+                                                            }
+                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                            setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top });
+                                                        } : undefined}
+                                                        onMouseLeave={selectedFolderId === '__all__' ? () => {
+                                                            // v5.0.0-alpha.132 - Delay hide to allow cursor to reach tooltip
+                                                            tooltipHideTimeoutRef.current = setTimeout(() => {
+                                                                setBookTooltip(null);
+                                                            }, 150);
+                                                        } : undefined}
+                                                        onDragStart={(e) => {
+                                                            e.stopPropagation();
+                                                            e.dataTransfer.effectAllowed = 'copyMove';
+                                                            const dragData = {
+                                                                sourceFolder: selectedFolderId, // '__all__' for All Books
+                                                                bookIds: explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1
+                                                                    ? [...explorerSelectedBooks]
+                                                                    : [book.id]
+                                                            };
+                                                            e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
+                                                            setExplorerDragData(dragData); // Store for validity checks in dragOver
+                                                            if (!explorerSelectedBooks.has(book.id)) {
+                                                                setExplorerSelectedBooks(new Set([book.id]));
+                                                            }
+                                                            setExplorerDragBookId(book.id);
+                                                        }}
+                                                        onDragOver={(e) => {
+                                                            e.preventDefault(); // Allow drop event to fire
+                                                            e.dataTransfer.dropEffect = 'move'; // Must be 'move' for onDrop to fire
+                                                            setExplorerReorderTarget(index); // Always show target (styled red if not allowed)
+                                                        }}
+                                                        onDragLeave={() => setExplorerReorderTarget(null)}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__') {
+                                                                const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
+                                                                if (dragData.sourceFolder === selectedFolderId) {
+                                                                    reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
+                                                                }
+                                                            } else if (selectedFolderId === '__all__') {
+                                                                showToast('Cannot reorder in All Books', e.clientX, e.clientY);
+                                                            } else if (explorerSort[0].column !== 'custom') {
+                                                                showToast('Clear sort to reorder', e.clientX, e.clientY);
+                                                            }
+                                                            setExplorerReorderTarget(null);
+                                                            setExplorerDragBookId(null);
+                                                        }}
+                                                        onDragEnd={() => {
+                                                            setExplorerDragBookId(null);
+                                                            setExplorerDropTargetId(null);
+                                                            setExplorerReorderTarget(null);
+                                                            setExplorerDragData(null);
+                                                        }}
+                                                        onClick={(e) => {
+                                                            if (e.shiftKey && explorerSelectionAnchor !== null) {
+                                                                const start = Math.min(explorerSelectionAnchor, index);
+                                                                const end = Math.max(explorerSelectionAnchor, index);
+                                                                const rangeIds = sortedBooks.slice(start, end + 1).map(b => b.id);
+                                                                setExplorerSelectedBooks(new Set(rangeIds));
+                                                            } else if (e.ctrlKey || e.metaKey) {
+                                                                setExplorerSelectedBooks(prev => {
+                                                                    const next = new Set(prev);
+                                                                    if (next.has(book.id)) next.delete(book.id);
+                                                                    else next.add(book.id);
+                                                                    return next;
+                                                                });
+                                                                setExplorerSelectionAnchor(index);
+                                                            } else {
+                                                                setExplorerSelectedBooks(new Set([book.id]));
+                                                                setExplorerSelectionAnchor(index);
+                                                            }
+                                                        }}
+                                                        onContextMenu={(e) => {
+                                                            // v5.0.0-alpha.165 - Right-click: If book not in selection, select it first
+                                                            e.preventDefault();
+                                                            if (!explorerSelectedBooks.has(book.id)) {
+                                                                setExplorerSelectedBooks(new Set([book.id]));
+                                                                setExplorerSelectionAnchor(index);
+                                                            }
+                                                            // Clear folder selection
+                                                            setExplorerSelectedFolders(new Set());
+                                                            setBookTooltip(null);  // v5.0.0-alpha.165.1 - Close tooltip when opening context menu
+                                                            setExplorerBookContextMenu({
+                                                                x: e.clientX,
+                                                                y: e.clientY
+                                                            });
+                                                        }}
+                                                        onDoubleClick={() => openBookModal(book, null)}>
+                                                        <img src={book.coverUrl} alt={book.title} className={`w-full h-auto rounded shadow ${book.onWishlist ? 'opacity-40' : ''}`} />
+                                                        <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
+                                                    </div>
+                                                ));
+                                            })()}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* v4.16.0.n - Removed floating selection box, now shown in footer */}
 
@@ -6998,6 +12053,8 @@
                                         <button
                                             className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700"
                                             onClick={() => {
+                                                // v5.0.0-alpha.169.8 - Store Columns selection before opening modal
+                                                setBulkPriceBookIds(getSelectedBookIds());
                                                 setShowBulkPriceModal(true);
                                                 setContextMenu(null);
                                                 setContextSubmenu(null);
@@ -7283,16 +12340,6 @@
                                         saveBooksToIndexedDB(updated);
                                         return updated;
                                     });
-                                    // Update tag registry counts
-                                    setTagRegistry(prev => {
-                                        const updated = { ...prev };
-                                        divTags.forEach(tagId => {
-                                            if (updated[tagId]) {
-                                                updated[tagId] = { ...updated[tagId], count: updated[tagId].count + booksToTag.length };
-                                            }
-                                        });
-                                        return updated;
-                                    });
                                     alert(`Added ${divTags.length} tag(s) to ${booksToTag.length} book(s).`);
                                     setDividerContextMenu(null);
                                 }}>
@@ -7480,7 +12527,7 @@
                                                                             }));
                                                                             setTagInputValue('');
                                                                         }}>
-                                                                        {tagData.label} ({tagData.count})
+                                                                        {tagData.label} ({getTagCount(tagId)})
                                                                     </button>
                                                                 ))}
                                                                 {existingTags.length === 0 && !showCreate && (
@@ -7519,8 +12566,8 @@
                                         <p className="text-gray-500 text-center py-8">No tags created yet.</p>
                                     ) : (() => {
                                         const sortedTags = Object.entries(tagRegistry).sort((a, b) => a[1].label.localeCompare(b[1].label));
-                                        const activeTags = sortedTags.filter(([, data]) => data.count > 0);
-                                        const orphanedTags = sortedTags.filter(([, data]) => data.count === 0);
+                                        const activeTags = sortedTags.filter(([tagId, data]) => getTagCount(tagId) > 0);
+                                        const orphanedTags = sortedTags.filter(([tagId, data]) => getTagCount(tagId) === 0);
 
                                         return (
                                             <>
@@ -7572,7 +12619,7 @@
                                                                         <span>{tagData.label}</span>
                                                                     )}
                                                                 </td>
-                                                                <td className="py-2 text-center text-gray-500">{tagData.count}</td>
+                                                                <td className="py-2 text-center text-gray-500">{getTagCount(tagId)}</td>
                                                                 <td className="py-2 text-right">
                                                                     <button
                                                                         onClick={() => setEditingTagId(tagId)}
@@ -7581,7 +12628,7 @@
                                                                     </button>
                                                                     <button
                                                                         onClick={() => {
-                                                                            if (confirm(`Delete tag "${tagData.label}"? This will remove it from ${tagData.count} book${tagData.count !== 1 ? 's' : ''}.`)) {
+                                                                            if (confirm(`Delete tag "${tagData.label}"? This will remove it from ${getTagCount(tagId)} book${getTagCount(tagId) !== 1 ? 's' : ''}.`)) {
                                                                                 // Remove tag from all books
                                                                                 setBooks(prev => {
                                                                                     const updated = prev.map(b => {
@@ -7787,6 +12834,1699 @@
                             {clipboardMessage}
                         </div>
                     )}
+
+                    {/* v5.0.0-alpha.98 - Book folder tooltip (All Books view only) */}
+                    {bookTooltip && selectedFolderId === '__all__' && (() => {
+                        const containingFolders = getFoldersContainingBook(bookTooltip.bookId);
+                        if (containingFolders.length === 0) return null;
+
+                        return (
+                            <div
+                                className="fixed bg-white border border-gray-300 shadow-lg rounded px-3 py-2 text-sm z-50"
+                                style={{
+                                    left: `${bookTooltip.x + 220}px`,
+                                    top: `${bookTooltip.y}px`,
+                                    maxWidth: '300px'
+                                }}
+                                onMouseEnter={() => {
+                                    // v5.0.0-alpha.132 - Cancel hide timeout when cursor enters tooltip
+                                    if (tooltipHideTimeoutRef.current) {
+                                        clearTimeout(tooltipHideTimeoutRef.current);
+                                        tooltipHideTimeoutRef.current = null;
+                                    }
+                                }}
+                                onMouseLeave={() => {
+                                    // v5.0.0-alpha.132 - Hide immediately when leaving tooltip
+                                    if (tooltipHideTimeoutRef.current) {
+                                        clearTimeout(tooltipHideTimeoutRef.current);
+                                        tooltipHideTimeoutRef.current = null;
+                                    }
+                                    setBookTooltip(null);
+                                }}>
+                                <div className="font-semibold text-gray-700 mb-1">Found in:</div>
+                                <div className="flex flex-col gap-1">
+                                    {containingFolders.map(folder => (
+                                        <button
+                                            key={folder.id}
+                                            onClick={() => {
+                                                navigateToFolder(folder.id);
+                                                setBookTooltip(null);
+                                            }}
+                                            className="text-left text-blue-600 hover:text-blue-800 hover:underline">
+                                            {folder.id === '__inbox__' ? '📥 ' : '📁 '}{folder.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* v5.0.0-alpha.133 - Folder context menu (left panel) */}
+                    {folderContextMenu && (() => {
+                        const folder = folders.find(f => f.id === folderContextMenu.folderId);
+                        if (!folder) return null;
+
+                        const isSpecialFolder = ['__all__', '__inbox__', '__my__'].includes(folder.id);
+                        // v5.0.0-alpha.166.2 - Check if viewing special folder in right panel (can't move folders from virtual views)
+                        const isInSpecialFolderView = folderContextMenu.source === 'right' &&
+                            ['__all__', '__library__', '__inbox__'].includes(selectedFolderId);
+                        const hasChildren = folders.some(f => f.parentId === folder.id);
+                        const hasBooks = folder.bookIds && folder.bookIds.length > 0;
+
+                        // v5.0.0-alpha.135 - Helper: Check if targetId is a descendant of folderId
+                        const isDescendantOf = (targetId, ancestorId) => {
+                            if (!targetId || !ancestorId) return false;
+                            let current = folders.find(f => f.id === targetId);
+                            while (current) {
+                                if (current.id === ancestorId) return true;
+                                current = folders.find(f => f.id === current.parentId);
+                            }
+                            return false;
+                        };
+
+                        // v5.0.0-alpha.135 - Helper: Move folder to new parent
+                        const moveFolder = (folderId, targetParentId) => {
+                            const folderToMove = folders.find(f => f.id === folderId);
+                            if (!folderToMove) return;
+
+                            // Prevent circular reference
+                            if (targetParentId && (targetParentId === folderId || isDescendantOf(targetParentId, folderId))) {
+                                alert("Cannot move folder into itself or its descendants");
+                                return;
+                            }
+
+                            // Check for large moves
+                            const getAllDescendants = (fid) => {
+                                const children = folders.filter(f => f.parentId === fid);
+                                let descendants = [...children];
+                                children.forEach(child => {
+                                    descendants = [...descendants, ...getAllDescendants(child.id)];
+                                });
+                                return descendants;
+                            };
+                            const descendants = getAllDescendants(folderId);
+                            if (descendants.length > 20) {
+                                if (!window.confirm(`Move folder with ${descendants.length} subfolders?`)) {
+                                    return;
+                                }
+                            }
+
+                            const oldParentId = folderToMove.parentId;
+
+                            // Record undo
+                            recordAction({
+                                type: 'MOVE_FOLDER',
+                                folderId: folderId,
+                                oldParentId: oldParentId,
+                                newParentId: targetParentId
+                            });
+
+                            // Update folder's parent
+                            setFolders(prev => prev.map(f =>
+                                f.id === folderId ? { ...f, parentId: targetParentId } : f
+                            ));
+
+                            setFolderContextMenu(null);
+                            setContextSubmenu(null);
+
+                            const targetFolder = folders.find(f => f.id === targetParentId);
+                            const targetName = targetFolder?.name || 'Root';
+                            console.log(`📁 Moved "${folderToMove.name}" to "${targetName}"`);
+                        };
+
+                        // v5.0.0-alpha.144 - Viewport-aware positioning
+                        const menuWidth = 200;
+                        const menuHeight = 400; // Approximate max height
+                        let menuX = folderContextMenu.x;
+                        let menuY = folderContextMenu.y;
+
+                        // Adjust if off-screen right
+                        if (menuX + menuWidth > window.innerWidth) {
+                            menuX = window.innerWidth - menuWidth - 10;
+                        }
+
+                        // Adjust if off-screen bottom
+                        if (menuY + menuHeight > window.innerHeight) {
+                            menuY = window.innerHeight - menuHeight - 10;
+                        }
+
+                        // Ensure not off-screen left/top
+                        menuX = Math.max(10, menuX);
+                        menuY = Math.max(10, menuY);
+
+                        return (
+                            <div
+                                className="fixed bg-white border border-gray-300 shadow-lg rounded z-50 py-1 min-w-[200px]"
+                                style={{
+                                    left: `${menuX}px`,
+                                    top: `${menuY}px`
+                                }}
+                                onClick={(e) => e.stopPropagation()}>
+
+                                {/* Open */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    onClick={() => {
+                                        navigateToFolder(folder.id);
+                                        setFolderContextMenu(null);
+                                    }}>
+                                    <span>📂</span>
+                                    <span>Open</span>
+                                </div>
+
+                                {/* Rename */}
+                                {!isSpecialFolder && (
+                                    <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        onClick={() => {
+                                            // v5.0.0-alpha.156 - Use separate state based on which panel triggered context menu
+                                            if (folderContextMenu.source === 'right') {
+                                                // Edit in right panel table
+                                                setRightPanelEditingId(folder.id);
+                                                setRightPanelEditingName(folder.name);
+                                                setRightPanelPlaceholderMode(false);
+                                            } else {
+                                                // Edit in left panel tree (default)
+                                                setEditingFolderId(folder.id);
+                                                setEditingFolderName(folder.name);
+                                                setIsPlaceholderMode(false);
+                                            }
+                                            setFolderContextMenu(null);
+                                        }}>
+                                        <span>✏️</span>
+                                        <span>Rename</span>
+                                        <span className="ml-auto text-gray-400 text-xs">F2</span>
+                                    </div>
+                                )}
+
+                                <div className="border-t border-gray-200 my-1"></div>
+
+                                {/* Move to - v5.0.0-alpha.137 */}
+                                {/* v5.0.0-alpha.166.2 - Disabled when viewing special folders in right panel */}
+                                {!isSpecialFolder && (
+                                    isInSpecialFolderView ? (
+                                        <div
+                                            className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3 relative"
+                                            title="Cannot move folders from virtual folder views">
+                                            <span>➡️</span>
+                                            <span>Move to</span>
+                                            <span className="ml-auto">▶</span>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                            onMouseEnter={() => setContextSubmenu('move-to')}
+                                            onMouseLeave={(e) => {
+                                                // v5.0.0-alpha.140 - Increased timeout to 600ms for slower mouse movement
+                                                setTimeout(() => {
+                                                    const activeSubmenu = document.querySelector('.context-submenu:hover');
+                                                    const activeTrigger = document.querySelector('.submenu-trigger:hover');
+                                                    if (!activeSubmenu && !activeTrigger) {
+                                                        setContextSubmenu(null);
+                                                    }
+                                                }, 600);
+                                            }}>
+                                            <span>➡️</span>
+                                            <span>Move to</span>
+                                            <span className="ml-auto">▶</span>
+
+                                        {/* Submenu */}
+                                        {contextSubmenu === 'move-to' && (() => {
+                                            // v5.0.0-alpha.138 - Use top-level state for expanded folders
+                                            const toggleExpand = (folderId, e) => {
+                                                e.stopPropagation();
+                                                setSubmenuExpandedFolders(prev => {
+                                                    const next = new Set(prev);
+                                                    if (next.has(folderId)) {
+                                                        next.delete(folderId);
+                                                    } else {
+                                                        next.add(folderId);
+                                                    }
+                                                    return next;
+                                                });
+                                            };
+
+                                            // Build folder tree with collapse/expand
+                                            const buildFolderTree = (parentId, depth = 0) => {
+                                                return folders
+                                                    .filter(f => f.parentId === parentId && f.id !== folder.id && !isDescendantOf(f.id, folder.id))
+                                                    .map(f => {
+                                                        const hasChildren = folders.some(child =>
+                                                            child.parentId === f.id &&
+                                                            child.id !== folder.id &&
+                                                            !isDescendantOf(child.id, folder.id)
+                                                        );
+                                                        const isExpanded = submenuExpandedFolders.has(f.id);
+
+                                                        return (
+                                                            <React.Fragment key={f.id}>
+                                                                <div
+                                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                                                                    style={{ paddingLeft: `${8 + depth * 16}px` }}>
+                                                                    {/* Chevron */}
+                                                                    <span
+                                                                        className="w-4 text-center cursor-pointer select-none"
+                                                                        onClick={(e) => hasChildren && toggleExpand(f.id, e)}>
+                                                                        {hasChildren ? (isExpanded ? '▼' : '▶') : ' '}
+                                                                    </span>
+                                                                    {/* Folder icon and name */}
+                                                                    <div
+                                                                        className="flex items-center gap-2 flex-1"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            moveFolder(folder.id, f.id);
+                                                                        }}>
+                                                                        <span>{f.id === folder.parentId ? '✓' : '📁'}</span>
+                                                                        <span>{f.name}</span>
+                                                                    </div>
+                                                                </div>
+                                                                {/* Children only if expanded */}
+                                                                {hasChildren && isExpanded && buildFolderTree(f.id, depth + 1)}
+                                                            </React.Fragment>
+                                                        );
+                                                    });
+                                            };
+
+                                            // v5.0.0-alpha.139 - Removed hooks (useRef/useEffect) from conditional render
+                                            // TODO: Add viewport boundary detection properly later
+                                            return (
+                                                <div
+                                                    className="context-submenu absolute left-full top-0 ml-1 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto"
+                                                    onMouseEnter={() => setContextSubmenu('move-to')}
+                                                    onMouseLeave={() => setContextSubmenu(null)}
+                                                    onClick={(e) => e.stopPropagation()}>
+
+                                                    {/* Root option */}
+                                                    <div
+                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            moveFolder(folder.id, null);
+                                                        }}>
+                                                        <span className="w-4"></span>
+                                                        <span>{folder.parentId === null ? '✓' : '📁'}</span>
+                                                        <span>Root</span>
+                                                    </div>
+
+                                                    {/* Folder tree */}
+                                                    {buildFolderTree(null)}
+                                                </div>
+                                            );
+                                        })()}
+                                        </div>
+                                    )
+                                )}
+
+                                {/* Create Subfolder */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    onClick={() => {
+                                        const newFolder = {
+                                            id: `folder-${Date.now()}`,
+                                            name: 'New Subfolder',
+                                            parentId: folder.id,
+                                            bookIds: [],
+                                            childFolderIds: [],
+                                            collapsed: false
+                                        };
+                                        recordAction({
+                                            type: 'CREATE_FOLDER',
+                                            folderId: newFolder.id,
+                                            parentId: folder.id,
+                                            folder: { ...newFolder }
+                                        });
+                                        setFolders(prev => [
+                                            ...prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f),
+                                            newFolder
+                                        ]);
+                                        navigateToFolder(newFolder.id);
+                                        setEditingFolderId(newFolder.id);
+                                        setEditingFolderName('New Subfolder');
+                                        setIsPlaceholderMode(true); // v5.0.0-alpha.134 - Show as placeholder
+                                        setFolderContextMenu(null);
+                                    }}>
+                                    <span>➕</span>
+                                    <span>Create Subfolder</span>
+                                </div>
+
+                                <div className="border-t border-gray-200 my-1"></div>
+
+                                {/* Cut - v5.0.0-alpha.141 */}
+                                {!isSpecialFolder && (
+                                    <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        onClick={() => {
+                                            setFolderClipboard({ items: [folder.id], operation: 'cut' });
+                                            setFolderContextMenu(null);
+                                            console.log(`✂️ Cut folder "${folder.name}"`);
+                                        }}>
+                                        <span>✂️</span>
+                                        <span>Cut</span>
+                                        <span className="ml-auto text-xs">Ctrl+X</span>
+                                    </div>
+                                )}
+
+                                {/* Copy - v5.0.0-alpha.141 */}
+                                {!isSpecialFolder && (
+                                    <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        onClick={() => {
+                                            setFolderClipboard({ items: [folder.id], operation: 'copy' });
+                                            setFolderContextMenu(null);
+                                            console.log(`📋 Copied folder "${folder.name}"`);
+                                        }}>
+                                        <span>📋</span>
+                                        <span>Copy</span>
+                                        <span className="ml-auto text-xs">Ctrl+C</span>
+                                    </div>
+                                )}
+
+                                {/* Paste - v5.0.0-alpha.141 */}
+                                {!isSpecialFolder && (
+                                    <div
+                                        className={`px-4 py-2 flex items-center gap-3 ${
+                                            folderClipboard.items.length > 0
+                                                ? 'hover:bg-gray-100 cursor-pointer'
+                                                : 'text-gray-400 cursor-not-allowed'
+                                        }`}
+                                        onClick={() => {
+                                            if (folderClipboard.items.length === 0) return;
+
+                                            const folderId = folderClipboard.items[0];
+                                            const folderToPaste = folders.find(f => f.id === folderId);
+                                            if (!folderToPaste) {
+                                                setFolderClipboard({ items: [], operation: null });
+                                                setFolderContextMenu(null);
+                                                return;
+                                            }
+
+                                            // Prevent circular reference
+                                            const isDescendantOf = (targetId, ancestorId) => {
+                                                if (!targetId || !ancestorId) return false;
+                                                let current = folders.find(f => f.id === targetId);
+                                                while (current) {
+                                                    if (current.id === ancestorId) return true;
+                                                    current = folders.find(f => f.parentId === current.id);
+                                                }
+                                                return false;
+                                            };
+                                            if (folder.id === folderId || isDescendantOf(folder.id, folderId)) {
+                                                alert("Cannot paste folder into itself or its descendants");
+                                                setFolderContextMenu(null);
+                                                return;
+                                            }
+
+                                            if (folderClipboard.operation === 'cut') {
+                                                // Move folder
+                                                const oldParentId = folderToPaste.parentId;
+                                                recordAction({
+                                                    type: 'CUT_PASTE_FOLDER',
+                                                    folderId: folderId,
+                                                    oldParentId: oldParentId,
+                                                    newParentId: folder.id
+                                                });
+                                                setFolders(prev => prev.map(f =>
+                                                    f.id === folderId ? { ...f, parentId: folder.id } : f
+                                                ));
+                                                setFolderClipboard({ items: [], operation: null });
+                                                console.log(`📌 Pasted (moved) "${folderToPaste.name}" into "${folder.name}"`);
+                                            } else if (folderClipboard.operation === 'copy') {
+                                                // Copy folder with deep copy
+                                                const copyFolderRecursive = (sourceFolderId, newParentId) => {
+                                                    const sourceFolder = folders.find(f => f.id === sourceFolderId);
+                                                    if (!sourceFolder) return null;
+
+                                                    // Create copy with new ID
+                                                    const newId = '__folder__' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                                                    const newFolder = {
+                                                        ...sourceFolder,
+                                                        id: newId,
+                                                        name: sourceFolder.name + ' (Copy)',
+                                                        parentId: newParentId,
+                                                        created: Date.now()
+                                                    };
+
+                                                    // Find children and copy recursively
+                                                    const children = folders.filter(f => f.parentId === sourceFolderId);
+                                                    return { folder: newFolder, children: children.map(child => copyFolderRecursive(child.id, newId)) };
+                                                };
+
+                                                const copyTree = copyFolderRecursive(folderId, folder.id);
+                                                if (copyTree) {
+                                                    const flattenCopyTree = (tree) => {
+                                                        const result = [tree.folder];
+                                                        tree.children.forEach(child => {
+                                                            if (child) result.push(...flattenCopyTree(child));
+                                                        });
+                                                        return result;
+                                                    };
+                                                    const newFolders = flattenCopyTree(copyTree);
+
+                                                    recordAction({
+                                                        type: 'COPY_PASTE_FOLDER',
+                                                        newFolderIds: newFolders.map(f => f.id),
+                                                        parentId: folder.id
+                                                    });
+
+                                                    setFolders(prev => [...prev, ...newFolders]);
+                                                    console.log(`📋 Pasted (copied) "${folderToPaste.name}" into "${folder.name}"`);
+                                                }
+                                            }
+                                            setFolderContextMenu(null);
+                                        }}>
+                                        <span>📌</span>
+                                        <span>Paste</span>
+                                        <span className="ml-auto text-xs">Ctrl+V</span>
+                                    </div>
+                                )}
+
+                                <div className="border-t border-gray-200 my-1"></div>
+
+                                {/* Delete Folder */}
+                                {!isSpecialFolder && (
+                                    <div
+                                        className="px-4 py-2 hover:bg-red-50 cursor-pointer flex items-center gap-3 text-red-600"
+                                        onClick={() => {
+                                            setFolderContextMenu(null);
+                                            if (window.confirm(`Delete folder "${folder.name}"?`)) {
+                                                const getAllDescendants = (folderId, allFolders) => {
+                                                    const children = allFolders.filter(f => f.parentId === folderId);
+                                                    let descendants = [...children];
+                                                    children.forEach(child => {
+                                                        descendants = [...descendants, ...getAllDescendants(child.id, allFolders)];
+                                                    });
+                                                    return descendants;
+                                                };
+                                                const descendants = getAllDescendants(folder.id, folders);
+                                                const foldersToDelete = [folder, ...descendants];
+                                                const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
+                                                const folderIndices = foldersToDelete.map(f => folders.findIndex(x => x.id === f.id));
+
+                                                const destinationId = folder.parentId || '__inbox__';
+                                                const destinationFolder = folders.find(f => f.id === destinationId);
+                                                const destinationName = destinationFolder?.name || 'Inbox';
+
+                                                const allOrphanedBookIds = foldersToDelete.flatMap(f => f.bookIds || []);
+                                                const uniqueOrphanedBookIds = [...new Set(allOrphanedBookIds)];
+
+                                                recordAction({
+                                                    type: 'DELETE_FOLDERS',
+                                                    deletedFolders: foldersToDelete.map(f => ({ ...f })),
+                                                    folderIndices: folderIndices,
+                                                    movedBooks: uniqueOrphanedBookIds.map(bookId => ({
+                                                        bookId,
+                                                        fromFolderId: foldersToDelete.find(f => f.bookIds?.includes(bookId))?.id,
+                                                        toFolderId: destinationId
+                                                    }))
+                                                });
+
+                                                setFolders(prev => prev
+                                                    .filter(f => !folderIdsToDelete.has(f.id))
+                                                    .map(f => {
+                                                        if (f.id === destinationId) {
+                                                            return {
+                                                                ...f,
+                                                                bookIds: [...(f.bookIds || []), ...uniqueOrphanedBookIds]
+                                                            };
+                                                        }
+                                                        return f;
+                                                    })
+                                                );
+
+                                                if (selectedFolderId && folderIdsToDelete.has(selectedFolderId)) {
+                                                    navigateToFolder(destinationId);
+                                                }
+
+                                                console.log(`🗑️ Deleted "${folder.name}" and ${descendants.length} descendant(s), moved ${uniqueOrphanedBookIds.length} book(s) to "${destinationName}"`);
+                                            }
+                                        }}>
+                                        <span>🗑️</span>
+                                        <span>Delete Folder</span>
+                                    </div>
+                                )}
+
+                                <div className="border-t border-gray-200 my-1"></div>
+
+                                {/* Folder Properties - v5.0.0-alpha.142 */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    onClick={() => {
+                                        setFolderPropertiesEditedName(folder.name); // v5.0.0-alpha.143 - Initialize edited name
+                                        setFolderPropertiesDialog({ folderId: folder.id });
+                                        // v5.0.0-alpha.144 - Initialize dialog position (centered)
+                                        setDialogDrag({
+                                            isDragging: false,
+                                            offsetX: 0,
+                                            offsetY: 0,
+                                            dialogX: window.innerWidth / 2 - 224, // 224 = half of max-w-md (448px)
+                                            dialogY: window.innerHeight / 2 - 200 // Approximate half height
+                                        });
+                                        setFolderContextMenu(null);
+                                    }}>
+                                    <span>ℹ️</span>
+                                    <span>Folder Properties</span>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
+                    {/* v5.0.0-alpha.165 - Explorer Book Context Menu */}
+                    {explorerBookContextMenu && (() => {
+                        // v5.0.0-alpha.166 - Phase 2: Full implementation with Move to / Copy to submenus
+
+                        // Calculate menu position to avoid going off-screen
+                        const menuHeight = 530; // v5.0.0-alpha.170 - Increased for Tags submenu (15 items + separators)
+                        const menuWidth = 220;
+                        const viewportHeight = window.innerHeight;
+                        const viewportWidth = window.innerWidth;
+
+                        // Flip up if menu would go below viewport
+                        const top = explorerBookContextMenu.y + menuHeight > viewportHeight
+                            ? Math.max(10, explorerBookContextMenu.y - menuHeight)
+                            : explorerBookContextMenu.y;
+                        // Flip left if menu would go past right edge
+                        const left = explorerBookContextMenu.x + menuWidth > viewportWidth
+                            ? Math.max(10, explorerBookContextMenu.x - menuWidth)
+                            : explorerBookContextMenu.x;
+
+                        // v5.0.0-alpha.169.8 - Determine submenu position (left or right of main menu)
+                        const submenuWidth = 200;
+                        const submenuHeight = 250; // v5.0.0-alpha.169.9 - For price goal submenu
+                        const submenuOnLeft = left + menuWidth + submenuWidth > viewportWidth;
+                        // v5.0.0-alpha.169.9 - Price Goal is ~12th item (~400px from menu top)
+                        const priceGoalItemOffset = 400;
+                        const priceGoalSubmenuOverflows = top + priceGoalItemOffset + submenuHeight > viewportHeight;
+                        // v5.0.0-alpha.170.1 - Tags is ~11th item (~360px from menu top, after Add Note)
+                        const tagsItemOffset = 360;
+                        const tagsSubmenuHeight = 300; // Tags submenu can be tall with many tags
+                        const tagsSubmenuOverflows = top + tagsItemOffset + tagsSubmenuHeight > viewportHeight;
+
+                        // v5.0.0-alpha.166 - Phase 2: Helper functions for Move to / Copy to
+
+                        // v5.0.0-alpha.166.1 - Check if current folder is special (can't move books from virtual folders)
+                        const isSpecialFolder = ['__all__', '__library__', '__inbox__'].includes(selectedFolderId);
+
+                        // Move books to target folder
+                        const handleMoveToFolder = (targetFolderId) => {
+                            const selectedBookIds = Array.from(explorerSelectedBooks);
+                            const currentFolderId = selectedFolderId;
+
+                            // Remove books from current folder
+                            setFolders(prev => prev.map(f => {
+                                if (f.id === currentFolderId) {
+                                    return {
+                                        ...f,
+                                        bookIds: f.bookIds.filter(id => !selectedBookIds.includes(id))
+                                    };
+                                }
+                                if (f.id === targetFolderId) {
+                                    // Add to target folder (at top)
+                                    return {
+                                        ...f,
+                                        bookIds: [...selectedBookIds, ...f.bookIds]
+                                    };
+                                }
+                                return f;
+                            }));
+
+                            // Record undo
+                            recordAction({
+                                type: 'MOVE_BOOKS_TO_FOLDER',
+                                bookIds: selectedBookIds,
+                                fromFolderId: currentFolderId,
+                                toFolderId: targetFolderId
+                            });
+
+                            // Clear selection and close menu
+                            setExplorerSelectedBooks(new Set());
+                            setExplorerBookContextMenu(null);
+                            setContextSubmenu(null);
+
+                            const targetFolder = folders.find(f => f.id === targetFolderId);
+                            console.log(`📚 Moved ${selectedBookIds.length} book(s) to "${targetFolder?.name || 'Unknown'}"`);
+                        };
+
+                        // Copy books to target folder
+                        const handleCopyToFolder = (targetFolderId) => {
+                            const selectedBookIds = Array.from(explorerSelectedBooks);
+
+                            // Add books to target folder (keep in source)
+                            setFolders(prev => prev.map(f => {
+                                if (f.id === targetFolderId) {
+                                    // Filter out duplicates, then add new books at top
+                                    const existingIds = new Set(f.bookIds);
+                                    const newBooks = selectedBookIds.filter(id => !existingIds.has(id));
+                                    return {
+                                        ...f,
+                                        bookIds: [...newBooks, ...f.bookIds]
+                                    };
+                                }
+                                return f;
+                            }));
+
+                            // Record undo
+                            recordAction({
+                                type: 'COPY_BOOKS_TO_FOLDER',
+                                bookIds: selectedBookIds,
+                                toFolderId: targetFolderId
+                            });
+
+                            // Clear selection and close menu
+                            setExplorerSelectedBooks(new Set());
+                            setExplorerBookContextMenu(null);
+                            setContextSubmenu(null);
+
+                            const targetFolder = folders.find(f => f.id === targetFolderId);
+                            console.log(`📋 Copied ${selectedBookIds.length} book(s) to "${targetFolder?.name || 'Unknown'}"`);
+                        };
+
+                        // Build folder tree for submenu (reused for both Move to and Copy to)
+                        const buildFolderTree = (parentId, depth = 0) => {
+                            return folders
+                                .filter(f => f.parentId === parentId && !['__all__'].includes(f.id)) // Exclude special folders
+                                .map(f => {
+                                    const hasChildren = folders.some(child =>
+                                        child.parentId === f.id &&
+                                        !['__all__'].includes(child.id)
+                                    );
+                                    const isExpanded = submenuExpandedFolders.has(f.id);
+                                    const isCurrentFolder = f.id === selectedFolderId;
+
+                                    return (
+                                        <React.Fragment key={f.id}>
+                                            <div
+                                                className={`px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 ${isCurrentFolder ? 'bg-blue-50' : ''}`}
+                                                style={{ paddingLeft: `${8 + depth * 16}px` }}>
+                                                {/* Chevron */}
+                                                <span
+                                                    className="w-4 text-center cursor-pointer select-none"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (hasChildren) {
+                                                            setSubmenuExpandedFolders(prev => {
+                                                                const next = new Set(prev);
+                                                                if (next.has(f.id)) {
+                                                                    next.delete(f.id);
+                                                                } else {
+                                                                    next.add(f.id);
+                                                                }
+                                                                return next;
+                                                            });
+                                                        }
+                                                    }}>
+                                                    {hasChildren ? (isExpanded ? '▼' : '▶') : ' '}
+                                                </span>
+                                                {/* Folder icon and name */}
+                                                <div
+                                                    className="flex items-center gap-2 flex-1"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (contextSubmenu === 'move-to') {
+                                                            handleMoveToFolder(f.id);
+                                                        } else if (contextSubmenu === 'copy-to') {
+                                                            handleCopyToFolder(f.id);
+                                                        }
+                                                    }}>
+                                                    <span>{isCurrentFolder ? '✓' : '📁'}</span>
+                                                    <span>{f.name}</span>
+                                                </div>
+                                            </div>
+                                            {/* Children only if expanded */}
+                                            {hasChildren && isExpanded && buildFolderTree(f.id, depth + 1)}
+                                        </React.Fragment>
+                                    );
+                                });
+                        };
+
+                        return (
+                            <div
+                                className="fixed bg-white border border-gray-300 rounded-lg shadow-xl z-[60] py-1 min-w-[200px]"
+                                style={{
+                                    left: `${left}px`,
+                                    top: `${top}px`
+                                }}
+                                onClick={(e) => e.stopPropagation()}>
+                                {/* Header */}
+                                <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 border-b border-gray-200">
+                                    {explorerSelectedBooks.size} book{explorerSelectedBooks.size !== 1 ? 's' : ''} selected
+                                </div>
+
+                                {/* Move to - v5.0.0-alpha.166 Phase 2 */}
+                                {/* v5.0.0-alpha.166.1 - Disabled in special folders (can't move from virtual folders) */}
+                                {isSpecialFolder ? (
+                                    <div
+                                        className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3 relative"
+                                        title="Cannot move books from virtual folders">
+                                        <span>📁</span>
+                                        <span>Move to</span>
+                                        <span className="ml-auto">▶</span>
+                                    </div>
+                                ) : (
+                                    <div
+                                        className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                        onMouseEnter={() => setContextSubmenu('move-to')}
+                                        onMouseLeave={(e) => {
+                                            setTimeout(() => {
+                                                const activeSubmenu = document.querySelector('.context-submenu:hover');
+                                                const activeTrigger = document.querySelector('.submenu-trigger:hover');
+                                                if (!activeSubmenu && !activeTrigger) {
+                                                    setContextSubmenu(null);
+                                                }
+                                            }, 600);
+                                        }}>
+                                        <span>📁</span>
+                                        <span>Move to</span>
+                                        <span className="ml-auto">▶</span>
+
+                                        {/* Submenu - v5.0.0-alpha.169.8 viewport-aware positioning */}
+                                        {contextSubmenu === 'move-to' && (
+                                            <div
+                                                className="context-submenu absolute top-0 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto z-[70]"
+                                                style={{ [submenuOnLeft ? 'right' : 'left']: '100%' }}
+                                                onMouseEnter={() => setContextSubmenu('move-to')}
+                                                onMouseLeave={() => setContextSubmenu(null)}
+                                                onClick={(e) => e.stopPropagation()}>
+                                                {/* Folder tree */}
+                                                {buildFolderTree(null)}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Copy to - v5.0.0-alpha.166 Phase 2 */}
+                                <div
+                                    className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                    onMouseEnter={() => setContextSubmenu('copy-to')}
+                                    onMouseLeave={(e) => {
+                                        setTimeout(() => {
+                                            const activeSubmenu = document.querySelector('.context-submenu:hover');
+                                            const activeTrigger = document.querySelector('.submenu-trigger:hover');
+                                            if (!activeSubmenu && !activeTrigger) {
+                                                setContextSubmenu(null);
+                                            }
+                                        }, 600);
+                                    }}>
+                                    <span>📋</span>
+                                    <span>Copy to</span>
+                                    <span className="ml-auto">▶</span>
+
+                                    {/* Submenu - v5.0.0-alpha.169.8 viewport-aware positioning */}
+                                    {contextSubmenu === 'copy-to' && (
+                                        <div
+                                            className="context-submenu absolute top-0 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto z-[70]"
+                                            style={{ [submenuOnLeft ? 'right' : 'left']: '100%' }}
+                                            onMouseEnter={() => setContextSubmenu('copy-to')}
+                                            onMouseLeave={() => setContextSubmenu(null)}
+                                            onClick={(e) => e.stopPropagation()}>
+                                            {/* Folder tree */}
+                                            {buildFolderTree(null)}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* v5.0.0-alpha.168.4 - Cut/Copy/Paste right after Move to/Copy to */}
+                                <div className="border-t border-gray-200 my-1"></div>
+
+                                {/* Cut - disabled in special folders */}
+                                {isSpecialFolder ? (
+                                    <div
+                                        className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
+                                        title="Cannot cut books from virtual folders">
+                                        <span>✂️</span>
+                                        <span>Cut</span>
+                                        <span className="ml-auto text-xs">Ctrl+X</span>
+                                    </div>
+                                ) : (
+                                    <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        onClick={() => {
+                                            const bookIds = Array.from(explorerSelectedBooks);
+                                            const sourcePositions = bookIds.map(bookId => ({
+                                                bookId,
+                                                folderId: selectedFolderId
+                                            }));
+                                            setClipboard({ type: 'cut', bookIds, sourcePositions });
+                                            const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} cut`;
+                                            setClipboardMessage(message);
+                                            setFooterClipboardVisible(false);
+                                            setToastVisible(true);
+                                            setToastAnimating(false);
+                                            setTimeout(() => {
+                                                setToastAnimating(true);
+                                                setTimeout(() => {
+                                                    setToastVisible(false);
+                                                    setToastAnimating(false);
+                                                    setFooterClipboardVisible(true);
+                                                }, 1000);
+                                            }, 1500);
+                                            setExplorerBookContextMenu(null);
+                                            setContextSubmenu(null);
+                                        }}>
+                                        <span>✂️</span>
+                                        <span>Cut</span>
+                                        <span className="ml-auto text-xs text-gray-400">Ctrl+X</span>
+                                    </div>
+                                )}
+
+                                {/* Copy */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    onClick={() => {
+                                        const bookIds = Array.from(explorerSelectedBooks);
+                                        const sourcePositions = bookIds.map(bookId => ({
+                                            bookId,
+                                            folderId: selectedFolderId
+                                        }));
+                                        setClipboard({ type: 'copy', bookIds, sourcePositions });
+                                        const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} copied`;
+                                        setClipboardMessage(message);
+                                        setFooterClipboardVisible(false);
+                                        setToastVisible(true);
+                                        setToastAnimating(false);
+                                        setTimeout(() => {
+                                            setToastAnimating(true);
+                                            setTimeout(() => {
+                                                setToastVisible(false);
+                                                setToastAnimating(false);
+                                                setFooterClipboardVisible(true);
+                                            }, 1000);
+                                        }, 1500);
+                                        setExplorerBookContextMenu(null);
+                                        setContextSubmenu(null);
+                                    }}>
+                                    <span>📋</span>
+                                    <span>Copy</span>
+                                    <span className="ml-auto text-xs text-gray-400">Ctrl+C</span>
+                                </div>
+
+                                {/* Paste - always visible, grayed when no clipboard or in special folder */}
+                                {(!clipboard || !clipboard.bookIds || clipboard.bookIds.length === 0 || isSpecialFolder) ? (
+                                    <div
+                                        className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
+                                        title={isSpecialFolder ? "Cannot paste into virtual folders" : "Nothing to paste"}>
+                                        <span>📥</span>
+                                        <span>Paste</span>
+                                        <span className="ml-auto text-xs">Ctrl+V</span>
+                                    </div>
+                                ) : (
+                                    <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        onClick={() => {
+                                            const targetFolderId = selectedFolderId;
+
+                                            if (clipboard.type === 'cut') {
+                                                const sourcesByFolder = {};
+                                                clipboard.sourcePositions.forEach(pos => {
+                                                    if (!sourcesByFolder[pos.folderId]) sourcesByFolder[pos.folderId] = [];
+                                                    sourcesByFolder[pos.folderId].push(pos.bookId);
+                                                });
+
+                                                setFolders(prev => prev.map(folder => {
+                                                    if (sourcesByFolder[folder.id]) {
+                                                        return {
+                                                            ...folder,
+                                                            bookIds: folder.bookIds.filter(id => !sourcesByFolder[folder.id].includes(id))
+                                                        };
+                                                    }
+                                                    if (folder.id === targetFolderId) {
+                                                        const newBookIds = clipboard.bookIds.filter(id => !folder.bookIds.includes(id));
+                                                        return {
+                                                            ...folder,
+                                                            bookIds: [...folder.bookIds, ...newBookIds]
+                                                        };
+                                                    }
+                                                    return folder;
+                                                }));
+
+                                                recordAction({
+                                                    type: 'PASTE_BOOKS_CUT',
+                                                    bookIds: clipboard.bookIds,
+                                                    sourcePositions: clipboard.sourcePositions,
+                                                    targetFolderId
+                                                });
+
+                                                setClipboard(null);
+                                                setClipboardMessage(null);
+                                                setFooterClipboardVisible(false);
+                                            } else {
+                                                setFolders(prev => prev.map(folder => {
+                                                    if (folder.id === targetFolderId) {
+                                                        const newBookIds = clipboard.bookIds.filter(id => !folder.bookIds.includes(id));
+                                                        return {
+                                                            ...folder,
+                                                            bookIds: [...folder.bookIds, ...newBookIds]
+                                                        };
+                                                    }
+                                                    return folder;
+                                                }));
+
+                                                recordAction({
+                                                    type: 'PASTE_BOOKS_COPY',
+                                                    bookIds: clipboard.bookIds,
+                                                    targetFolderId
+                                                });
+                                            }
+
+                                            setExplorerBookContextMenu(null);
+                                            setContextSubmenu(null);
+                                        }}>
+                                        <span>📥</span>
+                                        <span>Paste ({clipboard.bookIds.length})</span>
+                                        <span className="ml-auto text-xs text-gray-400">Ctrl+V</span>
+                                    </div>
+                                )}
+
+                                <div className="border-t border-gray-200 my-1"></div>
+
+                                {/* v5.0.0-alpha.167 - Phase 3: Other menu items */}
+
+                                {/* Helper to get selected books as array */}
+                                {(() => {
+                                    const getSelectedBooksArray = () => {
+                                        const selectedIds = Array.from(explorerSelectedBooks);
+                                        return selectedIds.map(id => books.find(b => b.id === id)).filter(Boolean);
+                                    };
+
+                                    const selectedBooksArray = getSelectedBooksArray();
+                                    const count = selectedBooksArray.length;
+
+                                    return (
+                                        <>
+                                            {/* Open in Amazon - v5.0.0-alpha.167.6: Single book only (popup blockers prevent multiple) */}
+                                            {count === 1 ? (
+                                                <div
+                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const book = selectedBooksArray[0];
+                                                        window.open(getAmazonUrl(book.asin), '_blank');
+                                                        setExplorerBookContextMenu(null);
+                                                        setContextSubmenu(null);
+                                                    }}>
+                                                    <span>🔗</span>
+                                                    <span>Open in Amazon</span>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
+                                                    title="Use Amazon column in List View for multiple books">
+                                                    <span>🔗</span>
+                                                    <span>Open in Amazon</span>
+                                                </div>
+                                            )}
+
+                                            {/* Copy Title(s) */}
+                                            <div
+                                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                                onClick={() => {
+                                                    const titles = selectedBooksArray.map(book => book.title).join('\n');
+                                                    navigator.clipboard.writeText(titles);
+                                                    setExplorerBookContextMenu(null);
+                                                    setContextSubmenu(null);
+                                                }}>
+                                                <span>📝</span>
+                                                <span>Copy Title{count !== 1 ? 's' : ''}</span>
+                                            </div>
+
+                                            {/* Add/Edit Note (single book only) */}
+                                            {count === 1 ? (
+                                                <div
+                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const book = selectedBooksArray[0];
+                                                        // Open modal with note editor (v5.0.0-alpha.167.1 - Fixed to use openBookModal)
+                                                        openBookModal(book, null);
+                                                        setNoteEditContent(book.userNote || '');
+                                                        setIsEditingNote(true);
+                                                        setExplorerBookContextMenu(null);
+                                                        setContextSubmenu(null);
+                                                    }}>
+                                                    <span>{selectedBooksArray[0]?.userNote ? '✏️' : '📝'}</span>
+                                                    <span>{selectedBooksArray[0]?.userNote ? 'Edit Note' : 'Add Note'}</span>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
+                                                    title="Notes can only be edited for one book at a time">
+                                                    <span>📝</span>
+                                                    <span>Add/Edit Note</span>
+                                                </div>
+                                            )}
+
+                                            {/* v5.0.0-alpha.170.1 - Tags submenu (moved to be with Add Note) */}
+                                            <div
+                                                className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                                onMouseEnter={() => { setTagInputValue(''); setContextSubmenu('explorer-tags'); }}
+                                                onMouseLeave={(e) => {
+                                                    setTimeout(() => {
+                                                        const activeSubmenu = document.querySelector('.context-submenu:hover');
+                                                        const activeTrigger = document.querySelector('.submenu-trigger:hover');
+                                                        if (!activeSubmenu && !activeTrigger) {
+                                                            setContextSubmenu(null);
+                                                        }
+                                                    }, 600);
+                                                }}>
+                                                <span>🏷️</span>
+                                                <span>Tags</span>
+                                                {(() => {
+                                                    // Count total tags across selected books
+                                                    const allTags = new Set();
+                                                    selectedBooksArray.forEach(b => (b.tags || []).forEach(t => allTags.add(t)));
+                                                    return allTags.size > 0 ? <span className="text-xs text-gray-500">({allTags.size})</span> : null;
+                                                })()}
+                                                <span className="ml-auto">▶</span>
+
+                                                {/* Tags Submenu */}
+                                                {contextSubmenu === 'explorer-tags' && (
+                                                    <div
+                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[220px] max-h-[350px] overflow-y-auto z-[70]"
+                                                        style={{
+                                                            [submenuOnLeft ? 'right' : 'left']: '100%',
+                                                            [tagsSubmenuOverflows ? 'bottom' : 'top']: '0'
+                                                        }}
+                                                        onMouseEnter={() => setContextSubmenu('explorer-tags')}
+                                                        onMouseLeave={() => setContextSubmenu(null)}
+                                                        onClick={(e) => e.stopPropagation()}>
+
+                                                        {/* Current tags on selected books */}
+                                                        {(() => {
+                                                            // Get tags that are on ANY of the selected books
+                                                            const tagsOnBooks = new Map(); // tagId -> count of books with this tag
+                                                            selectedBooksArray.forEach(book => {
+                                                                (book.tags || []).forEach(tagId => {
+                                                                    tagsOnBooks.set(tagId, (tagsOnBooks.get(tagId) || 0) + 1);
+                                                                });
+                                                            });
+
+                                                            if (tagsOnBooks.size > 0) {
+                                                                return (
+                                                                    <>
+                                                                        <div className="px-3 py-1 text-xs font-semibold text-gray-500 border-b border-gray-200">
+                                                                            Current Tags
+                                                                        </div>
+                                                                        {Array.from(tagsOnBooks.entries())
+                                                                            .sort((a, b) => (tagRegistry[a[0]]?.label || a[0]).localeCompare(tagRegistry[b[0]]?.label || b[0]))
+                                                                            .map(([tagId, bookCount]) => (
+                                                                                <div
+                                                                                    key={tagId}
+                                                                                    className="px-3 py-1.5 hover:bg-gray-100 flex items-center justify-between group">
+                                                                                    <span className="flex items-center gap-2">
+                                                                                        <span className="text-sm">{tagRegistry[tagId]?.label || tagId}</span>
+                                                                                        {bookCount < count && (
+                                                                                            <span className="text-xs text-gray-400">({bookCount}/{count})</span>
+                                                                                        )}
+                                                                                    </span>
+                                                                                    <button
+                                                                                        className="text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity text-sm px-1"
+                                                                                        title="Remove tag from selected books"
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                                            // Remove tag from all selected books
+                                                                                            setBooks(prev => {
+                                                                                                const updated = prev.map(b => {
+                                                                                                    if (selectedBookIds.includes(b.id) && (b.tags || []).includes(tagId)) {
+                                                                                                        return { ...b, tags: (b.tags || []).filter(t => t !== tagId) };
+                                                                                                    }
+                                                                                                    return b;
+                                                                                                });
+                                                                                                 saveBooksToIndexedDB(updated);
+                                                                                                return updated;
+                                                                                            });
+                                                                                            // Toast
+                                                                                            setClipboardMessage(`Removed "${tagRegistry[tagId]?.label || tagId}" from ${bookCount} book${bookCount !== 1 ? 's' : ''}`);
+                                                                                            setFooterClipboardVisible(false);
+                                                                                            setToastVisible(true);
+                                                                                            setToastAnimating(false);
+                                                                                            setTimeout(() => {
+                                                                                                setToastAnimating(true);
+                                                                                                setTimeout(() => {
+                                                                                                    setToastVisible(false);
+                                                                                                    setToastAnimating(false);
+                                                                                                    setFooterClipboardVisible(true);
+                                                                                                }, 1000);
+                                                                                            }, 1500);
+                                                                                        }}>
+                                                                                        ×
+                                                                                    </button>
+                                                                                </div>
+                                                                            ))}
+                                                                        <div className="border-t border-gray-200 my-1"></div>
+                                                                    </>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        })()}
+
+                                                        {/* Add tag section */}
+                                                        <div className="px-3 py-1 text-xs font-semibold text-gray-500">
+                                                            Add Tag
+                                                        </div>
+                                                        <div className="px-2 py-1">
+                                                            <input
+                                                                type="text"
+                                                                value={tagInputValue}
+                                                                placeholder="Type to search or create..."
+                                                                className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                autoFocus
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                onKeyDown={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (e.key === 'Escape') {
+                                                                        setContextSubmenu(null);
+                                                                        setTagInputValue('');
+                                                                    } else if (e.key === 'Enter') {
+                                                                        const inputValue = tagInputValue.toLowerCase().trim();
+                                                                        if (!inputValue) return;
+
+                                                                        // Check for exact match in registry
+                                                                        const exactMatch = Object.entries(tagRegistry)
+                                                                            .find(([id, data]) => data.label.toLowerCase() === inputValue);
+
+                                                                        const selectedBookIds = Array.from(explorerSelectedBooks);
+
+                                                                        if (exactMatch) {
+                                                                            // Add existing tag to books that don't have it
+                                                                            const [tagId] = exactMatch;
+                                                                            let addedCount = 0;
+                                                                            setBooks(prev => {
+                                                                                const updated = prev.map(b => {
+                                                                                    if (selectedBookIds.includes(b.id) && !(b.tags || []).includes(tagId)) {
+                                                                                        addedCount++;
+                                                                                        return { ...b, tags: [...(b.tags || []), tagId] };
+                                                                                    }
+                                                                                    return b;
+                                                                                });
+                                                                                saveBooksToIndexedDB(updated);
+                                                                                 return updated;
+                                                                            });
+                                                                                        } else {
+                                                                            const newTagId = inputValue.replace(/\s+/g, '-');
+                                                                            const newTagLabel = tagInputValue.trim();
+                                                                            setTagRegistry(prev => ({
+                                                                                ...prev,
+                                                                                [newTagId]: { label: newTagLabel, count: selectedBookIds.length }
+                                                                            }));
+                                                                            setBooks(prev => {
+                                                                                const updated = prev.map(b => {
+                                                                                    if (selectedBookIds.includes(b.id)) {
+                                                                                        return { ...b, tags: [...(b.tags || []), newTagId] };
+                                                                                    }
+                                                                                    return b;
+                                                                                });
+                                                                                saveBooksToIndexedDB(updated);
+                                                                                return updated;
+                                                                            });
+                                                                        }
+                                                                        setTagInputValue('');
+                                                                        setExplorerBookContextMenu(null);
+                                                                        setContextSubmenu(null);
+                                                                    }
+                                                                }}
+                                                                onChange={(e) => setTagInputValue(e.target.value)}
+                                                            />
+                                                        </div>
+
+                                                        {/* Tag suggestions */}
+                                                        {(() => {
+                                                            const inputValue = tagInputValue.toLowerCase().trim();
+                                                            // Get tags that aren't on ALL selected books
+                                                            const tagsOnAllBooks = new Set();
+                                                            if (selectedBooksArray.length > 0) {
+                                                                const firstBookTags = selectedBooksArray[0].tags || [];
+                                                                firstBookTags.forEach(tagId => {
+                                                                    if (selectedBooksArray.every(b => (b.tags || []).includes(tagId))) {
+                                                                        tagsOnAllBooks.add(tagId);
+                                                                    }
+                                                                });
+                                                            }
+
+                                                            const availableTags = Object.entries(tagRegistry)
+                                                                .filter(([id, data]) =>
+                                                                    (!inputValue || data.label.toLowerCase().includes(inputValue)) &&
+                                                                    !tagsOnAllBooks.has(id)
+                                                                )
+                                                                .sort((a, b) => a[1].label.localeCompare(b[1].label))
+                                                                .slice(0, 10); // Limit to 10
+
+                                                            const exactMatchExists = Object.entries(tagRegistry)
+                                                                .some(([id, data]) => data.label.toLowerCase() === inputValue);
+                                                            const showCreate = inputValue && !exactMatchExists;
+
+                                                            return (
+                                                                <div className="max-h-[150px] overflow-y-auto">
+                                                                    {showCreate && (
+                                                                        <div
+                                                                            className="px-3 py-1.5 hover:bg-blue-50 cursor-pointer text-blue-600 text-sm flex items-center gap-2"
+                                                                            onClick={() => {
+                                                                                const newTagId = inputValue.replace(/\s+/g, '-');
+                                                                                const newTagLabel = tagInputValue.trim();
+                                                                                const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                                setTagRegistry(prev => ({
+                                                                                    ...prev,
+                                                                                    [newTagId]: { label: newTagLabel, count: selectedBookIds.length }
+                                                                                }));
+                                                                                setBooks(prev => {
+                                                                                    const updated = prev.map(b => {
+                                                                                        if (selectedBookIds.includes(b.id)) {
+                                                                                            return { ...b, tags: [...(b.tags || []), newTagId] };
+                                                                                        }
+                                                                                        return b;
+                                                                                    });
+                                                                                    saveBooksToIndexedDB(updated);
+                                                                                    return updated;
+                                                                                });
+                                                                                setTagInputValue('');
+                                                                                setExplorerBookContextMenu(null);
+                                                                                setContextSubmenu(null);
+                                                                            }}>
+                                                                            <span>➕</span>
+                                                                            <span>Create "{tagInputValue.trim()}"</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {availableTags.map(([tagId, tagData]) => (
+                                                                        <div
+                                                                            key={tagId}
+                                                                            className="px-3 py-1.5 hover:bg-gray-100 cursor-pointer text-sm flex items-center justify-between"
+                                                                            onClick={() => {
+                                                                                const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                                let addedCount = 0;
+                                                                                setBooks(prev => {
+                                                                                    const updated = prev.map(b => {
+                                                                                        if (selectedBookIds.includes(b.id) && !(b.tags || []).includes(tagId)) {
+                                                                                            addedCount++;
+                                                                                            return { ...b, tags: [...(b.tags || []), tagId] };
+                                                                                        }
+                                                                                        return b;
+                                                                                    });
+                                                                                    saveBooksToIndexedDB(updated);
+                                                                                     return updated;
+                                                                                });
+                                                                                if (addedCount > 0) {
+                                                                                    setClipboardMessage(`Added "${tagData.label}" to ${addedCount} book${addedCount !== 1 ? 's' : ''}`);
+                                                                                    setFooterClipboardVisible(false);
+                                                                                    setToastVisible(true);
+                                                                                    setToastAnimating(false);
+                                                                                    setTimeout(() => {
+                                                                                        setToastAnimating(true);
+                                                                                        setTimeout(() => {
+                                                                                            setToastVisible(false);
+                                                                                            setToastAnimating(false);
+                                                                                            setFooterClipboardVisible(true);
+                                                                                        }, 1000);
+                                                                                    }, 1500);
+                                                                                }
+                                                                                setTagInputValue('');
+                                                                                setExplorerBookContextMenu(null);
+                                                                                setContextSubmenu(null);
+                                                                            }}>
+                                                                            <span>{tagData.label}</span>
+                                                                            <span className="text-xs text-gray-400">({getTagCount(tagId)})</span>
+                                                                        </div>
+                                                                    ))}
+                                                                    {availableTags.length === 0 && !showCreate && (
+                                                                        <div className="px-3 py-2 text-sm text-gray-500 italic">
+                                                                            {Object.keys(tagRegistry).length === 0
+                                                                                ? 'No tags yet. Type to create one.'
+                                                                                : 'No matching tags'}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })()}
+
+                                                        {/* Manage Tags link */}
+                                                        <div className="border-t border-gray-200 mt-1 pt-1">
+                                                            <div
+                                                                className="px-3 py-1.5 hover:bg-gray-100 cursor-pointer text-sm text-blue-600"
+                                                                onClick={() => {
+                                                                    setTagManagementOpen(true);
+                                                                    setExplorerBookContextMenu(null);
+                                                                    setContextSubmenu(null);
+                                                                }}>
+                                                                ⚙️ Manage Tags...
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Set Price Goal submenu */}
+                                            <div
+                                                className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                                onMouseEnter={() => setContextSubmenu('price-goal')}
+                                                onMouseLeave={(e) => {
+                                                    setTimeout(() => {
+                                                        const activeSubmenu = document.querySelector('.context-submenu:hover');
+                                                        const activeTrigger = document.querySelector('.submenu-trigger:hover');
+                                                        if (!activeSubmenu && !activeTrigger) {
+                                                            setContextSubmenu(null);
+                                                        }
+                                                    }, 600);
+                                                }}>
+                                                <span>💰</span>
+                                                <span>Set Price Goal</span>
+                                                <span className="ml-auto">▶</span>
+
+                                                {/* Price Goal Submenu - v5.0.0-alpha.169.9 viewport-aware vertical positioning */}
+                                                {contextSubmenu === 'price-goal' && (
+                                                    <div
+                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[150px] z-[70]"
+                                                        style={{
+                                                            [submenuOnLeft ? 'right' : 'left']: '100%',
+                                                            [priceGoalSubmenuOverflows ? 'bottom' : 'top']: '0'
+                                                        }}
+                                                        onMouseEnter={() => setContextSubmenu('price-goal')}
+                                                        onMouseLeave={() => setContextSubmenu(null)}
+                                                        onClick={(e) => e.stopPropagation()}>
+                                                        {/* Preset prices */}
+                                                        {/* v5.0.0-alpha.167.1 - Show current price goal in bold */}
+                                                        {[0.99, 1.99, 2.99, 3.99, 4.99].map(price => {
+                                                            const hasThisGoal = selectedBooksArray.some(b => b.priceTrigger === price);
+                                                            return (
+                                                                <div
+                                                                    key={price}
+                                                                    className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${hasThisGoal ? 'font-bold' : ''}`}
+                                                                    onClick={async () => {
+                                                                    const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                    setBooks(prev => {
+                                                                        const updated = prev.map(b =>
+                                                                            selectedBookIds.includes(b.id) ? { ...b, priceTrigger: price } : b
+                                                                        );
+                                                                        saveBooksToIndexedDB(updated);
+                                                                        return updated;
+                                                                    });
+                                                                    // Toast feedback
+                                                                    setClipboardMessage(`Price goal set to $${price.toFixed(2)} for ${count} book${count !== 1 ? 's' : ''}`);
+                                                                    setFooterClipboardVisible(false);
+                                                                    setToastVisible(true);
+                                                                    setToastAnimating(false);
+                                                                    setTimeout(() => {
+                                                                        setToastAnimating(true);
+                                                                        setTimeout(() => {
+                                                                            setToastVisible(false);
+                                                                            setToastAnimating(false);
+                                                                            setFooterClipboardVisible(true);
+                                                                        }, 1000);
+                                                                    }, 1500);
+                                                                    setExplorerBookContextMenu(null);
+                                                                    setContextSubmenu(null);
+                                                                }}>
+                                                                ${price.toFixed(2)}
+                                                            </div>
+                                                            );
+                                                        })}
+                                                        <div
+                                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                            onClick={() => {
+                                                                // v5.0.0-alpha.169.8 - Store Explorer selection before opening modal
+                                                                setBulkPriceBookIds(Array.from(explorerSelectedBooks));
+                                                                setShowBulkPriceModal(true);
+                                                                setExplorerBookContextMenu(null);
+                                                                setContextSubmenu(null);
+                                                            }}>
+                                                            Custom...
+                                                        </div>
+                                                        <div className="border-t border-gray-200 my-1"></div>
+                                                        <div
+                                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
+                                                            onClick={async () => {
+                                                                const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                setBooks(prev => {
+                                                                    const updated = prev.map(b =>
+                                                                        selectedBookIds.includes(b.id) ? { ...b, priceTrigger: null } : b
+                                                                    );
+                                                                    saveBooksToIndexedDB(updated);
+                                                                    return updated;
+                                                                });
+                                                                // Toast feedback
+                                                                setClipboardMessage(`Price goal cleared for ${count} book${count !== 1 ? 's' : ''}`);
+                                                                setFooterClipboardVisible(false);
+                                                                setToastVisible(true);
+                                                                setToastAnimating(false);
+                                                                setTimeout(() => {
+                                                                    setToastAnimating(true);
+                                                                    setTimeout(() => {
+                                                                        setToastVisible(false);
+                                                                        setToastAnimating(false);
+                                                                        setFooterClipboardVisible(true);
+                                                                    }, 1000);
+                                                                }, 1500);
+                                                                setExplorerBookContextMenu(null);
+                                                                setContextSubmenu(null);
+                                                            }}>
+                                                            Clear Price Goal
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* v5.0.0-alpha.168.3 - Hide/Unhide and Remove section */}
+                                            <div className="border-t border-gray-200 my-1"></div>
+
+                                            {/* Hide Book */}
+                                            {(() => {
+                                                const allHidden = selectedBooksArray.every(b => b.isHidden);
+                                                return (
+                                                    <div
+                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                                        onClick={async () => {
+                                                            const newHiddenState = !allHidden;
+                                                            const bookIdsToToggle = Array.from(explorerSelectedBooks);
+                                                            const previousStates = {};
+                                                            bookIdsToToggle.forEach(id => {
+                                                                const book = books.find(b => b.id === id);
+                                                                previousStates[id] = book?.isHidden || false;
+                                                            });
+
+                                                            const updatedBooks = books.map(book => {
+                                                                if (bookIdsToToggle.includes(book.id)) {
+                                                                    return { ...book, isHidden: newHiddenState };
+                                                                }
+                                                                return book;
+                                                            });
+                                                            setBooks(updatedBooks);
+                                                            await saveBooksToIndexedDB(updatedBooks);
+
+                                                            recordAction({
+                                                                type: 'TOGGLE_HIDE',
+                                                                bookIds: bookIdsToToggle,
+                                                                previousStates: previousStates,
+                                                                newState: newHiddenState
+                                                            });
+
+                                                            setExplorerBookContextMenu(null);
+                                                            setContextSubmenu(null);
+                                                        }}>
+                                                        <span>{allHidden ? '👁️' : '🚫'}</span>
+                                                        <span>{allHidden ? 'Unhide' : 'Hide'} Book{count !== 1 ? 's' : ''}</span>
+                                                    </div>
+                                                );
+                                            })()}
+
+                                            {/* Remove from Folder */}
+                                            {isSpecialFolder ? (
+                                                <div
+                                                    className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
+                                                    title="Cannot remove books from virtual folders">
+                                                    <span>🗑️</span>
+                                                    <span>Remove from Folder</span>
+                                                    <span className="ml-auto text-xs">Del</span>
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
+                                                    onClick={() => {
+                                                        const folder = folders.find(f => f.id === selectedFolderId);
+                                                        if (!folder) return;
+
+                                                        const bookIdsToRemove = Array.from(explorerSelectedBooks);
+                                                        const fromIndices = bookIdsToRemove.map(id => (folder.bookIds || []).indexOf(id));
+
+                                                        setFolders(prev => prev.map(f => {
+                                                            if (f.id === selectedFolderId) {
+                                                                return { ...f, bookIds: (f.bookIds || []).filter(id => !explorerSelectedBooks.has(id)) };
+                                                            }
+                                                            return f;
+                                                        }));
+
+                                                        recordAction({
+                                                            type: 'REMOVE_BOOKS_FOLDER',
+                                                            folderId: selectedFolderId,
+                                                            bookIds: bookIdsToRemove,
+                                                            fromIndices: fromIndices
+                                                        });
+
+                                                        console.log(`🗑️ Removed ${bookIdsToRemove.length} book(s) from "${folder.name}"`);
+                                                        setExplorerSelectedBooks(new Set());
+                                                        setExplorerBookContextMenu(null);
+                                                        setContextSubmenu(null);
+                                                    }}>
+                                                    <span>🗑️</span>
+                                                    <span>Remove from Folder</span>
+                                                    <span className="ml-auto text-xs text-gray-400">Del</span>
+                                                </div>
+                                            )}
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        );
+                    })()}
+
+                    {/* Folder Properties Dialog - v5.0.0-alpha.142 */}
+                    {folderPropertiesDialog && (() => {
+                        const folder = folders.find(f => f.id === folderPropertiesDialog.folderId);
+                        if (!folder) return null;
+
+                        const isSpecialFolder = ['__all__', '__inbox__', '__library__'].includes(folder.id);
+
+                        // Calculate folder statistics
+                        const getAllDescendantIds = (folderId) => {
+                            const children = folders.filter(f => f.parentId === folderId);
+                            let allIds = children.map(c => c.id);
+                            children.forEach(child => {
+                                allIds = [...allIds, ...getAllDescendantIds(child.id)];
+                            });
+                            return allIds;
+                        };
+
+                        // v5.0.0-alpha.144 - Fix: Use folder.bookIds, not b.folderIds
+                        const getAllBooksInFolder = (folderId) => {
+                            const bookIds = getFolderBookIds(folderId);
+                            return books.filter(b => bookIds.includes(b.id));
+                        };
+
+                        const directChildren = folders.filter(f => f.parentId === folder.id);
+                        const allDescendantIds = getAllDescendantIds(folder.id);
+                        const directBooks = getAllBooksInFolder(folder.id);
+                        const totalBooks = directBooks.length;
+                        const ownedBooks = directBooks.filter(b => !b.onWishlist).length;
+                        const wishlistBooks = directBooks.filter(b => b.onWishlist).length;
+
+                        // Calculate recursive total
+                        const recursiveBookIds = new Set();
+                        [folder.id, ...allDescendantIds].forEach(fid => {
+                            getAllBooksInFolder(fid).forEach(b => recursiveBookIds.add(b.id));
+                        });
+                        const recursiveTotalBooks = recursiveBookIds.size;
+
+                        // v5.0.0-alpha.143 - Use top-level state for edited name to avoid hooks violation
+                        const handleSave = () => {
+                            if (!folderPropertiesEditedName.trim()) {
+                                alert('Folder name cannot be empty');
+                                return;
+                            }
+
+                            // Check for duplicate names at same level
+                            const siblings = folders.filter(f => f.parentId === folder.parentId && f.id !== folder.id);
+                            if (siblings.some(f => f.name === folderPropertiesEditedName.trim())) {
+                                alert('A folder with this name already exists at this level');
+                                return;
+                            }
+
+                            // Update folder - v5.0.0-alpha.144: Removed modified timestamp (not tracked)
+                            setFolders(prev => prev.map(f =>
+                                f.id === folder.id ? { ...f, name: folderPropertiesEditedName.trim() } : f
+                            ));
+
+                            setFolderPropertiesDialog(null);
+                            console.log(`💾 Updated folder "${folder.name}" → "${folderPropertiesEditedName.trim()}"`);
+                        };
+
+                        return (
+                            <>
+                                {/* Backdrop */}
+                                <div
+                                    className="fixed inset-0 bg-black bg-opacity-50 z-50"
+                                    onClick={() => setFolderPropertiesDialog(null)}
+                                />
+
+                                {/* Dialog - v5.0.0-alpha.144: Draggable */}
+                                <div
+                                    className="bg-white rounded-lg shadow-xl w-full max-w-md pointer-events-auto fixed z-50"
+                                    style={{
+                                        left: `${dialogDrag?.dialogX || 0}px`,
+                                        top: `${dialogDrag?.dialogY || 0}px`,
+                                        cursor: dialogDrag?.isDragging ? 'grabbing' : 'default'
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}>
+                                    <h2
+                                        className="text-xl font-semibold mb-4 p-6 pb-0 cursor-grab active:cursor-grabbing select-none"
+                                        onMouseDown={(e) => {
+                                            const rect = e.currentTarget.parentElement.getBoundingClientRect();
+                                            setDialogDrag({
+                                                isDragging: true,
+                                                offsetX: e.clientX - rect.left,
+                                                offsetY: e.clientY - rect.top,
+                                                dialogX: rect.left,
+                                                dialogY: rect.top
+                                            });
+                                        }}>
+                                        Folder Properties
+                                    </h2>
+                                    <div className="px-6 pb-6">
+
+                                        {/* Name */}
+                                        <div className="mb-4">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                            {isSpecialFolder ? (
+                                                <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded text-gray-700">
+                                                    {folder.name}
+                                                    <span className="ml-2 text-xs text-gray-500">(System folder)</span>
+                                                </div>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    value={folderPropertiesEditedName}
+                                                    onChange={(e) => setFolderPropertiesEditedName(e.target.value)}
+                                                    autoFocus
+                                                />
+                                            )}
+                                        </div>
+
+                                        {/* Statistics - v5.0.0-alpha.144: Removed created/modified dates */}
+                                        <div className="border-t border-gray-200 pt-4 mb-4 space-y-2 text-sm">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Books:</span>
+                                                <span className="text-gray-900">
+                                                    {totalBooks} total ({ownedBooks} owned, {wishlistBooks} wishlist)
+                                                </span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Subfolders:</span>
+                                                <span className="text-gray-900">{directChildren.length}</span>
+                                            </div>
+                                            {allDescendantIds.length > 0 && (
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Total books (recursive):</span>
+                                                    <span className="text-gray-900">{recursiveTotalBooks}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Buttons */}
+                                        <div className="flex gap-2 justify-end">
+                                            <button
+                                                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                                                onClick={() => setFolderPropertiesDialog(null)}>
+                                                Cancel
+                                            </button>
+                                            {!isSpecialFolder && (
+                                                <button
+                                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                    onClick={handleSave}>
+                                                    Save
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        );
+                    })()}
 
                     {/* Affiliate Disclosure Footer (v4.4.0) */}
                     {/* v4.16.0.j - Restructured to include clipboard message on left */}

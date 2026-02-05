@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security & Privacy - ReaderWrangler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/png" href="images/icons/favicon.png">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-12">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">Security & Privacy</h1>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Why Security Scanners Flag This Site</h2>
+            <p class="text-gray-600 mb-4">
+                Some automated security scanners may flag ReaderWrangler as suspicious. Here's why these are false positives:
+            </p>
+
+            <div class="space-y-4">
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <h3 class="font-semibold text-gray-700">"Obfuscated Scripts"</h3>
+                    <p class="text-gray-600 text-sm">
+                        We use React and Tailwind CSS from CDN (unpkg.com, cdn.tailwindcss.com). These libraries are minified for performance, which looks like "obfuscation" to scanners. Our own code is fully readable.
+                    </p>
+                </div>
+
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <h3 class="font-semibold text-gray-700">"Suspicious HTML Elements"</h3>
+                    <p class="text-gray-600 text-sm">
+                        Bookmarklets use <code class="bg-gray-100 px-1 rounded">javascript:</code> URLs, which look like XSS attacks to automated tools. This is standard bookmarklet technology used by many legitimate tools (Pocket, Pinterest, etc.).
+                    </p>
+                </div>
+
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <h3 class="font-semibold text-gray-700">"Newborn Domain"</h3>
+                    <p class="text-gray-600 text-sm">
+                        readerwrangler.com was registered in November 2025. New domains are flagged by some services simply for being new. This is a legitimate project under active development.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Privacy Guarantee</h2>
+            <ul class="list-disc list-inside text-gray-600 space-y-2">
+                <li><strong>100% Client-Side:</strong> All processing happens in your browser. Your library data never leaves your computer.</li>
+                <li><strong>No Server:</strong> ReaderWrangler is hosted on GitHub Pages as static files. There is no backend server collecting data.</li>
+                <li><strong>Minimal Analytics:</strong> We use <a href="https://www.goatcounter.com/" class="text-blue-600 hover:underline">GoatCounter</a> for basic traffic statistics (page views, referrers). GoatCounter is privacy-focused: no cookies, no personal data, no cross-site tracking. Your book library data is never sent anywhere.</li>
+                <li><strong>No Account Required:</strong> No sign-up, no login, no personal information collected.</li>
+                <li><strong>Open Source:</strong> All code is visible on <a href="https://github.com/Ron-L/ReaderWrangler" class="text-blue-600 hover:underline">GitHub</a>.</li>
+            </ul>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">How the Bookmarklet Works</h2>
+            <p class="text-gray-600 mb-4">
+                The bookmarklet is a small piece of JavaScript that runs on Amazon.com pages. Here's exactly what it does:
+            </p>
+            <ol class="list-decimal list-inside text-gray-600 space-y-2">
+                <li>Shows a navigation dialog with options</li>
+                <li>When you click "Refresh Library Data", it loads our reader script</li>
+                <li>The script reads your book data from the Amazon page you're viewing</li>
+                <li>Data is saved to a JSON file on YOUR computer via browser download</li>
+                <li>The ReaderWrangler app reads this local file to display your books</li>
+            </ol>
+            <p class="text-gray-600 mt-4 text-sm">
+                At no point does any data leave your browser except to Amazon's own servers (which you're already logged into).
+            </p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Verify the Code Yourself</h2>
+            <p class="text-gray-600 mb-4">
+                All source code is available for inspection:
+            </p>
+            <ul class="list-disc list-inside text-gray-600 space-y-2">
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/bookmarklet-nav-hub.js" class="text-blue-600 hover:underline">bookmarklet-nav-hub.js</a> - Navigation dialog</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/amazon-library-fetcher.js" class="text-blue-600 hover:underline">amazon-library-fetcher.js</a> - Library data reader</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/amazon-collections-fetcher.js" class="text-blue-600 hover:underline">amazon-collections-fetcher.js</a> - Collections reader</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/readerwrangler.js" class="text-blue-600 hover:underline">readerwrangler.js</a> - Main application</li>
+            </ul>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Contact</h2>
+            <p class="text-gray-600">
+                Questions or security concerns? Contact us:
+            </p>
+            <ul class="list-disc list-inside text-gray-600 mt-2 space-y-1">
+                <li>Email: <a href="mailto:contact@readerwrangler.com" class="text-blue-600 hover:underline">contact@readerwrangler.com</a></li>
+                <li>GitHub: <a href="https://github.com/Ron-L/ReaderWrangler/issues" class="text-blue-600 hover:underline">Open an Issue</a></li>
+            </ul>
+        </div>
+
+        <div class="mt-8 text-center">
+            <a href="index.html" class="text-blue-600 hover:underline">Back to ReaderWrangler</a>
+        </div>
+    </div>
+</body>
+</html>

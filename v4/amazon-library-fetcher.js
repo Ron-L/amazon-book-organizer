@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.9.0-alpha.2';
+    const FETCHER_VERSION = 'v4.8.1';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -2036,7 +2036,6 @@ async function fetchAmazonLibrary() {
 
                     // Update each book with price data
                     const now = new Date().toISOString();
-
                     for (const book of batchBooks) {
                         const product = productMap.get(book.asin);
                         if (product) {

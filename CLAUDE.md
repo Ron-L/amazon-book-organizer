@@ -16,7 +16,7 @@
 
 ## Behaviors
 
-* **Response start** → Read `.claude-timestamp`, display `📋 [YYYY-MM-DD HH:MM:SS Local]` + separator
+* **Response start** →  display `📋 [YYYY-MM-DD HH:MM:SS Local]` + separator (read time from `.claude-timestamp`)
 * **Discussion question** → STOP, answer, don't act until directed
 * **Before code/file change** → Ask approval first
 * **Problem report** → STOP, acknowledge, ask to analyze, wait for decision
@@ -59,14 +59,20 @@ Standard semver with pre-release suffix for test iterations:
 **Feature branches:** For customer-facing work (not doc-only changes):
 1. `git checkout -b feature/descriptive-name` from main
 2. Develop with alpha versions, commit before each test
-3. Push branch to dev for testing
+3. Test locally (most changes don't require push)
 4. When complete: merge to main, push to prod
+
+**When to push to dev:**
+- Navigator link changes (require extension loaded from URL to test)
+- Ready to share feature branch for external testing
+
+**Do NOT push to dev** for routine local testing. Test locally first.
 
 Branch naming: `feature/tags`, `fix/filter-bug`, `refactor/modules`
 
 | User says | Do |
 |-----------|-----|
-| "push" or "proceed" | `git push dev <current-branch>` |
+| "push" or "proceed" | Ask: navigator changes or ready to share? |
 | "push to prod" | Merge to main first, then `git push prod main` |
 | "release" | Clarify which |
 

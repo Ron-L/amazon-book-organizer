@@ -1,0 +1,781 @@
+import { useState, useRef, useEffect } from "react";
+
+// ─── Tiny icon components ───────────────────────────────────────────
+const ChevronDown = ({ size = 12 }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 6l4 4 4-4"/></svg>
+);
+const SearchIcon = ({ size = 14 }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l4 4"/></svg>
+);
+const ListIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="1" width="3" height="3" rx="0.5"/><rect x="5" y="1" width="11" height="3" rx="0.5"/><rect x="0" y="6.5" width="3" height="3" rx="0.5"/><rect x="5" y="6.5" width="11" height="3" rx="0.5"/><rect x="0" y="12" width="3" height="3" rx="0.5"/><rect x="5" y="12" width="11" height="3" rx="0.5"/></svg>
+);
+const GridIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="0" y="0" width="4.5" height="4.5" rx="1"/><rect x="5.75" y="0" width="4.5" height="4.5" rx="1"/><rect x="11.5" y="0" width="4.5" height="4.5" rx="1"/><rect x="0" y="5.75" width="4.5" height="4.5" rx="1"/><rect x="5.75" y="5.75" width="4.5" height="4.5" rx="1"/><rect x="11.5" y="5.75" width="4.5" height="4.5" rx="1"/><rect x="0" y="11.5" width="4.5" height="4.5" rx="1"/><rect x="5.75" y="11.5" width="4.5" height="4.5" rx="1"/><rect x="11.5" y="11.5" width="4.5" height="4.5" rx="1"/></svg>
+);
+const FolderIcon = ({ open }) => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill={open ? "#FCD34D" : "#FBBF24"} stroke="#B45309" strokeWidth="0.5">
+    {open ? <path d="M1 3.5A1.5 1.5 0 012.5 2h3.379a1.5 1.5 0 011.06.44l.622.62a.5.5 0 00.354.147H13.5A1.5 1.5 0 0115 4.707V5H2.5a1 1 0 00-.992.876L.5 12.5V3.5z"/> 
+          : <path d="M1 3.5A1.5 1.5 0 012.5 2h3.379a1.5 1.5 0 011.06.44l.622.62A1.5 1.5 0 008.622 3.5H13.5A1.5 1.5 0 0115 5v7.5a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 011 12.5v-9z"/>}
+    {open && <path d="M1.053 12.118L2.008 6.382A1 1 0 012.992 5.5H14.5a1 1 0 01.987 1.162l-.866 5.382A1 1 0 0113.634 13H2.04a1 1 0 01-.987-.882z" fill="#FDE68A"/>}
+  </svg>
+);
+const BookIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="#6B7280" strokeWidth="1.2"><path d="M2 2h4.5a1.5 1.5 0 011.5 1.5V14l-2-1.5L4 14V2z"/><path d="M14 2H9.5A1.5 1.5 0 008 3.5V14l2-1.5L12 14V2z"/></svg>
+);
+const CheckIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M3 8.5l3.5 3.5L13 4"/></svg>
+);
+const ImportIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 2v8M5 7l3 3 3-3M2 12v1.5h12V12"/></svg>
+);
+const ExportIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 10V2M5 5l3-3 3 3M2 12v1.5h12V12"/></svg>
+);
+const ResetIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 8a6 6 0 0111.3-2.8M14 2v3.2h-3.2"/><path d="M14 8A6 6 0 012.7 10.8M2 14v-3.2h3.2"/></svg>
+);
+const SortIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M2 4h12M4 8h8M6 12h4"/></svg>
+);
+
+// ─── Menu dropdown component ────────────────────────────────────────
+function Menu({ label, items, openMenu, setOpenMenu }) {
+  const ref = useRef(null);
+  const isOpen = openMenu === label;
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpenMenu(null);
+    };
+    if (isOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isOpen, setOpenMenu]);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpenMenu(isOpen ? null : label)}
+        onMouseEnter={() => openMenu && setOpenMenu(label)}
+        style={{
+          padding: "2px 10px",
+          fontSize: "13px",
+          color: isOpen ? "#1e40af" : "#374151",
+          background: isOpen ? "#dbeafe" : "transparent",
+          border: "none",
+          borderRadius: "3px",
+          cursor: "pointer",
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
+          fontWeight: 500,
+          letterSpacing: "0.01em",
+        }}
+      >
+        {label}
+      </button>
+      {isOpen && (
+        <div style={{
+          position: "absolute",
+          top: "100%",
+          left: 0,
+          marginTop: "2px",
+          minWidth: "200px",
+          background: "white",
+          border: "1px solid #d1d5db",
+          borderRadius: "6px",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+          zIndex: 1000,
+          padding: "4px 0",
+        }}>
+          {items.map((item, i) => {
+            if (item.separator) return <div key={i} style={{ height: "1px", background: "#e5e7eb", margin: "4px 8px" }} />;
+            return (
+              <button
+                key={i}
+                onClick={() => { item.onClick?.(); setOpenMenu(null); }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  width: "100%",
+                  padding: "6px 12px",
+                  fontSize: "13px",
+                  color: item.danger ? "#dc2626" : "#374151",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  fontFamily: "'Segoe UI', system-ui, sans-serif",
+                  textAlign: "left",
+                }}
+                onMouseEnter={(e) => e.target.style.background = item.danger ? "#fef2f2" : "#f3f4f6"}
+                onMouseLeave={(e) => e.target.style.background = "transparent"}
+              >
+                <span style={{ width: "16px", display: "flex", justifyContent: "center" }}>
+                  {item.checked && <CheckIcon />}
+                  {item.icon && !item.checked && item.icon}
+                </span>
+                <span style={{ flex: 1 }}>{item.label}</span>
+                {item.shortcut && <span style={{ fontSize: "11px", color: "#9ca3af" }}>{item.shortcut}</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Compact filter dropdown ────────────────────────────────────────
+function CompactFilter({ icon, label, value, options, active }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
+    };
+    if (isOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isOpen]);
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          padding: "3px 8px",
+          fontSize: "12px",
+          color: active ? "#1e40af" : "#4b5563",
+          background: active ? "#dbeafe" : "#f9fafb",
+          border: `1px solid ${active ? "#93c5fd" : "#d1d5db"}`,
+          borderRadius: "4px",
+          cursor: "pointer",
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
+          whiteSpace: "nowrap",
+          height: "26px",
+        }}
+      >
+        {icon && <span style={{ fontSize: "12px", lineHeight: 1 }}>{icon}</span>}
+        <span>{value || label}</span>
+        <ChevronDown size={10} />
+      </button>
+      {isOpen && (
+        <div style={{
+          position: "absolute",
+          top: "100%",
+          left: 0,
+          marginTop: "2px",
+          minWidth: "150px",
+          background: "white",
+          border: "1px solid #d1d5db",
+          borderRadius: "6px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          zIndex: 999,
+          padding: "4px 0",
+          maxHeight: "240px",
+          overflowY: "auto",
+        }}>
+          {options.map((opt, i) => (
+            <button
+              key={i}
+              onClick={() => setIsOpen(false)}
+              style={{
+                display: "block",
+                width: "100%",
+                padding: "5px 12px",
+                fontSize: "12px",
+                color: opt === value ? "#1e40af" : "#374151",
+                fontWeight: opt === value ? 600 : 400,
+                background: opt === value ? "#eff6ff" : "transparent",
+                border: "none",
+                cursor: "pointer",
+                textAlign: "left",
+                fontFamily: "'Segoe UI', system-ui, sans-serif",
+              }}
+              onMouseEnter={(e) => { if (opt !== value) e.target.style.background = "#f3f4f6"; }}
+              onMouseLeave={(e) => { if (opt !== value) e.target.style.background = "transparent"; }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Toggle button ──────────────────────────────────────────────────
+function ToggleButton({ label, checked, badge }) {
+  const [on, setOn] = useState(checked);
+  return (
+    <button
+      onClick={() => setOn(!on)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
+        padding: "3px 8px",
+        fontSize: "12px",
+        color: on ? "#1e40af" : "#6b7280",
+        background: on ? "#dbeafe" : "transparent",
+        border: `1px solid ${on ? "#93c5fd" : "transparent"}`,
+        borderRadius: "4px",
+        cursor: "pointer",
+        fontFamily: "'Segoe UI', system-ui, sans-serif",
+        whiteSpace: "nowrap",
+        height: "26px",
+      }}
+    >
+      <span style={{
+        width: "12px", height: "12px",
+        border: `1.5px solid ${on ? "#2563eb" : "#9ca3af"}`,
+        borderRadius: "2px",
+        background: on ? "#2563eb" : "white",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0,
+      }}>
+        {on && <CheckIcon />}
+      </span>
+      <span>{label}</span>
+      {badge && <span style={{
+        fontSize: "10px",
+        background: "#fbbf24",
+        color: "#78350f",
+        borderRadius: "8px",
+        padding: "0 5px",
+        fontWeight: 700,
+        lineHeight: "16px",
+      }}>{badge}</span>}
+    </button>
+  );
+}
+
+// ─── View toggle ────────────────────────────────────────────────────
+function ViewToggle() {
+  const [view, setView] = useState("list");
+  return (
+    <div style={{ display: "flex", border: "1px solid #d1d5db", borderRadius: "4px", overflow: "hidden" }}>
+      {[{ id: "list", icon: <ListIcon /> }, { id: "covers", icon: <GridIcon /> }].map(v => (
+        <button
+          key={v.id}
+          onClick={() => setView(v.id)}
+          style={{
+            padding: "3px 8px",
+            background: view === v.id ? "#2563eb" : "white",
+            color: view === v.id ? "white" : "#6b7280",
+            border: "none",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            height: "26px",
+          }}
+          title={v.id === "list" ? "List View" : "Cover View"}
+        >
+          {v.icon}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ─── More Filters Panel ─────────────────────────────────────────────
+function MoreFiltersPanel({ isOpen, onClose }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    };
+    if (isOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+  return (
+    <div ref={ref} style={{
+      position: "absolute",
+      top: "100%",
+      left: 0,
+      marginTop: "2px",
+      background: "white",
+      border: "1px solid #d1d5db",
+      borderRadius: "8px",
+      boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+      padding: "12px 16px",
+      zIndex: 998,
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr 1fr",
+      gap: "8px 16px",
+      minWidth: "500px",
+    }}>
+      <div style={{ gridColumn: "1 / -1", fontSize: "11px", fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", paddingBottom: "4px", borderBottom: "1px solid #f3f4f6", marginBottom: "4px", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>
+        Additional Filters
+      </div>
+      {[
+        { icon: "⭐", label: "Rating", options: ["All Ratings", "★★★★★", "★★★★", "★★★", "★★", "★", "Unrated"] },
+        { icon: "📚", label: "Series", options: ["All Series", "In Series", "Standalone"] },
+        { icon: "❤️", label: "Favorites", options: ["All Books", "Favorites Only", "Non-Favorites"] },
+        { icon: "🏷️", label: "Tags", options: ["All Tags", "Sci-Fi", "Fantasy", "Mystery", "Romance"] },
+        { icon: "📅", label: "Date Added", options: ["All Dates", "Today", "This Week", "This Month", "This Year"] },
+      ].map((f, i) => (
+        <div key={i}>
+          <div style={{ fontSize: "11px", color: "#6b7280", marginBottom: "3px", fontFamily: "'Segoe UI', system-ui, sans-serif" }}>{f.icon} {f.label}</div>
+          <select style={{
+            width: "100%",
+            padding: "4px 6px",
+            fontSize: "12px",
+            border: "1px solid #d1d5db",
+            borderRadius: "4px",
+            background: "white",
+            color: "#374151",
+            fontFamily: "'Segoe UI', system-ui, sans-serif",
+          }}>
+            {f.options.map((o, j) => <option key={j}>{o}</option>)}
+          </select>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Mock book data ─────────────────────────────────────────────────
+const mockBooks = [
+  { name: "The Dispatcher", author: "John Scalzi", rating: 4, date: "Jan 22, 2026", goal: "$2.99", price: "$5.99", under: "-$3.00" },
+  { name: "Monsters of Ohio", author: "John Scalzi", rating: null, date: "Jan 22, 2026", goal: "$2.99", price: "$14.99", under: "-$12.00" },
+  { name: "Uncle John's Presents Book of the Dumb 2", author: "John Scalzi", rating: 3.5, date: "Jan 22, 2026", goal: "$2.99", price: "$11.99", under: "-$9.00" },
+  { name: "The Mallet of Loving Correction", author: "John Scalzi", rating: 4, date: "Jan 22, 2026", goal: "$2.99", price: "$4.99", under: "-$2.00" },
+  { name: "Metatropolis: Original Science Fiction Stories in a Shared Future", author: "John Scalzi", rating: 4, date: "Jan 22, 2026", goal: "$2.99", price: "$11.99", under: "-$9.00" },
+  { name: "Virtue Signaling and Other Heresies", author: "John Scalzi", rating: 3.5, date: "Jan 22, 2026", goal: "$2.99", price: "$4.99", under: "-$2.00" },
+];
+
+const mockFolders = [
+  { name: "Old Man's War", count: 7 },
+  { name: "The Far Reaches", count: 1 },
+  { name: "Lock In", count: 1 },
+  { name: "The Forever War", count: 1 },
+  { name: "The Time Traveler's Passport", count: 1 },
+];
+
+// ─── Stars component ────────────────────────────────────────────────
+function Stars({ rating }) {
+  if (!rating) return <span style={{ color: "#d1d5db", fontSize: "12px" }}>—</span>;
+  return (
+    <span style={{ fontSize: "12px", letterSpacing: "-1px", color: "#f59e0b" }}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <span key={i} style={{ color: i < Math.floor(rating) ? "#f59e0b" : i < rating ? "#fbbf24" : "#e5e7eb" }}>★</span>
+      ))}
+    </span>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MAIN APP
+// ═══════════════════════════════════════════════════════════════════
+export default function ReaderWranglerMockup() {
+  const [openMenu, setOpenMenu] = useState(null);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
+  const [showHidden, setShowHidden] = useState(true);
+  const moreRef = useRef(null);
+
+  const fileMenuItems = [
+    { icon: <ImportIcon />, label: "Import Library…", shortcut: "" },
+    { icon: <ExportIcon />, label: "Export Library…", shortcut: "" },
+    { separator: true },
+    { icon: null, label: "Configure Columns…", shortcut: "" },
+    { separator: true },
+    { icon: <ResetIcon />, label: "Reset App", danger: true },
+  ];
+
+  const viewMenuItems = [
+    { label: "List View", checked: true },
+    { label: "Cover View", checked: false },
+    { separator: true },
+    { label: "Show Hidden", checked: showHidden },
+    { label: "Deals Only", checked: false },
+    { separator: true },
+    { label: "Sort…", icon: <SortIcon /> },
+    { label: "Jump To…", shortcut: "Ctrl+J" },
+  ];
+
+  const helpMenuItems = [
+    { label: "How To Use", icon: <BookIcon /> },
+    { label: "Glossary", icon: null },
+    { separator: true },
+    { label: "About ReaderWrangler™", icon: null },
+  ];
+
+  // ─── Sidebar folders ───────────────────────────────────────────
+  const sidebarFolders = [
+    { name: "Jim Butcher", count: 37, children: ["Dresden Files (25)", "Complete Series (4)", "Duplicates (8)"] },
+    { name: "John Scalzi", count: 73, active: true, children: ["Old Man's War (7)", "The Far Reaches (1)", "Lock In (1)", "The Forever War (1)", "The Time Traveler's Passport (1)"] },
+    { name: "Warren Murphy", count: 176, children: ["The Destroyer (155)", "Misc Destroyer (7)", "Legacy (8)", "Digger (4)", "Duplicates (2)"] },
+    { name: "Brian Lumley", count: 13 },
+  ];
+
+  return (
+    <div style={{
+      fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
+      height: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      background: "#ffffff",
+      color: "#1f2937",
+      fontSize: "13px",
+    }}>
+
+      {/* ═══ ROW 1: MENU BAR ═══ */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        height: "32px",
+        background: "linear-gradient(to bottom, #f8fafc, #f1f5f9)",
+        borderBottom: "1px solid #e2e8f0",
+        padding: "0 8px",
+        gap: "2px",
+        flexShrink: 0,
+      }}>
+        {/* Logo + App Name */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          paddingRight: "12px",
+          marginRight: "4px",
+          borderRight: "1px solid #cbd5e1",
+        }}>
+          <span style={{ fontSize: "18px", lineHeight: 1 }}>🤠</span>
+          <span style={{
+            fontWeight: 700,
+            fontSize: "13px",
+            color: "#1e293b",
+            letterSpacing: "-0.02em",
+          }}>
+            ReaderWrangler<span style={{ fontSize: "9px", verticalAlign: "super", color: "#64748b" }}>™</span>
+          </span>
+        </div>
+
+        {/* Menus */}
+        <Menu label="File" items={fileMenuItems} openMenu={openMenu} setOpenMenu={setOpenMenu} />
+        <Menu label="View" items={viewMenuItems} openMenu={openMenu} setOpenMenu={setOpenMenu} />
+        <Menu label="Help" items={helpMenuItems} openMenu={openMenu} setOpenMenu={setOpenMenu} />
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Data Status */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          fontSize: "11.5px",
+          color: "#16a34a",
+          fontWeight: 500,
+          padding: "2px 8px",
+          background: "#f0fdf4",
+          border: "1px solid #bbf7d0",
+          borderRadius: "3px",
+        }}>
+          <span style={{ fontSize: "10px" }}>✅</span>
+          Data Status: Fresh
+        </div>
+      </div>
+
+      {/* ═══ ROW 2: TOOLBAR ═══ */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        height: "36px",
+        background: "#ffffff",
+        borderBottom: "1px solid #e5e7eb",
+        padding: "0 8px",
+        gap: "6px",
+        flexShrink: 0,
+      }}>
+        {/* Search */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          padding: "0 8px",
+          height: "26px",
+          background: "#f9fafb",
+          border: "1px solid #d1d5db",
+          borderRadius: "4px",
+          minWidth: "140px",
+          maxWidth: "180px",
+        }}>
+          <SearchIcon />
+          <input
+            placeholder="Title or author…"
+            style={{
+              border: "none",
+              background: "transparent",
+              fontSize: "12px",
+              outline: "none",
+              width: "100%",
+              color: "#374151",
+              fontFamily: "'Segoe UI', system-ui, sans-serif",
+            }}
+          />
+        </div>
+
+        {/* Jump To */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          padding: "0 8px",
+          height: "26px",
+          background: "#f9fafb",
+          border: "1px solid #d1d5db",
+          borderRadius: "4px",
+          minWidth: "120px",
+          maxWidth: "150px",
+        }}>
+          <span style={{ fontSize: "11px", color: "#9ca3af" }}>⌖</span>
+          <input
+            placeholder="Jump to…"
+            style={{
+              border: "none",
+              background: "transparent",
+              fontSize: "12px",
+              outline: "none",
+              width: "100%",
+              color: "#374151",
+              fontFamily: "'Segoe UI', system-ui, sans-serif",
+            }}
+          />
+        </div>
+
+        {/* Separator */}
+        <div style={{ width: "1px", height: "18px", background: "#e5e7eb" }} />
+
+        {/* Primary filters */}
+        <CompactFilter icon="📊" label="Status" value="All Status" options={["All Status", "Owned", "Wishlist", "Sample"]} />
+        <CompactFilter icon="📁" label="Collection" value="All Collections" options={["All Collections", "Jim Butcher", "John Scalzi", "Warren Murphy", "Brian Lumley"]} />
+        <CompactFilter icon="📖" label="Type" value="All Types" options={["All Types", "Kindle", "Paperback", "Hardcover", "Audiobook"]} />
+
+        {/* More Filters */}
+        <div style={{ position: "relative" }} ref={moreRef}>
+          <button
+            onClick={() => setShowMoreFilters(!showMoreFilters)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              padding: "3px 8px",
+              fontSize: "12px",
+              color: showMoreFilters ? "#1e40af" : "#6b7280",
+              background: showMoreFilters ? "#dbeafe" : "transparent",
+              border: `1px solid ${showMoreFilters ? "#93c5fd" : "#d1d5db"}`,
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontFamily: "'Segoe UI', system-ui, sans-serif",
+              height: "26px",
+            }}
+          >
+            <span style={{ fontSize: "11px" }}>▼</span>
+            More
+          </button>
+          <MoreFiltersPanel isOpen={showMoreFilters} onClose={() => setShowMoreFilters(false)} />
+        </div>
+
+        {/* Separator */}
+        <div style={{ width: "1px", height: "18px", background: "#e5e7eb" }} />
+
+        {/* Toggle options */}
+        <ToggleButton label="Hidden" checked={true} />
+        <ToggleButton label="Deals" checked={false} badge="1" />
+
+        {/* Spacer */}
+        <div style={{ flex: 1 }} />
+
+        {/* Count */}
+        <span style={{ fontSize: "11px", color: "#9ca3af", whiteSpace: "nowrap" }}>
+          2,577 of 2,577
+        </span>
+
+        {/* Separator */}
+        <div style={{ width: "1px", height: "18px", background: "#e5e7eb" }} />
+
+        {/* View toggle */}
+        <ViewToggle />
+
+        {/* Sort */}
+        <CompactFilter icon="" label="Sort" value="Manual ▲" options={["Manual ▲", "Manual ▼", "Name A-Z", "Name Z-A", "Rating", "Date Added", "Price"]} />
+      </div>
+
+      {/* ═══ MAIN CONTENT AREA ═══ */}
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
+
+        {/* ─── Sidebar ─── */}
+        <div style={{
+          width: "260px",
+          borderRight: "1px solid #e5e7eb",
+          background: "#fafbfc",
+          overflowY: "auto",
+          padding: "6px 0",
+          flexShrink: 0,
+        }}>
+          {/* Top-level nav */}
+          <div style={{ padding: "4px 12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 6px", fontSize: "13px", fontWeight: 600, color: "#374151", cursor: "pointer", borderRadius: "4px" }}
+              onMouseEnter={e => e.currentTarget.style.background = "#f3f4f6"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <span>📚</span> All Books <span style={{ color: "#9ca3af", fontWeight: 400, fontSize: "12px", marginLeft: "auto" }}>(2577)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 6px", fontSize: "13px", fontWeight: 600, color: "#374151", cursor: "pointer", borderRadius: "4px" }}
+              onMouseEnter={e => e.currentTarget.style.background = "#f3f4f6"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <FolderIcon /> My Library <span style={{ color: "#9ca3af", fontWeight: 400, fontSize: "12px", marginLeft: "auto" }}>(12 folders)</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", padding: "4px 6px", fontSize: "13px", fontWeight: 600, color: "#374151", cursor: "pointer", borderRadius: "4px" }}
+              onMouseEnter={e => e.currentTarget.style.background = "#f3f4f6"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <span style={{ fontSize: "14px" }}>📥</span> Inbox <span style={{ color: "#9ca3af", fontWeight: 400, fontSize: "12px", marginLeft: "auto" }}>(2127)</span>
+            </div>
+          </div>
+
+          <div style={{ height: "1px", background: "#e5e7eb", margin: "6px 12px" }} />
+
+          {/* Author folders */}
+          {sidebarFolders.map((folder, i) => (
+            <div key={i} style={{ padding: "0 12px" }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "4px 6px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: folder.active ? "#2563eb" : "#374151",
+                background: folder.active ? "#eff6ff" : "transparent",
+                cursor: "pointer",
+                borderRadius: "4px",
+                borderLeft: folder.active ? "3px solid #2563eb" : "3px solid transparent",
+              }}>
+                <span style={{ fontSize: "10px", color: "#9ca3af" }}>▼</span>
+                <FolderIcon open={folder.active} />
+                <span>{folder.name}</span>
+                <span style={{ color: "#9ca3af", fontWeight: 400, fontSize: "12px", marginLeft: "auto" }}>({folder.count})</span>
+              </div>
+              {folder.children && (
+                <div style={{ paddingLeft: "28px" }}>
+                  {folder.children.map((child, j) => (
+                    <div key={j} style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "2px 6px",
+                      fontSize: "12px",
+                      color: "#6b7280",
+                      cursor: "pointer",
+                      borderRadius: "3px",
+                    }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#f3f4f6"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    >
+                      <FolderIcon /> {child}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* ─── Content area ─── */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+          {/* Breadcrumb */}
+          <div style={{
+            padding: "6px 16px",
+            fontSize: "13px",
+            color: "#6b7280",
+            borderBottom: "1px solid #f3f4f6",
+            background: "#fafbfc",
+          }}>
+            <span style={{ color: "#2563eb", cursor: "pointer" }}>My Library</span>
+            <span style={{ margin: "0 6px", color: "#d1d5db" }}>›</span>
+            <span style={{ fontWeight: 600, color: "#1f2937" }}>John Scalzi</span>
+            <span style={{ color: "#9ca3af", marginLeft: "8px" }}>(5 folders, 62 books)</span>
+          </div>
+
+          {/* Table */}
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+              <thead>
+                <tr style={{ background: "#f1f5f9", position: "sticky", top: 0, zIndex: 10 }}>
+                  {["", "Name", "Author", "Rating", "Series", "#", "Date Added", "Goal", "Price", "Under", "Amazon"].map((h, i) => (
+                    <th key={i} style={{
+                      padding: "6px 10px",
+                      textAlign: "left",
+                      fontWeight: 600,
+                      fontSize: "12px",
+                      color: "#64748b",
+                      borderBottom: "2px solid #e2e8f0",
+                      whiteSpace: "nowrap",
+                    }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {/* Folders */}
+                {mockFolders.map((f, i) => (
+                  <tr key={`f${i}`} style={{ cursor: "pointer" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#fafbfc"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <td style={{ padding: "5px 10px", width: "30px" }}></td>
+                    <td style={{ padding: "5px 10px", display: "flex", alignItems: "center", gap: "8px" }}>
+                      <FolderIcon open={false} />
+                      <span style={{ fontWeight: 500 }}>{f.name}</span>
+                    </td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>—</td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>—</td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>—</td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>—</td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>—</td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>—</td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>—</td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>—</td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>—</td>
+                  </tr>
+                ))}
+                {/* Books */}
+                {mockBooks.map((b, i) => (
+                  <tr key={`b${i}`}
+                    style={{ borderTop: i === 0 ? "2px solid #e5e7eb" : "1px solid #f3f4f6", cursor: "pointer" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#f0f7ff"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <td style={{ padding: "5px 10px", width: "30px" }}>
+                      <div style={{ width: "16px", height: "16px", background: "#2563eb", borderRadius: "3px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round"><path d="M3 8.5l3.5 3.5L13 4"/></svg>
+                      </div>
+                    </td>
+                    <td style={{ padding: "5px 10px", fontWeight: 500, maxWidth: "300px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.name}</td>
+                    <td style={{ padding: "5px 10px", color: "#6b7280" }}>{b.author}</td>
+                    <td style={{ padding: "5px 10px" }}><Stars rating={b.rating} /></td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>-</td>
+                    <td style={{ padding: "5px 10px", color: "#9ca3af" }}>-</td>
+                    <td style={{ padding: "5px 10px", color: "#6b7280", fontSize: "12px" }}>{b.date}</td>
+                    <td style={{ padding: "5px 10px", color: "#6b7280" }}>{b.goal}</td>
+                    <td style={{ padding: "5px 10px", color: "#6b7280" }}>{b.price}</td>
+                    <td style={{ padding: "5px 10px", color: "#dc2626", fontWeight: 500, fontSize: "12px" }}>{b.under}</td>
+                    <td style={{ padding: "5px 10px" }}>
+                      <span style={{ color: "#2563eb", fontSize: "12px", cursor: "pointer" }}>Amazon</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
