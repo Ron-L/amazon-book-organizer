@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.1] - 2026-02-05
+
+### Fixed
+- Fixed app defaulting to deprecated v4 Column App on startup
+- Removed migration prompt that appeared when loading production instance
+- App now always starts in v5 Explorer mode
+- v4 Column App code still present but inactive (full removal planned for v5.1.0)
+
 ## [5.0.0] - 2026-02-05
 
 ### Major Release: Book Explorer
