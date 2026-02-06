@@ -1,7 +1,9 @@
 # Multi-User (Multi-Account) Design Document
 
+> **⚠️ ARCHIVED:** This feature is not needed. ReaderWrangler provides a simpler workaround: Export/Import backup files to switch between accounts. See [USER-GUIDE.md FAQ](../../USER-GUIDE.md#faq) "Can I maintain separate organizational states?" for the Backup/Restore method to swap between different organizational states (different accounts, demo vs. actual collection, testing vs. production, etc.).
+
 **Feature**: Multi-User Support
-**Status**: Future Enhancement (documented for "Ship Fast" approach - implement single-user first, design for multi-user)
+**Status**: Archived - Workaround sufficient (Export/Import backups)
 **Created**: 2025-11-21
 
 ---

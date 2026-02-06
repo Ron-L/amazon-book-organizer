@@ -1,10 +1,12 @@
 # Dual-Pane Split View
 
+> **⚠️ ARCHIVED:** This design is no longer applicable. ReaderWrangler v5.0.0 (February 2025) replaced the horizontal column interface with a Book Explorer (folder tree + content view). The column-based dual-pane concept this feature was designed for no longer exists. The current Book Explorer already uses a two-pane layout (folder tree left + content right).
+
 ## Overview
 
 Design options for viewing and organizing books across two folders simultaneously.
 
-**Status:** Design Discussion - Deferred to V2
+**Status:** Design Discussion - Archived (Obsolete after v5.0.0)
 
 ---
 

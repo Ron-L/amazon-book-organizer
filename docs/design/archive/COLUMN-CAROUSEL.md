@@ -1,6 +1,8 @@
 # Column Carousel Design
 
-**Status**: Design
+> **⚠️ ARCHIVED:** This design is no longer applicable. ReaderWrangler v5.0.0 (February 2025) replaced the horizontal column interface with a Book Explorer (folder tree + content view). The column-based UI this feature was designed for no longer exists.
+
+**Status**: Design (Archived)
 **Created**: 2026-01-09
 **Problem**: With 7+ columns and 2000+ books to organize, horizontal scrolling becomes unwieldy. Users need a way to efficiently navigate and access many columns.
 

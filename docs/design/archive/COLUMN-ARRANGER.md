@@ -1,5 +1,7 @@
 # Column Arranger - Split Pane UI
 
+> **⚠️ ARCHIVED:** This design is no longer applicable. ReaderWrangler v5.0.0 (February 2025) replaced the horizontal column interface with a Book Explorer (folder tree + content view). The column-based UI this feature was designed for no longer exists.
+
 ## Overview
 
 A resizable split pane that provides quick access to collapsed columns and enables bulk column management. Solves the problem of managing 20+ columns by allowing users to "park" inactive columns in a compact list while keeping the main workspace uncluttered.
