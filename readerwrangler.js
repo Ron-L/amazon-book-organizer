@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.8";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.9-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.9-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -189,14 +189,14 @@
                     showInfoDialog(
                         'Why replace the file?',
                         `Your backup contains:\n` +
-                        `• Library data (from amazon-library.json)\n` +
+                        `• Library data (books from a prior amazon-library.json)\n` +
                         `• Your organization (folders, tags, notes)\n\n` +
                         `When restored:\n` +
-                        `1. ✓ Organization is loaded\n` +
-                        `2. → Library file needs updating\n\n` +
+                        `1. ✓ Organization loaded into app\n` +
+                        `2. → amazon-library.json needs updating\n\n` +
                         `If you skip this or save as (1):\n` +
-                        `• Next bookmarklet use will load old data\n` +
-                        `• Your organization will disappear`
+                        `• Next bookmarklet use will load prior data\n` +
+                        `• May import books from different account or time period`
                     );
                 };
 
