@@ -7,8 +7,19 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 ---
 
 ### 🎯 Priority 0: Bug
-**1. Remove Column App**
-   - Defer to post V5
+**1. Hidden Books**
+   * Hidden books should show grayed out with red circle/slash
+
+**2. Make left pane sortable?**
+   - discuss with UX expert
+
+**3. List view Ratings column has corrupted text in it?**
+   - maybe the browser?
+
+**4. Need URL to reset**
+   - readerwrangler.com/reset.html
+   - has 1 button that deletes all localStarage and indexedDB associated with ReaderWrangler
+
 
 ### 🎯 Priority 1: Current Focus
 
@@ -72,18 +83,11 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Proposed: Nested disclosure triangles that rotate on expand/collapse
    - Implementation: Two state variables (`filtersExpanded`, `advancedExpanded`) instead of single `filterMode`
 
-**5. Column/Explorer Mode Deprecation Notice** - LOW/LOW (30 minutes)
-   - Update Column/Explorer toggle button tooltip
-   - When hovering Explorer button while in Column mode:
-   - "Column mode is deprecated. Switch to Explorer mode and import your organization automatically."
-   - Problem: Users may not know Column mode is being phased out
-   - Impact: Guides users toward the supported mode
-
-**6. Enhanced Getting Started UX** - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
+**5. Enhanced Getting Started UX** - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
    - Status: Planned (post-rename enhancement)
    - Help menu links, enhanced empty library state
 
-**7. Quality Attribute Validation** - LOW/LOW (2-3 hours)
+**6. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
    - **Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second
    - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
@@ -91,7 +95,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Need confidence app handles edge cases for public release
    - Impact: Robustness validation before launch
 
-**8. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
+**7. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
    - Semantic HTML audit (use `<button>` not `<div onclick>`)
    - ARIA labels for key interactions (context menus, drag operations)
    - Keyboard-only navigation validation (tab order, focus indicators)
@@ -99,7 +103,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Potential public users may need accessibility features
    - Impact: Broader user base support with minimal effort
 
-**9. Browser Compatibility Documentation** - LOW/LOW (30 min)
+**8. Browser Compatibility Documentation** - LOW/LOW (30 min)
    - Document Chrome-only requirement in README and app footer
    - Note: Firefox/Edge may work but untested
    - Optional: 30-min Firefox smoke test before public release
