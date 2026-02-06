@@ -8,12 +8,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 0: Bug
 
-**1. Document double-click folder sync tip**
-   - Update docs/design/VIDEO-PRODUCTION-PLAN.md
-   - Tip: Sort right panel by Author → Double-click folder → Left panel syncs to that folder
-   - Solves "can't find folder in long left panel list" problem
-
-**2. Create standalone reset page**
+**1. Create standalone reset page**
    - **File:** reset.html (minimal standalone page)
    - **File:** reset.js (reset logic)
    - **URL:** readerwrangler.com/reset.html

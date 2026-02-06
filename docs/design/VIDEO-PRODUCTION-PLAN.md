@@ -89,6 +89,12 @@ When re-recording, add mentions of:
   - **Removed:** Hero banner, old expandable filter bar, Settings gear, Help ? button
   - 6 training scenarios documented in [BOOK-EXPLORER-VIDEO-SCENARIOS.md](BOOK-EXPLORER-VIDEO-SCENARIOS.md)
 
+**Tips & Tricks:**
+- **Finding folders in long lists:** Sort right panel by Author → Double-click any folder in right panel → Left panel syncs to show that folder
+  - **Why this helps:** When you have many folders, scrolling the left panel to find a specific folder is slow
+  - **Workaround:** Use the right panel's sort feature to find books by a particular author/series, then double-click the folder name in the breadcrumb or folder column to navigate directly to it in the left panel
+  - **Use case:** "I know I put Brandon Sanderson books in a folder somewhere, but I can't remember which one" → Sort by Author, find Sanderson book, double-click its folder name
+
 **Pending Features:**
 - [ ] Filtered Folder View - Auto-hide empty, auto-expand matches
 
