@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.5] - 2026-02-05
+
+### Changed
+- Removed unused wishlistFilter code (internal cleanup)
+- Removed 23 references and ~24 lines of dead code
+- No behavioral changes expected - wishlistFilter UI was removed in v5.0.0, state variable never set by users
+
 ## [5.0.4] - 2026-02-05
 
 ### Added

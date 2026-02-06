@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "5.0.4";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.5-alpha.1";  // Build version for this file
+        const APP_VERSION = "5.0.5";  // Release version shown to users
+        const ORGANIZER_VERSION = "5.0.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
