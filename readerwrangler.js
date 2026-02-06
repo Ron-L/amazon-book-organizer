@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.6-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.6-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -11010,7 +11010,7 @@
                                                             <img src={book.coverUrl} alt={book.title} className={`w-full h-auto rounded shadow ${book.onWishlist ? 'opacity-40' : ''}`} />
                                                             {/* v5.0.6 - Hidden book overlay */}
                                                             {(hiddenInstances.has(book._instanceId) || book.isHidden) && (
-                                                                <div className="absolute inset-0 flex items-center justify-center text-4xl pointer-events-none">🚫</div>
+                                                                <div className="absolute inset-0 flex items-center justify-center text-8xl pointer-events-none">🚫</div>
                                                             )}
                                                         </div>
                                                         <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
