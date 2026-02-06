@@ -20,7 +20,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - readerwrangler.com/reset.html
    - has 1 button that deletes all localStarage and indexedDB associated with ReaderWrangler
 
-
 ### 🎯 Priority 1: Current Focus
 
 **1. Wizard Mode**

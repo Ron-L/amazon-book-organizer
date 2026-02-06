@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.3] - 2026-02-05
+
+### Fixed
+- Fixed column overlay bug where null column widths became "nullpx" in CSS
+- Enhanced column width handling to be future-proof for new columns added in future versions
+- Ensured consistent sanitization pattern across load, save, export, and restore operations
+
 ## [5.0.2] - 2026-02-05
 
 ### Fixed
