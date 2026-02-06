@@ -9,7 +9,7 @@
 **Core principle:** STOP and ASK before acting.
 
 - Every code change requires explicit approval
-- Every git operation requires explicit approval
+- Every git operation requires explicit approval, except alpha commits during development.
 - When in doubt, ask first
 
 ---
@@ -21,6 +21,7 @@
 * **Before code/file change** → Ask approval first
 * **Problem report** → STOP, acknowledge, ask to analyze, wait for decision
 * **Idea evaluation** → Evaluate critically, identify issues, disagree when warranted
+* **Code change approved ("proceed")** → Make change, increment ORGANIZER_VERSION, commit, report ready for testing (follows Versioning workflow)
 
 ---
 
