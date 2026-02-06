@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.9] - 2026-02-06
+
+### Changed
+- Redesigned backup restore dialog from EULA-like text to action-oriented guidance
+- Dialog now appears AFTER restore completes (not before) with clear next steps
+- Visual checkmarks (✓) for required actions, X marks (✗) for what NOT to do
+- Three action buttons: "Why replace?" (help), "Save File", "Cancel"
+- Help popup explains backup contents and dangers of skipping regeneration
+- Download only triggered when user explicitly clicks "Save File"
+- Updated help text: "prior data" instead of "old data" (chronologically accurate)
+- Corrected help text: removed incorrect "organization will disappear" claim
+- Organization description now includes "order" and "price goals" (aligns with app tagline)
+
+### Added
+- Created docs/design/BACKUP-RESTORE-FLOW.md with comprehensive data flow documentation
+- Three Mermaid diagrams showing normal flow, restore flow, and account contamination danger
+- Detailed explanation of storage architecture (IndexedDB vs localStorage separation)
+- Account switching edge case documentation with step-by-step contamination scenario
+- Added "Understanding the Codebase" section to CONTRIBUTING.md linking to architecture docs
+
+### Technical
+- New function: showBackupRestoredDialog(bookCount) returns Promise<boolean>
+- Organization stored separately from book data (survives even if library file skipped)
+- Danger of skipping regeneration: next fetch imports wrong books (account mixing), not data loss
+
 ## [5.0.8] - 2026-02-06
 
 ### Fixed
