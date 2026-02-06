@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.7";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.8-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.8-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2799,7 +2799,6 @@
                     setFolderSortSettings({}); // v5.0.0-alpha.100 - Clear per-folder sort settings
                     setTagRegistry({}); // v5.0.0-alpha.175.28 - Clear tag registry on reset
                     setExplorerView('list');
-                    setViewMode('columns'); // Reset to Columns view
 
                     console.log('✅ Cleared library - app reset to initial state');
                     new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/app-reset';
