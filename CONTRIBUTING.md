@@ -217,6 +217,23 @@ Solution: Install all three bookmarklets from the localhost installer. Now you c
 
 The installer detects its own environment using `window.location.hostname` and generates appropriate bookmarklet code dynamically.
 
+---
+
+## Understanding the Codebase
+
+Before contributing, familiarize yourself with the technical architecture and design decisions:
+
+### Core Documentation
+- **[Architecture Overview](docs/design/ARCHITECTURE.md)** - System design, tech stack, data flow, version management
+- **[Backup/Restore Flow](docs/design/BACKUP-RESTORE-FLOW.md)** - Data flow diagrams and restore workflow
+- **[Data Schema](docs/design/DATA-SCHEMA.md)** - Book object structure, field definitions, version history
+
+### Key Patterns
+- **Version Management** - `APP_VERSION` vs `ORGANIZER_VERSION` (see ARCHITECTURE.md)
+- **Status Icons** - Visual feedback system for data freshness
+- **Cache-Busting** - Query string versioning for bookmarklet scripts
+- **Three-Environment Testing** - LOCAL/DEV/PROD workflow
+
 ### Files Overview
 
 **User-Facing Files:**
