@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.2";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.3-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1142,7 +1142,22 @@
                             if (explorerData.leftPaneWidth) setLeftPaneWidth(explorerData.leftPaneWidth); // v5.0.0-alpha.91
                             if (explorerData.folderSortSettings) setFolderSortSettings(explorerData.folderSortSettings); // v5.0.0-alpha.100
                             if (explorerData.visibleColumns) setVisibleColumns(explorerData.visibleColumns); // v5.0.0-alpha.104
-                            if (explorerData.columnWidths) setColumnWidths(explorerData.columnWidths); // v5.0.0-alpha.109
+                            // v5.0.0-alpha.109 - Restore column widths, filtering out null values
+                            // v5.0.3-alpha.1 - Merge localStorage with defaults (handles new columns)
+                            if (explorerData.columnWidths) {
+                                const defaultWidths = {
+                                    title: 200, author: 150, series: 150, seriesNum: 50, rating: 96,
+                                    myRating: 100, dateAdded: 112, price: 80, priceGoal: 80, delta: 80, amazon: 70
+                                };
+                                // Iterate over defaults, overlay localStorage values, filter nulls
+                                const sanitizedWidths = Object.fromEntries(
+                                    Object.keys(defaultWidths).map(key => [
+                                        key,
+                                        explorerData.columnWidths[key] ?? defaultWidths[key]
+                                    ])
+                                );
+                                setColumnWidths(sanitizedWidths);
+                            }
                             if (explorerData.columnOrder) setColumnOrder(explorerData.columnOrder); // v5.0.0-alpha.172
                             console.log('📁 Restored Explorer settings from localStorage');
                         }
@@ -1321,6 +1336,18 @@
 
             // v5.0.0 - Save Explorer settings to localStorage
             useEffect(() => {
+                // v5.0.3-alpha.1 - Filter out null column widths before saving
+                const defaultWidths = {
+                    title: 200, author: 150, series: 150, seriesNum: 50, rating: 96,
+                    myRating: 100, dateAdded: 112, price: 80, priceGoal: 80, delta: 80, amazon: 70
+                };
+                const sanitizedColumnWidths = Object.fromEntries(
+                    Object.keys(defaultWidths).map(key => [
+                        key,
+                        columnWidths[key] ?? defaultWidths[key]
+                    ])
+                );
+
                 const explorerData = {
                     // v5.0.2 - viewMode removed (always Explorer mode)
                     selectedFolderId,
@@ -1330,7 +1357,7 @@
                     leftPaneWidth, // v5.0.0-alpha.91
                     folderSortSettings, // v5.0.0-alpha.100 - Per-folder sort settings
                     visibleColumns, // v5.0.0-alpha.104 - Column visibility
-                    columnWidths, // v5.0.0-alpha.109 - Column widths
+                    columnWidths: sanitizedColumnWidths, // v5.0.0-alpha.109 - Column widths (sanitized)
                     columnOrder // v5.0.0-alpha.172 - Column display order
                 };
                 localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
@@ -2680,7 +2707,19 @@
                                 explorerCoverCols,
                                 leftPaneWidth,
                                 visibleColumns, // v5.0.0-alpha.109
-                                columnWidths // v5.0.0-alpha.109
+                                // v5.0.3-alpha.1 - Sanitize column widths before export
+                                columnWidths: (() => {
+                                    const defaultWidths = {
+                                        title: 200, author: 150, series: 150, seriesNum: 50, rating: 96,
+                                        myRating: 100, dateAdded: 112, price: 80, priceGoal: 80, delta: 80, amazon: 70
+                                    };
+                                    return Object.fromEntries(
+                                        Object.keys(defaultWidths).map(key => [
+                                            key,
+                                            columnWidths[key] ?? defaultWidths[key]
+                                        ])
+                                    );
+                                })()
                             },
                             exportDate: new Date().toISOString(),
                             tagRegistry, // v5.0.0-alpha.175 - Tag registry
@@ -3366,7 +3405,21 @@
                         if (settings.explorerCoverCols) setExplorerCoverCols(settings.explorerCoverCols);
                         if (settings.leftPaneWidth) setLeftPaneWidth(settings.leftPaneWidth);
                         if (settings.visibleColumns) setVisibleColumns(settings.visibleColumns); // v5.0.0-alpha.109
-                        if (settings.columnWidths) setColumnWidths(settings.columnWidths); // v5.0.0-alpha.109
+                        // v5.0.3-alpha.1 - Sanitize column widths (filter null values + merge with defaults)
+                        if (settings.columnWidths) {
+                            const defaultWidths = {
+                                title: 200, author: 150, series: 150, seriesNum: 50, rating: 96,
+                                myRating: 100, dateAdded: 112, price: 80, priceGoal: 80, delta: 80, amazon: 70
+                            };
+                            // Iterate over defaults to include new columns
+                            const sanitizedWidths = Object.fromEntries(
+                                Object.keys(defaultWidths).map(key => [
+                                    key,
+                                    settings.columnWidths[key] ?? defaultWidths[key]
+                                ])
+                            );
+                            setColumnWidths(sanitizedWidths);
+                        }
                         console.log('✅ Restored Explorer view settings from backup');
                     } else {
                         // No explorer settings in backup - preserve existing from localStorage (backward compatibility)
