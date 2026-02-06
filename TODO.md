@@ -13,9 +13,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 **2. Make left pane sortable?**
    - discuss with UX expert
 
-**3. List view Ratings column has corrupted text in it?**
-   - maybe the browser?
-
 **4. Need URL to reset**
    - readerwrangler.com/reset.html
    - has 1 button that deletes all localStarage and indexedDB associated with ReaderWrangler

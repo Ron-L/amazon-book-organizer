@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.4] - 2026-02-05
+
+### Added
+- Added Wishlist option to Source filter dropdown (appears first in list)
+
+### Fixed
+- Fixed missing filter for wishlist books (lost in v5.0.0 menu/toolbar redesign)
+- Backward compatible filtering checks both onWishlist flag and ownershipType for legacy data
+- Updated DATA-SCHEMA.md to document wishlist as valid ownershipType
+
 ## [5.0.3] - 2026-02-05
 
 ### Fixed
