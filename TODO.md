@@ -8,12 +8,22 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 0: Bug
 
-**1. Make left pane sortable?**
-   - discuss with UX expert
+**1. Document double-click folder sync tip**
+   - Update docs/design/VIDEO-PRODUCTION-PLAN.md
+   - Tip: Sort right panel by Author → Double-click folder → Left panel syncs to that folder
+   - Solves "can't find folder in long left panel list" problem
 
-**4. Need URL to reset**
-   - readerwrangler.com/reset.html
-   - has 1 button that deletes all localStarage and indexedDB associated with ReaderWrangler
+**2. Create standalone reset page**
+   - **File:** reset.html (minimal standalone page)
+   - **File:** reset.js (reset logic)
+   - **URL:** readerwrangler.com/reset.html
+   - **Purpose:** Emergency recovery when main app won't load (mobile, corrupted state)
+   - **Button:** "Reset App" - clears all localStorage + IndexedDB
+   - **Warning:** Same text as File → Reset App dialog
+   - **Flow:** reset.html → Click button → Auto-redirect to readerwrangler.html → Import backup
+   - **Clear:** localStorage keys: readerwrangler-books, readerwrangler-cover-cache, readerwrangler-status, readwrangler-explorer, readerwrangler-folders
+   - **Clear:** IndexedDB: ReaderWranglerDB
+   - **Why:** Mobile devices can't access dev tools; corrupted state blocks app load
 
 ### 🎯 Priority 1: Current Focus
 

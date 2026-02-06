@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.8] - 2026-02-06
+
+### Fixed
+- Fixed folder reordering error messages in All Books and My Library for better clarity
+- Enabled Manual Order mode in My Library to allow folder reordering (was incorrectly disabled, preventing folder organization)
+- Fixed Reset App error "setViewMode is not defined" (removed orphaned v4 code reference)
+
 ## [5.0.7] - 2026-02-05
 
 ### Fixed
