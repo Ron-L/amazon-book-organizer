@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.7";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.7";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.8-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10491,13 +10491,13 @@
                                                             onDrop={(e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
-                                                                if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__') {
+                                                                if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
                                                                     const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                                                     if (dragData.sourceFolder === selectedFolderId) {
                                                                         reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                     }
-                                                                } else if (selectedFolderId === '__all__') {
-                                                                    showToast('Cannot reorder in All Books', e.clientX, e.clientY);
+                                                                } else if (selectedFolderId === '__all__' || selectedFolderId === '__library__') {
+                                                                    showToast('Manual ordering not available in All Books and My Library. These views aggregate books from multiple folders. Use column sorting instead.', e.clientX, e.clientY);
                                                                 } else if (explorerSort[0].column !== 'custom') {
                                                                     showToast('Clear sort to reorder', e.clientX, e.clientY);
                                                                 }
@@ -10949,13 +10949,13 @@
                                                         onDrop={(e) => {
                                                             e.preventDefault();
                                                             e.stopPropagation();
-                                                            if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__') {
+                                                            if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
                                                                 const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                                                 if (dragData.sourceFolder === selectedFolderId) {
                                                                     reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                 }
-                                                            } else if (selectedFolderId === '__all__') {
-                                                                showToast('Cannot reorder in All Books', e.clientX, e.clientY);
+                                                            } else if (selectedFolderId === '__all__' || selectedFolderId === '__library__') {
+                                                                showToast('Manual ordering not available in All Books and My Library. These views aggregate books from multiple folders. Use column sorting instead.', e.clientX, e.clientY);
                                                             } else if (explorerSort[0].column !== 'custom') {
                                                                 showToast('Clear sort to reorder', e.clientX, e.clientY);
                                                             }
