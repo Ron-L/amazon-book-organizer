@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.1";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.2-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -229,7 +229,7 @@
             const [hiddenInstances, setHiddenInstances] = useState(new Set());
 
             // v5.0.0 - Book Explorer state
-            const [viewMode, setViewMode] = useState('explorer'); // v5.1.0 - Always use Explorer mode (v4 Column App removed)
+            // v5.0.2 - Removed viewMode (app always uses Explorer mode, v4 Column App fully removed)
             const [folders, setFolders] = useState([]); // User-created folders
             const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
             // v5.0.0-alpha.174 - Multi-column sorting: array of sort criteria (max 3)
@@ -1122,7 +1122,7 @@
                         const savedExplorer = localStorage.getItem(EXPLORER_KEY);
                         if (savedExplorer) {
                             const explorerData = JSON.parse(savedExplorer);
-                            if (explorerData.viewMode) setViewMode(explorerData.viewMode);
+                            // v5.0.2 - viewMode removed (always Explorer mode)
                             if (explorerData.selectedFolderId) setSelectedFolderId(explorerData.selectedFolderId);
                             if (explorerData.explorerView) setExplorerView(explorerData.explorerView);
                             // v5.0.0-alpha.169.11 - Use per-folder sort if available, else fall back to explorerSort
@@ -1322,7 +1322,7 @@
             // v5.0.0 - Save Explorer settings to localStorage
             useEffect(() => {
                 const explorerData = {
-                    viewMode,
+                    // v5.0.2 - viewMode removed (always Explorer mode)
                     selectedFolderId,
                     explorerView,
                     explorerSort,
@@ -1334,7 +1334,7 @@
                     columnOrder // v5.0.0-alpha.172 - Column display order
                 };
                 localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
-            }, [viewMode, selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, visibleColumns, columnWidths, columnOrder]);
+            }, [selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, visibleColumns, columnWidths, columnOrder]);
 
             // v5.0.0 - Save folders to localStorage
             useEffect(() => {
@@ -1542,12 +1542,12 @@
                         return;
                     }
 
-                    // v5.0.0-alpha.92 - Alt+Left: Back, Alt+Right: Forward (only in Explorer view)
-                    if (viewMode === 'explorer' && e.altKey && e.key === 'ArrowLeft') {
+                    // v5.0.0-alpha.92 - Alt+Left: Back, Alt+Right: Forward
+                    if (e.altKey && e.key === 'ArrowLeft') {
                         e.preventDefault();
                         goBack();
                     }
-                    if (viewMode === 'explorer' && e.altKey && e.key === 'ArrowRight') {
+                    if (e.altKey && e.key === 'ArrowRight') {
                         e.preventDefault();
                         goForward();
                     }
@@ -1594,7 +1594,7 @@
 
                     // v5.0.0-alpha.102 - Ctrl+A in Explorer view: Select all visible books/folders
                     // v5.0.0-alpha.103 - Fixed: Check viewMode first (activeColumnId is set even in Explorer view)
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'a' && viewMode === 'explorer') {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
                         e.preventDefault(); // Prevent browser's select-all
 
                         // Determine what to select based on current view
@@ -1623,7 +1623,7 @@
                     }
 
                     // v5.0.0-alpha.168 - Ctrl+X in Explorer view: Cut selected books
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'x' && viewMode === 'explorer' && explorerSelectedBooks.size > 0) {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'x' && explorerSelectedBooks.size > 0) {
                         e.preventDefault();
                         // Can't cut from special folders
                         if (['__all__', '__library__', '__inbox__'].includes(selectedFolderId)) {
@@ -1654,7 +1654,7 @@
                     }
 
                     // v5.0.0-alpha.168 - Ctrl+C in Explorer view: Copy selected books
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'c' && viewMode === 'explorer' && explorerSelectedBooks.size > 0) {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'c' && explorerSelectedBooks.size > 0) {
                         e.preventDefault();
                         const bookIds = Array.from(explorerSelectedBooks);
                         const sourcePositions = bookIds.map(bookId => ({
@@ -1680,7 +1680,7 @@
                     }
 
                     // v5.0.0-alpha.168 - Ctrl+V in Explorer view: Paste books to current folder
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'v' && viewMode === 'explorer' && clipboard && clipboard.bookIds && clipboard.bookIds.length > 0) {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'v' && clipboard && clipboard.bookIds && clipboard.bookIds.length > 0) {
                         e.preventDefault();
                         // Can't paste to special folders
                         if (['__all__', '__library__', '__inbox__'].includes(selectedFolderId)) {
@@ -1956,7 +1956,7 @@
                     }
 
                     // v5.0.0-alpha.46 - DEL key in Explorer: Remove selected books from current folder
-                    if (e.key === 'Delete' && viewMode === 'explorer' && explorerSelectedBooks.size > 0) {
+                    if (e.key === 'Delete' && explorerSelectedBooks.size > 0) {
                         e.preventDefault();
                         // Can't remove from All Books (view-only) or Inbox
                         if (selectedFolderId === '__all__' || selectedFolderId === '__inbox__') {
@@ -2063,7 +2063,7 @@
 
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [activeColumnId, columns, selectedBooks, clipboard, hiddenInstances, viewMode, explorerSelectedBooks, selectedFolderId, folders]);
+            }, [activeColumnId, columns, selectedBooks, clipboard, hiddenInstances, explorerSelectedBooks, selectedFolderId, folders]);
 
             // Initialize activeColumnId to first column when columns are loaded
             useEffect(() => {
@@ -2674,7 +2674,7 @@
                             })),
                             // v5.0.0-alpha.101 - Include Explorer view settings
                             explorerSettings: {
-                                viewMode,
+                                // v5.0.2 - viewMode removed (always Explorer mode)
                                 folderSortSettings,
                                 explorerView,
                                 explorerCoverCols,
@@ -3360,7 +3360,7 @@
                     // v5.0.0-alpha.101 - Restore Explorer settings from backup (if present)
                     if (orgToRestore.explorerSettings) {
                         const settings = orgToRestore.explorerSettings;
-                        if (settings.viewMode) setViewMode(settings.viewMode);
+                        // v5.0.2 - viewMode removed (always Explorer mode)
                         if (settings.folderSortSettings) setFolderSortSettings(settings.folderSortSettings);
                         if (settings.explorerView) setExplorerView(settings.explorerView);
                         if (settings.explorerCoverCols) setExplorerCoverCols(settings.explorerCoverCols);
@@ -8778,479 +8778,9 @@
                         </div>
                     )}
 
-                    {/* v5.0.0 - Conditional rendering: Columns view or Explorer view */}
-                    {viewMode === 'columns' && (
-                    <div className="flex-1 min-h-0 overflow-x-scroll overflow-y-hidden mb-6 columns-scroll-container" onClick={(e) => {
-                        // Clear selection if clicking on empty space (not on books or columns)
-                        if (e.target === e.currentTarget || e.target.classList.contains('columns-container')) {
-                            clearSelection();
-                        }
-                    }}>
-                        <div className="flex h-full p-4 gap-4 columns-container" style={{ minWidth: 'fit-content' }} onClick={(e) => {
-                            // Clear selection if clicking between columns
-                            if (e.target === e.currentTarget) {
-                                clearSelection();
-                            }
-                        }}>
-                            {/* v4.16.0.e - Compute filtered books once per column for performance */}
-                            {columns.map(column => ({
-                                column,
-                                filteredBooks: filteredBooks(column.books)
-                            })).filter(({ column, filteredBooks: colFilteredBooks }) => {
-                                // v4.16.0.am - Show truly empty columns (never had books) even with filters
-                                const bookEntries = column.books.filter(item => !(item && item.type === 'divider'));
-                                if (bookEntries.length === 0) return true;
-                                // v4.16.0.an - Hide columns with only hidden books when Show Hidden is off
-                                const hasVisibleBooks = colFilteredBooks.some(item => !(item && item.type === 'divider'));
-                                if (!showHidden && !hasVisibleBooks) return false;
-                                // v4.15.3 - Hide empty columns when filters are active
-                                if (!hasActiveFilters) return true;
-                                // v4.15.4.a - Show column if its name matches search term
-                                if (searchTerm && column.name.toLowerCase().includes(searchTerm.toLowerCase())) return true;
-                                // v4.15.4.b - Show column if any divider label matches search term
-                                if (searchTerm && column.books.some(item =>
-                                    item && item.type === 'divider' && item.label &&
-                                    item.label.toLowerCase().includes(searchTerm.toLowerCase())
-                                )) return true;
-                                // Otherwise, show column if it has visible books (hide if filtered-empty)
-                                return colFilteredBooks.some(item => !(item && item.type === 'divider'));
-                            }).map(({ column, filteredBooks: colFilteredBooks }, colIndex) => (
-                                <div key={column.id}
-                                     data-column-id={column.id}
-                                     onClick={() => setActiveColumnId(column.id)}
-                                     className={`flex-shrink-0 w-96 bg-white rounded-lg flex flex-col relative ${draggedColumn === column.id && isDraggingColumn ? 'column-dragging' : ''}`}
-                                     style={activeColumnId === column.id ? {
-                                         boxShadow: 'inset 0 2px 4px rgba(64, 64, 64, 0.4), inset 0 -2px 4px rgba(64, 64, 64, 0.4), inset 2px 0 4px rgba(64, 64, 64, 0.4), inset -2px 0 4px rgba(64, 64, 64, 0.4), 0 1px 3px rgba(0, 0, 0, 0.12)',
-                                         border: '2px solid rgb(96, 96, 96)'
-                                     } : { boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)' }}>
-                                    {isDraggingColumn && columnDropTarget === colIndex && draggedColumn !== column.id && (
-                                        <div className="column-drop-indicator" style={{ left: '-8px' }} />
-                                    )}
-                                    <div className="p-4 border-b border-gray-200 flex items-center justify-between"
-                                         onMouseDown={(e) => handleColumnDragStart(e, column.id)}
-                                         style={{ cursor: 'grab' }}>
-                                        <div className="flex items-center gap-2 flex-1">
-                                            <span className="text-gray-400">⋮⋮</span>
-                                            {editingColumn === column.id ? (
-                                                <input
-                                                    type="text"
-                                                    value={editingName}
-                                                    onChange={(e) => setEditingName(e.target.value)}
-                                                    onBlur={() => finishEditingColumn(column.id)}
-                                                    onKeyPress={(e) => e.key === 'Enter' && finishEditingColumn(column.id)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Escape') {
-                                                            setEditingColumn(null);
-                                                            setEditingName('');
-                                                        }
-                                                    }}
-                                                    className="text-lg font-semibold text-gray-900 border-2 border-blue-500 rounded px-2 py-1"
-                                                    autoFocus
-                                                />
-                                            ) : (
-                                                <div className="flex items-center gap-1 editable-title-container">
-                                                    <h2
-                                                        className="text-lg font-semibold text-gray-900 editable-title"
-                                                        onDoubleClick={() => startEditingColumn(column.id, column.name)}
-                                                        title="Double-click to rename"
-                                                    >
-                                                        {column.name}
-                                                    </h2>
-                                                    <span className="pencil-icon text-gray-400 text-sm">✏️</span>
-                                                </div>
-                                            )}
-                                            {/* v4.16.0.e - Use pre-computed colFilteredBooks for performance */}
-                                            <span className="text-sm text-gray-500">({colFilteredBooks.filter(item => !(item && item.type === 'divider')).length})</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <div className="relative" ref={columnMenuOpen === column.id ? columnMenuRef : null}>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setColumnMenuOpen(columnMenuOpen === column.id ? null : column.id); }}
-                                                    className="p-1 hover:bg-gray-100 rounded text-lg"
-                                                    title="Column options">
-                                                    ⋮
-                                                </button>
-                                                {columnMenuOpen === column.id && (
-                                                    <div className="absolute right-0 top-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-56"
-                                                         onClick={(e) => e.stopPropagation()}>
-                                                        <div className="p-2">
-                                                            {/* Sort submenu */}
-                                                            <div className="relative">
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); setSortMenuOpen(sortMenuOpen === column.id ? null : column.id); }}
-                                                                    className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm flex items-center justify-between">
-                                                                    Sort Column
-                                                                    <span>▸</span>
-                                                                </button>
-                                                                {sortMenuOpen === column.id && (
-                                                                    <div className="absolute left-full top-0 ml-1 bg-white border border-gray-300 rounded-lg shadow-lg w-48 z-50">
-                                                                        <div className="p-2">
-                                                                            <button onClick={() => sortColumn(column.id, 'title-asc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Title (A→Z)</button>
-                                                                            <button onClick={() => sortColumn(column.id, 'title-desc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Title (Z→A)</button>
-                                                                            <button onClick={() => sortColumn(column.id, 'author-asc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Author (A→Z)</button>
-                                                                            <button onClick={() => sortColumn(column.id, 'author-desc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Author (Z→A)</button>
-                                                                            {dataSource === 'enriched' && (
-                                                                                <>
-                                                                                    <button onClick={() => sortColumn(column.id, 'rating-desc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Rating (High→Low)</button>
-                                                                                    <button onClick={() => sortColumn(column.id, 'rating-asc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Rating (Low→High)</button>
-                                                                                </>
-                                                                            )}
-                                                                            <button onClick={() => sortColumn(column.id, 'acquired-desc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Acquired (Newest)</button>
-                                                                            <button onClick={() => sortColumn(column.id, 'acquired-asc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Acquired (Oldest)</button>
-                                                                            <button onClick={() => sortColumn(column.id, 'published-desc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Published (Newest)</button>
-                                                                            <button onClick={() => sortColumn(column.id, 'published-asc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Published (Oldest)</button>
-                                                                            <button onClick={() => sortColumn(column.id, 'series-pos-asc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Series (1→99)</button>
-                                                                            <button onClick={() => sortColumn(column.id, 'series-pos-desc')} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Series (99→1)</button>
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-
-                                                            <div className="border-t border-gray-200 my-1"></div>
-
-                                                            {/* Auto-divide options */}
-                                                            <button onClick={() => autoDivideBySeries(column.id)} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Auto-Divide by Series</button>
-                                                            {dataSource === 'enriched' && (
-                                                                <button onClick={() => autoDivideByRating(column.id)} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Auto-Divide by Rating</button>
-                                                            )}
-
-                                                            <div className="border-t border-gray-200 my-1"></div>
-
-                                                            {/* Insert Divider */}
-                                                            <button onClick={() => { setInsertDividerOpen(column.id); setNewDividerLabel(''); }} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Insert Divider</button>
-
-                                                            <div className="border-t border-gray-200 my-1"></div>
-
-                                                            {/* v4.12.0 - Insert Column Before/After */}
-                                                            <button onClick={() => { insertColumn(column.id, 'before'); setColumnMenuOpen(null); }} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Insert Column Before</button>
-                                                            <button onClick={() => { insertColumn(column.id, 'after'); setColumnMenuOpen(null); }} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Insert Column After</button>
-
-                                                            <div className="border-t border-gray-200 my-1"></div>
-
-                                                            {/* Rename and Delete */}
-                                                            <button onClick={() => { startEditingColumn(column.id, column.name); setColumnMenuOpen(null); }} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm">Rename Column</button>
-                                                            {columns.length > 1 && (
-                                                                <button onClick={() => { openDeleteDialog(column.id); setColumnMenuOpen(null); }} className="w-full text-left px-2 py-1 hover:bg-gray-100 rounded text-sm text-red-600">Delete Column</button>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto p-4" onClick={(e) => {
-                                        // v3.14.0.y - Clear selection when clicking empty space in scrollable area
-                                        if (e.target === e.currentTarget) {
-                                            clearSelection();
-                                        }
-                                    }}>
-                                        <div className="grid grid-cols-3 gap-3 relative book-grid" onClick={(e) => {
-                                            // v3.14.0.y - Clear selection when clicking empty grid cells
-                                            if (e.target === e.currentTarget) {
-                                                clearSelection();
-                                            }
-                                        }}>
-                                            {/* v3.14.0.v - Old start-of-column indicator removed; overlay handles it */}
-                                            {/* v4.16.0.d - Added filteredIndex for instance-based selection */}
-                                            {/* v4.16.0.e - Use pre-computed colFilteredBooks for performance */}
-                                            {colFilteredBooks.map((item, filteredIndex) => {
-                                                // v3.11.0 - Handle dividers
-                                                if (typeof item === 'object' && item.type === 'divider') {
-                                                    const isHovering = hoveringDivider && hoveringDivider.columnId === column.id && hoveringDivider.dividerId === item.id;
-                                                    const isEditing = editingDivider && editingDivider.columnId === column.id && editingDivider.dividerId === item.id;
-                                                    // v4.19.1 - Check both selectedDivider AND selectedBooks for divider selection
-                                                    const dividerActualIndex = column.books.findIndex(b => b && b.type === 'divider' && b.id === item.id);
-                                                    const dividerKey = `${column.id}:divider:${item.id}:${dividerActualIndex}`;
-                                                    const isSelected = (selectedDivider && selectedDivider.columnId === column.id && selectedDivider.dividerId === item.id) ||
-                                                                       selectedBooks.has(dividerKey);
-
-                                                    // v3.14.0.v - Old divider indicator code removed; overlay handles it
-
-                                                    return (
-                                                        <div key={item.id} className="col-span-3 relative">
-                                                            <div className={`flex items-center gap-2 py-2 px-3 my-1 rounded cursor-pointer divider-item ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
-                                                                 data-divider-id={item.id}
-                                                                 style={{ backgroundColor: isSelected ? '#dbeafe' : '#f3f4f6' }}
-                                                                 onClick={(e) => {
-                                                                     if (!isEditing) {
-                                                                         e.stopPropagation();
-                                                                         selectDividerGroup(column.id, item.id);
-                                                                     }
-                                                                 }}
-                                                                 onContextMenu={(e) => {
-                                                                     e.preventDefault();
-                                                                     e.stopPropagation();
-                                                                     setDividerContextMenu({
-                                                                         x: e.clientX,
-                                                                         y: e.clientY,
-                                                                         columnId: column.id,
-                                                                         dividerId: item.id,
-                                                                         divider: item
-                                                                     });
-                                                                 }}
-                                                                 onMouseEnter={() => setHoveringDivider({ columnId: column.id, dividerId: item.id })}
-                                                                 onMouseLeave={() => setHoveringDivider(null)}>
-                                                                {isHovering && (
-                                                                <span
-                                                                    className="text-gray-400 cursor-grab text-lg"
-                                                                    onMouseDown={(e) => handleDividerMouseDown(e, item, column.id)}
-                                                                    style={{ cursor: 'grab' }}>
-                                                                    ⋮
-                                                                </span>
-                                                            )}
-                                                            <div className="flex-1 text-center">
-                                                                {isEditing ? (
-                                                                    <input
-                                                                        type="text"
-                                                                        value={editingDividerLabel}
-                                                                        onChange={(e) => setEditingDividerLabel(e.target.value)}
-                                                                        onBlur={finishEditingDivider}
-                                                                        onKeyPress={(e) => {
-                                                                            if (e.key === 'Enter') finishEditingDivider();
-                                                                        }}
-                                                                        onKeyDown={(e) => {
-                                                                            if (e.key === 'Escape') {
-                                                                                setEditingDivider(null);
-                                                                                setEditingDividerLabel('');
-                                                                            }
-                                                                        }}
-                                                                        className="text-sm font-semibold text-gray-700 border-2 border-blue-500 rounded px-2 py-1 text-center"
-                                                                        autoFocus
-                                                                        onClick={(e) => e.stopPropagation()}
-                                                                    />
-                                                                ) : (
-                                                                    <span
-                                                                        className="text-sm font-semibold text-gray-700 cursor-pointer select-none"
-                                                                        onDoubleClick={() => startEditingDivider(column.id, item.id, item.label)}
-                                                                        title="Double-click to rename">
-                                                                        ═══ {item.label} ═══
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            {isHovering && (
-                                                                <button
-                                                                    onClick={() => deleteDivider(column.id, item.id)}
-                                                                    className="text-gray-400 hover:text-red-600 font-bold text-lg"
-                                                                    title="Delete divider">
-                                                                    ✕
-                                                                </button>
-                                                            )}
-                                                            </div>
-                                                            {/* v3.14.0.v - Old divider bottom indicator removed; overlay handles it */}
-                                                        </div>
-                                                    );
-                                                }
-
-                                                // Regular book rendering
-                                                const book = item;
-                                                // v4.16.0.d - Find actual index in column.books for instance-based selection
-                                                // v4.16.0.e - Use pre-computed colFilteredBooks for performance
-                                                // Need to find which occurrence this is (in case of duplicates in same column)
-                                                const filteredBooksBeforeThis = colFilteredBooks.slice(0, filteredIndex);
-                                                const sameBookCountBefore = filteredBooksBeforeThis.filter(b => b && b.id === book.id).length;
-                                                // Find the Nth occurrence of this bookId in column.books
-                                                // v4.16.0.y - Use getBookIdFromEntry to handle both legacy strings and GUID objects
-                                                let occurrenceCount = 0;
-                                                let actualIndex = -1;
-                                                for (let i = 0; i < column.books.length; i++) {
-                                                    if (getBookIdFromEntry(column.books[i]) === book.id) {
-                                                        if (occurrenceCount === sameBookCountBefore) {
-                                                            actualIndex = i;
-                                                            break;
-                                                        }
-                                                        occurrenceCount++;
-                                                    }
-                                                }
-
-                                                // v4.16.0.x - Per-instance hidden check
-                                                // GUID entries: check hiddenInstances Set using _instanceId from filteredBooks
-                                                // Legacy entries: check book.isHidden
-                                                const isInstanceHidden = book._instanceId
-                                                    ? hiddenInstances.has(book._instanceId)
-                                                    : book.isHidden;
-
-                                                return (
-                                                    <div key={`${book.id}-${actualIndex}`} className="relative book-item" data-book-id={book.id} data-index={actualIndex}>
-                                                        {/* v4.16.0.d - Use composite key with index for selection check */}
-                                                        {/* v4.16.0.f - Check clipboard sourcePositions for instance-specific visual */}
-                                                        {/* v4.16.0.x - Use isInstanceHidden for per-instance opacity */}
-                                                        {/* v4.16.0.ag - Dragging visual now instance-specific using column+index */}
-                                                        <div className={`book-clickable ${selectedBooks.has(`${column.id}:${book.id}:${actualIndex}`) ? 'selected' : ''} ${draggedBook?.id === book.id && isDragging && draggedFromColumn === column.id && draggedBookIndex === actualIndex ? 'dragging' : ''} ${book.onWishlist || isInstanceHidden ? 'opacity-40' : ''} ${clipboard?.sourcePositions?.some(pos => pos.columnId === column.id && pos.index === actualIndex && pos.bookId === book.id) ? (clipboard.type === 'cut' ? 'cut-pending' : 'copy-pending') : ''}`}
-                                                             onMouseDown={(e) => handleMouseDown(e, book, column.id, actualIndex)}
-                                                             onClick={(e) => {
-                                                                 e.stopPropagation();
-
-                                                                 if (isDragging) return;
-
-                                                                 // Always set active column when clicking a book
-                                                                 setActiveColumnId(column.id);
-
-                                                                 // v4.16.0.m - Capture book position for toast placement
-                                                                 const rect = e.currentTarget.getBoundingClientRect();
-                                                                 setToastPosition({
-                                                                     x: rect.left + rect.width / 2,
-                                                                     y: rect.top
-                                                                 });
-
-                                                                 if (e.ctrlKey || e.metaKey) {
-                                                                     // Ctrl+Click: Toggle selection
-                                                                     // v4.16.0.d - Pass actualIndex for instance-based selection
-                                                                     toggleBookSelection(book.id, column.id, actualIndex);
-                                                                     setLastClickedBook({ id: book.id, columnId: column.id, index: actualIndex });
-                                                                 } else if (e.shiftKey) {
-                                                                     // Shift+Click: Range selection
-                                                                     if (lastClickedBook && lastClickedBook.columnId === column.id) {
-                                                                         // Range from last clicked book to this book (same column)
-                                                                         selectBookRange(lastClickedBook.id, book.id, column.id, lastClickedBook.index, actualIndex);
-                                                                     } else {
-                                                                         // No anchor point or different column: treat as single click
-                                                                         clearSelection();
-                                                                         toggleBookSelection(book.id, column.id, actualIndex);
-                                                                         setLastClickedBook({ id: book.id, columnId: column.id, index: actualIndex });
-                                                                     }
-                                                                 } else {
-                                                                     // Single click: Select this book (replace selection)
-                                                                     clearSelection();
-                                                                     toggleBookSelection(book.id, column.id, actualIndex);
-                                                                     setLastClickedBook({ id: book.id, columnId: column.id, index: actualIndex });
-                                                                 }
-                                                             }}
-                                                             onDoubleClick={(e) => {
-                                                                 e.stopPropagation();
-                                                                 // Double-click: Open modal for all books
-                                                                 openBookModal(book, column.id);
-                                                             }}
-                                                             onContextMenu={(e) => {
-                                                                 e.preventDefault();
-                                                                 // Right-click: If book not in selection, select it first
-                                                                 // v4.16.0.d - Use composite key with index for selection check
-                                                                 if (!selectedBooks.has(`${column.id}:${book.id}:${actualIndex}`)) {
-                                                                     clearSelection();
-                                                                     toggleBookSelection(book.id, column.id, actualIndex);
-                                                                 }
-                                                                 // Show context menu
-                                                                 setContextMenu({
-                                                                     x: e.clientX,
-                                                                     y: e.clientY,
-                                                                     bookId: book.id,
-                                                                     columnId: column.id
-                                                                 });
-                                                             }}
-                                                             title={book.collections && book.collections.length > 0
-                                                                ? `Collections:\n${book.collections.map(c => c.name).join('\n')}`
-                                                                : '📭 No collections'}>
-                                                            <div className="relative">
-                                                                {blankImageBooks.has(book.id) ? (
-                                                                    <div className="w-full aspect-[2/3] rounded shadow-lg overflow-hidden flex flex-col"
-                                                                         style={{ backgroundColor: '#d4c5a9' }}>
-                                                                        <div className="flex-1 flex items-center justify-center px-4">
-                                                                            <div className="text-center">
-                                                                                <div className="text-xs font-serif font-bold text-gray-800 leading-tight mb-2">
-                                                                                    {book.title.length > 40 ? book.title.substring(0, 40) + '...' : book.title}
-                                                                                </div>
-                                                                                <div className="text-xs text-gray-600 mt-2">KINDLE EDITION</div>
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                ) : (
-                                                                    <img src={coverUrlMap[book.coverUrl] || book.coverUrl}
-                                                                         alt={book.title}
-                                                                         className="w-full rounded shadow-lg"
-                                                                         onLoad={(e) => checkIfBlankImage(e.target, book.id)}
-                                                                         onError={(e) => e.target.src = 'https://via.placeholder.com/128x192/4f46e5/fff?text=No+Cover'} />
-                                                                )}
-                                                                {/* Top-right: Rating badge */}
-                                                                {book.rating > 0 && (
-                                                                    <div className="absolute top-1 right-1 bg-black bg-opacity-75 rounded px-1.5 py-0.5 text-xs font-bold text-yellow-400">
-                                                                        ★ {book.rating.toFixed(1)}
-                                                                    </div>
-                                                                )}
-                                                                {/* Bottom-right: Read status checkmark */}
-                                                                {book.readStatus === 'READ' && (
-                                                                    <div className="absolute bottom-1 right-1 bg-green-600 rounded-full w-6 h-6 flex items-center justify-center" title="Read">
-                                                                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-                                                                        </svg>
-                                                                    </div>
-                                                                )}
-                                                                {/* Bottom-left: Price tag (any book with price) or Ownership badge (non-purchased owned) */}
-                                                                {book.currentPrice != null ? (
-                                                                    <div
-                                                                        className={`absolute bottom-1 left-1 ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'bg-green-500' : 'bg-gray-500'} bg-opacity-90 text-xs font-bold text-white`}
-                                                                        style={{
-                                                                            clipPath: 'polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%)',
-                                                                            padding: '3px 14px 3px 6px'
-                                                                        }}
-                                                                        title={book.priceTrigger ? `Goal: $${book.priceTrigger.toFixed(2)} or less` : 'Current price'}
-                                                                    >
-                                                                        ${book.currentPrice.toFixed(2)}
-                                                                    </div>
-                                                                ) : book.ownershipType && book.ownershipType !== 'purchased' && (() => {
-                                                                    const badgeConfig = {
-                                                                        sample: { bg: 'bg-amber-500', text: 'SAMPLE' },
-                                                                        borrowed: { bg: 'bg-teal-500', text: 'BORROWED' },
-                                                                        prime: { bg: 'bg-purple-500', text: 'PRIME' },
-                                                                        kindleUnlimited: { bg: 'bg-purple-500', text: 'KU' },
-                                                                        koll: { bg: 'bg-purple-500', text: 'KOLL' },
-                                                                        comixology: { bg: 'bg-purple-500', text: 'COMIX' },
-                                                                        unknown: { bg: 'bg-gray-500', text: '?' }
-                                                                    };
-                                                                    const config = badgeConfig[book.ownershipType];
-                                                                    return config ? (
-                                                                        <div className={`absolute bottom-1 left-1 ${config.bg} bg-opacity-90 rounded px-1.5 py-0.5 text-xs font-bold text-white`}>
-                                                                            {config.text}
-                                                                        </div>
-                                                                    ) : null;
-                                                                })()}
-                                                                {/* Top-left: Selection or Collections badge */}
-                                                                {/* v4.16.0.d - Use composite key with index for selection check */}
-                                                                {selectedBooks.has(`${column.id}:${book.id}:${actualIndex}`) ? (
-                                                                    <div className="absolute top-1 left-1 bg-blue-700 rounded-full w-6 h-6 flex items-center justify-center z-10">
-                                                                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
-                                                                        </svg>
-                                                                    </div>
-                                                                ) : book.collections && book.collections.length > 0 && (
-                                                                    <div className="absolute top-1 left-1 bg-gray-700 bg-opacity-75 rounded px-1.5 py-0.5 text-xs font-bold text-white">
-                                                                        📁 {book.collections.length}
-                                                                    </div>
-                                                                )}
-                                                                {/* Hidden book overlay (v4.1.0.d, v4.1.0.e larger, v4.16.0.x per-instance) */}
-                                                                {isInstanceHidden && showHidden && (
-                                                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                                                        <span style={{ fontSize: '90px', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}>🚫</span>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div className="mt-2 text-xs">
-                                                                <div className="font-medium text-gray-800 leading-tight line-clamp-2" title={book.title}>
-                                                                    {book.title}
-                                                                </div>
-                                                                <div className="text-gray-600 mt-1 leading-tight line-clamp-1" title={book.author}>
-                                                                    {book.author}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                            {/* v3.14.0.v - Old fallback indicator removed; overlay handles all cases */}
-                                        </div>
-                                    </div>
-                                    {isDraggingColumn && columnDropTarget === colIndex + 1 && draggedColumn !== column.id && (
-                                        <div className="column-drop-indicator" style={{ right: '-8px' }} />
-                                    )}
-                                </div>
-                            ))}
-                            {/* v4.12.0.b - Floating Add Column button removed; use column dropdown menu instead */}
-                        </div>
-                    </div>
-                    )}
-
-                    {/* v5.0.0 - Book Explorer view */}
-                    {viewMode === 'explorer' && (
-                        <div className="flex-1 min-h-0 flex mb-6">
-                            {/* Left pane: Folder tree */}
+                    {/* v5.0.0 - Book Explorer view (always rendered) */}
+                    <div className="flex-1 min-h-0 flex mb-6">
+                        {/* Left pane: Folder tree */}
                             {/* v5.0.0-alpha.49 - onDragOver prevents browser "split view" prompt */}
                             {/* v5.0.0-alpha.91 - Resizable left pane */}
                             {/* v5.0.0-alpha.95 - Sticky header and virtual folders */}
@@ -11437,7 +10967,6 @@
                                 </div>
                             </div>
                         </div>
-                    )}
 
                     {/* v4.16.0.n - Removed floating selection box, now shown in footer */}
 

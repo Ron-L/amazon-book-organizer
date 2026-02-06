@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Fixed production app loading v4 Column App due to localStorage persistence
+- Removed viewMode entirely - app now always renders Book Explorer mode
+- Deleted all v4 Column App code (~470 lines removed)
+- Cleaned up viewMode references from localStorage, backup/restore, and keyboard shortcuts
+
 ## [5.0.1] - 2026-02-05
 
 ### Fixed
