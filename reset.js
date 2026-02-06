@@ -1,6 +1,6 @@
 // reset.js - Emergency reset functionality for ReaderWrangler
 // Clears all app data (localStorage + IndexedDB) and redirects to main app
-// v5.0.10-alpha.1
+// v5.0.10
 
 // LocalStorage keys to clear (from uiHelpers.js)
 const STORAGE_KEYS = [

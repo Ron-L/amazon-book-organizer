@@ -6,20 +6,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 🎯 Priority 0: Bug
-
-**1. Create standalone reset page**
-   - **File:** reset.html (minimal standalone page)
-   - **File:** reset.js (reset logic)
-   - **URL:** readerwrangler.com/reset.html
-   - **Purpose:** Emergency recovery when main app won't load (mobile, corrupted state)
-   - **Button:** "Reset App" - clears all localStorage + IndexedDB
-   - **Warning:** Same text as File → Reset App dialog
-   - **Flow:** reset.html → Click button → Auto-redirect to readerwrangler.html → Import backup
-   - **Clear:** localStorage keys: readerwrangler-books, readerwrangler-cover-cache, readerwrangler-status, readwrangler-explorer, readerwrangler-folders
-   - **Clear:** IndexedDB: ReaderWranglerDB
-   - **Why:** Mobile devices can't access dev tools; corrupted state blocks app load
-
 ### 🎯 Priority 1: Current Focus
 
 **1. Wizard Mode**
