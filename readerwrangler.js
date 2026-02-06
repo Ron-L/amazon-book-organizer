@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.8";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.9-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2445,14 +2445,7 @@
                             if (parsedData.isBackup === true) {
                                 // Backup file - prompt user before restoring
                                 const confirmed = window.confirm(
-                                    'This will restore your backup and regenerate amazon-library.json\n\n' +
-                                    '✓ Restore all books and folders from backup\n' +
-                                    '✓ Restore all tags, ratings, and notes\n' +
-                                    '✓ Replace your current organization\n' +
-                                    '✗ Merge with current data (everything is replaced)\n\n' +
-                                    '⚠️ Important: When prompted, replace your existing amazon-library.json file.\n' +
-                                    'Do not save as amazon-library(1).json or you\'ll lose sync with the app.\n\n' +
-                                    'Continue with restore?'
+                                    'Restore backup?\n\nThis will replace your current organization with the organization from the backup file.'
                                 );
                                 if (!confirmed) {
                                     console.log('📋 Backup restore cancelled by user');
