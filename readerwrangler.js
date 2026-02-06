@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.7";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.8-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.8-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9773,11 +9773,11 @@
                                             {explorerSort[0].column !== 'custom' && (
                                                 <>
                                                     {(() => {
-                                                        const isReadOnlyView = selectedFolderId === '__all__' || selectedFolderId === '__library__';
-                                                        const viewName = selectedFolderId === '__all__' ? 'All Books' :
-                                                                        selectedFolderId === '__library__' ? 'My Library' : '';
+                                                        // v5.0.8 - Only All Books blocks manual ordering (books can't be reordered)
+                                                        // My Library allows folder reordering in manual mode
+                                                        const isReadOnlyView = selectedFolderId === '__all__';
                                                         const tooltipText = isReadOnlyView
-                                                            ? `${viewName} is a read-only view - no manual ordering`
+                                                            ? 'All Books is a read-only view - no manual ordering'
                                                             : 'Return to Manual Order';
 
                                                         return (
@@ -10103,6 +10103,7 @@
                                                     }
 
                                                     // v5.0.0-alpha.88 - Allow folder reordering in My Library (Inbox protected by isDraggable=false)
+                                                    // v5.0.8 - Folders CAN be reordered in My Library (unlike books), just not in All Books
                                                     const canReorderFolders = explorerSort[0].column === 'custom' &&
                                                         selectedFolderId !== '__all__';
                                                     const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
@@ -10218,8 +10219,10 @@
                                                                                     // v5.0.0-alpha.90 - Pass folder.id and position (not visual index)
                                                                                     reorderFoldersInParent(parentForReorder, dragData.folderIds, folder.id, target.position);
                                                                                 }
+                                                                            } else if (selectedFolderId === '__all__') {
+                                                                                showToast("Folder reordering not available in All Books", e.clientX, e.clientY);
                                                                             } else {
-                                                                                showToast("Switch to Manual Order to reorder folders", e.clientX, e.clientY);
+                                                                                showToast("Change sort to Manual Order to reorder folders", e.clientX, e.clientY);
                                                                             }
                                                                         }
                                                                     } catch (err) {
@@ -10802,8 +10805,10 @@
                                                                             // v5.0.0-alpha.90 - Pass folder.id and position (not visual index)
                                                                             reorderFoldersInParent(parentForReorder, dragData.folderIds, folder.id, target.position);
                                                                         }
+                                                                    } else if (selectedFolderId === '__all__') {
+                                                                        showToast("Folder reordering not available in All Books", e.clientX, e.clientY);
                                                                     } else {
-                                                                        showToast("Switch to Manual Order to reorder folders", e.clientX, e.clientY);
+                                                                        showToast("Change sort to Manual Order to reorder folders", e.clientX, e.clientY);
                                                                     }
                                                                 }
                                                             } catch (err) {
