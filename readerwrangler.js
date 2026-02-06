@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.8";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.8";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.9-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -104,6 +104,116 @@
                 overlay.appendChild(dialog);
 
                 // Show dialog
+                document.body.appendChild(overlay);
+            });
+        }
+
+        // v5.0.9 - Custom dialog for backup restore completion
+        function showBackupRestoredDialog(bookCount) {
+            return new Promise((resolve) => {
+                // Create overlay
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                `;
+
+                // Create dialog
+                const dialog = document.createElement('div');
+                dialog.style.cssText = `
+                    background: white;
+                    border-radius: 8px;
+                    padding: 24px;
+                    max-width: 500px;
+                    width: 90%;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                `;
+
+                // Create content
+                dialog.innerHTML = `
+                    <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #28a745;">
+                        ✓ Backup Restored (${bookCount} books)
+                    </h2>
+                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #333;">
+                        Next: Update your library file
+                    </h3>
+                    <div style="margin-bottom: 16px; font-size: 14px; line-height: 1.6; color: #555;">
+                        <p style="margin: 0 0 8px 0; font-weight: 500;">When the save dialog appears:</p>
+                        <div style="margin-left: 8px;">
+                            <div style="margin: 4px 0;">✓ Keep filename: <strong>amazon-library.json</strong></div>
+                            <div style="margin: 4px 0;">✓ Replace existing file</div>
+                            <div style="margin: 4px 0;">✗ Don't save as <strong>amazon-library(1).json</strong></div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 20px; padding: 12px; background: #e7f3ff; border-left: 3px solid #007bff; font-size: 13px; color: #555;">
+                        💡 This keeps your bookmarklet in sync
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button id="whyReplaceBtn" style="background: transparent; color: #007bff; border: 1px solid #007bff; border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;">
+                            ? Why replace?
+                        </button>
+                        <button id="cancelBtn" style="background: #6c757d; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;">
+                            Cancel
+                        </button>
+                        <button id="saveBtn" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                            Save File
+                        </button>
+                    </div>
+                `;
+
+                // Add button hover effects and handlers
+                const whyBtn = dialog.querySelector('#whyReplaceBtn');
+                const cancelBtn = dialog.querySelector('#cancelBtn');
+                const saveBtn = dialog.querySelector('#saveBtn');
+
+                whyBtn.onmouseover = () => whyBtn.style.background = '#e7f3ff';
+                whyBtn.onmouseout = () => whyBtn.style.background = 'transparent';
+
+                cancelBtn.onmouseover = () => cancelBtn.style.background = '#5a6268';
+                cancelBtn.onmouseout = () => cancelBtn.style.background = '#6c757d';
+
+                saveBtn.onmouseover = () => saveBtn.style.background = '#218838';
+                saveBtn.onmouseout = () => saveBtn.style.background = '#28a745';
+
+                // Why replace? button - show help popup
+                whyBtn.onclick = () => {
+                    showInfoDialog(
+                        'Why replace the file?',
+                        `Your backup contains:\n` +
+                        `• Library data (from amazon-library.json)\n` +
+                        `• Your organization (folders, tags, notes)\n\n` +
+                        `When restored:\n` +
+                        `1. ✓ Organization is loaded\n` +
+                        `2. → Library file needs updating\n\n` +
+                        `If you skip this or save as (1):\n` +
+                        `• Next bookmarklet use will load old data\n` +
+                        `• Your organization will disappear`
+                    );
+                };
+
+                // Cancel button - close without saving
+                cancelBtn.onclick = () => {
+                    document.body.removeChild(overlay);
+                    resolve(false);
+                };
+
+                // Save File button - proceed with download
+                saveBtn.onclick = () => {
+                    document.body.removeChild(overlay);
+                    resolve(true);
+                };
+
+                // Assemble and show
+                overlay.appendChild(dialog);
                 document.body.appendChild(overlay);
             });
         }
@@ -3237,30 +3347,21 @@
                         };
                     }
 
-                    // Show GUI notification FIRST (before file picker appears) - v5.0.0-alpha.130
-                    await showInfoDialog(
-                        '✅ Backup Restored!',
-                        `📥 Library file regenerated (${mergedBooks.length} books)\n\n` +
-                        `⚠️ IMPORTANT: Replace your existing amazon-library.json file\n\n` +
-                        `When the save dialog appears:\n` +
-                        `   • Navigate to where you keep amazon-library.json\n` +
-                        `   • If browser suggests "amazon-library (1).json",\n` +
-                        `     change it back to "amazon-library.json"\n` +
-                        `   • Save to replace the existing file\n\n` +
-                        `💡 Why this matters:\n\n` +
-                        `This regenerated file contains ALL your books (owned + wishlist). ` +
-                        `Using it for future Library Fetcher runs ensures ALL your books get updated, ` +
-                        `preventing stale data for wishlist items.`
-                    );
+                    // v5.0.9 - Show custom restore completion dialog
+                    const shouldSave = await showBackupRestoredDialog(mergedBooks.length);
 
-                    // Trigger download AFTER user acknowledges
-                    const blob = new Blob([JSON.stringify(libraryData, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'amazon-library.json';
-                    a.click();
-                    URL.revokeObjectURL(url);
+                    // Only trigger download if user clicked "Save File"
+                    if (shouldSave) {
+                        const blob = new Blob([JSON.stringify(libraryData, null, 2)], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'amazon-library.json';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    } else {
+                        console.log('⚠️ User cancelled library file download');
+                    }
 
                     // Show helpful guidance (console backup)
                     console.log('\n========================================');
