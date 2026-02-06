@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.4";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.5-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -197,7 +197,6 @@
             const [contextSubmenu, setContextSubmenu] = useState(null); // v4.16.0.ba - 'move' | 'copyTo' | 'priceGoal' | null for submenu hover
             const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
             const [ratingFilter, setRatingFilter] = useState(''); // Filter by minimum rating (NEW v3.8.0)
-            const [wishlistFilter, setWishlistFilter] = useState(''); // Filter by wishlist status: '' | 'owned' | 'wishlist' (NEW v3.8.0)
             const [dealsFilterActive, setDealsFilterActive] = useState(false); // v4.17.0.j - Deals filter toggle
             const [ownershipFilter, setOwnershipFilter] = useState(''); // Filter by ownership type (NEW v4.9.0)
             const [seriesFilter, setSeriesFilter] = useState(''); // Filter by series name or "NOT_IN_SERIES" (NEW v3.8.0.k)
@@ -444,11 +443,6 @@
                 // Rating filter
                 const matchesRating = !ratingFilter || (book.rating >= parseFloat(ratingFilter));
 
-                // Wishlist filter
-                const matchesWishlist = !wishlistFilter ||
-                    (wishlistFilter === 'wishlist' && book.onWishlist) ||
-                    (wishlistFilter === 'owned' && !book.onWishlist);
-
                 // Ownership type filter (v5.0.4 - wishlist checks both fields for backward compatibility)
                 const matchesOwnership = !ownershipFilter ||
                     (ownershipFilter === 'wishlist'
@@ -505,7 +499,7 @@
                 }
 
                 return matchesSearch && matchesReadStatus && matchesCollection && matchesCollections && matchesAmazonRating &&
-                    matchesMyRating && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries &&
+                    matchesMyRating && matchesRating && matchesOwnership && matchesHidden && matchesSeries &&
                     matchesSeriesMulti && matchesDateRange && matchesDeals && matchesTags;
             };
 
@@ -932,7 +926,6 @@
                         if (filters.readStatusFilter !== undefined) setReadStatusFilter(filters.readStatusFilter);
                         if (filters.collectionFilter !== undefined) setCollectionFilter(filters.collectionFilter);
                         if (filters.ratingFilter !== undefined) setRatingFilter(filters.ratingFilter);
-                        if (filters.wishlistFilter !== undefined) setWishlistFilter(filters.wishlistFilter);
                         if (filters.ownershipFilter !== undefined) setOwnershipFilter(filters.ownershipFilter);
                         if (filters.seriesFilter !== undefined) setSeriesFilter(filters.seriesFilter);
                         if (filters.showHidden !== undefined) setShowHidden(filters.showHidden);
@@ -994,7 +987,6 @@
                         readStatusFilter,
                         collectionFilter,
                         ratingFilter,
-                        wishlistFilter,
                         ownershipFilter,
                         seriesFilter,
                         datePreset,  // v4.15.6: Save preset instead of raw dates (except for custom)
@@ -1011,7 +1003,7 @@
                 } catch (e) {
                     console.error('Failed to save filters to localStorage:', e);
                 }
-            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden, tagFilter, selectedCollections, minAmazonRating, minMyRating, selectedSeries]);
+            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden, tagFilter, selectedCollections, minAmazonRating, minMyRating, selectedSeries]);
 
             // Compute dateFrom/dateTo from datePreset selection (v4.15.6)
             React.useEffect(() => {
@@ -3306,7 +3298,6 @@
                     readStatusFilter: '',
                     collectionFilter: '',
                     ratingFilter: '',
-                    wishlistFilter: '',
                     ownershipFilter: '',
                     seriesFilter: '',
                     dateFrom: '',
@@ -6052,7 +6043,7 @@
             const filteredBooks = (bookIds) => {
                 // Check if any filter is active (needed inside function scope for divider hiding)
                 const filtersActive = !!(searchTerm || readStatusFilter || collectionFilter ||
-                    ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo || dealsFilterActive ||
+                    ratingFilter || ownershipFilter || seriesFilter || dateFrom || dateTo || dealsFilterActive ||
                     (tagFilter && tagFilter.length > 0));
 
                 // v4.27.0 - Track current divider tags for inheritance during map
@@ -6100,11 +6091,6 @@
 
                     // Rating filter (NEW v3.8.0)
                     const matchesRating = !ratingFilter || (book.rating >= parseFloat(ratingFilter));
-
-                    // Wishlist filter (NEW v3.8.0, v4.18.0.a - onWishlist replaces isWishlist)
-                    const matchesWishlist = !wishlistFilter ||
-                        (wishlistFilter === 'wishlist' && book.onWishlist) ||
-                        (wishlistFilter === 'owned' && !book.onWishlist);
 
                     // Ownership type filter (v4.9.0, v5.0.4 - wishlist checks both fields)
                     const matchesOwnership = !ownershipFilter ||
@@ -6163,7 +6149,7 @@
                     const inheritedMatch = book._inheritedTags && book._inheritedTags.some(tag => tagFilter.includes(tag));
                     const matchesTags = !tagFilter || tagFilter.length === 0 || explicitMatch || inheritedMatch;
 
-                    return matchesSearch && matchesReadStatus && matchesCollection && matchesRating && matchesWishlist && matchesOwnership && matchesHidden && matchesSeries && matchesDateRange && matchesDeals && matchesTags;
+                    return matchesSearch && matchesReadStatus && matchesCollection && matchesRating && matchesOwnership && matchesHidden && matchesSeries && matchesDateRange && matchesDeals && matchesTags;
                 });
 
                 // v4.15.3 - Post-process: hide dividers with no books under them when filters active
@@ -6203,7 +6189,7 @@
 
             // v4.16.0.a - Check if any filter is active (for hiding empty columns/dividers)
             const hasActiveFilters = !!(searchTerm || readStatusFilter || collectionFilter ||
-                ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || dateFrom || dateTo ||
+                ratingFilter || ownershipFilter || seriesFilter || dateFrom || dateTo ||
                 (tagFilter && tagFilter.length > 0));
 
             // v5.0.0-alpha.169 - Filtered Folder View: Save/restore expansion state when filters change
@@ -6253,7 +6239,7 @@
             // v5.0.0-alpha.169 - Reset "show all" override when any filter changes
             useEffect(() => {
                 setShowAllFoldersOverride(false);
-            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, wishlistFilter,
+            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter,
                 ownershipFilter, seriesFilter, dateFrom, dateTo, tagFilter, dealsFilterActive]);
 
             // Calculate combined urgency from Library and Collections status
@@ -6934,14 +6920,6 @@
                                     });
                                 }
 
-                                // Wishlist filter
-                                if (wishlistFilter) {
-                                    filtered = filtered.filter(book => {
-                                        const isWishlist = book.owned === 'No';
-                                        return wishlistFilter === 'wishlist' ? isWishlist : !isWishlist;
-                                    });
-                                }
-
                                 // Ownership filter
                                 if (ownershipFilter) {
                                     filtered = filtered.filter(book => {
@@ -7529,19 +7507,17 @@
                     {/* v5.0.0-alpha.175.47 - Phase 7: Old filter panel removed (replaced by toolbar in Phases 3-6) */}
 
                     {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel, v4.15.6.m - use datePreset, v4.27.0 - add tagFilter, v5.0.0-alpha.175.41 - add selectedCollections, v5.0.0-alpha.175.42 - add minAmazonRating, v5.0.0-alpha.175.43 - add minMyRating, v5.0.0-alpha.175.44 - add selectedSeries, v5.0.0-alpha.175.47 - restored after Phase 7 cleanup, v5.0.0-alpha.175.49.2 - Clear All button floats near filters instead of far right) */}
-                    {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || ownershipFilter || seriesFilter || datePreset || (tagFilter && tagFilter.length > 0) || selectedCollections.length > 0 || minAmazonRating || minMyRating || selectedSeries.length > 0) && (
+                    {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || ownershipFilter || seriesFilter || datePreset || (tagFilter && tagFilter.length > 0) || selectedCollections.length > 0 || minAmazonRating || minMyRating || selectedSeries.length > 0) && (
                         <div className="bg-blue-100 border border-blue-300 rounded-lg px-4 py-2 mb-4 flex items-center gap-2 flex-wrap text-sm">
                             <span className="font-semibold">🔍 Active:</span>
                                 {searchTerm && <span>Search: "{searchTerm}"</span>}
-                                {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {readStatusFilter && <span>Read: {readStatusFilter}</span>}
-                                {readStatusFilter && (collectionFilter || ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {readStatusFilter && (collectionFilter || ratingFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {collectionFilter && <span>Collection: {collectionFilter === 'UNCOLLECTED' ? 'Uncollected' : collectionFilter}</span>}
-                                {collectionFilter && (ratingFilter || wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {collectionFilter && (ratingFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {ratingFilter && <span>Rating: {ratingFilter}+★</span>}
-                                {ratingFilter && (wishlistFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
-                                {wishlistFilter && <span>Wishlist: {wishlistFilter === 'owned' ? 'Owned Only' : 'Wishlist Only'}</span>}
-                                {wishlistFilter && (ownershipFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
+                                {ratingFilter && (ownershipFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
                                 {ownershipFilter && (seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {seriesFilter && <span>Series: {seriesFilter === 'NOT_IN_SERIES' ? 'Not in Series' : seriesFilter}</span>}
