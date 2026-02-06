@@ -39,8 +39,9 @@ Field names change at certain boundaries. This document maps those transformatio
   series: "Series Name",
   seriesNum: "1",
   collections: ["Collection 1", "Collection 2"],
-  owned: "Yes",                   // "Yes" or "No" (wishlist)
-  ownershipType: "purchased",     // purchased|sample|borrowed|prime|kindleUnlimited|koll|comixology
+  owned: "Yes",                   // "Yes" or "No" (wishlist) - from Amazon fetcher
+  ownershipType: "purchased",     // wishlist|purchased|sample|borrowed|prime|kindleUnlimited|koll|comixology
+  onWishlist: false,              // Boolean flag (true for wishlist books) - v5.0.4: Source filter checks both ownershipType and onWishlist
   purchaseDate: "2024-01-15",
 
   // User metadata (preserved across imports)
@@ -412,6 +413,7 @@ organization: {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 5.0.4 | 2026-02-05 | Added 'wishlist' to ownershipType enum; documented onWishlist field; Source filter checks both fields for backward compatibility |
 | 5.0.0-alpha.175.31 | 2026-02-04 | Added myRating field (Phase 4.5) |
 | 5.0.0-alpha.175.20 | 2026-02-04 | Fixed note/userNote field name mismatch |
 | 5.0.0-alpha.175.17 | 2026-02-04 | Added tagRegistry to backup/restore |

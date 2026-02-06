@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.3";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.4-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -449,9 +449,11 @@
                     (wishlistFilter === 'wishlist' && book.onWishlist) ||
                     (wishlistFilter === 'owned' && !book.onWishlist);
 
-                // Ownership type filter
+                // Ownership type filter (v5.0.4 - wishlist checks both fields for backward compatibility)
                 const matchesOwnership = !ownershipFilter ||
-                    (book.ownershipType || 'purchased') === ownershipFilter;
+                    (ownershipFilter === 'wishlist'
+                        ? (book.onWishlist || book.ownershipType === 'wishlist')
+                        : (book.ownershipType || 'purchased') === ownershipFilter);
 
                 // Hidden filter (book-level for Explorer)
                 const matchesHidden = showHidden || !book.isHidden;
@@ -6104,9 +6106,11 @@
                         (wishlistFilter === 'wishlist' && book.onWishlist) ||
                         (wishlistFilter === 'owned' && !book.onWishlist);
 
-                    // Ownership type filter (NEW v4.9.0)
+                    // Ownership type filter (v4.9.0, v5.0.4 - wishlist checks both fields)
                     const matchesOwnership = !ownershipFilter ||
-                        (book.ownershipType || 'purchased') === ownershipFilter;
+                        (ownershipFilter === 'wishlist'
+                            ? (book.onWishlist || book.ownershipType === 'wishlist')
+                            : (book.ownershipType || 'purchased') === ownershipFilter);
 
                     // Hidden filter (v4.1.0.d, v4.16.0.s - per-instance hidden support)
                     // New format: check hiddenInstances Set by instanceId
@@ -6768,6 +6772,7 @@
                                 {ownershipFilter ?
                                     (() => {
                                         const labels = {
+                                            'wishlist': 'Wishlist',
                                             'purchased': 'Purchased',
                                             'sample': 'Sample',
                                             'borrowed': 'Borrowed',
@@ -6807,6 +6812,7 @@
                                         All Types
                                     </div>
                                     {[
+                                        { value: 'wishlist', label: 'Wishlist' },
                                         { value: 'purchased', label: 'Purchased' },
                                         { value: 'sample', label: 'Sample' },
                                         { value: 'borrowed', label: 'Borrowed' },
