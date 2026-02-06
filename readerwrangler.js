@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.5";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.5";  // Build version for this file
+        const ORGANIZER_VERSION = "5.0.6-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10443,7 +10443,11 @@
                                                                 if (explorerReorderTarget === index) {
                                                                     styles.borderTop = `3px solid ${explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}`;
                                                                 }
-                                                                // v5.0.0-alpha.168 - Cut book visual feedback
+                                                                // v5.0.6 - Hidden book visual feedback (check both current and legacy formats)
+                                                                if (hiddenInstances.has(book._instanceId) || book.isHidden) {
+                                                                    styles.opacity = 0.4;
+                                                                }
+                                                                // v5.0.0-alpha.168 - Cut book visual feedback (takes precedence over hidden)
                                                                 if (clipboard?.type === 'cut' && clipboard?.bookIds?.includes(book.id)) {
                                                                     styles.opacity = 0.5;
                                                                 }
@@ -10572,7 +10576,13 @@
                                                                 </div>
                                                             </td>
                                                             <td className="p-2">
-                                                                <img src={book.coverUrl} alt="" className={`h-12 object-contain rounded ${book.onWishlist ? 'opacity-40' : ''}`} style={{ minWidth: '32px', maxWidth: '48px' }} />
+                                                                <div className="relative" style={{ minWidth: '32px', maxWidth: '48px' }}>
+                                                                    <img src={book.coverUrl} alt="" className={`h-12 object-contain rounded ${book.onWishlist ? 'opacity-40' : ''}`} />
+                                                                    {/* v5.0.6 - Hidden book overlay */}
+                                                                    {(hiddenInstances.has(book._instanceId) || book.isHidden) && (
+                                                                        <div className="absolute inset-0 flex items-center justify-center text-2xl pointer-events-none">🚫</div>
+                                                                    )}
+                                                                </div>
                                                             </td>
                                                             {/* v5.0.0-alpha.172.1 - Dynamic column cells with inline JSX (performance fix) */}
                                                             {columnOrder.filter(colKey => colKey === 'title' || visibleColumns[colKey]).map(colKey => {
@@ -10891,7 +10901,11 @@
                                                                 styles.outline = `3px solid ${explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}`;
                                                                 styles.outlineOffset = '2px';
                                                             }
-                                                            // v5.0.0-alpha.168 - Cut book visual feedback
+                                                            // v5.0.6 - Hidden book visual feedback (check both current and legacy formats)
+                                                            if (hiddenInstances.has(book._instanceId) || book.isHidden) {
+                                                                styles.opacity = 0.4;
+                                                            }
+                                                            // v5.0.0-alpha.168 - Cut book visual feedback (takes precedence over hidden)
                                                             if (clipboard?.type === 'cut' && clipboard?.bookIds?.includes(book.id)) {
                                                                 styles.opacity = 0.5;
                                                             }
@@ -10992,7 +11006,13 @@
                                                             });
                                                         }}
                                                         onDoubleClick={() => openBookModal(book, null)}>
-                                                        <img src={book.coverUrl} alt={book.title} className={`w-full h-auto rounded shadow ${book.onWishlist ? 'opacity-40' : ''}`} />
+                                                        <div className="relative">
+                                                            <img src={book.coverUrl} alt={book.title} className={`w-full h-auto rounded shadow ${book.onWishlist ? 'opacity-40' : ''}`} />
+                                                            {/* v5.0.6 - Hidden book overlay */}
+                                                            {(hiddenInstances.has(book._instanceId) || book.isHidden) && (
+                                                                <div className="absolute inset-0 flex items-center justify-center text-4xl pointer-events-none">🚫</div>
+                                                            )}
+                                                        </div>
                                                         <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
                                                     </div>
                                                 ));
