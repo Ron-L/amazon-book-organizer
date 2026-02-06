@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.6] - 2026-02-05
+
+### Fixed
+- Restored hidden book visual styling (lost in v5.0.0 refactoring)
+- Hidden books now display with 40% opacity + centered 🚫 emoji overlay
+- Works in both List view (text-2xl emoji on thumbnail) and Cover view (text-8xl emoji on full cover)
+- Dual-format compatibility checks both hiddenInstances (current) and book.isHidden (legacy)
+
 ## [5.0.5] - 2026-02-05
 
 ### Changed
