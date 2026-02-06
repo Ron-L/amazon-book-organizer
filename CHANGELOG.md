@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.10-alpha.1] - 2026-02-06
+
+### Added
+- Emergency reset page (reset.html) for recovery when main app won't load
+- Standalone reset functionality accessible when corrupted state blocks app initialization
+- Clears all localStorage keys and IndexedDB to restore app to fresh state
+- Browser-native confirm() dialog prevents accidental resets
+- Success message with auto-redirect to main app after 3 seconds
+- Link to reset page added to index.html footer (unintrusive, gray text)
+- Clear recovery instructions explaining backup vs library file restoration paths
+
+### Technical
+- New file: reset.html - Standalone page with Tailwind CSS styling
+- New file: reset.js - Reset logic (clears 7 localStorage keys + ReaderWranglerDB)
+- Clears: readerwrangler-state, readerwrangler-enriched-cache, readerwrangler-settings, readerwrangler-status, readerwrangler-filters, readerwrangler-explorer, readerwrangler-folders
+- IndexedDB deletion with blocked state handling (resolves when other tabs close)
+- Recovery text distinguishes between importing backup (everything) vs amazon-library.json (books only)
+
 ## [5.0.9] - 2026-02-06
 
 ### Changed
