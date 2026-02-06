@@ -7,10 +7,8 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 ---
 
 ### 🎯 Priority 0: Bug
-**1. Hidden Books**
-   * Hidden books should show grayed out with red circle/slash
 
-**2. Make left pane sortable?**
+**1. Make left pane sortable?**
    - discuss with UX expert
 
 **4. Need URL to reset**

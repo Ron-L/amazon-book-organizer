@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.0.7] - 2026-02-05
+
+### Fixed
+- Fixed backup import error "setWishlistFilter is not defined"
+- Removed 3 remaining setWishlistFilter() calls missed in v5.0.5 cleanup
+- Affects: Reset All Data, Import Backup, and Clear Filters button
+
 ## [5.0.6] - 2026-02-05
 
 ### Fixed
