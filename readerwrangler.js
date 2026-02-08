@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -287,6 +287,8 @@
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
+            const [wizardSourceFolder, setWizardSourceFolder] = useState('__inbox__'); // v5.1.0 - Wizard source folder selection
+            const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0 - Wizard minimum books threshold
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
@@ -7870,6 +7872,73 @@
                                     </div>
                                     <div className="text-sm text-gray-600">
                                         <p>For detailed instructions, see the User Guide documentation.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* v5.1.0-alpha.3 - Auto-Organize Wizard Modal */}
+                    {wizardModalOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setWizardModalOpen(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
+                                    <h2 className="text-xl font-bold text-gray-900">🪄 Auto-Organize by Author</h2>
+                                    <button onClick={() => setWizardModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    {/* Configuration options */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Source Folder</label>
+                                            <select
+                                                value={wizardSourceFolder}
+                                                onChange={(e) => setWizardSourceFolder(e.target.value)}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <option value="__inbox__">Inbox</option>
+                                                <option value="__all__">All Books</option>
+                                                {folders.filter(f => f.parentId === null).map(folder => (
+                                                    <option key={folder.id} value={folder.id}>{folder.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Minimum Books per Author</label>
+                                            <select
+                                                value={wizardMinBooks}
+                                                onChange={(e) => setWizardMinBooks(parseInt(e.target.value))}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                                <option value="3">3 books</option>
+                                                <option value="5">5 books</option>
+                                                <option value="10">10 books</option>
+                                                <option value="15">15 books</option>
+                                                <option value="20">20 books</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Author list placeholder */}
+                                    <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 min-h-64">
+                                        <p className="text-gray-500 text-center">Author list will appear here</p>
+                                        <p className="text-gray-400 text-sm text-center mt-2">(Phase 1.3: Author detection algorithm)</p>
+                                    </div>
+
+                                    {/* Action buttons */}
+                                    <div className="flex justify-end gap-3 pt-2">
+                                        <button
+                                            onClick={() => setWizardModalOpen(false)}
+                                            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                // Placeholder for Phase 1.5
+                                                console.log('[WIZARD] Organize clicked - Phase 1.5 will implement this');
+                                                setWizardModalOpen(false);
+                                            }}
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                                            Organize
+                                        </button>
                                     </div>
                                 </div>
                             </div>
