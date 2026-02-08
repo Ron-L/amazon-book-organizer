@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1275,10 +1275,7 @@
 
                         // v5.0.0 - Load folders
                         const savedFolders = localStorage.getItem(FOLDERS_KEY);
-                        if (savedFolders) {
-                            setFolders(JSON.parse(savedFolders));
-                            console.log('📁 Restored folders from localStorage');
-                        }
+                        let loadedFolders = savedFolders ? JSON.parse(savedFolders) : [];
 
                         // Load books from IndexedDB
                         let loadedBooks = await loadBooksFromIndexedDB();
@@ -1286,6 +1283,32 @@
                         // Merge collections data into loaded books
                         if (loadedBooks.length > 0) {
                             loadedBooks = await mergeCollectionsIntoBooks(loadedBooks);
+
+                            // v5.1.0-alpha.8 - Clean up orphaned bookIds in folders
+                            if (loadedFolders.length > 0) {
+                                const validBookIds = new Set(loadedBooks.map(b => b.id));
+                                let totalOrphans = 0;
+
+                                loadedFolders = loadedFolders.map(folder => {
+                                    if (folder.bookIds && folder.bookIds.length > 0) {
+                                        const before = folder.bookIds.length;
+                                        folder.bookIds = folder.bookIds.filter(id => validBookIds.has(id));
+                                        const removed = before - folder.bookIds.length;
+                                        if (removed > 0) {
+                                            console.log(`[CLEANUP] Removed ${removed} orphaned bookIds from folder "${folder.name}"`);
+                                            totalOrphans += removed;
+                                        }
+                                    }
+                                    return folder;
+                                });
+
+                                if (totalOrphans > 0) {
+                                    console.log(`[CLEANUP] Total orphaned bookIds removed: ${totalOrphans}`);
+                                    localStorage.setItem(FOLDERS_KEY, JSON.stringify(loadedFolders));
+                                }
+                            }
+
+                            setFolders(loadedFolders);
                             setBooks(loadedBooks);
                             // Update IndexedDB with merged data
                             await saveBooksToIndexedDB(loadedBooks);
@@ -3602,6 +3625,26 @@
                                 bookIds: [],
                                 parentId: null
                             });
+                        }
+
+                        // v5.1.0-alpha.8 - Clean up orphaned bookIds in folders
+                        const validBookIds = new Set(processedBooks.map(b => b.id));
+                        let totalOrphans = 0;
+
+                        restoredFolders.forEach(folder => {
+                            if (folder.bookIds && folder.bookIds.length > 0) {
+                                const before = folder.bookIds.length;
+                                folder.bookIds = folder.bookIds.filter(id => validBookIds.has(id));
+                                const removed = before - folder.bookIds.length;
+                                if (removed > 0) {
+                                    console.log(`[CLEANUP] Removed ${removed} orphaned bookIds from folder "${folder.name}"`);
+                                    totalOrphans += removed;
+                                }
+                            }
+                        });
+
+                        if (totalOrphans > 0) {
+                            console.log(`[CLEANUP] Total orphaned bookIds removed: ${totalOrphans}`);
                         }
 
                         setFolders(restoredFolders);
