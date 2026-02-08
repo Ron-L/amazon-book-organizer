@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -289,7 +289,6 @@
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
             const [wizardSourceFolder, setWizardSourceFolder] = useState('__inbox__'); // v5.1.0 - Wizard source folder selection
             const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0 - Wizard minimum books threshold
-            const [wizardLastFirst, setWizardLastFirst] = useState(false); // v5.1.0-alpha.4 - Display authors as Last, First
             const [wizardAuthors, setWizardAuthors] = useState([]); // v5.1.0-alpha.4 - Detected authors array
             const [wizardSelectedAuthors, setWizardSelectedAuthors] = useState(new Set()); // v5.1.0-alpha.5 - Selected author normalized names
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -1391,6 +1390,24 @@
                 }
             }, [syncStatus, columns, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
 
+            // v5.1.0-alpha.7 - Helper: Get all books in folder (including subfolders recursively)
+            const getAllBooksInFolder = (folderId, folders) => {
+                const folder = folders.find(f => f.id === folderId);
+                if (!folder) return [];
+
+                // Collect books directly in this folder
+                const bookIds = new Set(folder.bookIds || []);
+
+                // Recursively collect books from all child folders
+                const childFolders = folders.filter(f => f.parentId === folderId);
+                childFolders.forEach(child => {
+                    const childBookIds = getAllBooksInFolder(child.id, folders);
+                    childBookIds.forEach(id => bookIds.add(id));
+                });
+
+                return Array.from(bookIds);
+            };
+
             // v5.1.0-alpha.4 - Wizard: Detect authors when modal opens or settings change
             useEffect(() => {
                 if (!wizardModalOpen) return; // Only run when modal is open
@@ -1399,61 +1416,16 @@
                 console.log('[WIZARD] Source folder:', wizardSourceFolder);
                 console.log('[WIZARD] Minimum books:', wizardMinBooks);
 
-                // Helper: Normalize author name for grouping
+                // Helper: Normalize author name for grouping (case-insensitive comparison)
                 const normalizeAuthor = (author) => {
                     if (!author) return 'Unknown Author';
-                    const trimmed = author.trim();
-
-                    // Check if format is "Last, First" (has comma)
-                    const commaIndex = trimmed.indexOf(',');
-                    if (commaIndex > 0) {
-                        // "Last, First" → "First Last" for normalization
-                        const last = trimmed.substring(0, commaIndex).trim();
-                        const first = trimmed.substring(commaIndex + 1).trim();
-                        return `${first} ${last}`.toLowerCase();
-                    }
-
-                    // Already "First Last" format
-                    return trimmed.toLowerCase();
+                    return author.trim().toLowerCase();
                 };
 
-                // Helper: Format author name for display
-                const formatAuthor = (author, asLastFirst) => {
+                // Helper: Format author name for display (use Amazon format as-is)
+                const formatAuthor = (author) => {
                     if (!author) return 'Unknown Author';
-                    const trimmed = author.trim();
-
-                    // Detect co-authors (4+ words or contains "and"/"&")
-                    const isCoAuthor = trimmed.split(' ').length >= 4 || trimmed.includes(' and ') || trimmed.includes(' & ');
-
-                    if (asLastFirst) {
-                        // Convert to "Last, First" if not already
-                        const commaIndex = trimmed.indexOf(',');
-                        if (commaIndex > 0) {
-                            return trimmed; // Already "Last, First"
-                        }
-
-                        // Don't flip co-authors (too ambiguous)
-                        if (isCoAuthor) {
-                            return trimmed + ' (co-authors)';
-                        }
-
-                        // "First Last" → "Last, First" (2-3 words only)
-                        const parts = trimmed.split(' ');
-                        if (parts.length >= 2) {
-                            const last = parts[parts.length - 1];
-                            const first = parts.slice(0, -1).join(' ');
-                            return `${last}, ${first}`;
-                        }
-                    }
-
-                    // Return as "First Last" (remove comma if present)
-                    const commaIndex = trimmed.indexOf(',');
-                    if (commaIndex > 0) {
-                        const last = trimmed.substring(0, commaIndex).trim();
-                        const first = trimmed.substring(commaIndex + 1).trim();
-                        return `${first} ${last}`;
-                    }
-                    return trimmed;
+                    return author.trim();
                 };
 
                 // Get books from selected folder
@@ -1473,13 +1445,14 @@
                     console.log('[WIZARD] Books in folders:', booksInFolders.size);
                     console.log('[WIZARD] Books in Inbox:', sourceBooks.length);
                 } else {
-                    // Books in specific folder
+                    // Books in specific folder (including subfolders recursively)
                     const folder = folders.find(f => f.id === wizardSourceFolder);
                     if (folder) {
-                        const bookIds = new Set(folder.bookIds || []);
-                        sourceBooks = books.filter(book => bookIds.has(book.id));
+                        const bookIds = getAllBooksInFolder(wizardSourceFolder, folders);
+                        const bookIdSet = new Set(bookIds);
+                        sourceBooks = books.filter(book => bookIdSet.has(book.id));
                         console.log('[WIZARD] Source: Folder', folder.name);
-                        console.log('[WIZARD] Folder bookIds:', folder.bookIds?.length || 0);
+                        console.log('[WIZARD] Folder bookIds (recursive):', bookIds.length);
                         console.log('[WIZARD] Matched books:', sourceBooks.length);
                     } else {
                         console.warn('[WIZARD] Folder not found:', wizardSourceFolder);
@@ -1514,7 +1487,7 @@
                 // Convert to array and calculate counts
                 const authorsArray = Array.from(authorMap.values()).map(authorData => ({
                     normalizedName: authorData.normalizedName,
-                    displayName: formatAuthor(authorData.originalName, wizardLastFirst),
+                    displayName: formatAuthor(authorData.originalName),
                     originalName: authorData.originalName,
                     books: authorData.books,
                     bookCount: authorData.books.length,
@@ -1535,7 +1508,7 @@
                 // Auto-select all authors by default
                 const allAuthorNames = new Set(sorted.map(a => a.normalizedName));
                 setWizardSelectedAuthors(allAuthorNames);
-            }, [wizardModalOpen, wizardSourceFolder, wizardMinBooks, wizardLastFirst, books, folders]);
+            }, [wizardModalOpen, wizardSourceFolder, wizardMinBooks, books, folders]);
 
             // v5.0.0-alpha.175.28 - Expose state for console debugging
             useEffect(() => {
@@ -8064,20 +8037,6 @@
                                                 <option value="20">20 books</option>
                                             </select>
                                         </div>
-                                    </div>
-
-                                    {/* v5.1.0-alpha.5 - Last, First checkbox */}
-                                    <div className="flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            id="wizardLastFirst"
-                                            checked={wizardLastFirst}
-                                            onChange={(e) => setWizardLastFirst(e.target.checked)}
-                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                        />
-                                        <label htmlFor="wizardLastFirst" className="ml-2 text-sm text-gray-700">
-                                            Display authors as <strong>Last, First</strong> (e.g., "Butcher, Jim")
-                                        </label>
                                     </div>
 
                                     {/* v5.1.0-alpha.5 - Author list */}
