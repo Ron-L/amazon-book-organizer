@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -291,6 +291,7 @@
             const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0 - Wizard minimum books threshold
             const [wizardLastFirst, setWizardLastFirst] = useState(false); // v5.1.0-alpha.4 - Display authors as Last, First
             const [wizardAuthors, setWizardAuthors] = useState([]); // v5.1.0-alpha.4 - Detected authors array
+            const [wizardSelectedAuthors, setWizardSelectedAuthors] = useState(new Set()); // v5.1.0-alpha.5 - Selected author normalized names
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
@@ -1511,6 +1512,10 @@
                 console.log('[WIZARD] Top 5 authors:', sorted.slice(0, 5).map(a => `${a.displayName} (${a.bookCount} books, ${a.seriesCount} series)`));
 
                 setWizardAuthors(sorted);
+
+                // Auto-select all authors by default
+                const allAuthorNames = new Set(sorted.map(a => a.normalizedName));
+                setWizardSelectedAuthors(allAuthorNames);
             }, [wizardModalOpen, wizardSourceFolder, wizardMinBooks, wizardLastFirst, books, folders]);
 
             // v5.0.0-alpha.175.28 - Expose state for console debugging
@@ -8042,10 +8047,74 @@
                                         </div>
                                     </div>
 
-                                    {/* Author list placeholder */}
-                                    <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 min-h-64">
-                                        <p className="text-gray-500 text-center">Author list will appear here</p>
-                                        <p className="text-gray-400 text-sm text-center mt-2">(Phase 1.3: Author detection algorithm)</p>
+                                    {/* v5.1.0-alpha.5 - Last, First checkbox */}
+                                    <div className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            id="wizardLastFirst"
+                                            checked={wizardLastFirst}
+                                            onChange={(e) => setWizardLastFirst(e.target.checked)}
+                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="wizardLastFirst" className="ml-2 text-sm text-gray-700">
+                                            Display authors as <strong>Last, First</strong> (e.g., "Butcher, Jim")
+                                        </label>
+                                    </div>
+
+                                    {/* v5.1.0-alpha.5 - Author list */}
+                                    <div className="border border-gray-300 rounded-lg bg-white">
+                                        {/* Header with Select All/None */}
+                                        <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-300">
+                                            <span className="text-sm font-semibold text-gray-700">
+                                                Authors found: {wizardAuthors.length}
+                                            </span>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => setWizardSelectedAuthors(new Set(wizardAuthors.map(a => a.normalizedName)))}
+                                                    className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors">
+                                                    Select All
+                                                </button>
+                                                <button
+                                                    onClick={() => setWizardSelectedAuthors(new Set())}
+                                                    className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors">
+                                                    Select None
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Author list scrollable area */}
+                                        <div className="max-h-80 overflow-y-auto p-2">
+                                            {wizardAuthors.length === 0 ? (
+                                                <div className="text-center text-gray-500 py-8">
+                                                    <p>No authors found with {wizardMinBooks}+ books</p>
+                                                    <p className="text-sm text-gray-400 mt-2">Try lowering the minimum books threshold</p>
+                                                </div>
+                                            ) : (
+                                                wizardAuthors.map(author => (
+                                                    <label
+                                                        key={author.normalizedName}
+                                                        className="flex items-center px-3 py-2 hover:bg-gray-50 rounded cursor-pointer transition-colors">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={wizardSelectedAuthors.has(author.normalizedName)}
+                                                            onChange={(e) => {
+                                                                const newSet = new Set(wizardSelectedAuthors);
+                                                                if (e.target.checked) {
+                                                                    newSet.add(author.normalizedName);
+                                                                } else {
+                                                                    newSet.delete(author.normalizedName);
+                                                                }
+                                                                setWizardSelectedAuthors(newSet);
+                                                            }}
+                                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                                        />
+                                                        <span className="ml-3 flex-1 text-sm text-gray-900">{author.displayName}</span>
+                                                        <span className="text-sm text-gray-600 mr-4">{author.bookCount} books</span>
+                                                        <span className="text-sm text-gray-500">{author.seriesCount} series</span>
+                                                    </label>
+                                                ))
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Action buttons */}
