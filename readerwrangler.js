@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.0.10";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -286,6 +286,7 @@
             const [editingTagId, setEditingTagId] = useState(null); // v4.27.0 Phase 3 - Currently renaming tag
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
+            const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
@@ -8955,6 +8956,13 @@
                                             </button>
                                         </div>
                                     </div>
+                                    {/* v5.1.0 - Auto-organize wizard button */}
+                                    <button
+                                        onClick={() => setWizardModalOpen(true)}
+                                        className="text-gray-600 hover:text-gray-800 text-lg px-2"
+                                        title="Auto-Organize by Author">
+                                        🪄
+                                    </button>
                                     {/* Expand/Collapse All toggle */}
                                     <button
                                         onClick={() => {
