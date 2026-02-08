@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.13";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4733,6 +4733,29 @@
                         }
                         showToast(`Undo: ${action.description}`, 'info');
                         break;
+                    case 'WIZARD_ORGANIZE':
+                        // v5.1.0-alpha.13 - Phase 1.5/1.6: Undo wizard organize
+                        console.log('[UNDO WIZARD_ORGANIZE]', action.description);
+                        // Reverse sub-actions in reverse order
+                        action.subActions.reverse().forEach(subAction => {
+                            if (subAction.type === 'CREATE_FOLDER') {
+                                // Remove created folder
+                                setFolders(prev => prev.filter(f => f.id !== subAction.folderId));
+                            } else if (subAction.type === 'ADD_BOOKS_TO_FOLDER') {
+                                // Remove books from folder
+                                setFolders(prev => prev.map(folder => {
+                                    if (folder.id === subAction.folderId) {
+                                        return {
+                                            ...folder,
+                                            bookIds: folder.bookIds.filter(id => !subAction.bookIds.includes(id))
+                                        };
+                                    }
+                                    return folder;
+                                }));
+                            }
+                        });
+                        showToast(`Undo: ${action.description}`, 'info');
+                        break;
                     default:
                         console.warn('Unknown action type for undo:', action.type);
                 }
@@ -5123,6 +5146,31 @@
                                 return updated;
                             });
                         }
+                        showToast(`Redo: ${action.description}`, 'info');
+                        break;
+                    case 'WIZARD_ORGANIZE':
+                        // v5.1.0-alpha.13 - Phase 1.5/1.6: Redo wizard organize
+                        console.log('[REDO WIZARD_ORGANIZE]', action.description);
+                        // Re-apply sub-actions in original order
+                        action.subActions.forEach(subAction => {
+                            if (subAction.type === 'CREATE_FOLDER') {
+                                // Re-create folder
+                                setFolders(prev => [...prev, subAction.folder]);
+                            } else if (subAction.type === 'ADD_BOOKS_TO_FOLDER') {
+                                // Re-add books to folder
+                                setFolders(prev => prev.map(folder => {
+                                    if (folder.id === subAction.folderId) {
+                                        const existingIds = new Set(folder.bookIds);
+                                        const newBooks = subAction.bookIds.filter(id => !existingIds.has(id));
+                                        return {
+                                            ...folder,
+                                            bookIds: [...folder.bookIds, ...newBooks]
+                                        };
+                                    }
+                                    return folder;
+                                }));
+                            }
+                        });
                         showToast(`Redo: ${action.description}`, 'info');
                         break;
                     default:
@@ -8202,11 +8250,91 @@
                                         </button>
                                         <button
                                             onClick={() => {
-                                                // Placeholder for Phase 1.5
-                                                console.log('[WIZARD] Organize clicked - Phase 1.5 will implement this');
+                                                // v5.1.0-alpha.13 - Phase 1.5: Implement organize function
+                                                const selectedAuthors = wizardAuthors.filter(a => wizardSelectedAuthors.has(a.normalizedName));
+
+                                                if (selectedAuthors.length === 0) {
+                                                    alert('Please select at least one author to organize.');
+                                                    return;
+                                                }
+
+                                                console.log(`[WIZARD] Organizing ${selectedAuthors.length} authors...`);
+
+                                                const subActions = [];
+                                                const createdFolders = [];
+                                                const mergedFolders = [];
+                                                let totalBooksOrganized = 0;
+
+                                                setFolders(prevFolders => {
+                                                    const newFolders = [...prevFolders];
+
+                                                    selectedAuthors.forEach(author => {
+                                                        // Find or create folder for this author
+                                                        const folderName = author.displayName;
+                                                        let targetFolder = newFolders.find(f => f.name === folderName && f.parentId === null);
+
+                                                        if (!targetFolder) {
+                                                            // Create new folder
+                                                            const newFolder = {
+                                                                id: 'folder-author-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                                                                name: folderName,
+                                                                bookIds: [],
+                                                                parentId: null,
+                                                                collapsed: false
+                                                            };
+                                                            newFolders.push(newFolder);
+                                                            targetFolder = newFolder;
+                                                            createdFolders.push(folderName);
+
+                                                            subActions.push({
+                                                                type: 'CREATE_FOLDER',
+                                                                folderId: newFolder.id,
+                                                                parentId: null,
+                                                                folder: { ...newFolder }
+                                                            });
+                                                        } else {
+                                                            mergedFolders.push(folderName);
+                                                        }
+
+                                                        // Add books to folder (avoid duplicates)
+                                                        const bookIdsToAdd = author.books
+                                                            .map(book => book.id)
+                                                            .filter(id => !targetFolder.bookIds.includes(id));
+
+                                                        if (bookIdsToAdd.length > 0) {
+                                                            targetFolder.bookIds = [...targetFolder.bookIds, ...bookIdsToAdd];
+                                                            totalBooksOrganized += bookIdsToAdd.length;
+
+                                                            subActions.push({
+                                                                type: 'ADD_BOOKS_TO_FOLDER',
+                                                                folderId: targetFolder.id,
+                                                                bookIds: bookIdsToAdd
+                                                            });
+                                                        }
+                                                    });
+
+                                                    return newFolders;
+                                                });
+
+                                                // Record bundled undo action
+                                                recordAction({
+                                                    type: 'WIZARD_ORGANIZE',
+                                                    description: `Organized ${selectedAuthors.length} authors (${totalBooksOrganized} books)`,
+                                                    subActions
+                                                });
+
+                                                console.log(`[WIZARD] ✅ Created ${createdFolders.length} folders, merged ${mergedFolders.length}, organized ${totalBooksOrganized} books`);
+                                                if (createdFolders.length > 0) {
+                                                    console.log(`[WIZARD] Created: ${createdFolders.slice(0, 5).join(', ')}${createdFolders.length > 5 ? '...' : ''}`);
+                                                }
+                                                if (mergedFolders.length > 0) {
+                                                    console.log(`[WIZARD] Merged: ${mergedFolders.slice(0, 5).join(', ')}${mergedFolders.length > 5 ? '...' : ''}`);
+                                                }
+
                                                 setWizardModalOpen(false);
                                             }}
-                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                                            disabled={wizardSelectedAuthors.size === 0}>
                                             Organize
                                         </button>
                                     </div>
