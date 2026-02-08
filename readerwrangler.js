@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1457,15 +1457,18 @@
                     sourceBooks = books;
                     console.log('[WIZARD] Source: All Books');
                 } else if (wizardSourceFolder === '__inbox__') {
-                    // Books not in any user folder (only check bookIds, not subfolders recursively)
+                    // Books not in any user folder (exclude virtual folders like __inbox__ itself)
                     const booksInFolders = new Set();
                     folders.forEach(folder => {
-                        (folder.bookIds || []).forEach(bookId => booksInFolders.add(bookId));
+                        // Only count books in actual user folders, not virtual folders
+                        if (folder.id !== '__inbox__' && folder.id !== '__all__') {
+                            (folder.bookIds || []).forEach(bookId => booksInFolders.add(bookId));
+                        }
                     });
                     sourceBooks = books.filter(book => !booksInFolders.has(book.id));
                     console.log('[WIZARD] Source: Inbox');
                     console.log('[WIZARD] Total books:', books.length);
-                    console.log('[WIZARD] Books in folders:', booksInFolders.size);
+                    console.log('[WIZARD] Books in user folders:', booksInFolders.size);
                     console.log('[WIZARD] Books in Inbox:', sourceBooks.length);
                 } else {
                     // Books in specific folder (including subfolders recursively)
