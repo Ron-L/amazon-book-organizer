@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -287,10 +287,12 @@
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
-            const [wizardSourceFolder, setWizardSourceFolder] = useState('__inbox__'); // v5.1.0 - Wizard source folder selection
-            const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0 - Wizard minimum books threshold
+            const [wizardMinBooksSlider, setWizardMinBooksSlider] = useState(5); // v5.1.0-alpha.10 - Slider value (immediate)
+            const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0-alpha.10 - Debounced threshold for detection
+            const [wizardSortBy, setWizardSortBy] = useState('bookCount'); // v5.1.0-alpha.10 - Sort by bookCount or authorName
             const [wizardAuthors, setWizardAuthors] = useState([]); // v5.1.0-alpha.4 - Detected authors array
             const [wizardSelectedAuthors, setWizardSelectedAuthors] = useState(new Set()); // v5.1.0-alpha.5 - Selected author normalized names
+            const [wizardHelpOpen, setWizardHelpOpen] = useState(false); // v5.1.0-alpha.10 - Help dialog
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
@@ -1431,12 +1433,19 @@
                 return Array.from(bookIds);
             };
 
+            // v5.1.0-alpha.10 - Debounce slider updates to avoid expensive recalculations
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    setWizardMinBooks(wizardMinBooksSlider);
+                }, 300); // 300ms debounce delay
+                return () => clearTimeout(timer);
+            }, [wizardMinBooksSlider]);
+
             // v5.1.0-alpha.4 - Wizard: Detect authors when modal opens or settings change
             useEffect(() => {
                 if (!wizardModalOpen) return; // Only run when modal is open
 
-                console.log('[WIZARD] Detecting authors...');
-                console.log('[WIZARD] Source folder:', wizardSourceFolder);
+                console.log('[WIZARD] Detecting authors from Inbox...');
                 console.log('[WIZARD] Minimum books:', wizardMinBooks);
 
                 // Helper: Normalize author name for grouping (case-insensitive comparison)
@@ -1451,41 +1460,19 @@
                     return author.trim();
                 };
 
-                // Get books from selected folder
-                let sourceBooks = [];
-                if (wizardSourceFolder === '__all__') {
-                    sourceBooks = books;
-                    console.log('[WIZARD] Source: All Books');
-                } else if (wizardSourceFolder === '__inbox__') {
-                    // Books not in any user folder (exclude virtual folders like __inbox__ itself)
-                    const booksInFolders = new Set();
-                    folders.forEach(folder => {
-                        // Only count books in actual user folders, not virtual folders
-                        if (folder.id !== '__inbox__' && folder.id !== '__all__') {
-                            (folder.bookIds || []).forEach(bookId => booksInFolders.add(bookId));
-                        }
-                    });
-                    sourceBooks = books.filter(book => !booksInFolders.has(book.id));
-                    console.log('[WIZARD] Source: Inbox');
-                    console.log('[WIZARD] Total books:', books.length);
-                    console.log('[WIZARD] Books in user folders:', booksInFolders.size);
-                    console.log('[WIZARD] Books in Inbox:', sourceBooks.length);
-                } else {
-                    // Books in specific folder (including subfolders recursively)
-                    const folder = folders.find(f => f.id === wizardSourceFolder);
-                    if (folder) {
-                        const bookIds = getAllBooksInFolder(wizardSourceFolder, folders);
-                        const bookIdSet = new Set(bookIds);
-                        sourceBooks = books.filter(book => bookIdSet.has(book.id));
-                        console.log('[WIZARD] Source: Folder', folder.name);
-                        console.log('[WIZARD] Folder bookIds (recursive):', bookIds.length);
-                        console.log('[WIZARD] Matched books:', sourceBooks.length);
-                    } else {
-                        console.warn('[WIZARD] Folder not found:', wizardSourceFolder);
+                // v5.1.0-alpha.10 - Source is always Inbox (books not in any user folder)
+                const booksInFolders = new Set();
+                folders.forEach(folder => {
+                    // Only count books in actual user folders, not virtual folders
+                    if (folder.id !== '__inbox__' && folder.id !== '__all__') {
+                        (folder.bookIds || []).forEach(bookId => booksInFolders.add(bookId));
                     }
-                }
+                });
+                const sourceBooks = books.filter(book => !booksInFolders.has(book.id));
 
-                console.log('[WIZARD] Source books:', sourceBooks.length);
+                console.log('[WIZARD] Total books:', books.length);
+                console.log('[WIZARD] Books in user folders:', booksInFolders.size);
+                console.log('[WIZARD] Books in Inbox:', sourceBooks.length);
 
                 // Group books by normalized author
                 const authorMap = new Map();
@@ -1523,10 +1510,17 @@
                 // Filter by minimum books threshold
                 const filtered = authorsArray.filter(author => author.bookCount >= wizardMinBooks);
 
-                // Sort by book count descending
-                const sorted = filtered.sort((a, b) => b.bookCount - a.bookCount);
+                // v5.1.0-alpha.10 - Sort by user preference (book count or author name)
+                const sorted = filtered.sort((a, b) => {
+                    if (wizardSortBy === 'authorName') {
+                        return a.displayName.localeCompare(b.displayName);
+                    } else {
+                        return b.bookCount - a.bookCount;
+                    }
+                });
 
                 console.log('[WIZARD] Authors detected:', sorted.length);
+                console.log('[WIZARD] Sort by:', wizardSortBy);
                 console.log('[WIZARD] Top 5 authors:', sorted.slice(0, 5).map(a => `${a.displayName} (${a.bookCount} books, ${a.seriesCount} series)`));
 
                 setWizardAuthors(sorted);
@@ -1534,7 +1528,7 @@
                 // Auto-select all authors by default
                 const allAuthorNames = new Set(sorted.map(a => a.normalizedName));
                 setWizardSelectedAuthors(allAuthorNames);
-            }, [wizardModalOpen, wizardSourceFolder, wizardMinBooks, books, folders]);
+            }, [wizardModalOpen, wizardMinBooks, wizardSortBy, books, folders]);
 
             // v5.0.0-alpha.175.28 - Expose state for console debugging
             useEffect(() => {
@@ -8050,49 +8044,60 @@
                     {wizardModalOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setWizardModalOpen(false)}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
+                                <div className="flex justify-between items-center p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">🪄 Auto-Organize by Author</h2>
-                                    <button onClick={() => setWizardModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                    <div className="flex items-center gap-2">
+                                        {/* v5.1.0-alpha.10 - Help icon */}
+                                        <button
+                                            onClick={() => setWizardHelpOpen(true)}
+                                            className="text-blue-600 hover:text-blue-800 text-xl font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-blue-100 transition-colors"
+                                            title="Show tips">
+                                            ?
+                                        </button>
+                                        <button onClick={() => setWizardModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                    </div>
                                 </div>
                                 <div className="p-6 space-y-4">
-                                    {/* Configuration options */}
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Source Folder</label>
-                                            <select
-                                                value={wizardSourceFolder}
-                                                onChange={(e) => setWizardSourceFolder(e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                <option value="__inbox__">Inbox</option>
-                                                <option value="__all__">All Books</option>
-                                                {folders.filter(f => f.parentId === null).map(folder => (
-                                                    <option key={folder.id} value={folder.id}>{folder.name}</option>
-                                                ))}
-                                            </select>
+                                    {/* v5.1.0-alpha.10 - Source is always Inbox */}
+                                    <div className="text-sm text-gray-600 mb-3">
+                                        Organizing books from: <strong>Inbox</strong>
+                                    </div>
+
+                                    {/* v5.1.0-alpha.10 - Slider with live updates */}
+                                    <div>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <label className="text-sm font-semibold text-gray-700">Minimum Books per Author</label>
+                                            <span className="text-sm font-bold text-blue-600">{wizardMinBooksSlider} book{wizardMinBooksSlider === 1 ? '' : 's'}</span>
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Minimum Books per Author</label>
-                                            <select
-                                                value={wizardMinBooks}
-                                                onChange={(e) => setWizardMinBooks(parseInt(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                                <option value="3">3 books</option>
-                                                <option value="5">5 books</option>
-                                                <option value="10">10 books</option>
-                                                <option value="15">15 books</option>
-                                                <option value="20">20 books</option>
-                                            </select>
+                                        <input
+                                            type="range"
+                                            min="1"
+                                            max="20"
+                                            value={wizardMinBooksSlider}
+                                            onChange={(e) => setWizardMinBooksSlider(Number(e.target.value))}
+                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                                        />
+                                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                                            <span>1</span>
+                                            <span>20</span>
                                         </div>
                                     </div>
 
                                     {/* v5.1.0-alpha.5 - Author list */}
                                     <div className="border border-gray-300 rounded-lg bg-white">
-                                        {/* Header with Select All/None */}
+                                        {/* Header with Select All/None + Sort Toggle */}
                                         <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-300">
                                             <span className="text-sm font-semibold text-gray-700">
                                                 Authors found: {wizardAuthors.length}
                                             </span>
                                             <div className="flex gap-2">
+                                                {/* v5.1.0-alpha.10 - Sort toggle */}
+                                                <button
+                                                    onClick={() => setWizardSortBy(wizardSortBy === 'bookCount' ? 'authorName' : 'bookCount')}
+                                                    className="px-3 py-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 rounded transition-colors"
+                                                    title={wizardSortBy === 'bookCount' ? 'Sort by Author Name' : 'Sort by Book Count'}>
+                                                    Sort: {wizardSortBy === 'bookCount' ? '# Books' : 'A-Z'}
+                                                </button>
                                                 <button
                                                     onClick={() => setWizardSelectedAuthors(new Set(wizardAuthors.map(a => a.normalizedName)))}
                                                     className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors">
@@ -8156,6 +8161,65 @@
                                             }}
                                             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                                             Organize
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* v5.1.0-alpha.10 - Wizard Help Dialog */}
+                    {wizardHelpOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setWizardHelpOpen(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
+                                    <h2 className="text-xl font-bold text-gray-900">📖 Auto-Organize Tips</h2>
+                                    <button onClick={() => setWizardHelpOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <div className="space-y-3 text-sm text-gray-700">
+                                        <div className="flex gap-2">
+                                            <span className="text-blue-600 font-bold">💡</span>
+                                            <div>
+                                                <strong>Run multiple times with different thresholds:</strong>
+                                                <ul className="mt-1 ml-4 list-disc text-gray-600">
+                                                    <li>First: 10+ books (top authors)</li>
+                                                    <li>Then: 5+ books (prolific)</li>
+                                                    <li>Then: 3+ books (regular)</li>
+                                                    <li>Finally: 1+ books (everyone)</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <span className="text-blue-600 font-bold">💡</span>
+                                            <div>
+                                                <strong>Sort by Author Name</strong> to find co-author duplicates that are adjacent in the list (e.g., "Jim Butcher" followed by "Jim Butcher, Other Author")
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <span className="text-blue-600 font-bold">💡</span>
+                                            <div>
+                                                <strong>Co-author books create separate folders</strong> - you can merge them manually if desired after organizing
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <span className="text-blue-600 font-bold">💡</span>
+                                            <div>
+                                                <strong>The wizard handles bulk work,</strong> you handle edge cases. Manual adjustments afterwards are expected and normal.
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <span className="text-blue-600 font-bold">💡</span>
+                                            <div>
+                                                <strong>Drag the slider</strong> to see how many authors match different thresholds in real-time
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end pt-2">
+                                        <button
+                                            onClick={() => setWizardHelpOpen(false)}
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                                            Got it
                                         </button>
                                     </div>
                                 </div>
