@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8113,19 +8113,47 @@
                                                     </button>
                                                 </div>
 
-                                                {/* v5.1.0-alpha.11 - Grouped Select buttons with separator */}
+                                                {/* v5.1.0-alpha.12 - 3-segment control for selection state */}
                                                 <div className="h-5 w-px bg-gray-300"></div>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => setWizardSelectedAuthors(new Set(wizardAuthors.map(a => a.normalizedName)))}
-                                                        className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors">
-                                                        Select All
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setWizardSelectedAuthors(new Set())}
-                                                        className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors">
-                                                        Select None
-                                                    </button>
+                                                <div className="flex border border-gray-300 rounded overflow-hidden">
+                                                    {(() => {
+                                                        const selectedCount = wizardSelectedAuthors.size;
+                                                        const totalCount = wizardAuthors.length;
+                                                        const isAll = selectedCount === totalCount && totalCount > 0;
+                                                        const isNone = selectedCount === 0;
+                                                        const isSome = !isAll && !isNone;
+
+                                                        return (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => setWizardSelectedAuthors(new Set(wizardAuthors.map(a => a.normalizedName)))}
+                                                                    className={`px-3 py-1 text-xs transition-colors ${
+                                                                        isAll
+                                                                            ? 'bg-blue-600 text-white font-semibold'
+                                                                            : 'bg-white text-gray-700 hover:bg-gray-100'
+                                                                    }`}>
+                                                                    All
+                                                                </button>
+                                                                <button
+                                                                    className={`px-3 py-1 text-xs border-l border-gray-300 ${
+                                                                        isSome
+                                                                            ? 'bg-blue-600 text-white font-semibold cursor-default'
+                                                                            : 'bg-white text-gray-400 cursor-default'
+                                                                    }`}>
+                                                                    Some
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setWizardSelectedAuthors(new Set())}
+                                                                    className={`px-3 py-1 text-xs border-l border-gray-300 transition-colors ${
+                                                                        isNone
+                                                                            ? 'bg-blue-600 text-white font-semibold'
+                                                                            : 'bg-white text-gray-700 hover:bg-gray-100'
+                                                                    }`}>
+                                                                    None
+                                                                </button>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             </div>
                                         </div>
