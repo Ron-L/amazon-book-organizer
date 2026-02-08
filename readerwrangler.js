@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8090,24 +8090,43 @@
                                             <span className="text-sm font-semibold text-gray-700">
                                                 Authors found: {wizardAuthors.length}
                                             </span>
-                                            <div className="flex gap-2">
-                                                {/* v5.1.0-alpha.10 - Sort toggle */}
-                                                <button
-                                                    onClick={() => setWizardSortBy(wizardSortBy === 'bookCount' ? 'authorName' : 'bookCount')}
-                                                    className="px-3 py-1 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 rounded transition-colors"
-                                                    title={wizardSortBy === 'bookCount' ? 'Sort by Author Name' : 'Sort by Book Count'}>
-                                                    Sort: {wizardSortBy === 'bookCount' ? '# Books' : 'A-Z'}
-                                                </button>
-                                                <button
-                                                    onClick={() => setWizardSelectedAuthors(new Set(wizardAuthors.map(a => a.normalizedName)))}
-                                                    className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors">
-                                                    Select All
-                                                </button>
-                                                <button
-                                                    onClick={() => setWizardSelectedAuthors(new Set())}
-                                                    className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors">
-                                                    Select None
-                                                </button>
+                                            <div className="flex gap-3 items-center">
+                                                {/* v5.1.0-alpha.11 - Segmented control for sort */}
+                                                <div className="flex border border-gray-300 rounded overflow-hidden">
+                                                    <button
+                                                        onClick={() => setWizardSortBy('bookCount')}
+                                                        className={`px-3 py-1 text-xs transition-colors ${
+                                                            wizardSortBy === 'bookCount'
+                                                                ? 'bg-blue-600 text-white font-semibold'
+                                                                : 'bg-white text-gray-700 hover:bg-gray-100'
+                                                        }`}>
+                                                        # Books
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setWizardSortBy('authorName')}
+                                                        className={`px-3 py-1 text-xs transition-colors border-l border-gray-300 ${
+                                                            wizardSortBy === 'authorName'
+                                                                ? 'bg-blue-600 text-white font-semibold'
+                                                                : 'bg-white text-gray-700 hover:bg-gray-100'
+                                                        }`}>
+                                                        A-Z
+                                                    </button>
+                                                </div>
+
+                                                {/* v5.1.0-alpha.11 - Grouped Select buttons with separator */}
+                                                <div className="h-5 w-px bg-gray-300"></div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => setWizardSelectedAuthors(new Set(wizardAuthors.map(a => a.normalizedName)))}
+                                                        className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded transition-colors">
+                                                        Select All
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setWizardSelectedAuthors(new Set())}
+                                                        className="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition-colors">
+                                                        Select None
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -8177,42 +8196,42 @@
                                     <button onClick={() => setWizardHelpOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
                                 </div>
                                 <div className="p-6 space-y-4">
-                                    <div className="space-y-3 text-sm text-gray-700">
-                                        <div className="flex gap-2">
-                                            <span className="text-blue-600 font-bold">💡</span>
-                                            <div>
-                                                <strong>Run multiple times with different thresholds:</strong>
-                                                <ul className="mt-1 ml-4 list-disc text-gray-600">
-                                                    <li>First: 10+ books (top authors)</li>
-                                                    <li>Then: 5+ books (prolific)</li>
-                                                    <li>Then: 3+ books (regular)</li>
-                                                    <li>Finally: 1+ books (everyone)</li>
-                                                </ul>
-                                            </div>
+                                    <div className="space-y-4 text-sm text-gray-700">
+                                        {/* Step 1 */}
+                                        <div>
+                                            <div className="font-bold text-gray-900 mb-2">Step 1: Set threshold and organize</div>
+                                            <ul className="ml-4 space-y-1 text-gray-600">
+                                                <li>• Drag slider to set minimum books (e.g., 10+ books)</li>
+                                                <li>• Review and select authors to organize</li>
+                                                <li>• Click "Organize" to create folders</li>
+                                            </ul>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <span className="text-blue-600 font-bold">💡</span>
-                                            <div>
-                                                <strong>Sort by Author Name</strong> to find co-author duplicates that are adjacent in the list (e.g., "Jim Butcher" followed by "Jim Butcher, Other Author")
-                                            </div>
+
+                                        {/* Step 2 */}
+                                        <div>
+                                            <div className="font-bold text-gray-900 mb-2">Step 2: Repeat with lower thresholds</div>
+                                            <ul className="ml-4 space-y-1 text-gray-600">
+                                                <li>• Then try 5+ books and organize again</li>
+                                                <li>• Then 3+ books, and so on</li>
+                                                <li>• Each pass adds more author folders</li>
+                                            </ul>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <span className="text-blue-600 font-bold">💡</span>
-                                            <div>
-                                                <strong>Co-author books create separate folders</strong> - you can merge them manually if desired after organizing
-                                            </div>
+
+                                        {/* Step 3 */}
+                                        <div>
+                                            <div className="font-bold text-gray-900 mb-2">Step 3: Manual cleanup afterwards</div>
+                                            <ul className="ml-4 space-y-1 text-gray-600">
+                                                <li>• Co-author books create separate folders</li>
+                                                <li>• Sort by A-Z to find duplicates (adjacent in list)</li>
+                                                <li>• Merge folders manually if desired</li>
+                                                <li>• Wizard handles bulk work, you handle edge cases</li>
+                                            </ul>
                                         </div>
-                                        <div className="flex gap-2">
-                                            <span className="text-blue-600 font-bold">💡</span>
-                                            <div>
-                                                <strong>The wizard handles bulk work,</strong> you handle edge cases. Manual adjustments afterwards are expected and normal.
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <span className="text-blue-600 font-bold">💡</span>
-                                            <div>
-                                                <strong>Drag the slider</strong> to see how many authors match different thresholds in real-time
-                                            </div>
+
+                                        {/* Tip */}
+                                        <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                                            <span className="text-blue-600 font-bold">💡 Tip:</span>
+                                            <span className="ml-2 text-gray-700">Drag slider to explore how many authors match different thresholds in real-time!</span>
                                         </div>
                                     </div>
                                     <div className="flex justify-end pt-2">
