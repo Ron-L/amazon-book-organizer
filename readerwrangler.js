@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -289,6 +289,8 @@
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
             const [wizardSourceFolder, setWizardSourceFolder] = useState('__inbox__'); // v5.1.0 - Wizard source folder selection
             const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0 - Wizard minimum books threshold
+            const [wizardLastFirst, setWizardLastFirst] = useState(false); // v5.1.0-alpha.4 - Display authors as Last, First
+            const [wizardAuthors, setWizardAuthors] = useState([]); // v5.1.0-alpha.4 - Detected authors array
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
@@ -1387,6 +1389,129 @@
                     }
                 }
             }, [syncStatus, columns, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
+
+            // v5.1.0-alpha.4 - Wizard: Detect authors when modal opens or settings change
+            useEffect(() => {
+                if (!wizardModalOpen) return; // Only run when modal is open
+
+                console.log('[WIZARD] Detecting authors...');
+                console.log('[WIZARD] Source folder:', wizardSourceFolder);
+                console.log('[WIZARD] Minimum books:', wizardMinBooks);
+
+                // Helper: Normalize author name for grouping
+                const normalizeAuthor = (author) => {
+                    if (!author) return 'Unknown Author';
+                    const trimmed = author.trim();
+
+                    // Check if format is "Last, First" (has comma)
+                    const commaIndex = trimmed.indexOf(',');
+                    if (commaIndex > 0) {
+                        // "Last, First" → "First Last" for normalization
+                        const last = trimmed.substring(0, commaIndex).trim();
+                        const first = trimmed.substring(commaIndex + 1).trim();
+                        return `${first} ${last}`.toLowerCase();
+                    }
+
+                    // Already "First Last" format
+                    return trimmed.toLowerCase();
+                };
+
+                // Helper: Format author name for display
+                const formatAuthor = (author, asLastFirst) => {
+                    if (!author) return 'Unknown Author';
+                    const trimmed = author.trim();
+
+                    if (asLastFirst) {
+                        // Convert to "Last, First" if not already
+                        const commaIndex = trimmed.indexOf(',');
+                        if (commaIndex > 0) {
+                            return trimmed; // Already "Last, First"
+                        }
+                        // "First Last" → "Last, First"
+                        const parts = trimmed.split(' ');
+                        if (parts.length >= 2) {
+                            const last = parts[parts.length - 1];
+                            const first = parts.slice(0, -1).join(' ');
+                            return `${last}, ${first}`;
+                        }
+                    }
+
+                    // Return as "First Last" (remove comma if present)
+                    const commaIndex = trimmed.indexOf(',');
+                    if (commaIndex > 0) {
+                        const last = trimmed.substring(0, commaIndex).trim();
+                        const first = trimmed.substring(commaIndex + 1).trim();
+                        return `${first} ${last}`;
+                    }
+                    return trimmed;
+                };
+
+                // Get books from selected folder
+                let sourceBooks = [];
+                if (wizardSourceFolder === '__all__') {
+                    sourceBooks = books;
+                } else if (wizardSourceFolder === '__inbox__') {
+                    // Books not in any user folder
+                    const booksInFolders = new Set();
+                    folders.forEach(folder => {
+                        folder.bookIds?.forEach(bookId => booksInFolders.add(bookId));
+                    });
+                    sourceBooks = books.filter(book => !booksInFolders.has(book.id));
+                } else {
+                    // Books in specific folder
+                    const folder = folders.find(f => f.id === wizardSourceFolder);
+                    if (folder) {
+                        const bookIds = new Set(folder.bookIds || []);
+                        sourceBooks = books.filter(book => bookIds.has(book.id));
+                    }
+                }
+
+                console.log('[WIZARD] Source books:', sourceBooks.length);
+
+                // Group books by normalized author
+                const authorMap = new Map();
+                sourceBooks.forEach(book => {
+                    const normalizedAuthor = normalizeAuthor(book.author);
+
+                    if (!authorMap.has(normalizedAuthor)) {
+                        authorMap.set(normalizedAuthor, {
+                            normalizedName: normalizedAuthor,
+                            originalName: book.author || 'Unknown Author',
+                            books: [],
+                            seriesSet: new Set()
+                        });
+                    }
+
+                    const authorData = authorMap.get(normalizedAuthor);
+                    authorData.books.push(book);
+
+                    // Track series
+                    if (book.series) {
+                        authorData.seriesSet.add(book.series);
+                    }
+                });
+
+                // Convert to array and calculate counts
+                const authorsArray = Array.from(authorMap.values()).map(authorData => ({
+                    normalizedName: authorData.normalizedName,
+                    displayName: formatAuthor(authorData.originalName, wizardLastFirst),
+                    originalName: authorData.originalName,
+                    books: authorData.books,
+                    bookCount: authorData.books.length,
+                    seriesCount: authorData.seriesSet.size
+                }));
+
+                // Filter by minimum books threshold
+                const filtered = authorsArray.filter(author => author.bookCount >= wizardMinBooks);
+
+                // Sort by book count descending
+                const sorted = filtered.sort((a, b) => b.bookCount - a.bookCount);
+
+                console.log('[WIZARD] Authors detected:', sorted.length);
+                console.log('[WIZARD] Top 5 authors:', sorted.slice(0, 5).map(a => `${a.displayName} (${a.bookCount} books, ${a.seriesCount} series)`));
+
+                setWizardAuthors(sorted);
+            }, [wizardModalOpen, wizardSourceFolder, wizardMinBooks, wizardLastFirst, books, folders]);
 
             // v5.0.0-alpha.175.28 - Expose state for console debugging
             useEffect(() => {
