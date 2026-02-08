@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6513,6 +6513,16 @@
                                                     Export Library…
                                                 </button>
                                                 <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                                {/* v5.1.0-alpha.2 - Auto-Organize wizard */}
+                                                <button onClick={() => { setWizardModalOpen(true); setOpenMenuBar(null); }} disabled={books.length === 0} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: books.length === 0 ? 'not-allowed' : 'pointer',
+                                                    transition: 'background 0.1s', color: books.length === 0 ? '#94a3b8' : '#1e293b',
+                                                    opacity: books.length === 0 ? 0.5 : 1
+                                                }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = '#f1f5f9')} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    🪄 Auto-Organize…
+                                                </button>
+                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
                                                 <button onClick={() => { setResetConfirmOpen(true); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                     border: 'none', background: 'white', cursor: 'pointer',
@@ -8956,13 +8966,6 @@
                                             </button>
                                         </div>
                                     </div>
-                                    {/* v5.1.0 - Auto-organize wizard button */}
-                                    <button
-                                        onClick={() => setWizardModalOpen(true)}
-                                        className="text-gray-600 hover:text-gray-800 text-lg px-2"
-                                        title="Auto-Organize by Author">
-                                        🪄
-                                    </button>
                                     {/* Expand/Collapse All toggle */}
                                     <button
                                         onClick={() => {
