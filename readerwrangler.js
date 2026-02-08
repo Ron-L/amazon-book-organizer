@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1422,13 +1422,22 @@
                     if (!author) return 'Unknown Author';
                     const trimmed = author.trim();
 
+                    // Detect co-authors (4+ words or contains "and"/"&")
+                    const isCoAuthor = trimmed.split(' ').length >= 4 || trimmed.includes(' and ') || trimmed.includes(' & ');
+
                     if (asLastFirst) {
                         // Convert to "Last, First" if not already
                         const commaIndex = trimmed.indexOf(',');
                         if (commaIndex > 0) {
                             return trimmed; // Already "Last, First"
                         }
-                        // "First Last" → "Last, First"
+
+                        // Don't flip co-authors (too ambiguous)
+                        if (isCoAuthor) {
+                            return trimmed + ' (co-authors)';
+                        }
+
+                        // "First Last" → "Last, First" (2-3 words only)
                         const parts = trimmed.split(' ');
                         if (parts.length >= 2) {
                             const last = parts[parts.length - 1];
@@ -1451,19 +1460,29 @@
                 let sourceBooks = [];
                 if (wizardSourceFolder === '__all__') {
                     sourceBooks = books;
+                    console.log('[WIZARD] Source: All Books');
                 } else if (wizardSourceFolder === '__inbox__') {
-                    // Books not in any user folder
+                    // Books not in any user folder (only check bookIds, not subfolders recursively)
                     const booksInFolders = new Set();
                     folders.forEach(folder => {
-                        folder.bookIds?.forEach(bookId => booksInFolders.add(bookId));
+                        (folder.bookIds || []).forEach(bookId => booksInFolders.add(bookId));
                     });
                     sourceBooks = books.filter(book => !booksInFolders.has(book.id));
+                    console.log('[WIZARD] Source: Inbox');
+                    console.log('[WIZARD] Total books:', books.length);
+                    console.log('[WIZARD] Books in folders:', booksInFolders.size);
+                    console.log('[WIZARD] Books in Inbox:', sourceBooks.length);
                 } else {
                     // Books in specific folder
                     const folder = folders.find(f => f.id === wizardSourceFolder);
                     if (folder) {
                         const bookIds = new Set(folder.bookIds || []);
                         sourceBooks = books.filter(book => bookIds.has(book.id));
+                        console.log('[WIZARD] Source: Folder', folder.name);
+                        console.log('[WIZARD] Folder bookIds:', folder.bookIds?.length || 0);
+                        console.log('[WIZARD] Matched books:', sourceBooks.length);
+                    } else {
+                        console.warn('[WIZARD] Folder not found:', wizardSourceFolder);
                     }
                 }
 
