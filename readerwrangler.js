@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.15";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4752,6 +4752,19 @@
                                     }
                                     return folder;
                                 }));
+                            } else if (subAction.type === 'REMOVE_BOOKS_FROM_FOLDER') {
+                                // v5.1.0-alpha.15 - Restore books to folder (undo removal)
+                                setFolders(prev => prev.map(folder => {
+                                    if (folder.id === subAction.folderId) {
+                                        const existingIds = new Set(folder.bookIds);
+                                        const booksToRestore = subAction.bookIds.filter(id => !existingIds.has(id));
+                                        return {
+                                            ...folder,
+                                            bookIds: [...folder.bookIds, ...booksToRestore]
+                                        };
+                                    }
+                                    return folder;
+                                }));
                             }
                         });
                         showToast(`Undo: ${action.description}`, 'info');
@@ -5165,6 +5178,18 @@
                                         return {
                                             ...folder,
                                             bookIds: [...folder.bookIds, ...newBooks]
+                                        };
+                                    }
+                                    return folder;
+                                }));
+                            } else if (subAction.type === 'REMOVE_BOOKS_FROM_FOLDER') {
+                                // v5.1.0-alpha.15 - Re-remove books from folder (redo removal)
+                                setFolders(prev => prev.map(folder => {
+                                    if (folder.id === subAction.folderId) {
+                                        const bookIdsSet = new Set(subAction.bookIds);
+                                        return {
+                                            ...folder,
+                                            bookIds: folder.bookIds.filter(id => !bookIdsSet.has(id))
                                         };
                                     }
                                     return folder;
@@ -8264,6 +8289,7 @@
                                                 const createdFolders = [];
                                                 const mergedFolders = [];
                                                 let totalBooksOrganized = 0;
+                                                const allBookIdsToOrganize = []; // v5.1.0-alpha.15 - Track all books to remove from Inbox
 
                                                 setFolders(prevFolders => {
                                                     const newFolders = [...prevFolders];
@@ -8304,6 +8330,7 @@
                                                         if (bookIdsToAdd.length > 0) {
                                                             targetFolder.bookIds = [...targetFolder.bookIds, ...bookIdsToAdd];
                                                             totalBooksOrganized += bookIdsToAdd.length;
+                                                            allBookIdsToOrganize.push(...bookIdsToAdd); // v5.1.0-alpha.15 - Collect for Inbox removal
 
                                                             subActions.push({
                                                                 type: 'ADD_BOOKS_TO_FOLDER',
@@ -8312,6 +8339,23 @@
                                                             });
                                                         }
                                                     });
+
+                                                    // v5.1.0-alpha.15 - Remove organized books from Inbox
+                                                    if (allBookIdsToOrganize.length > 0) {
+                                                        const inboxFolder = newFolders.find(f => f.id === '__inbox__');
+                                                        if (inboxFolder) {
+                                                            const bookIdsSet = new Set(allBookIdsToOrganize);
+                                                            inboxFolder.bookIds = inboxFolder.bookIds.filter(id => !bookIdsSet.has(id));
+
+                                                            subActions.push({
+                                                                type: 'REMOVE_BOOKS_FROM_FOLDER',
+                                                                folderId: '__inbox__',
+                                                                bookIds: allBookIdsToOrganize
+                                                            });
+
+                                                            console.log(`[WIZARD] Removed ${allBookIdsToOrganize.length} books from Inbox`);
+                                                        }
+                                                    }
 
                                                     return newFolders;
                                                 });
