@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.18";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.19";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1445,9 +1445,6 @@
             useEffect(() => {
                 if (!wizardModalOpen) return; // Only run when modal is open
 
-                console.log('[WIZARD] Detecting authors from Inbox...');
-                console.log('[WIZARD] Minimum books:', wizardMinBooks);
-
                 // Helper: Normalize author name for grouping (case-insensitive comparison)
                 const normalizeAuthor = (author) => {
                     if (!author) return 'Unknown Author';
@@ -1469,10 +1466,6 @@
                     }
                 });
                 const sourceBooks = books.filter(book => !booksInFolders.has(book.id));
-
-                console.log('[WIZARD] Total books:', books.length);
-                console.log('[WIZARD] Books in user folders:', booksInFolders.size);
-                console.log('[WIZARD] Books in Inbox:', sourceBooks.length);
 
                 // Group books by normalized author
                 const authorMap = new Map();
@@ -1518,10 +1511,6 @@
                         return b.bookCount - a.bookCount;
                     }
                 });
-
-                console.log('[WIZARD] Authors detected:', sorted.length);
-                console.log('[WIZARD] Sort by:', wizardSortBy);
-                console.log('[WIZARD] Top 5 authors:', sorted.slice(0, 5).map(a => `${a.displayName} (${a.bookCount} books, ${a.seriesCount} series)`));
 
                 setWizardAuthors(sorted);
 
@@ -8366,8 +8355,6 @@
                                                                 folderId: '__inbox__',
                                                                 bookIds: allBookIdsToOrganize
                                                             });
-
-                                                            console.log(`[WIZARD] Removed ${allBookIdsToOrganize.length} books from Inbox`);
                                                         }
                                                     }
 
