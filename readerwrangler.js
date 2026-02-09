@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.20";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -293,6 +293,9 @@
             const [wizardAuthors, setWizardAuthors] = useState([]); // v5.1.0-alpha.4 - Detected authors array
             const [wizardSelectedAuthors, setWizardSelectedAuthors] = useState(new Set()); // v5.1.0-alpha.5 - Selected author normalized names
             const [wizardHelpOpen, setWizardHelpOpen] = useState(false); // v5.1.0-alpha.10 - Help dialog
+            const [wizardCreateSeriesFolders, setWizardCreateSeriesFolders] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Create series subfolders
+            const [wizardSortByPosition, setWizardSortByPosition] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Sort books by series position
+            const [wizardCreateMiscellaneous, setWizardCreateMiscellaneous] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Create Miscellaneous folder
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
@@ -8157,6 +8160,37 @@
                                             <span>1</span>
                                             <span>20</span>
                                         </div>
+                                    </div>
+
+                                    {/* v5.1.0-alpha.20 - Phase 2.1: Series subfolder options */}
+                                    <div className="space-y-2 pt-2 pb-2">
+                                        <label className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-2 rounded cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={wizardCreateSeriesFolders}
+                                                onChange={(e) => setWizardCreateSeriesFolders(e.target.checked)}
+                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                            />
+                                            <span>Create subfolders for each series</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-2 rounded cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={wizardSortByPosition}
+                                                onChange={(e) => setWizardSortByPosition(e.target.checked)}
+                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                            />
+                                            <span>Sort books by series position</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-2 rounded cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={wizardCreateMiscellaneous}
+                                                onChange={(e) => setWizardCreateMiscellaneous(e.target.checked)}
+                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                            />
+                                            <span>Create 'Miscellaneous' for non-series books</span>
+                                        </label>
                                     </div>
 
                                     {/* v5.1.0-alpha.5 - Author list */}
