@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.14";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9492,18 +9492,6 @@
                                             </button>
                                         </div>
                                     </div>
-                                    {/* Expand/Collapse All toggle */}
-                                    <button
-                                        onClick={() => {
-                                            // Check if any folder is expanded
-                                            const anyExpanded = folders.some(f => !f.collapsed && getChildFolders(f.id).length > 0);
-                                            // Toggle all: if any expanded, collapse all; else expand all
-                                            setFolders(prev => prev.map(f => ({ ...f, collapsed: anyExpanded })));
-                                        }}
-                                        className="text-gray-400 hover:text-gray-600 text-sm px-1"
-                                        title={folders.some(f => !f.collapsed && getChildFolders(f.id).length > 0) ? 'Collapse all folders' : 'Expand all folders'}>
-                                        {folders.some(f => !f.collapsed && getChildFolders(f.id).length > 0) ? '▼' : '▶'}
-                                    </button>
                                 </div>
                                 {/* v5.0.0-alpha.169 - Filtered folder indicator */}
                                 {hasActiveFilters && (
@@ -9577,13 +9565,33 @@
                                     <div className="border-b border-gray-200 my-1 mx-2"></div>
                                     {/* v5.0.0-alpha.63 - My Library (organizational root container) */}
                                     <div
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
-                                        onClick={() => navigateToFolder('__library__')}>
-                                        <span className="pointer-events-none">{FOLDER_LIBRARY.icon}</span>
-                                        <span className="flex-1 pointer-events-none">{FOLDER_LIBRARY.name}</span>
-                                        <span className="text-xs text-gray-500 pointer-events-none">
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}>
+                                        <span className="pointer-events-none cursor-pointer" onClick={() => navigateToFolder('__library__')}>{FOLDER_LIBRARY.icon}</span>
+                                        <span className="flex-1 pointer-events-none cursor-pointer" onClick={() => navigateToFolder('__library__')}>{FOLDER_LIBRARY.name}</span>
+                                        <span className="text-xs text-gray-500 pointer-events-none cursor-pointer" onClick={() => navigateToFolder('__library__')}>
                                             ({getChildFolders(null).length} folders)
                                         </span>
+                                        {/* v5.1.0-alpha.14 - Collapse/Expand all controls (moved from top, only applies to My Library folders) */}
+                                        <div className="flex gap-0.5 ml-1" onClick={(e) => e.stopPropagation()}>
+                                            <button
+                                                onClick={() => {
+                                                    // Collapse all folders
+                                                    setFolders(prev => prev.map(f => ({ ...f, collapsed: true })));
+                                                }}
+                                                className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
+                                                title="Collapse all folders">
+                                                ▼
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    // Expand all folders
+                                                    setFolders(prev => prev.map(f => ({ ...f, collapsed: false })));
+                                                }}
+                                                className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
+                                                title="Expand all folders">
+                                                ▲
+                                            </button>
+                                        </div>
                                     </div>
                                     {/* Inbox - indented as part of folder hierarchy */}
                                     <div
