@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.1.0-alpha.29d";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.30";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -304,6 +304,7 @@
             const [wizardPreviewData, setWizardPreviewData] = useState(null); // v5.1.0-alpha.28 - Phase 3.1: Preview structure data
             const [wizardResultsOpen, setWizardResultsOpen] = useState(false); // v5.1.0-alpha.29 - Phase 3.3: Results dialog visibility
             const [wizardResultsData, setWizardResultsData] = useState(null); // v5.1.0-alpha.29 - Phase 3.3: Results summary data
+            const [wizardSourceBooksCount, setWizardSourceBooksCount] = useState(0); // v5.1.0-alpha.30 - Phase 3.4: Track Inbox book count for validation
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
@@ -1519,6 +1520,9 @@
                     }
                 });
                 const sourceBooks = books.filter(book => !booksInFolders.has(book.id));
+
+                // v5.1.0-alpha.30 - Phase 3.4: Track source books count for validation
+                setWizardSourceBooksCount(sourceBooks.length);
 
                 // Group books by normalized author
                 const authorMap = new Map();
@@ -8673,8 +8677,17 @@
                                         <div className="max-h-80 overflow-y-auto p-2">
                                             {wizardAuthors.length === 0 ? (
                                                 <div className="text-center text-gray-500 py-8">
-                                                    <p>No authors found with {wizardMinBooks}+ books</p>
-                                                    <p className="text-sm text-gray-400 mt-2">Try lowering the minimum books threshold</p>
+                                                    {wizardSourceBooksCount === 0 ? (
+                                                        <>
+                                                            <p>No books found in Inbox to organize</p>
+                                                            <p className="text-sm text-gray-400 mt-2">All books are already organized in folders</p>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <p>No authors found with {wizardMinBooks}+ books</p>
+                                                            <p className="text-sm text-gray-400 mt-2">Try lowering the minimum books threshold</p>
+                                                        </>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 wizardAuthors.map(author => (
