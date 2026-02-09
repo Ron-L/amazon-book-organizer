@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.1.0-alpha.24";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.25";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6690,6 +6690,57 @@
                 return ballMap[urgency.text] || '⚪';
             };
 
+            // v5.1.0-alpha.25 - Phase 2.3: Group books by series for subfolder creation
+            const groupBooksBySeries = (books) => {
+                const seriesMap = new Map(); // normalized series name → {originalName, books[]}
+                const standaloneBooks = [];
+
+                books.forEach(book => {
+                    if (book.series && book.series.trim()) {
+                        // Normalize series name (case-insensitive)
+                        const normalizedSeries = book.series.trim().toLowerCase();
+
+                        if (!seriesMap.has(normalizedSeries)) {
+                            seriesMap.set(normalizedSeries, {
+                                originalName: book.series.trim(), // Keep original casing for display
+                                books: []
+                            });
+                        }
+
+                        seriesMap.get(normalizedSeries).books.push(book);
+                    } else {
+                        // No series → standalone book
+                        standaloneBooks.push(book);
+                    }
+                });
+
+                // Sort books within each series by position (or dateAdded fallback)
+                seriesMap.forEach((seriesData) => {
+                    seriesData.books.sort((a, b) => {
+                        // Primary sort: series position
+                        const posA = a.seriesPosition;
+                        const posB = b.seriesPosition;
+
+                        if (posA !== null && posA !== undefined && posB !== null && posB !== undefined) {
+                            if (posA !== posB) {
+                                return posA - posB;
+                            }
+                            // Same position → use dateAdded as tiebreaker
+                        }
+
+                        // Fallback sort: dateAdded
+                        const dateA = a.dateAdded || '';
+                        const dateB = b.dateAdded || '';
+                        return dateA.localeCompare(dateB);
+                    });
+                });
+
+                return {
+                    seriesGroups: seriesMap,
+                    standaloneBooks: standaloneBooks
+                };
+            };
+
             return (
                 <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 text-gray-900"
                      onMouseMove={handleMouseMove}
@@ -8378,6 +8429,14 @@
                                                     const newFolders = [...prevFolders];
 
                                                     selectedAuthors.forEach(author => {
+                                                        // v5.1.0-alpha.25 - Phase 2.3: Group books by series (logging only, no subfolder creation yet)
+                                                        const { seriesGroups, standaloneBooks } = groupBooksBySeries(author.books);
+                                                        console.log(`[WIZARD] ${author.displayName} - ${author.books.length} books:`);
+                                                        console.log(`  Series: ${seriesGroups.size}, Standalone: ${standaloneBooks.length}`);
+                                                        seriesGroups.forEach((seriesData, normalizedName) => {
+                                                            console.log(`    • ${seriesData.originalName}: ${seriesData.books.length} books`);
+                                                        });
+
                                                         // Find or create folder for this author
                                                         const folderName = author.displayName;
                                                         let targetFolder = newFolders.find(f => f.name === folderName && f.parentId === null);
