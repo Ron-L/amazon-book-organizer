@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2845,12 +2845,22 @@
                 setEditSeriesPosition('');
             };
 
-            // v5.2.0-alpha.3 - Phase 1.2: Save series edits (placeholder - Phase 1.4)
+            // v5.2.0-alpha.3 - Phase 1.2: Save series edits
+            // v5.2.0-alpha.9 - Phase 1.4: Persist to IndexedDB, update modal
             const saveSeriesEdit = () => {
-                console.log('[EDIT SERIES] Save clicked');
-                console.log('[EDIT SERIES] Series name:', editSeriesName);
-                console.log('[EDIT SERIES] Position:', editSeriesPosition);
-                // TODO: Phase 1.4 - Persist changes to IndexedDB, update book, undo support
+                if (!modalBook) return;
+                const newSeries = editSeriesName.trim() || null;
+                const newPosition = editSeriesPosition.trim() ? parseFloat(editSeriesPosition) : null;
+                console.log('[EDIT SERIES] Saving:', { bookId: modalBook.id, series: newSeries, position: newPosition });
+
+                setBooks(prev => {
+                    const updated = prev.map(b =>
+                        b.id === modalBook.id ? { ...b, series: newSeries, seriesPosition: newPosition } : b
+                    );
+                    saveBooksToIndexedDB(updated);
+                    return updated;
+                });
+                setModalBook(prev => ({ ...prev, series: newSeries, seriesPosition: newPosition }));
                 closeEditSeriesDialog();
             };
 
