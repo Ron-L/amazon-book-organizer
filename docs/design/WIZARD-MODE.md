@@ -220,18 +220,18 @@ Clicking "Preview" shows what will be created without making changes:
 **Deliverable:** Wizard creates series subfolders with sorted books
 **Alpha checkpoint:** v5.1.0-alpha.20+
 
-#### 2.1 - Options: Add series subfolder options to modal
-- ☐ Add checkbox: "Create subfolders for each series" (default: checked)
-- ☐ Add checkbox: "Sort books by series position" (default: checked)
-- ☐ Add checkbox: "Create 'Miscellaneous' for non-series books" (default: checked)
-- ☐ Options state management (useState hooks)
-- ☐ Test: Options toggle correctly, persist during session
+#### 2.1 - Options: Add series subfolder options to modal ✅ COMPLETE (v5.1.0-alpha.20-24)
+- ✅ Add checkbox: "Create subfolders for each series" (default: checked)
+- ✅ Add checkbox: "Sort books by series position" (default: checked)
+- ✅ Add checkbox: "Create 'Miscellaneous' for non-series books" (default: checked)
+- ✅ Options state management (useState hooks + localStorage persistence)
+- ✅ Test: Options toggle correctly, persist during session
 
-#### 2.2 - UI: Update author list to show series count
-- ☐ Parse series metadata for each author's books
-- ☐ Count unique series per author
-- ☐ Update display format: "Jim Butcher - 43 books - 6 series detected"
-- ☐ Test: Series counts appear, match reality
+#### 2.2 - UI: Update author list to show series count ✅ COMPLETE
+- ✅ Parse series metadata for each author's books
+- ✅ Count unique series per author
+- ✅ Update display format: "Jim Butcher - 43 books - 6 series detected"
+- ✅ Test: Series counts appear, match reality
 
 #### 2.3 - Algorithm: Parse series metadata
 - ☐ Extract series name from `book.series` field
