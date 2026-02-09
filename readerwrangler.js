@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -293,6 +293,7 @@
             const [editSeriesOpen, setEditSeriesOpen] = useState(false); // v5.2.0-alpha.3 - Phase 1.2: Edit Series dialog
             const [editSeriesName, setEditSeriesName] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series name field
             const [editSeriesPosition, setEditSeriesPosition] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series position field
+            const [editSeriesDropdownOpen, setEditSeriesDropdownOpen] = useState(false); // v5.2.0-alpha.4 - Phase 1.3: Combobox dropdown
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
             const [wizardMinBooksSlider, setWizardMinBooksSlider] = useState(5); // v5.1.0-alpha.10 - Slider value (immediate)
             const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0-alpha.10 - Debounced threshold for detection
@@ -2809,6 +2810,20 @@
                 input.click();
             };
 
+            // v5.2.0-alpha.4 - Phase 1.3: Get unique series names with book counts
+            const getUniqueSeriesList = () => {
+                const seriesCounts = {};
+                books.forEach(b => {
+                    if (b.series && b.series.trim()) {
+                        const name = b.series.trim();
+                        seriesCounts[name] = (seriesCounts[name] || 0) + 1;
+                    }
+                });
+                return Object.entries(seriesCounts)
+                    .map(([name, count]) => ({ name, count }))
+                    .sort((a, b) => a.name.localeCompare(b.name));
+            };
+
             // v5.2.0-alpha.1 - Phase 1.1: Edit Series button handler
             // v5.2.0-alpha.3 - Phase 1.2: Opens Edit Series dialog modal
             const openEditSeriesDialog = () => {
@@ -2817,12 +2832,14 @@
                 console.log('[EDIT SERIES] Current position:', modalBook?.seriesPosition);
                 setEditSeriesName(modalBook?.series || '');
                 setEditSeriesPosition(modalBook?.seriesPosition != null ? String(modalBook.seriesPosition) : '');
+                setEditSeriesDropdownOpen(false);
                 setEditSeriesOpen(true);
             };
 
             // v5.2.0-alpha.3 - Phase 1.2: Close Edit Series dialog
             const closeEditSeriesDialog = () => {
                 setEditSeriesOpen(false);
+                setEditSeriesDropdownOpen(false);
                 setEditSeriesName('');
                 setEditSeriesPosition('');
             };
@@ -9346,7 +9363,7 @@
                     {/* v5.2.0-alpha.3 - Phase 1.2: Edit Series Dialog */}
                     {editSeriesOpen && modalBook && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onClick={closeEditSeriesDialog}>
-                            <div className="bg-white rounded-lg shadow-2xl p-6 w-[420px]" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl p-6 w-[420px]" onClick={(e) => { e.stopPropagation(); setEditSeriesDropdownOpen(false); }}>
                                 <div className="flex items-center justify-between mb-4">
                                     <h2 className="text-lg font-bold text-gray-900">
                                         {modalBook.series ? '✏️ Edit Series Information' : '✏️ Add to Series'}
@@ -9355,17 +9372,54 @@
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div>
+                                    <div className="relative" onClick={(e) => e.stopPropagation()}>
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Series Name</label>
-                                        <input
-                                            type="text"
-                                            value={editSeriesName}
-                                            onChange={(e) => setEditSeriesName(e.target.value)}
-                                            placeholder="Enter series name..."
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                            autoFocus
-                                        />
-                                        <p className="text-xs text-gray-400 mt-1">Combobox with existing series coming in Phase 1.3</p>
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={editSeriesName}
+                                                onChange={(e) => {
+                                                    setEditSeriesName(e.target.value);
+                                                    setEditSeriesDropdownOpen(true);
+                                                }}
+                                                onFocus={() => setEditSeriesDropdownOpen(true)}
+                                                placeholder="Type or select a series..."
+                                                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                autoFocus
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setEditSeriesDropdownOpen(!editSeriesDropdownOpen)}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+                                                tabIndex={-1}>
+                                                ▼
+                                            </button>
+                                        </div>
+                                        {editSeriesDropdownOpen && (() => {
+                                            const allSeries = getUniqueSeriesList();
+                                            const filtered = editSeriesName.trim()
+                                                ? allSeries.filter(s => s.name.toLowerCase().includes(editSeriesName.toLowerCase()))
+                                                : allSeries;
+                                            return filtered.length > 0 ? (
+                                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                    {filtered.map(s => (
+                                                        <button
+                                                            key={s.name}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setEditSeriesName(s.name);
+                                                                setEditSeriesDropdownOpen(false);
+                                                            }}
+                                                            className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex justify-between items-center ${
+                                                                s.name === editSeriesName ? 'bg-blue-50 font-medium' : ''
+                                                            }`}>
+                                                            <span className="truncate">{s.name}</span>
+                                                            <span className="text-xs text-gray-400 ml-2 shrink-0">({s.count})</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            ) : null;
+                                        })()}
                                     </div>
 
                                     <div>
