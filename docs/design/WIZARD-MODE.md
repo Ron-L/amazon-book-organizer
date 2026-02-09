@@ -233,13 +233,13 @@ Clicking "Preview" shows what will be created without making changes:
 - ✅ Update display format: "Jim Butcher - 43 books - 6 series detected"
 - ✅ Test: Series counts appear, match reality
 
-#### 2.3 - Algorithm: Parse series metadata
-- ☐ Extract series name from `book.series` field
-- ☐ Extract series position from `book.seriesPosition` field (integer or decimal)
-- ☐ Handle missing series data (treat as standalone book)
-- ☐ Handle malformed data gracefully (log warnings, don't crash)
-- ☐ Group books by normalized series name (case-insensitive)
-- ☐ Test: Console log series grouping for test author
+#### 2.3 - Algorithm: Parse series metadata ✅ COMPLETE (v5.1.0-alpha.25)
+- ✅ Extract series name from `book.series` field
+- ✅ Extract series position from `book.seriesPosition` field (integer or decimal)
+- ✅ Handle missing series data (treat as standalone book)
+- ✅ Handle malformed data gracefully (log warnings, don't crash)
+- ✅ Group books by normalized series name (case-insensitive)
+- ✅ Test: Console log series grouping for test author
 
 #### 2.4 - Algorithm: Create series subfolders
 - ☐ For each series with 2+ books: create subfolder under author folder
