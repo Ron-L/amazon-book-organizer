@@ -10,10 +10,15 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 **1. Editable Series and Series Position**
 
-**2. Author list**
+
+**2. Remove column App vestigages**
+
+**3. I can't select My Library in the left pane**
+
+**4. Author list**
    -  Should we have a way to generate a list? If so, how and where would be the output? A dialog? Maybe list view in right panel have a way of "collapsing" the book list by Author (show only 1 line per author, all fields except author are blank)???
 
-**4. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)
+**5. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)
    - Problem: Portrait mode shows only 1-2 book rows, left pane too wide, headers consume vertical space
    - Current state: App works on mobile but layout unusable (landscape shows 2 rows, portrait ~0 rows)
    - Solution TBD: May require UX paradigm shift (hamburger nav, tab switching, overlay panels) vs. basic responsive CSS
@@ -63,19 +68,13 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Users don't know available shortcuts
    - Impact: Power user efficiency
 
-**4. Filter Chevron UI** - LOW/LOW (2-3 hours)
-   - Replace cycling filter button with expandable chevron pattern:
-     ```
-     ▶ Filters                     [collapsed - no filters visible]
-     ▼ Filters  [basic filters]    [click ▶ to expand basic]
-        ▶ More                     [advanced collapsed]
-     ▼ Filters  [basic filters]    [both expanded]
-        ▼ More  [advanced filters]
-     ```
-   - Benefits: More discoverable, more predictable, more familiar, easier to undo
-   - Current: Button cycles through Hidden → Basic → Advanced → Hidden
-   - Proposed: Nested disclosure triangles that rotate on expand/collapse
-   - Implementation: Two state variables (`filtersExpanded`, `advancedExpanded`) instead of single `filterMode`
+**4. Button Consistency Audit** - LOW/LOW (2-4 hours)
+   - Audit all button hover states across the app
+   - Define 3 button styles: Primary/Secondary/Tertiary
+   - Apply consistently everywhere (price goals, Add Tag, View on Amazon, Add Note, Edit Series, etc.)
+   - Document button style patterns
+   - Problem: Different buttons have different hover behaviors, users can't predict interaction
+   - Impact: Consistent, predictable UI interactions
 
 **5. Enhanced Getting Started UX** - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
    - Status: Planned (post-rename enhancement)
