@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9406,6 +9406,7 @@
                                                     {filtered.map(s => (
                                                         <button
                                                             key={s.name}
+                                                            ref={s.name === modalBook?.series ? (el) => { if (el) el.scrollIntoView({ block: 'nearest' }); } : null}
                                                             type="button"
                                                             onClick={() => {
                                                                 setEditSeriesName(s.name);
