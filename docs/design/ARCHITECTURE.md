@@ -8,9 +8,9 @@
 
 ## Data Flow
 
-- User loads library → Parse JSON → Store in IndexedDB
-- UI state (columns, book positions) → localStorage
-- Collections data loaded from `amazon-collections.json` with cache-busting
+- User loads library → Parse JSON (amazon-library.json) → Store in IndexedDB
+- UI state (folders, organization) → localStorage
+- Book data includes collections metadata (consolidated in amazon-library.json)
 
 ## Storage Architecture Rationale
 
@@ -80,11 +80,37 @@ Project/release version is maintained in README.md badge (single source of truth
 
 ## Cache-Busting
 
-**Collections file:** `amazon-collections.json?t=${Date.now()}` in readerwrangler.js:828
-- Prevents browser from caching collections data
+### Main Application (readerwrangler.html + readerwrangler.js)
 
-**Dev mode scripts:** `?v=' + Date.now()` in bookmarklet-nav-hub.js:160
-- Used for script loading in development environment
+**Production cache busting** (version-based):
+- `APP_VERSION` defined in readerwrangler.html (line ~30)
+- Dynamic script loading: `readerwrangler.js?v={APP_VERSION}`
+- Updated on each release to force browsers to fetch new code
+- Validation: readerwrangler.js checks cache-buster matches its APP_VERSION, warns if mismatched
+
+**Developer workflow:**
+- During alpha development: Cache-buster stays at current APP_VERSION
+- Use **hard refresh** (Ctrl+Shift+R / Cmd+Shift+R) to see code changes
+- At release: Update APP_VERSION in readerwrangler.html to new version
+- Version validation prevents accidental mismatches
+
+**Why not Date.now() for production?**
+- Would bypass cache on every page load
+- Measured: 13 seconds (cached) vs 17 seconds (uncached) load time
+- Version-based cache busting only invalidates on actual releases
+
+### Navigator Scripts (bookmarklet-nav-hub.js)
+
+**Environment-based cache busting:**
+```javascript
+const IS_DEV_MODE = TARGET_ENV !== 'PROD';  // Line 46
+const cacheBuster = IS_DEV_MODE ? '?v=' + Date.now() : '';  // Line 214
+```
+
+**Behavior:**
+- LOCAL: `Date.now()` cache busting (rapid iteration)
+- DEV: `Date.now()` cache busting (GitHub Pages testing)
+- PROD: No cache busting (stable, cached for users)
 
 ## Terminology
 

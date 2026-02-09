@@ -27,8 +27,18 @@
     <script src="uiHelpers.js?v=5.0.0"></script>
     <script src="storage.js?v=5.0.0"></script>
 
-    <!-- Main app with JSX (needs Babel) -->
-    <script type="text/babel" src="readerwrangler.js?v=5.0.0"></script>
+    <!-- Main app with JSX (needs Babel) - Dynamic loading for cache busting -->
+    <script>
+        // APP_VERSION - Single source of truth for cache busting
+        // Update this on each release to force browsers to fetch new code
+        const APP_VERSION = "5.0.10";
+
+        // Dynamically load main app with version-based cache busting
+        const script = document.createElement('script');
+        script.type = 'text/babel';
+        script.src = 'readerwrangler.js?v=' + APP_VERSION;
+        document.body.appendChild(script);
+    </script>
     <script data-goatcounter="https://readerwrangler.goatcounter.com/count"
             async src="//gc.zgo.at/count.js"></script>
 </body>
