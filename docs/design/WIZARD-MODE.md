@@ -195,23 +195,101 @@ Clicking "Preview" shows what will be created without making changes:
 
 ## Implementation Phases
 
-### Phase 1: Basic Wizard
-- Author detection and grouping
-- Simple modal with author list
-- Create flat author folders (no series subfolders)
-- Move books from Inbox
+### Phase 1: Basic Wizard ✅ COMPLETE (v5.1.0-alpha.19)
 
-### Phase 2: Series Detection
-- Parse series metadata
-- Create series subfolders
-- Sort by series position
-- Miscellaneous subfolder
+**Deliverable:** Wizard creates flat author folders from Inbox
+
+**Completed features:**
+- ✅ Author detection and grouping (case-insensitive)
+- ✅ Simple modal with author list and checkboxes
+- ✅ Slider control for minimum books threshold (1-20)
+- ✅ Segmented controls for sort (# Books / A-Z) and selection (All / Some / None)
+- ✅ Create flat author folders (no series subfolders)
+- ✅ Remove organized books from Inbox
+- ✅ Bundled undo/redo (single Ctrl+Z undoes entire operation)
+- ✅ Help dialog with workflow tips
+- ✅ Orphaned bookId cleanup
+- ✅ Collapse/Expand controls moved to My Library header
+
+**Alpha versions:** v5.1.0-alpha.8 through alpha.19
+
+---
+
+### Phase 2: Series Detection (Subfolders & Organization)
+
+**Deliverable:** Wizard creates series subfolders with sorted books
+**Alpha checkpoint:** v5.1.0-alpha.20+
+
+#### 2.1 - Options: Add series subfolder options to modal
+- ☐ Add checkbox: "Create subfolders for each series" (default: checked)
+- ☐ Add checkbox: "Sort books by series position" (default: checked)
+- ☐ Add checkbox: "Create 'Miscellaneous' for non-series books" (default: checked)
+- ☐ Options state management (useState hooks)
+- ☐ Test: Options toggle correctly, persist during session
+
+#### 2.2 - UI: Update author list to show series count
+- ☐ Parse series metadata for each author's books
+- ☐ Count unique series per author
+- ☐ Update display format: "Jim Butcher - 43 books - 6 series detected"
+- ☐ Test: Series counts appear, match reality
+
+#### 2.3 - Algorithm: Parse series metadata
+- ☐ Extract series name from `book.series` field
+- ☐ Extract series position from `book.seriesPosition` field (integer or decimal)
+- ☐ Handle missing series data (treat as standalone book)
+- ☐ Handle malformed data gracefully (log warnings, don't crash)
+- ☐ Group books by normalized series name (case-insensitive)
+- ☐ Test: Console log series grouping for test author
+
+#### 2.4 - Algorithm: Create series subfolders
+- ☐ For each series with 2+ books: create subfolder under author folder
+- ☐ Add books to series folder, sorted by position (if option enabled)
+- ☐ If sort option disabled: use acquisition date order
+- ☐ Handle books with same position (use acquisition date as tiebreaker)
+- ☐ Update sub-actions for undo (CREATE_FOLDER for series subfolders)
+- ☐ Test: Series folders created with correct books in correct order
+
+#### 2.5 - Algorithm: Handle non-series books
+- ☐ If "Miscellaneous" option enabled: create Miscellaneous subfolder
+- ☐ Add non-series books to Miscellaneous (sorted by acquisition date)
+- ☐ If "Miscellaneous" option disabled: add non-series books to author folder root
+- ☐ Test: Non-series books go to correct location based on option
+
+---
 
 ### Phase 3: Preview & Polish
-- Preview mode with folder tree visualization
-- Select All / Select None
-- Progress indicator for large operations
-- Undo support (or confirmation dialog)
+
+**Deliverable:** Production-ready wizard with preview mode
+
+#### 3.1 - UI: Preview mode dialog
+- ☐ Add "Preview" button to main wizard dialog (next to "Organize")
+- ☐ Create preview modal with folder tree visualization
+- ☐ Show hierarchy: Author > Series > Book count
+- ☐ Summary counts: folders, subfolders, books moved
+- ☐ "Back" button returns to main wizard
+- ☐ "Organize Now" button executes organization
+- ☐ Test: Preview shows accurate folder tree structure
+
+#### 3.2 - UX: Progress indicator
+- ☐ Detect large operations (threshold: 100+ books)
+- ☐ Show progress dialog during organization
+- ☐ Update progress: "Creating folders... (3 of 12)"
+- ☐ Update progress: "Moving books... (127 of 523)"
+- ☐ Auto-dismiss on completion
+- ☐ Test: Progress updates smoothly, completes at 100%
+
+#### 3.3 - UX: Results summary
+- ☐ Show summary dialog after completion
+- ☐ Display: "Created X folders, Y subfolders, moved Z books"
+- ☐ Close button dismisses dialog
+- ☐ Test: Summary counts accurate, dialog dismissible
+
+#### 3.4 - Edge cases: Validation & error handling
+- ☐ Handle empty source folder gracefully (show message, disable Organize)
+- ☐ Handle no authors meeting threshold (show message)
+- ☐ Handle duplicate folder names (shouldn't happen, but safeguard)
+- ☐ Handle invalid series positions (log warning, use date fallback)
+- ☐ Test: Edge cases handled without crashes
 
 ---
 
@@ -234,8 +312,15 @@ Clicking "Preview" shows what will be created without making changes:
 
 ## Status
 
-**Status:** Design Complete - Ready for Implementation
+**Current:** Phase 1 Complete (v5.1.0-alpha.19) ✅
 
-**Priority:** Phase 5 (after core Explorer features)
+**Next:** Phase 2 - Series Detection
 
-**Estimated Effort:** Medium (8-12 hours)
+**Progress:**
+- Phase 1: ✅ Complete (v5.1.0-alpha.8 through alpha.19)
+- Phase 2: ⏸️ Not Started
+- Phase 3: ⏸️ Not Started
+
+**Estimated Effort:**
+- Phase 2: Medium (6-8 hours)
+- Phase 3: Small (2-4 hours)
