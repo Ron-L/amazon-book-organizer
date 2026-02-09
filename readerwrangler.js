@@ -1,24 +1,11 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
 
-        // APP_VERSION - Read from query parameter (defined ONCE in readerwrangler.html)
+        // APP_VERSION - Defined ONCE in readerwrangler.html, available in global scope
         // Single source of truth - no duplication!
-        const APP_VERSION = (() => {
-            const currentScript = document.currentScript || document.querySelector('script[src*="readerwrangler.js"]');
-            if (currentScript) {
-                const scriptSrc = currentScript.src || '';
-                const urlParams = new URLSearchParams(scriptSrc.split('?')[1]);
-                const version = urlParams.get('v');
-                if (version) {
-                    console.log(`✅ APP_VERSION: ${version} (from readerwrangler.html)`);
-                    return version;
-                }
-            }
-            console.warn('⚠️ APP_VERSION not found in query params, using fallback');
-            return "5.0.10";  // Fallback only (should never happen in normal operation)
-        })();
+        console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.1.0-alpha.23";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.24";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
