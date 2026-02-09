@@ -215,10 +215,10 @@ Clicking "Preview" shows what will be created without making changes:
 
 ---
 
-### Phase 2: Series Detection (Subfolders & Organization)
+### Phase 2: Series Detection (Subfolders & Organization) ✅ COMPLETE (v5.1.0-alpha.20-27)
 
 **Deliverable:** Wizard creates series subfolders with sorted books
-**Alpha checkpoint:** v5.1.0-alpha.20+
+**Alpha checkpoint:** v5.1.0-alpha.20-27
 
 #### 2.1 - Options: Add series subfolder options to modal ✅ COMPLETE (v5.1.0-alpha.20-24)
 - ✅ Add checkbox: "Create subfolders for each series" (default: checked)
@@ -249,11 +249,11 @@ Clicking "Preview" shows what will be created without making changes:
 - ✅ Update sub-actions for undo (CREATE_FOLDER for series subfolders)
 - ✅ Test: Series folders created with correct books in correct order
 
-#### 2.5 - Algorithm: Handle non-series books
-- ☐ If "Miscellaneous" option enabled: create Miscellaneous subfolder
-- ☐ Add non-series books to Miscellaneous (sorted by acquisition date)
-- ☐ If "Miscellaneous" option disabled: add non-series books to author folder root
-- ☐ Test: Non-series books go to correct location based on option
+#### 2.5 - Algorithm: Handle non-series books ✅ COMPLETE (v5.1.0-alpha.27)
+- ✅ If "Miscellaneous" option enabled: create Miscellaneous subfolder
+- ✅ Add non-series books to Miscellaneous (sorted by acquisition date)
+- ✅ If "Miscellaneous" option disabled: add non-series books to author folder root
+- ✅ Test: Non-series books go to correct location based on option
 
 ---
 
@@ -312,13 +312,13 @@ Clicking "Preview" shows what will be created without making changes:
 
 ## Status
 
-**Current:** Phase 1 Complete (v5.1.0-alpha.19) ✅
+**Current:** Phase 2 Complete (v5.1.0-alpha.27) ✅
 
-**Next:** Phase 2 - Series Detection
+**Next:** Phase 3 - Preview & Polish
 
 **Progress:**
 - Phase 1: ✅ Complete (v5.1.0-alpha.8 through alpha.19)
-- Phase 2: ⏸️ Not Started
+- Phase 2: ✅ Complete (v5.1.0-alpha.20 through alpha.27)
 - Phase 3: ⏸️ Not Started
 
 **Estimated Effort:**
