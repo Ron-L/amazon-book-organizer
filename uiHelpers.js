@@ -10,6 +10,7 @@ const STATUS_KEY = "readerwrangler-status";
 const FILTERS_KEY = "readerwrangler-filters";
 const EXPLORER_KEY = "readerwrangler-explorer"; // v5.0.0 - Explorer view settings
 const FOLDERS_KEY = "readerwrangler-folders"; // v5.0.0 - User folder organization
+const WIZARD_KEY = "readerwrangler-wizard"; // v5.1.0-alpha.23 - Wizard settings
 
 // ===== Amazon =====
 const AMAZON_AFFILIATE_TAG = 'rclewent-20';

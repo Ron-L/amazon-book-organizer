@@ -18,7 +18,7 @@
             return "5.0.10";  // Fallback only (should never happen in normal operation)
         })();
 
-        const ORGANIZER_VERSION = "5.1.0-alpha.22";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.23";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1049,6 +1049,7 @@
             // v4.15.6: Track initial mount to prevent save effect from overwriting loaded values
             const filtersLoadedRef = useRef(false);
             const explorerSettingsLoadedRef = useRef(false); // v5.0.0-alpha.169.10 - Track Explorer settings load
+            const wizardSettingsLoadedRef = useRef(false); // v5.1.0-alpha.23 - Track wizard settings load
 
             // v5.0.0-alpha.82 - Timeout for auto-expanding folder on drag hover
             const dragHoverExpandTimeoutRef = useRef(null);
@@ -1141,6 +1142,47 @@
                     console.error('Failed to save filters to localStorage:', e);
                 }
             }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden, tagFilter, selectedCollections, minAmazonRating, minMyRating, selectedSeries]);
+
+            // v5.1.0-alpha.23 - Load wizard settings from localStorage on mount
+            React.useEffect(() => {
+                try {
+                    const savedWizard = localStorage.getItem(WIZARD_KEY);
+                    if (savedWizard) {
+                        const wizard = JSON.parse(savedWizard);
+                        if (wizard.minBooksSlider !== undefined) setWizardMinBooksSlider(wizard.minBooksSlider);
+                        if (wizard.minBooks !== undefined) setWizardMinBooks(wizard.minBooks);
+                        if (wizard.sortBy !== undefined) setWizardSortBy(wizard.sortBy);
+                        if (wizard.createSeriesFolders !== undefined) setWizardCreateSeriesFolders(wizard.createSeriesFolders);
+                        if (wizard.sortByPosition !== undefined) setWizardSortByPosition(wizard.sortByPosition);
+                        if (wizard.createMiscellaneous !== undefined) setWizardCreateMiscellaneous(wizard.createMiscellaneous);
+                    }
+                } catch (e) {
+                    console.error('Failed to load wizard settings from localStorage:', e);
+                }
+                // Mark settings loaded after a small delay
+                setTimeout(() => {
+                    wizardSettingsLoadedRef.current = true;
+                }, 100);
+            }, []); // Empty dependency array = run once on mount
+
+            // v5.1.0-alpha.23 - Save wizard settings to localStorage whenever they change
+            React.useEffect(() => {
+                // Skip save during initial load to prevent overwriting
+                if (!wizardSettingsLoadedRef.current) return;
+                try {
+                    const wizard = {
+                        minBooksSlider: wizardMinBooksSlider,
+                        minBooks: wizardMinBooks,
+                        sortBy: wizardSortBy,
+                        createSeriesFolders: wizardCreateSeriesFolders,
+                        sortByPosition: wizardSortByPosition,
+                        createMiscellaneous: wizardCreateMiscellaneous
+                    };
+                    localStorage.setItem(WIZARD_KEY, JSON.stringify(wizard));
+                } catch (e) {
+                    console.error('Failed to save wizard settings to localStorage:', e);
+                }
+            }, [wizardMinBooksSlider, wizardMinBooks, wizardSortBy, wizardCreateSeriesFolders, wizardSortByPosition, wizardCreateMiscellaneous]);
 
             // Compute dateFrom/dateTo from datePreset selection (v4.15.6)
             React.useEffect(() => {
