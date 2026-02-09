@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.17";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.18";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4740,8 +4740,8 @@
                         setFolders(prev => {
                             let updated = [...prev];
 
-                            // Process sub-actions in reverse order
-                            action.subActions.reverse().forEach(subAction => {
+                            // Process sub-actions in reverse order (make copy to avoid mutating original)
+                            [...action.subActions].reverse().forEach(subAction => {
                                 if (subAction.type === 'CREATE_FOLDER') {
                                     // Remove created folder
                                     updated = updated.filter(f => f.id !== subAction.folderId);
@@ -5172,31 +5172,20 @@
                         // v5.1.0-alpha.13 - Phase 1.5/1.6: Redo wizard organize
                         // v5.1.0-alpha.15.1 - Batch all sub-actions into single state update to avoid race conditions
                         console.log('[REDO WIZARD_ORGANIZE]', action.description);
-                        console.log('[REDO DEBUG] Sub-actions:', action.subActions.length);
                         setFolders(prev => {
                             let updated = [...prev];
-                            console.log('[REDO DEBUG] Starting with', updated.length, 'folders');
 
                             // Process all sub-actions in order, building final state
-                            action.subActions.forEach((subAction, idx) => {
-                                console.log(`[REDO DEBUG] Processing sub-action ${idx + 1}:`, subAction.type);
-
+                            action.subActions.forEach(subAction => {
                                 if (subAction.type === 'CREATE_FOLDER') {
                                     // Add folder
-                                    console.log('[REDO DEBUG] Creating folder:', subAction.folder.name, 'with', subAction.folder.bookIds?.length || 0, 'books');
                                     updated.push(subAction.folder);
-                                    console.log('[REDO DEBUG] After CREATE, folder count:', updated.length);
                                 } else if (subAction.type === 'ADD_BOOKS_TO_FOLDER') {
                                     // Add books to folder
-                                    console.log('[REDO DEBUG] Adding', subAction.bookIds.length, 'books to folder:', subAction.folderId);
-                                    const folderBefore = updated.find(f => f.id === subAction.folderId);
-                                    console.log('[REDO DEBUG] Folder before ADD:', folderBefore?.name, 'has', folderBefore?.bookIds?.length || 0, 'books');
-
                                     updated = updated.map(folder => {
                                         if (folder.id === subAction.folderId) {
                                             const existingIds = new Set(folder.bookIds);
                                             const newBooks = subAction.bookIds.filter(id => !existingIds.has(id));
-                                            console.log('[REDO DEBUG] Adding', newBooks.length, 'new books (', subAction.bookIds.length - newBooks.length, 'already existed)');
                                             return {
                                                 ...folder,
                                                 bookIds: [...folder.bookIds, ...newBooks]
@@ -5204,15 +5193,8 @@
                                         }
                                         return folder;
                                     });
-
-                                    const folderAfter = updated.find(f => f.id === subAction.folderId);
-                                    console.log('[REDO DEBUG] Folder after ADD:', folderAfter?.name, 'has', folderAfter?.bookIds?.length || 0, 'books');
                                 } else if (subAction.type === 'REMOVE_BOOKS_FROM_FOLDER') {
                                     // Remove books from folder (e.g., from Inbox)
-                                    console.log('[REDO DEBUG] Removing', subAction.bookIds.length, 'books from folder:', subAction.folderId);
-                                    const folderBefore = updated.find(f => f.id === subAction.folderId);
-                                    console.log('[REDO DEBUG] Folder before REMOVE:', folderBefore?.name, 'has', folderBefore?.bookIds?.length || 0, 'books');
-
                                     updated = updated.map(folder => {
                                         if (folder.id === subAction.folderId) {
                                             const bookIdsSet = new Set(subAction.bookIds);
@@ -5223,17 +5205,9 @@
                                         }
                                         return folder;
                                     });
-
-                                    const folderAfter = updated.find(f => f.id === subAction.folderId);
-                                    console.log('[REDO DEBUG] Folder after REMOVE:', folderAfter?.name, 'has', folderAfter?.bookIds?.length || 0, 'books');
                                 }
                             });
 
-                            console.log('[REDO DEBUG] Returning', updated.length, 'folders');
-                            const authorFolder = updated.find(f => f.name === 'Simon R. Green');
-                            if (authorFolder) {
-                                console.log('[REDO DEBUG] Simon R. Green folder has', authorFolder.bookIds?.length || 0, 'books');
-                            }
                             return updated;
                         });
                         showToast(`Redo: ${action.description}`, 'info');
