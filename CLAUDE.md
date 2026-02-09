@@ -35,7 +35,7 @@ Standard semver with pre-release suffix for test iterations:
 | Each test | Increment: `-alpha.2`, `-alpha.3`, **COMMIT before test** |
 | Release | Drop suffix: `4.23.0` |
 
-**APP_VERSION** (readerwrangler.html + readerwrangler.js): Updated at release for user-facing changes. **CRITICAL:** Update in BOTH files to match (HTML for cache busting, JS for display). Version mismatch warning in console if out of sync.
+**APP_VERSION** (readerwrangler.html): Updated at release for user-facing changes. Defined ONCE in HTML, passed to JS via query param. JS reads and uses it (no duplication).
 
 **ORGANIZER_VERSION** (readerwrangler.js): Update in the same commit as each alpha iteration.
 

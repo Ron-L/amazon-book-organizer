@@ -1,24 +1,24 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
-        const APP_VERSION = "5.0.10";  // Release version shown to users (also defined in readerwrangler.html for cache busting)
-        const ORGANIZER_VERSION = "5.1.0-alpha.21";  // Build version for this file
 
-        // Validate cache-buster version matches APP_VERSION (detects stale HTML)
-        (() => {
+        // APP_VERSION - Read from query parameter (defined ONCE in readerwrangler.html)
+        // Single source of truth - no duplication!
+        const APP_VERSION = (() => {
             const currentScript = document.currentScript || document.querySelector('script[src*="readerwrangler.js"]');
             if (currentScript) {
                 const scriptSrc = currentScript.src || '';
                 const urlParams = new URLSearchParams(scriptSrc.split('?')[1]);
-                const cacheBusterVersion = urlParams.get('v');
-
-                if (cacheBusterVersion && cacheBusterVersion !== APP_VERSION) {
-                    console.warn(`⚠️ VERSION MISMATCH: HTML cache-buster is v=${cacheBusterVersion} but APP_VERSION=${APP_VERSION}`);
-                    console.warn(`   Update APP_VERSION in readerwrangler.html to "${APP_VERSION}" to match!`);
-                } else if (cacheBusterVersion) {
-                    console.log(`✅ Cache-buster version matches: v=${cacheBusterVersion}`);
+                const version = urlParams.get('v');
+                if (version) {
+                    console.log(`✅ APP_VERSION: ${version} (from readerwrangler.html)`);
+                    return version;
                 }
             }
+            console.warn('⚠️ APP_VERSION not found in query params, using fallback');
+            return "5.0.10";  // Fallback only (should never happen in normal operation)
         })();
+
+        const ORGANIZER_VERSION = "5.1.0-alpha.22";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {

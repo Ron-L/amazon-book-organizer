@@ -83,16 +83,16 @@ Project/release version is maintained in README.md badge (single source of truth
 ### Main Application (readerwrangler.html + readerwrangler.js)
 
 **Production cache busting** (version-based):
-- `APP_VERSION` defined in readerwrangler.html (line ~30)
+- `APP_VERSION` defined ONCE in readerwrangler.html (line ~34)
 - Dynamic script loading: `readerwrangler.js?v={APP_VERSION}`
+- readerwrangler.js reads version from query param (no duplication!)
 - Updated on each release to force browsers to fetch new code
-- Validation: readerwrangler.js checks cache-buster matches its APP_VERSION, warns if mismatched
 
 **Developer workflow:**
 - During alpha development: Cache-buster stays at current APP_VERSION
 - Use **hard refresh** (Ctrl+Shift+R / Cmd+Shift+R) to see code changes
-- At release: Update APP_VERSION in readerwrangler.html to new version
-- Version validation prevents accidental mismatches
+- At release: Update APP_VERSION in readerwrangler.html only (single source of truth)
+- JavaScript automatically uses the version from HTML (no duplication to maintain)
 
 **Why not Date.now() for production?**
 - Would bypass cache on every page load
