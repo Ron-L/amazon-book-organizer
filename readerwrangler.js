@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.1.0";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2804,6 +2804,14 @@
                     }
                 };
                 input.click();
+            };
+
+            // v5.2.0-alpha.1 - Phase 1.1: Placeholder for Edit Series dialog
+            const openEditSeriesDialog = () => {
+                console.log('[EDIT SERIES] Opening edit dialog for book:', modalBook?.title);
+                console.log('[EDIT SERIES] Current series:', modalBook?.series);
+                console.log('[EDIT SERIES] Current position:', modalBook?.seriesPosition);
+                // TODO: Phase 1.2 - Open edit dialog modal
             };
 
             const openCollectSeriesDialog = () => {
@@ -9460,19 +9468,43 @@
 
                                             {modalBook.series && (
                                                 <div className="mb-3">
-                                                    <p className="text-lg mb-2" style={{ color: '#621e31' }}>
-                                                        {(modalBook.seriesPosition && modalBook.seriesTotal)
-                                                            ? `Book ${modalBook.seriesPosition} of ${modalBook.seriesTotal}: ${modalBook.series}`
-                                                            : modalBook.seriesPosition
-                                                                ? `Book ${modalBook.seriesPosition}: ${modalBook.series}`
-                                                                : modalBook.series
-                                                        }
-                                                    </p>
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <p className="text-lg" style={{ color: '#621e31' }}>
+                                                            {(modalBook.seriesPosition && modalBook.seriesTotal)
+                                                                ? `Book ${modalBook.seriesPosition} of ${modalBook.seriesTotal}: ${modalBook.series}`
+                                                                : modalBook.seriesPosition
+                                                                    ? `Book ${modalBook.seriesPosition}: ${modalBook.series}`
+                                                                    : modalBook.series
+                                                            }
+                                                        </p>
+                                                        <button
+                                                            onClick={openEditSeriesDialog}
+                                                            className="text-gray-500 hover:text-blue-600 transition-colors"
+                                                            title="Edit series information">
+                                                            ✏️
+                                                        </button>
+                                                    </div>
                                                     <button
                                                         onClick={openCollectSeriesDialog}
                                                         className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-medium flex items-center gap-2">
                                                         📚 Group Series Books
                                                     </button>
+                                                </div>
+                                            )}
+
+                                            {!modalBook.series && (
+                                                <div className="mb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-sm text-gray-500 italic">
+                                                            Not part of a series
+                                                        </p>
+                                                        <button
+                                                            onClick={openEditSeriesDialog}
+                                                            className="text-gray-500 hover:text-blue-600 text-sm transition-colors"
+                                                            title="Add to series">
+                                                            ✏️ Add to series
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             )}
 
