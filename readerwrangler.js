@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.1.0-alpha.29c";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.29d";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7011,6 +7011,27 @@
                         }
                     }
 
+                    // v5.1.0-alpha.29d - Phase 3.3: MOVED INSIDE callback to fix async execution bug
+                    // Must execute here while variables are populated, before returning
+                    console.log(`[WIZARD] ✅ Created ${createdFolders.length} folders, merged ${mergedFolders.length}, organized ${totalBooksOrganized} books`);
+                    if (createdFolders.length > 0) {
+                        console.log(`[WIZARD] Created: ${createdFolders.slice(0, 5).join(', ')}${createdFolders.length > 5 ? '...' : ''}`);
+                    }
+                    if (mergedFolders.length > 0) {
+                        console.log(`[WIZARD] Merged: ${mergedFolders.slice(0, 5).join(', ')}${mergedFolders.length > 5 ? '...' : ''}`);
+                    }
+
+                    const subfoldersCreated = subActions.filter(action =>
+                        action.type === 'CREATE_FOLDER' && action.parentId !== null
+                    ).length;
+
+                    setWizardResultsData({
+                        foldersCreated: createdFolders.length,
+                        foldersMerged: mergedFolders.length,
+                        subfoldersCreated: subfoldersCreated,
+                        totalBooks: totalBooksOrganized
+                    });
+
                     return newFolders;
                 });
 
@@ -7020,24 +7041,6 @@
                     subActions
                 });
 
-                console.log(`[WIZARD] ✅ Created ${createdFolders.length} folders, merged ${mergedFolders.length}, organized ${totalBooksOrganized} books`);
-                if (createdFolders.length > 0) {
-                    console.log(`[WIZARD] Created: ${createdFolders.slice(0, 5).join(', ')}${createdFolders.length > 5 ? '...' : ''}`);
-                }
-                if (mergedFolders.length > 0) {
-                    console.log(`[WIZARD] Merged: ${mergedFolders.slice(0, 5).join(', ')}${mergedFolders.length > 5 ? '...' : ''}`);
-                }
-
-                const subfoldersCreated = subActions.filter(action =>
-                    action.type === 'CREATE_FOLDER' && action.parentId !== null
-                ).length;
-
-                setWizardResultsData({
-                    foldersCreated: createdFolders.length,
-                    foldersMerged: mergedFolders.length,
-                    subfoldersCreated: subfoldersCreated,
-                    totalBooks: totalBooksOrganized
-                });
                 setWizardModalOpen(false);
                 setWizardResultsOpen(true);
             };
