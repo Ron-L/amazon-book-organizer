@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2826,11 +2826,12 @@
 
             // v5.2.0-alpha.1 - Phase 1.1: Edit Series button handler
             // v5.2.0-alpha.3 - Phase 1.2: Opens Edit Series dialog modal
+            // v5.2.0-alpha.5 - Tags pattern: blank field, current series highlighted in dropdown
             const openEditSeriesDialog = () => {
                 console.log('[EDIT SERIES] Opening edit dialog for book:', modalBook?.title);
                 console.log('[EDIT SERIES] Current series:', modalBook?.series);
                 console.log('[EDIT SERIES] Current position:', modalBook?.seriesPosition);
-                setEditSeriesName(modalBook?.series || '');
+                setEditSeriesName('');
                 setEditSeriesPosition(modalBook?.seriesPosition != null ? String(modalBook.seriesPosition) : '');
                 setEditSeriesDropdownOpen(false);
                 setEditSeriesOpen(true);
@@ -9383,7 +9384,7 @@
                                                     setEditSeriesDropdownOpen(true);
                                                 }}
                                                 onFocus={() => setEditSeriesDropdownOpen(true)}
-                                                placeholder="Type or select a series..."
+                                                placeholder="Type to filter or select below..."
                                                 className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                 autoFocus
                                             />
@@ -9411,7 +9412,7 @@
                                                                 setEditSeriesDropdownOpen(false);
                                                             }}
                                                             className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex justify-between items-center ${
-                                                                s.name === editSeriesName ? 'bg-blue-50 font-medium' : ''
+                                                                s.name === modalBook?.series ? 'bg-blue-100 font-medium' : ''
                                                             }`}>
                                                             <span className="truncate">{s.name}</span>
                                                             <span className="text-xs text-gray-400 ml-2 shrink-0">({s.count})</span>
