@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.1.0-alpha.28";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.29";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -302,6 +302,8 @@
             const [wizardCreateMiscellaneous, setWizardCreateMiscellaneous] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Create Miscellaneous folder
             const [wizardPreviewMode, setWizardPreviewMode] = useState(false); // v5.1.0-alpha.28 - Phase 3.1: Preview mode
             const [wizardPreviewData, setWizardPreviewData] = useState(null); // v5.1.0-alpha.28 - Phase 3.1: Preview structure data
+            const [wizardResultsOpen, setWizardResultsOpen] = useState(false); // v5.1.0-alpha.29 - Phase 3.3: Results dialog visibility
+            const [wizardResultsData, setWizardResultsData] = useState(null); // v5.1.0-alpha.29 - Phase 3.3: Results summary data
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
@@ -8726,7 +8728,19 @@
                                                     console.log(`[WIZARD] Merged: ${mergedFolders.slice(0, 5).join(', ')}${mergedFolders.length > 5 ? '...' : ''}`);
                                                 }
 
+                                                // v5.1.0-alpha.29 - Phase 3.3: Count subfolders and show results dialog
+                                                const subfoldersCreated = subActions.filter(action =>
+                                                    action.type === 'CREATE_FOLDER' && action.parentId !== null
+                                                ).length;
+
+                                                setWizardResultsData({
+                                                    foldersCreated: createdFolders.length,
+                                                    foldersMerged: mergedFolders.length,
+                                                    subfoldersCreated: subfoldersCreated,
+                                                    totalBooks: totalBooksOrganized
+                                                });
                                                 setWizardModalOpen(false);
+                                                setWizardResultsOpen(true);
                                             }}
                                             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                                             disabled={wizardSelectedAuthors.size === 0}>
@@ -9073,10 +9087,99 @@
                                                     console.log(`[WIZARD] Merged: ${mergedFolders.slice(0, 5).join(', ')}${mergedFolders.length > 5 ? '...' : ''}`);
                                                 }
 
+                                                // v5.1.0-alpha.29 - Phase 3.3: Count subfolders and show results dialog
+                                                const subfoldersCreated = subActions.filter(action =>
+                                                    action.type === 'CREATE_FOLDER' && action.parentId !== null
+                                                ).length;
+
+                                                setWizardResultsData({
+                                                    foldersCreated: createdFolders.length,
+                                                    foldersMerged: mergedFolders.length,
+                                                    subfoldersCreated: subfoldersCreated,
+                                                    totalBooks: totalBooksOrganized
+                                                });
                                                 setWizardModalOpen(false);
+                                                setWizardResultsOpen(true);
                                             }}
                                             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                                             Organize Now
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* v5.1.0-alpha.29 - Phase 3.3: Wizard Results Summary Dialog */}
+                    {wizardResultsOpen && wizardResultsData && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setWizardResultsOpen(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-center p-4 bg-green-100 rounded-t-lg border-b border-green-300">
+                                    <h2 className="text-xl font-bold text-gray-900">🪄 Organization Complete</h2>
+                                    <button onClick={() => setWizardResultsOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                </div>
+
+                                <div className="p-6">
+                                    <div className="space-y-3">
+                                        {/* Folders created */}
+                                        {wizardResultsData.foldersCreated > 0 && (
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">📁</span>
+                                                <div className="flex-1">
+                                                    <div className="font-semibold text-gray-900">
+                                                        Created {wizardResultsData.foldersCreated} author folder{wizardResultsData.foldersCreated !== 1 ? 's' : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Folders merged */}
+                                        {wizardResultsData.foldersMerged > 0 && (
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">🔀</span>
+                                                <div className="flex-1">
+                                                    <div className="font-semibold text-gray-900">
+                                                        Merged into {wizardResultsData.foldersMerged} existing folder{wizardResultsData.foldersMerged !== 1 ? 's' : ''}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Subfolders created */}
+                                        {wizardResultsData.subfoldersCreated > 0 && (
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-2xl">📂</span>
+                                                <div className="flex-1">
+                                                    <div className="font-semibold text-gray-900">
+                                                        Created {wizardResultsData.subfoldersCreated} subfolder{wizardResultsData.subfoldersCreated !== 1 ? 's' : ''}
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        Series and Miscellaneous folders
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Books moved */}
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-2xl">📚</span>
+                                            <div className="flex-1">
+                                                <div className="font-semibold text-gray-900">
+                                                    Moved {wizardResultsData.totalBooks} book{wizardResultsData.totalBooks !== 1 ? 's' : ''}
+                                                </div>
+                                                <div className="text-sm text-gray-600">
+                                                    Removed from Inbox
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Close button */}
+                                    <div className="flex justify-end pt-6">
+                                        <button
+                                            onClick={() => setWizardResultsOpen(false)}
+                                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+                                            Done
                                         </button>
                                     </div>
                                 </div>
