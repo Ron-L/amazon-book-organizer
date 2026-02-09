@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.1.0-alpha.26";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.27";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8519,8 +8519,54 @@
                                                                 }
                                                             });
 
-                                                            // Add standalone books to author folder root
-                                                            booksToAuthorRoot.push(...standaloneBooks);
+                                                            // v5.1.0-alpha.27 - Phase 2.5: Handle standalone books (Miscellaneous option)
+                                                            if (wizardCreateMiscellaneous && standaloneBooks.length > 0) {
+                                                                // Create "Miscellaneous" subfolder for standalone books
+                                                                const miscFolderName = 'Miscellaneous';
+                                                                let miscFolder = newFolders.find(f =>
+                                                                    f.name === miscFolderName &&
+                                                                    f.parentId === targetFolder.id
+                                                                );
+
+                                                                if (!miscFolder) {
+                                                                    miscFolder = {
+                                                                        id: 'folder-misc-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                                                                        name: miscFolderName,
+                                                                        bookIds: [],
+                                                                        parentId: targetFolder.id,
+                                                                        collapsed: false
+                                                                    };
+                                                                    newFolders.push(miscFolder);
+
+                                                                    subActions.push({
+                                                                        type: 'CREATE_FOLDER',
+                                                                        folderId: miscFolder.id,
+                                                                        parentId: targetFolder.id,
+                                                                        folder: { ...miscFolder }
+                                                                    });
+                                                                }
+
+                                                                // Add standalone books to Miscellaneous folder (sorted by dateAdded)
+                                                                const miscBookIds = standaloneBooks
+                                                                    .sort((a, b) => (a.dateAdded || '').localeCompare(b.dateAdded || ''))
+                                                                    .map(book => book.id)
+                                                                    .filter(id => !miscFolder.bookIds.includes(id));
+
+                                                                if (miscBookIds.length > 0) {
+                                                                    miscFolder.bookIds = [...miscFolder.bookIds, ...miscBookIds];
+                                                                    totalBooksOrganized += miscBookIds.length;
+                                                                    allBookIdsToOrganize.push(...miscBookIds);
+
+                                                                    subActions.push({
+                                                                        type: 'ADD_BOOKS_TO_FOLDER',
+                                                                        folderId: miscFolder.id,
+                                                                        bookIds: miscBookIds
+                                                                    });
+                                                                }
+                                                            } else {
+                                                                // Add standalone books to author folder root
+                                                                booksToAuthorRoot.push(...standaloneBooks);
+                                                            }
 
                                                             // Add accumulated books to author folder root (avoid duplicates)
                                                             const rootBookIds = booksToAuthorRoot
