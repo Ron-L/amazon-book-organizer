@@ -241,13 +241,13 @@ Clicking "Preview" shows what will be created without making changes:
 - ✅ Group books by normalized series name (case-insensitive)
 - ✅ Test: Console log series grouping for test author
 
-#### 2.4 - Algorithm: Create series subfolders
-- ☐ For each series with 2+ books: create subfolder under author folder
-- ☐ Add books to series folder, sorted by position (if option enabled)
-- ☐ If sort option disabled: use acquisition date order
-- ☐ Handle books with same position (use acquisition date as tiebreaker)
-- ☐ Update sub-actions for undo (CREATE_FOLDER for series subfolders)
-- ☐ Test: Series folders created with correct books in correct order
+#### 2.4 - Algorithm: Create series subfolders ✅ COMPLETE (v5.1.0-alpha.26)
+- ✅ For each series with 2+ books: create subfolder under author folder
+- ✅ Add books to series folder, sorted by position (if option enabled)
+- ✅ If sort option disabled: use acquisition date order
+- ✅ Handle books with same position (use acquisition date as tiebreaker)
+- ✅ Update sub-actions for undo (CREATE_FOLDER for series subfolders)
+- ✅ Test: Series folders created with correct books in correct order
 
 #### 2.5 - Algorithm: Handle non-series books
 - ☐ If "Miscellaneous" option enabled: create Miscellaneous subfolder
