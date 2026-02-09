@@ -261,22 +261,23 @@ Clicking "Preview" shows what will be created without making changes:
 
 **Deliverable:** Production-ready wizard with preview mode
 
-#### 3.1 - UI: Preview mode dialog
-- ☐ Add "Preview" button to main wizard dialog (next to "Organize")
-- ☐ Create preview modal with folder tree visualization
-- ☐ Show hierarchy: Author > Series > Book count
-- ☐ Summary counts: folders, subfolders, books moved
-- ☐ "Back" button returns to main wizard
-- ☐ "Organize Now" button executes organization
-- ☐ Test: Preview shows accurate folder tree structure
+#### 3.1 - UI: Preview mode dialog ✅ COMPLETE (v5.1.0-alpha.28)
+- ✅ Add "Preview" button to main wizard dialog (next to "Organize")
+- ✅ Create preview modal with folder tree visualization
+- ✅ Show hierarchy: Author > Series > Book count
+- ✅ Summary counts: folders, subfolders, books moved
+- ✅ "Back" button returns to main wizard
+- ✅ "Organize Now" button executes organization
+- ✅ Test: Preview shows accurate folder tree structure
 
-#### 3.2 - UX: Progress indicator
-- ☐ Detect large operations (threshold: 100+ books)
-- ☐ Show progress dialog during organization
-- ☐ Update progress: "Creating folders... (3 of 12)"
-- ☐ Update progress: "Moving books... (127 of 523)"
-- ☐ Auto-dismiss on completion
-- ☐ Test: Progress updates smoothly, completes at 100%
+#### 3.2 - UX: Progress indicator ⏭️ SKIPPED (Not needed)
+- ⏭️ Detect large operations (threshold: 100+ books)
+- ⏭️ Show progress dialog during organization
+- ⏭️ Update progress: "Creating folders... (3 of 12)"
+- ⏭️ Update progress: "Moving books... (127 of 523)"
+- ⏭️ Auto-dismiss on completion
+- ⏭️ Test: Progress updates smoothly, completes at 100%
+- **Note:** Tested with 2138 books - organization is instantaneous, no progress indicator needed
 
 #### 3.3 - UX: Results summary
 - ☐ Show summary dialog after completion
