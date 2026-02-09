@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.1.0-alpha.27";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.28";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -300,6 +300,8 @@
             const [wizardCreateSeriesFolders, setWizardCreateSeriesFolders] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Create series subfolders
             const [wizardSortByPosition, setWizardSortByPosition] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Sort books by series position
             const [wizardCreateMiscellaneous, setWizardCreateMiscellaneous] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Create Miscellaneous folder
+            const [wizardPreviewMode, setWizardPreviewMode] = useState(false); // v5.1.0-alpha.28 - Phase 3.1: Preview mode
+            const [wizardPreviewData, setWizardPreviewData] = useState(null); // v5.1.0-alpha.28 - Phase 3.1: Preview structure data
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
             const [lastSyncTime, setLastSyncTime] = useState(null);
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
@@ -6741,6 +6743,75 @@
                 };
             };
 
+            // v5.1.0-alpha.28 - Phase 3.1: Calculate preview structure without modifying state
+            const calculateWizardPreview = (selectedAuthors) => {
+                const authorStructures = []; // Array of {authorName, totalBooks, series: [], standalone: N, subfolders: N}
+                let totalFolders = 0;
+                let totalSubfolders = 0;
+                let totalBooks = 0;
+
+                selectedAuthors.forEach(author => {
+                    const { seriesGroups, standaloneBooks } = groupBooksBySeries(author.books);
+
+                    const authorStructure = {
+                        authorName: author.displayName,
+                        totalBooks: author.books.length,
+                        series: [],
+                        standalone: 0,
+                        subfolders: 0
+                    };
+
+                    totalFolders++;
+                    totalBooks += author.books.length;
+
+                    if (wizardCreateSeriesFolders) {
+                        // Count series subfolders (2+ books only)
+                        seriesGroups.forEach((seriesData, normalizedName) => {
+                            if (seriesData.books.length >= 2) {
+                                authorStructure.series.push({
+                                    name: seriesData.originalName,
+                                    bookCount: seriesData.books.length
+                                });
+                                authorStructure.subfolders++;
+                                totalSubfolders++;
+                            }
+                        });
+
+                        // Count standalone books + single-book series
+                        let standaloneCount = standaloneBooks.length;
+                        seriesGroups.forEach((seriesData, normalizedName) => {
+                            if (seriesData.books.length === 1) {
+                                standaloneCount++;
+                            }
+                        });
+
+                        // Miscellaneous subfolder
+                        if (wizardCreateMiscellaneous && standaloneCount > 0) {
+                            authorStructure.series.push({
+                                name: 'Miscellaneous',
+                                bookCount: standaloneCount
+                            });
+                            authorStructure.subfolders++;
+                            totalSubfolders++;
+                        } else {
+                            authorStructure.standalone = standaloneCount;
+                        }
+                    } else {
+                        // Flat structure - all books at author root
+                        authorStructure.standalone = author.books.length;
+                    }
+
+                    authorStructures.push(authorStructure);
+                });
+
+                return {
+                    authorStructures,
+                    totalFolders,
+                    totalSubfolders,
+                    totalBooks
+                };
+            };
+
             return (
                 <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 text-gray-900"
                      onMouseMove={handleMouseMove}
@@ -8407,6 +8478,24 @@
                                             className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium transition-colors">
                                             Cancel
                                         </button>
+                                        {/* v5.1.0-alpha.28 - Phase 3.1: Preview button */}
+                                        <button
+                                            onClick={() => {
+                                                const selectedAuthors = wizardAuthors.filter(a => wizardSelectedAuthors.has(a.normalizedName));
+
+                                                if (selectedAuthors.length === 0) {
+                                                    alert('Please select at least one author to preview.');
+                                                    return;
+                                                }
+
+                                                const previewData = calculateWizardPreview(selectedAuthors);
+                                                setWizardPreviewData(previewData);
+                                                setWizardPreviewMode(true);
+                                            }}
+                                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
+                                            disabled={wizardSelectedAuthors.size === 0}>
+                                            Preview
+                                        </button>
                                         <button
                                             onClick={() => {
                                                 // v5.1.0-alpha.13 - Phase 1.5: Implement organize function
@@ -8701,6 +8790,293 @@
                                             onClick={() => setWizardHelpOpen(false)}
                                             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
                                             Got it
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* v5.1.0-alpha.28 - Phase 3.1: Wizard Preview Dialog */}
+                    {wizardPreviewMode && wizardPreviewData && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setWizardPreviewMode(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-center p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
+                                    <h2 className="text-xl font-bold text-gray-900">🪄 Preview - Folders to Create</h2>
+                                    <button onClick={() => setWizardPreviewMode(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                </div>
+
+                                {/* Scrollable preview content */}
+                                <div className="flex-1 overflow-y-auto p-6 space-y-3">
+                                    {wizardPreviewData.authorStructures.map((author, idx) => (
+                                        <div key={idx} className="border border-gray-300 rounded-lg bg-white">
+                                            {/* Author folder header */}
+                                            <div className="px-4 py-3 bg-gray-50 border-b border-gray-300 flex items-center gap-2">
+                                                <span className="text-lg">📁</span>
+                                                <span className="font-bold text-gray-900">{author.authorName}</span>
+                                                <span className="text-sm text-gray-600">({author.totalBooks} books)</span>
+                                            </div>
+
+                                            {/* Series subfolders + standalone books */}
+                                            <div className="p-3 space-y-2">
+                                                {author.series.length > 0 ? (
+                                                    author.series.map((series, seriesIdx) => (
+                                                        <div key={seriesIdx} className="flex items-center gap-2 pl-6">
+                                                            <span className="text-base">📁</span>
+                                                            <span className="text-gray-800">{series.name}</span>
+                                                            <span className="text-sm text-gray-500">({series.bookCount} books)</span>
+                                                        </div>
+                                                    ))
+                                                ) : null}
+
+                                                {author.standalone > 0 && (
+                                                    <div className="flex items-center gap-2 pl-6">
+                                                        <span className="text-base">📄</span>
+                                                        <span className="text-gray-600 text-sm">{author.standalone} books at folder root</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Summary footer */}
+                                <div className="p-4 bg-gray-50 border-t-2 border-gray-300 rounded-b-lg">
+                                    <div className="text-sm text-gray-700 text-center space-y-1">
+                                        <div className="font-semibold">
+                                            Will create: {wizardPreviewData.totalFolders} author folder{wizardPreviewData.totalFolders !== 1 ? 's' : ''}
+                                            {wizardPreviewData.totalSubfolders > 0 && `, ${wizardPreviewData.totalSubfolders} subfolder${wizardPreviewData.totalSubfolders !== 1 ? 's' : ''}`}
+                                        </div>
+                                        <div className="text-gray-600">
+                                            Will move: {wizardPreviewData.totalBooks} books from Inbox
+                                        </div>
+                                    </div>
+
+                                    {/* Action buttons */}
+                                    <div className="flex justify-end gap-3 pt-4">
+                                        <button
+                                            onClick={() => setWizardPreviewMode(false)}
+                                            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium transition-colors">
+                                            Back
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                // Close preview, execute organize
+                                                setWizardPreviewMode(false);
+
+                                                // Trigger the organize button logic from the main wizard dialog
+                                                const selectedAuthors = wizardAuthors.filter(a => wizardSelectedAuthors.has(a.normalizedName));
+
+                                                if (selectedAuthors.length === 0) {
+                                                    alert('Please select at least one author to organize.');
+                                                    return;
+                                                }
+
+                                                console.log(`[WIZARD] Organizing ${selectedAuthors.length} authors...`);
+
+                                                const subActions = [];
+                                                const createdFolders = [];
+                                                const mergedFolders = [];
+                                                let totalBooksOrganized = 0;
+                                                const allBookIdsToOrganize = [];
+
+                                                setFolders(prevFolders => {
+                                                    const newFolders = [...prevFolders];
+
+                                                    selectedAuthors.forEach(author => {
+                                                        const { seriesGroups, standaloneBooks } = groupBooksBySeries(author.books);
+                                                        console.log(`[WIZARD] ${author.displayName} - ${author.books.length} books:`);
+                                                        console.log(`  Series: ${seriesGroups.size}, Standalone: ${standaloneBooks.length}`);
+                                                        seriesGroups.forEach((seriesData, normalizedName) => {
+                                                            console.log(`    • ${seriesData.originalName}: ${seriesData.books.length} books`);
+                                                        });
+
+                                                        let targetFolder = newFolders.find(f => f.name === author.displayName && f.parentId === null);
+
+                                                        if (!targetFolder) {
+                                                            const newFolder = {
+                                                                id: 'folder-author-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                                                                name: author.displayName,
+                                                                bookIds: [],
+                                                                parentId: null,
+                                                                collapsed: false
+                                                            };
+                                                            newFolders.push(newFolder);
+                                                            targetFolder = newFolder;
+                                                            createdFolders.push(author.displayName);
+
+                                                            subActions.push({
+                                                                type: 'CREATE_FOLDER',
+                                                                folderId: newFolder.id,
+                                                                parentId: null,
+                                                                folder: { ...newFolder }
+                                                            });
+                                                        } else {
+                                                            mergedFolders.push(author.displayName);
+                                                        }
+
+                                                        if (wizardCreateSeriesFolders) {
+                                                            const booksToAuthorRoot = [];
+
+                                                            seriesGroups.forEach((seriesData, normalizedName) => {
+                                                                if (seriesData.books.length >= 2) {
+                                                                    let seriesFolder = newFolders.find(f =>
+                                                                        f.name === seriesData.originalName &&
+                                                                        f.parentId === targetFolder.id
+                                                                    );
+
+                                                                    if (!seriesFolder) {
+                                                                        seriesFolder = {
+                                                                            id: 'folder-series-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                                                                            name: seriesData.originalName,
+                                                                            bookIds: [],
+                                                                            parentId: targetFolder.id,
+                                                                            collapsed: false
+                                                                        };
+                                                                        newFolders.push(seriesFolder);
+
+                                                                        subActions.push({
+                                                                            type: 'CREATE_FOLDER',
+                                                                            folderId: seriesFolder.id,
+                                                                            parentId: targetFolder.id,
+                                                                            folder: { ...seriesFolder }
+                                                                        });
+                                                                    }
+
+                                                                    const seriesBookIds = (wizardSortByPosition
+                                                                        ? seriesData.books
+                                                                        : seriesData.books.sort((a, b) => (a.dateAdded || '').localeCompare(b.dateAdded || ''))
+                                                                    ).map(book => book.id).filter(id => !seriesFolder.bookIds.includes(id));
+
+                                                                    if (seriesBookIds.length > 0) {
+                                                                        seriesFolder.bookIds = [...seriesFolder.bookIds, ...seriesBookIds];
+                                                                        totalBooksOrganized += seriesBookIds.length;
+                                                                        allBookIdsToOrganize.push(...seriesBookIds);
+
+                                                                        subActions.push({
+                                                                            type: 'ADD_BOOKS_TO_FOLDER',
+                                                                            folderId: seriesFolder.id,
+                                                                            bookIds: seriesBookIds
+                                                                        });
+                                                                    }
+                                                                } else {
+                                                                    booksToAuthorRoot.push(...seriesData.books);
+                                                                }
+                                                            });
+
+                                                            if (wizardCreateMiscellaneous && standaloneBooks.length > 0) {
+                                                                let miscFolder = newFolders.find(f =>
+                                                                    f.name === 'Miscellaneous' &&
+                                                                    f.parentId === targetFolder.id
+                                                                );
+
+                                                                if (!miscFolder) {
+                                                                    miscFolder = {
+                                                                        id: 'folder-misc-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                                                                        name: 'Miscellaneous',
+                                                                        bookIds: [],
+                                                                        parentId: targetFolder.id,
+                                                                        collapsed: false
+                                                                    };
+                                                                    newFolders.push(miscFolder);
+
+                                                                    subActions.push({
+                                                                        type: 'CREATE_FOLDER',
+                                                                        folderId: miscFolder.id,
+                                                                        parentId: targetFolder.id,
+                                                                        folder: { ...miscFolder }
+                                                                    });
+                                                                }
+
+                                                                const miscBookIds = standaloneBooks
+                                                                    .sort((a, b) => (a.dateAdded || '').localeCompare(b.dateAdded || ''))
+                                                                    .map(book => book.id)
+                                                                    .filter(id => !miscFolder.bookIds.includes(id));
+
+                                                                if (miscBookIds.length > 0) {
+                                                                    miscFolder.bookIds = [...miscFolder.bookIds, ...miscBookIds];
+                                                                    totalBooksOrganized += miscBookIds.length;
+                                                                    allBookIdsToOrganize.push(...miscBookIds);
+
+                                                                    subActions.push({
+                                                                        type: 'ADD_BOOKS_TO_FOLDER',
+                                                                        folderId: miscFolder.id,
+                                                                        bookIds: miscBookIds
+                                                                    });
+                                                                }
+                                                            } else {
+                                                                booksToAuthorRoot.push(...standaloneBooks);
+                                                            }
+
+                                                            const rootBookIds = booksToAuthorRoot
+                                                                .map(book => book.id)
+                                                                .filter(id => !targetFolder.bookIds.includes(id));
+
+                                                            if (rootBookIds.length > 0) {
+                                                                targetFolder.bookIds = [...targetFolder.bookIds, ...rootBookIds];
+                                                                totalBooksOrganized += rootBookIds.length;
+                                                                allBookIdsToOrganize.push(...rootBookIds);
+
+                                                                subActions.push({
+                                                                    type: 'ADD_BOOKS_TO_FOLDER',
+                                                                    folderId: targetFolder.id,
+                                                                    bookIds: rootBookIds
+                                                                });
+                                                            }
+                                                        } else {
+                                                            const bookIdsToAdd = author.books
+                                                                .map(book => book.id)
+                                                                .filter(id => !targetFolder.bookIds.includes(id));
+
+                                                            if (bookIdsToAdd.length > 0) {
+                                                                targetFolder.bookIds = [...targetFolder.bookIds, ...bookIdsToAdd];
+                                                                totalBooksOrganized += bookIdsToAdd.length;
+                                                                allBookIdsToOrganize.push(...bookIdsToAdd);
+
+                                                                subActions.push({
+                                                                    type: 'ADD_BOOKS_TO_FOLDER',
+                                                                    folderId: targetFolder.id,
+                                                                    bookIds: bookIdsToAdd
+                                                                });
+                                                            }
+                                                        }
+                                                    });
+
+                                                    if (allBookIdsToOrganize.length > 0) {
+                                                        const inboxFolder = newFolders.find(f => f.id === '__inbox__');
+                                                        if (inboxFolder) {
+                                                            const bookIdsSet = new Set(allBookIdsToOrganize);
+                                                            inboxFolder.bookIds = inboxFolder.bookIds.filter(id => !bookIdsSet.has(id));
+
+                                                            subActions.push({
+                                                                type: 'REMOVE_BOOKS_FROM_FOLDER',
+                                                                folderId: '__inbox__',
+                                                                bookIds: allBookIdsToOrganize
+                                                            });
+                                                        }
+                                                    }
+
+                                                    return newFolders;
+                                                });
+
+                                                recordAction({
+                                                    type: 'WIZARD_ORGANIZE',
+                                                    description: `Organized ${selectedAuthors.length} authors (${totalBooksOrganized} books)`,
+                                                    subActions
+                                                });
+
+                                                console.log(`[WIZARD] ✅ Created ${createdFolders.length} folders, merged ${mergedFolders.length}, organized ${totalBooksOrganized} books`);
+                                                if (createdFolders.length > 0) {
+                                                    console.log(`[WIZARD] Created: ${createdFolders.slice(0, 5).join(', ')}${createdFolders.length > 5 ? '...' : ''}`);
+                                                }
+                                                if (mergedFolders.length > 0) {
+                                                    console.log(`[WIZARD] Merged: ${mergedFolders.slice(0, 5).join(', ')}${mergedFolders.length > 5 ? '...' : ''}`);
+                                                }
+
+                                                setWizardModalOpen(false);
+                                            }}
+                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                                            Organize Now
                                         </button>
                                     </div>
                                 </div>
