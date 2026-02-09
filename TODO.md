@@ -8,8 +8,17 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Current Focus
 
-**1. Wizard Mode**
-   - See [docs/design/WIZARD-MODE.md](docs/design/WIZARD-MODE.md)
+**1. Editable Series and Series Position**
+
+**2. Author list**
+   -  Should we have a way to generate a list? If so, how and where would be the output? A dialog? Maybe list view in right panel have a way of "collapsing" the book list by Author (show only 1 line per author, all fields except author are blank)???
+
+**4. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)
+   - Problem: Portrait mode shows only 1-2 book rows, left pane too wide, headers consume vertical space
+   - Current state: App works on mobile but layout unusable (landscape shows 2 rows, portrait ~0 rows)
+   - Solution TBD: May require UX paradigm shift (hamburger nav, tab switching, overlay panels) vs. basic responsive CSS
+   - Needs brainstorming session to determine approach
+   - Impact: Makes app usable on mobile devices
 
 ---
 
@@ -177,11 +186,10 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: No visibility into which books are shared with family
    - Impact: Better awareness of Family Library sharing status
 
-**2. 📖 Series Management** - See [docs/design/WIZARD-MODE.md](docs/design/WIZARD-MODE.md)
-   - Covered by Wizard Mode (auto-organize by author/series)
-   - Includes: Automatic series detection, series reading order, series subfolders
-   - Future: Missing book detection ("You have Dresden Files #1-15 but missing #7")
-   - Problem: Series books scattered across library
+**2. 📖 Series Management** - ✅ COMPLETE (v5.1.0)
+   - See [docs/design/WIZARD-MODE.md](docs/design/WIZARD-MODE.md)
+   - Implemented: Auto-organize by author/series, automatic series detection, series subfolders, series reading order
+   - Future enhancement: Missing book detection ("You have Dresden Files #1-15 but missing #7")
    - Impact: Better management for series readers
 
 **3. 🖼️ V2 Dual-Pane Split** - MEDIUM/MEDIUM (8-12 hours)
@@ -255,7 +263,11 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Users unaware of missing enrichment data
    - Impact: Transparency about data quality
 
-**2. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
+**2.  UI Error Handling** #FetcherImprovements
+   -failures (especially in phase 0 - test API - should generate a report for a github issue with a link to github issues)
+
+
+**3. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
    - Current state: 3,862-line monolithic file with 50+ state variables, 80+ functions
    - **Recommended: Minimal Split (4 modules)**
 

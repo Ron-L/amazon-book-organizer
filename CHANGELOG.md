@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.1.0] - 2026-02-09
+
+### Added
+- **Auto-Organize Wizard** - Automated folder organization by author and series
+  - Magic wand icon (🪄) in Folders header triggers wizard
+  - Analyzes books in Inbox, groups by author with configurable minimum books threshold (1-20)
+  - Detects and counts series from book metadata (series name and position)
+  - Creates hierarchical folder structure: Author → Series → Books
+  - **Series subfolder options:**
+    - Create subfolders for each series (2+ books)
+    - Sort books by series position (with dateAdded fallback)
+    - Create "Miscellaneous" subfolder for standalone books
+  - **Preview mode** - Visualize folder structure before organizing
+    - Shows full hierarchy: Author folders → Series subfolders → Book counts
+    - Summary counts: total folders, subfolders, books to be moved
+    - "Organize Now" executes organization from preview
+  - **Results summary dialog** - Shows what was created after organization
+    - Displays: folders created, folders merged, subfolders created, books moved
+  - **Smart selection controls:**
+    - Sort authors by book count (default) or alphabetically
+    - 3-segment selection: All / Some / None
+    - Individual author checkboxes with book count and series count
+  - **Bundled undo** - Single Ctrl+Z undoes entire organization operation
+  - **Edge case handling:**
+    - Empty Inbox detection with helpful message
+    - No authors meeting threshold guidance
+    - Automatic folder merging when author folders already exist
+    - Invalid series position fallback to date sorting
+  - **Help dialog** - Workflow tips and best practices
+  - Moves organized books out of Inbox automatically
+  - Options persist in localStorage across sessions
+
+### Technical
+- Phase 1 (alpha.8-19): Basic wizard with flat author folders
+- Phase 2 (alpha.20-27): Series detection and subfolder creation
+- Phase 3 (alpha.28-30): Preview mode, results dialog, edge case validation
+- New state variables: wizardModalOpen, wizardAuthors, wizardSelectedAuthors, wizardPreviewMode, wizardResultsData, wizardSourceBooksCount
+- New functions: groupBooksBySeries, calculateWizardPreview, executeWizardOrganize
+- Undo system support: WIZARD_ORGANIZE action type with nested sub-actions
+- Series grouping algorithm: case-insensitive normalization, position-based sorting
+- Collapsed/Expand All controls moved from wizard to My Library header (UX improvement)
+
 ## [5.0.10] - 2026-02-06
 
 ### Added
