@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -290,6 +290,9 @@
             const [editingTagId, setEditingTagId] = useState(null); // v4.27.0 Phase 3 - Currently renaming tag
             const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
             const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
+            const [editSeriesOpen, setEditSeriesOpen] = useState(false); // v5.2.0-alpha.3 - Phase 1.2: Edit Series dialog
+            const [editSeriesName, setEditSeriesName] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series name field
+            const [editSeriesPosition, setEditSeriesPosition] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series position field
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
             const [wizardMinBooksSlider, setWizardMinBooksSlider] = useState(5); // v5.1.0-alpha.10 - Slider value (immediate)
             const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0-alpha.10 - Debounced threshold for detection
@@ -2806,12 +2809,31 @@
                 input.click();
             };
 
-            // v5.2.0-alpha.1 - Phase 1.1: Placeholder for Edit Series dialog
+            // v5.2.0-alpha.1 - Phase 1.1: Edit Series button handler
+            // v5.2.0-alpha.3 - Phase 1.2: Opens Edit Series dialog modal
             const openEditSeriesDialog = () => {
                 console.log('[EDIT SERIES] Opening edit dialog for book:', modalBook?.title);
                 console.log('[EDIT SERIES] Current series:', modalBook?.series);
                 console.log('[EDIT SERIES] Current position:', modalBook?.seriesPosition);
-                // TODO: Phase 1.2 - Open edit dialog modal
+                setEditSeriesName(modalBook?.series || '');
+                setEditSeriesPosition(modalBook?.seriesPosition != null ? String(modalBook.seriesPosition) : '');
+                setEditSeriesOpen(true);
+            };
+
+            // v5.2.0-alpha.3 - Phase 1.2: Close Edit Series dialog
+            const closeEditSeriesDialog = () => {
+                setEditSeriesOpen(false);
+                setEditSeriesName('');
+                setEditSeriesPosition('');
+            };
+
+            // v5.2.0-alpha.3 - Phase 1.2: Save series edits (placeholder - Phase 1.4)
+            const saveSeriesEdit = () => {
+                console.log('[EDIT SERIES] Save clicked');
+                console.log('[EDIT SERIES] Series name:', editSeriesName);
+                console.log('[EDIT SERIES] Position:', editSeriesPosition);
+                // TODO: Phase 1.4 - Persist changes to IndexedDB, update book, undo support
+                closeEditSeriesDialog();
             };
 
             const openCollectSeriesDialog = () => {
@@ -9316,6 +9338,80 @@
                                             All Columns
                                         </button>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* v5.2.0-alpha.3 - Phase 1.2: Edit Series Dialog */}
+                    {editSeriesOpen && modalBook && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onClick={closeEditSeriesDialog}>
+                            <div className="bg-white rounded-lg shadow-2xl p-6 w-[420px]" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg font-bold text-gray-900">
+                                        {modalBook.series ? '✏️ Edit Series Information' : '✏️ Add to Series'}
+                                    </h2>
+                                    <button onClick={closeEditSeriesDialog} className="text-gray-500 hover:text-gray-700 text-xl">×</button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Series Name</label>
+                                        <input
+                                            type="text"
+                                            value={editSeriesName}
+                                            onChange={(e) => setEditSeriesName(e.target.value)}
+                                            placeholder="Enter series name..."
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                            autoFocus
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">Combobox with existing series coming in Phase 1.3</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Position / Number</label>
+                                        <input
+                                            type="text"
+                                            value={editSeriesPosition}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                    setEditSeriesPosition(val);
+                                                }
+                                            }}
+                                            placeholder="e.g., 141"
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                        />
+                                        <p className="text-xs text-gray-400 mt-1">Supports decimals (e.g., 1.5 for books between #1 and #2)</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                                    <div>
+                                        {modalBook.series && (
+                                            <button
+                                                onClick={() => {
+                                                    console.log('[EDIT SERIES] Remove from series clicked');
+                                                    // TODO: Phase 1.5 - Remove from series with confirmation
+                                                    closeEditSeriesDialog();
+                                                }}
+                                                className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                                Remove from Series
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={closeEditSeriesDialog}
+                                            className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={saveSeriesEdit}
+                                            className="px-4 py-2 text-sm bg-blue-700 hover:bg-blue-800 text-white rounded-lg transition-colors">
+                                            Save
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
