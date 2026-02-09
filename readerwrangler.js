@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9479,7 +9479,7 @@
                                                         </p>
                                                         <button
                                                             onClick={openEditSeriesDialog}
-                                                            className="text-gray-500 hover:text-blue-600 transition-colors"
+                                                            className="hover:bg-gray-100 rounded px-1 transition-colors"
                                                             title="Edit series information">
                                                             ✏️
                                                         </button>
@@ -9500,7 +9500,7 @@
                                                         </p>
                                                         <button
                                                             onClick={openEditSeriesDialog}
-                                                            className="text-gray-500 hover:text-blue-600 text-sm transition-colors"
+                                                            className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded transition-colors"
                                                             title="Add to series">
                                                             ✏️ Add to series
                                                         </button>
