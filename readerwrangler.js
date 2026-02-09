@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1618,6 +1618,8 @@
                 } else if (booksNotInAnyFolder.length > 0) {
                     // Add new books to Inbox (books imported that aren't in any folder yet)
                     console.log('📥 Adding', booksNotInAnyFolder.length, 'new books to Inbox');
+                    console.log('📥 [DEBUG] Book IDs being added to Inbox:', booksNotInAnyFolder);
+                    console.log('📥 [DEBUG] These books:', booksNotInAnyFolder.map(id => { const b = books.find(bb => bb.id === id); return b ? `${b.title} (${b.series || 'no series'})` : id; }));
                     setFolders(prev => prev.map(f => {
                         if (f.id !== '__inbox__') return f;
                         return { ...f, bookIds: [...booksNotInAnyFolder.reverse(), ...(f.bookIds || [])] };
@@ -2847,11 +2849,13 @@
 
             // v5.2.0-alpha.3 - Phase 1.2: Save series edits
             // v5.2.0-alpha.9 - Phase 1.4: Persist to IndexedDB, update modal
+            // v5.2.0-alpha.10 - Blank field = keep original series (only Remove button clears)
             const saveSeriesEdit = () => {
                 if (!modalBook) return;
-                const newSeries = editSeriesName.trim() || null;
+                // Blank field = keep original series name (user didn't select/type anything)
+                const newSeries = editSeriesName.trim() || modalBook.series || null;
                 const newPosition = editSeriesPosition.trim() ? parseFloat(editSeriesPosition) : null;
-                console.log('[EDIT SERIES] Saving:', { bookId: modalBook.id, series: newSeries, position: newPosition });
+                console.log('[EDIT SERIES] Saving:', { bookId: modalBook.id, series: newSeries, position: newPosition, originalSeries: modalBook.series });
 
                 setBooks(prev => {
                     const updated = prev.map(b =>
@@ -9393,8 +9397,8 @@
                                                     setEditSeriesName(e.target.value);
                                                     setEditSeriesDropdownOpen(true);
                                                 }}
-                                                onFocus={() => setEditSeriesDropdownOpen(true)}
-                                                placeholder="Type to filter or select below..."
+                                                onKeyDown={(e) => { if (e.key === 'Enter') { setEditSeriesDropdownOpen(false); saveSeriesEdit(); } }}
+                                                placeholder="Type to filter or click ▼..."
                                                 className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                 autoFocus
                                             />
@@ -9445,6 +9449,7 @@
                                                     setEditSeriesPosition(val);
                                                 }
                                             }}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') saveSeriesEdit(); }}
                                             placeholder="e.g., 141"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                         />
