@@ -1,7 +1,7 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
         const { useState, useEffect, useRef } = React;
         const APP_VERSION = "5.0.10";  // Release version shown to users
-        const ORGANIZER_VERSION = "5.1.0-alpha.15";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.16";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4735,37 +4735,44 @@
                         break;
                     case 'WIZARD_ORGANIZE':
                         // v5.1.0-alpha.13 - Phase 1.5/1.6: Undo wizard organize
+                        // v5.1.0-alpha.15.1 - Batch all sub-actions into single state update to avoid race conditions
                         console.log('[UNDO WIZARD_ORGANIZE]', action.description);
-                        // Reverse sub-actions in reverse order
-                        action.subActions.reverse().forEach(subAction => {
-                            if (subAction.type === 'CREATE_FOLDER') {
-                                // Remove created folder
-                                setFolders(prev => prev.filter(f => f.id !== subAction.folderId));
-                            } else if (subAction.type === 'ADD_BOOKS_TO_FOLDER') {
-                                // Remove books from folder
-                                setFolders(prev => prev.map(folder => {
-                                    if (folder.id === subAction.folderId) {
-                                        return {
-                                            ...folder,
-                                            bookIds: folder.bookIds.filter(id => !subAction.bookIds.includes(id))
-                                        };
-                                    }
-                                    return folder;
-                                }));
-                            } else if (subAction.type === 'REMOVE_BOOKS_FROM_FOLDER') {
-                                // v5.1.0-alpha.15 - Restore books to folder (undo removal)
-                                setFolders(prev => prev.map(folder => {
-                                    if (folder.id === subAction.folderId) {
-                                        const existingIds = new Set(folder.bookIds);
-                                        const booksToRestore = subAction.bookIds.filter(id => !existingIds.has(id));
-                                        return {
-                                            ...folder,
-                                            bookIds: [...folder.bookIds, ...booksToRestore]
-                                        };
-                                    }
-                                    return folder;
-                                }));
-                            }
+                        setFolders(prev => {
+                            let updated = [...prev];
+
+                            // Process sub-actions in reverse order
+                            action.subActions.reverse().forEach(subAction => {
+                                if (subAction.type === 'CREATE_FOLDER') {
+                                    // Remove created folder
+                                    updated = updated.filter(f => f.id !== subAction.folderId);
+                                } else if (subAction.type === 'ADD_BOOKS_TO_FOLDER') {
+                                    // Remove books from folder
+                                    updated = updated.map(folder => {
+                                        if (folder.id === subAction.folderId) {
+                                            return {
+                                                ...folder,
+                                                bookIds: folder.bookIds.filter(id => !subAction.bookIds.includes(id))
+                                            };
+                                        }
+                                        return folder;
+                                    });
+                                } else if (subAction.type === 'REMOVE_BOOKS_FROM_FOLDER') {
+                                    // Restore books to folder (undo removal, e.g., restore to Inbox)
+                                    updated = updated.map(folder => {
+                                        if (folder.id === subAction.folderId) {
+                                            const existingIds = new Set(folder.bookIds);
+                                            const booksToRestore = subAction.bookIds.filter(id => !existingIds.has(id));
+                                            return {
+                                                ...folder,
+                                                bookIds: [...folder.bookIds, ...booksToRestore]
+                                            };
+                                        }
+                                        return folder;
+                                    });
+                                }
+                            });
+
+                            return updated;
                         });
                         showToast(`Undo: ${action.description}`, 'info');
                         break;
@@ -5163,38 +5170,45 @@
                         break;
                     case 'WIZARD_ORGANIZE':
                         // v5.1.0-alpha.13 - Phase 1.5/1.6: Redo wizard organize
+                        // v5.1.0-alpha.15.1 - Batch all sub-actions into single state update to avoid race conditions
                         console.log('[REDO WIZARD_ORGANIZE]', action.description);
-                        // Re-apply sub-actions in original order
-                        action.subActions.forEach(subAction => {
-                            if (subAction.type === 'CREATE_FOLDER') {
-                                // Re-create folder
-                                setFolders(prev => [...prev, subAction.folder]);
-                            } else if (subAction.type === 'ADD_BOOKS_TO_FOLDER') {
-                                // Re-add books to folder
-                                setFolders(prev => prev.map(folder => {
-                                    if (folder.id === subAction.folderId) {
-                                        const existingIds = new Set(folder.bookIds);
-                                        const newBooks = subAction.bookIds.filter(id => !existingIds.has(id));
-                                        return {
-                                            ...folder,
-                                            bookIds: [...folder.bookIds, ...newBooks]
-                                        };
-                                    }
-                                    return folder;
-                                }));
-                            } else if (subAction.type === 'REMOVE_BOOKS_FROM_FOLDER') {
-                                // v5.1.0-alpha.15 - Re-remove books from folder (redo removal)
-                                setFolders(prev => prev.map(folder => {
-                                    if (folder.id === subAction.folderId) {
-                                        const bookIdsSet = new Set(subAction.bookIds);
-                                        return {
-                                            ...folder,
-                                            bookIds: folder.bookIds.filter(id => !bookIdsSet.has(id))
-                                        };
-                                    }
-                                    return folder;
-                                }));
-                            }
+                        setFolders(prev => {
+                            let updated = [...prev];
+
+                            // Process all sub-actions in order, building final state
+                            action.subActions.forEach(subAction => {
+                                if (subAction.type === 'CREATE_FOLDER') {
+                                    // Add folder
+                                    updated.push(subAction.folder);
+                                } else if (subAction.type === 'ADD_BOOKS_TO_FOLDER') {
+                                    // Add books to folder
+                                    updated = updated.map(folder => {
+                                        if (folder.id === subAction.folderId) {
+                                            const existingIds = new Set(folder.bookIds);
+                                            const newBooks = subAction.bookIds.filter(id => !existingIds.has(id));
+                                            return {
+                                                ...folder,
+                                                bookIds: [...folder.bookIds, ...newBooks]
+                                            };
+                                        }
+                                        return folder;
+                                    });
+                                } else if (subAction.type === 'REMOVE_BOOKS_FROM_FOLDER') {
+                                    // Remove books from folder (e.g., from Inbox)
+                                    updated = updated.map(folder => {
+                                        if (folder.id === subAction.folderId) {
+                                            const bookIdsSet = new Set(subAction.bookIds);
+                                            return {
+                                                ...folder,
+                                                bookIds: folder.bookIds.filter(id => !bookIdsSet.has(id))
+                                            };
+                                        }
+                                        return folder;
+                                    });
+                                }
+                            });
+
+                            return updated;
                         });
                         showToast(`Redo: ${action.description}`, 'info');
                         break;
