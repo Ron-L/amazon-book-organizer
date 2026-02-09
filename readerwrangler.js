@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.1.0-alpha.25";  // Build version for this file
+        const ORGANIZER_VERSION = "5.1.0-alpha.26";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8464,21 +8464,97 @@
                                                             mergedFolders.push(folderName);
                                                         }
 
-                                                        // Add books to folder (avoid duplicates)
-                                                        const bookIdsToAdd = author.books
-                                                            .map(book => book.id)
-                                                            .filter(id => !targetFolder.bookIds.includes(id));
+                                                        // v5.1.0-alpha.26 - Phase 2.4: Create series subfolders (conditional)
+                                                        if (wizardCreateSeriesFolders) {
+                                                            // Create series subfolders for series with 2+ books
+                                                            const booksToAuthorRoot = []; // Single-book series + standalone books
 
-                                                        if (bookIdsToAdd.length > 0) {
-                                                            targetFolder.bookIds = [...targetFolder.bookIds, ...bookIdsToAdd];
-                                                            totalBooksOrganized += bookIdsToAdd.length;
-                                                            allBookIdsToOrganize.push(...bookIdsToAdd); // v5.1.0-alpha.15 - Collect for Inbox removal
+                                                            seriesGroups.forEach((seriesData, normalizedName) => {
+                                                                if (seriesData.books.length >= 2) {
+                                                                    // Create series subfolder
+                                                                    const seriesFolderName = seriesData.originalName;
+                                                                    let seriesFolder = newFolders.find(f =>
+                                                                        f.name === seriesFolderName &&
+                                                                        f.parentId === targetFolder.id
+                                                                    );
 
-                                                            subActions.push({
-                                                                type: 'ADD_BOOKS_TO_FOLDER',
-                                                                folderId: targetFolder.id,
-                                                                bookIds: bookIdsToAdd
+                                                                    if (!seriesFolder) {
+                                                                        seriesFolder = {
+                                                                            id: 'folder-series-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+                                                                            name: seriesFolderName,
+                                                                            bookIds: [],
+                                                                            parentId: targetFolder.id,
+                                                                            collapsed: false
+                                                                        };
+                                                                        newFolders.push(seriesFolder);
+
+                                                                        subActions.push({
+                                                                            type: 'CREATE_FOLDER',
+                                                                            folderId: seriesFolder.id,
+                                                                            parentId: targetFolder.id,
+                                                                            folder: { ...seriesFolder }
+                                                                        });
+                                                                    }
+
+                                                                    // Add books to series folder (sorted if option enabled)
+                                                                    const seriesBookIds = (wizardSortByPosition
+                                                                        ? seriesData.books
+                                                                        : seriesData.books.sort((a, b) => (a.dateAdded || '').localeCompare(b.dateAdded || ''))
+                                                                    ).map(book => book.id).filter(id => !seriesFolder.bookIds.includes(id));
+
+                                                                    if (seriesBookIds.length > 0) {
+                                                                        seriesFolder.bookIds = [...seriesFolder.bookIds, ...seriesBookIds];
+                                                                        totalBooksOrganized += seriesBookIds.length;
+                                                                        allBookIdsToOrganize.push(...seriesBookIds);
+
+                                                                        subActions.push({
+                                                                            type: 'ADD_BOOKS_TO_FOLDER',
+                                                                            folderId: seriesFolder.id,
+                                                                            bookIds: seriesBookIds
+                                                                        });
+                                                                    }
+                                                                } else {
+                                                                    // Single-book series → add to author folder root
+                                                                    booksToAuthorRoot.push(...seriesData.books);
+                                                                }
                                                             });
+
+                                                            // Add standalone books to author folder root
+                                                            booksToAuthorRoot.push(...standaloneBooks);
+
+                                                            // Add accumulated books to author folder root (avoid duplicates)
+                                                            const rootBookIds = booksToAuthorRoot
+                                                                .map(book => book.id)
+                                                                .filter(id => !targetFolder.bookIds.includes(id));
+
+                                                            if (rootBookIds.length > 0) {
+                                                                targetFolder.bookIds = [...targetFolder.bookIds, ...rootBookIds];
+                                                                totalBooksOrganized += rootBookIds.length;
+                                                                allBookIdsToOrganize.push(...rootBookIds);
+
+                                                                subActions.push({
+                                                                    type: 'ADD_BOOKS_TO_FOLDER',
+                                                                    folderId: targetFolder.id,
+                                                                    bookIds: rootBookIds
+                                                                });
+                                                            }
+                                                        } else {
+                                                            // Flat structure (Phase 1 behavior) - add all books to author folder
+                                                            const bookIdsToAdd = author.books
+                                                                .map(book => book.id)
+                                                                .filter(id => !targetFolder.bookIds.includes(id));
+
+                                                            if (bookIdsToAdd.length > 0) {
+                                                                targetFolder.bookIds = [...targetFolder.bookIds, ...bookIdsToAdd];
+                                                                totalBooksOrganized += bookIdsToAdd.length;
+                                                                allBookIdsToOrganize.push(...bookIdsToAdd);
+
+                                                                subActions.push({
+                                                                    type: 'ADD_BOOKS_TO_FOLDER',
+                                                                    folderId: targetFolder.id,
+                                                                    bookIds: bookIdsToAdd
+                                                                });
+                                                            }
                                                         }
                                                     });
 
