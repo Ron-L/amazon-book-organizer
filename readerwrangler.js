@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.21";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.22";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8430,7 +8430,7 @@
                         const booksWithCollections = books.filter(b => b.collections && b.collections.length > 0).length;
 
                         return (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setStatusModalOpen(false)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setStatusModalOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 {/* Header */}
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
@@ -8529,7 +8529,7 @@
 
                     {/* v5.0.0-alpha.175.2 - About Dialog */}
                     {aboutDialogOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setAboutDialogOpen(false)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setAboutDialogOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">About ReaderWrangler™</h2>
@@ -8552,7 +8552,7 @@
 
                     {/* v5.0.0-alpha.175.2 - Keyboard Shortcuts Dialog */}
                     {shortcutsDialogOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShortcutsDialogOpen(false)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setShortcutsDialogOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">Keyboard Shortcuts</h2>
@@ -8597,7 +8597,7 @@
 
                     {/* v5.0.0-alpha.175.2 - How To Use Dialog */}
                     {howToDialogOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setHowToDialogOpen(false)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setHowToDialogOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">How To Use ReaderWrangler</h2>
@@ -8853,7 +8853,7 @@
 
                     {/* v5.1.0-alpha.10 - Wizard Help Dialog */}
                     {wizardHelpOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setWizardHelpOpen(false)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardHelpOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">📖 Auto-Organize Tips</h2>
@@ -8912,7 +8912,7 @@
 
                     {/* v5.1.0-alpha.28 - Phase 3.1: Wizard Preview Dialog */}
                     {wizardPreviewMode && wizardPreviewData && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setWizardPreviewMode(false)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardPreviewMode(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">🪄 Preview - Folders to Create</h2>
@@ -8988,7 +8988,7 @@
 
                     {/* v5.1.0-alpha.29 - Phase 3.3: Wizard Results Summary Dialog */}
                     {wizardResultsOpen && wizardResultsData && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setWizardResultsOpen(false)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardResultsOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-green-100 rounded-t-lg border-b border-green-300">
                                     <h2 className="text-xl font-bold text-gray-900">🪄 Organization Complete</h2>
@@ -9144,7 +9144,7 @@
                     {/* v4.20.0.a - Bulk price goal modal (v5.0.0-alpha.169.8 - use bulkPriceBookIds) */}
                     {showBulkPriceModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                             onClick={() => { setShowBulkPriceModal(false); setBulkPriceInput(''); setBulkPriceBookIds([]); }}>
+                             onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setShowBulkPriceModal(false); setBulkPriceInput(''); setBulkPriceBookIds([]); } backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm" onClick={(e) => e.stopPropagation()}>
                                 <h2 className="text-lg font-bold text-gray-900 mb-4">Set Custom Price Goal</h2>
                                 <p className="text-sm text-gray-600 mb-4">
@@ -9330,7 +9330,7 @@
                     })()}
 
                     {collectSeriesOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onClick={() => setCollectSeriesOpen(false)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setCollectSeriesOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl p-6 max-w-2xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                                 <h2 className="text-xl font-bold text-gray-900 mb-4">Group Series Books</h2>
 
@@ -13250,7 +13250,7 @@
 
                         return (
                             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                                 onClick={() => { setDividerTagEditorOpen(null); setTagInputValue(''); }}>
+                                 onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setDividerTagEditorOpen(null); setTagInputValue(''); } backdropMouseDownRef.current = null; }}>
                                 <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
                                      onClick={(e) => e.stopPropagation()}>
                                     <div className="flex items-center justify-between mb-4">
@@ -15326,7 +15326,7 @@
                                 {/* Backdrop */}
                                 <div
                                     className="fixed inset-0 bg-black bg-opacity-50 z-50"
-                                    onClick={() => setFolderPropertiesDialog(null)}
+                                    onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setFolderPropertiesDialog(null); backdropMouseDownRef.current = null; }}
                                 />
 
                                 {/* Dialog - v5.0.0-alpha.144: Draggable */}
