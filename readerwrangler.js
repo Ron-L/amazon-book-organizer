@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.20";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.21";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8488,7 +8488,7 @@
                     })()}
 
                     {resetConfirmOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setResetConfirmOpen(false)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setResetConfirmOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">Reset App Confirmation</h2>
@@ -13438,7 +13438,7 @@
                     {/* v4.27.0 Phase 3 - Tag Management Modal */}
                     {tagManagementOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                             onClick={() => { setTagManagementOpen(false); setEditingTagId(null); }}>
+                             onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setTagManagementOpen(false); setEditingTagId(null); } backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col"
                                  onClick={(e) => e.stopPropagation()}>
                                 <div className="flex items-center justify-between p-4 border-b border-gray-200">
