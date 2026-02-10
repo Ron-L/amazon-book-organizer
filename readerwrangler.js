@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.14";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9416,7 +9416,7 @@
                                                     setEditSeriesName(e.target.value);
                                                     setEditSeriesDropdownOpen(true);
                                                 }}
-                                                onKeyDown={(e) => { if (e.key === 'Enter') { setEditSeriesDropdownOpen(false); saveSeriesEdit(); } }}
+                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { setEditSeriesDropdownOpen(false); saveSeriesEdit(); } }}
                                                 placeholder="Type to filter or click ▼..."
                                                 className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                 autoFocus
@@ -9469,7 +9469,7 @@
                                                     setEditSeriesPosition(val);
                                                 }
                                             }}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') saveSeriesEdit(); }}
+                                            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') saveSeriesEdit(); }}
                                             placeholder="e.g., 141"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                         />
