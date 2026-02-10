@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.19-test1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2555,8 +2555,8 @@
                     // Skip if user is typing in an input/textarea
                     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-                    // Skip if dialog or context menu is open
-                    if (folderContextMenu || folderPropertiesDialog) return;
+                    // Skip if any modal/dialog or context menu is open
+                    if (folderContextMenu || folderPropertiesDialog || anyModalOpenRef.current) return;
 
                     const currentFolder = folders.find(f => f.id === selectedFolderId);
                     if (!currentFolder) return;
