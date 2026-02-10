@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.22";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.23";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4405,8 +4405,8 @@
             }, [modalBook]);
             // v5.2.0-alpha.18 - Track whether any modal/dialog overlay is open
             useEffect(() => {
-                anyModalOpenRef.current = !!(modalBook || insertDividerOpen || showBulkPriceModal || editSeriesOpen || tagManagementOpen || wizardModalOpen || dividerTagEditorOpen || folderPropertiesDialog);
-            }, [modalBook, insertDividerOpen, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, dividerTagEditorOpen, folderPropertiesDialog]);
+                anyModalOpenRef.current = !!(modalBook || insertDividerOpen || showBulkPriceModal || editSeriesOpen || tagManagementOpen || wizardModalOpen || dividerTagEditorOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen || collectSeriesOpen);
+            }, [modalBook, insertDividerOpen, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, dividerTagEditorOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, collectSeriesOpen]);
 
             const recordAction = (action) => {
                 setUndoStack(prev => {
