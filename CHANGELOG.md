@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.0] - 2026-02-10
+
+### Added
+- **Manage Tags in filter dropdown** - "Manage Tags..." link at the bottom of the Tags filter dropdown (separated by divider) opens the Tag Management dialog
+
 ## [5.2.0] - 2026-02-10
 
 ### Added

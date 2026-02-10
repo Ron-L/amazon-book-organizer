@@ -8,12 +8,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔥 Priority 0: Immediate
 
-**1. Add "Manage Tags" link to Tags filter dropdown**
-   - Add a "Manage Tags" link at the bottom of the Tags filter dropdown (separated by a divider)
-   - Opens the same Tag Management dialog as View > Manage Tags
-   - UX rationale: Users working with tag filters naturally expect tag management to be accessible there (proximity principle, discoverability)
-
-**2. Double-click tag name in Tag Management should enter rename mode**
+**1. Double-click tag name in Tag Management should enter rename mode**
    - Currently only the "Rename" button triggers edit mode
    - Standard UX: double-click text to edit in-place
 
