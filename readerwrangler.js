@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -244,11 +244,7 @@
             const [editingName, setEditingName] = useState('');
             const [sortMenuOpen, setSortMenuOpen] = useState(null);
             const [columnMenuOpen, setColumnMenuOpen] = useState(null); // v3.11.0 - Unified column dropdown menu
-            const [editingDivider, setEditingDivider] = useState(null); // v3.11.0 - {columnId, dividerId}
-            const [editingDividerLabel, setEditingDividerLabel] = useState(''); // v3.11.0
-            const [insertDividerOpen, setInsertDividerOpen] = useState(null); // v3.11.0 - columnId for Insert Divider modal
-            const [newDividerLabel, setNewDividerLabel] = useState(''); // v3.11.0
-            const [hoveringDivider, setHoveringDivider] = useState(null); // v3.11.0 - {columnId, dividerId}
+            // v5.4.0 - Removed divider state variables (Column App only): editingDivider, editingDividerLabel, insertDividerOpen, newDividerLabel, hoveringDivider
             // v5.0.0-alpha.175.48 - Removed helpOpen and settingsOpen (dead code)
             // v5.0.0-alpha.175.1 - Menu bar state
             const [openMenuBar, setOpenMenuBar] = useState(null); // 'file' | 'view' | 'help' | null
@@ -284,8 +280,7 @@
             const [isEditingNote, setIsEditingNote] = useState(false); // v4.21.0.a - book note edit mode
             const [noteEditContent, setNoteEditContent] = useState(''); // v4.21.0.a - book note editor content
             const [tagInputValue, setTagInputValue] = useState(''); // v4.27.0 - tag input autocomplete value
-            const [dividerContextMenu, setDividerContextMenu] = useState(null); // v4.27.0 - {x, y, columnId, dividerId, divider}
-            const [dividerTagEditorOpen, setDividerTagEditorOpen] = useState(null); // v4.27.0 - {columnId, dividerId} for editing div tags
+            // v5.4.0 - Removed dividerContextMenu, dividerTagEditorOpen (Column App only)
             const [tagManagementOpen, setTagManagementOpen] = useState(false); // v4.27.0 Phase 3 - Tag management modal
             const [editingTagId, setEditingTagId] = useState(null); // v4.27.0 Phase 3 - Currently renaming tag
             // v5.4.0 - Removed collectSeriesOpen, seriesBooks (Column App only)
@@ -469,25 +464,7 @@
                 return columnBooks.some(entry => getBookIdFromEntry(entry) === bookId);
             };
 
-            // v4.27.0 - Get inherited tags for a book based on its position in columns
-            // Books inherit tags from the divider above them (until next divider)
-            const getInheritedTags = (bookId, columnId) => {
-                const column = columns.find(c => c.id === columnId);
-                if (!column) return [];
-
-                let currentDivTags = [];
-                for (const entry of column.books) {
-                    if (entry && entry.type === 'divider') {
-                        currentDivTags = entry.tags || [];
-                    } else {
-                        const entryBookId = getBookIdFromEntry(entry);
-                        if (entryBookId === bookId) {
-                            return currentDivTags;
-                        }
-                    }
-                }
-                return [];
-            };
+            // v5.4.0 - Removed getInheritedTags() (Column App divider tag inheritance)
 
             // v4.16.0.s - Helper to find index of bookId in column (first occurrence)
             const findBookIndexInColumn = (columnBooks, bookId) => {
@@ -3930,246 +3907,9 @@
                 setDeleteDestination('');
             };
 
-            // v3.11.0 - Divider Functions
-            const insertDivider = (columnId) => {
-                if (!newDividerLabel.trim()) return;
+            // v5.4.0 - Removed divider functions: insertDivider, startEditingDivider, finishEditingDivider,
+            // deleteDivider, autoDivideBySeries, autoDivideByRating (Column App only)
 
-                const dividerId = `divider-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                const divider = {
-                    type: 'divider',
-                    id: dividerId,
-                    label: newDividerLabel.trim()
-                };
-
-                setColumns(columns.map(col => {
-                    if (col.id !== columnId) return col;
-
-                    // Find insertion position: before first selected book, or at top if no selection
-                    let insertIndex = 0; // Default to top
-                    if (selectedBooks.size > 0) {
-                        // Find first selected book in this column
-                        // v4.16.0.d - Check composite keys with indices for this column
-                        let minIndex = Infinity;
-                        for (const key of selectedBooks) {
-                            const [keyColumnId, bookId, indexStr] = key.split(':');
-                            if (keyColumnId === columnId) {
-                                const index = parseInt(indexStr, 10);
-                                if (index < minIndex) {
-                                    minIndex = index;
-                                }
-                            }
-                        }
-                        if (minIndex !== Infinity) {
-                            insertIndex = minIndex;
-                        }
-                    }
-
-                    const newBooks = [...col.books];
-                    newBooks.splice(insertIndex, 0, divider);
-                    return { ...col, books: newBooks };
-                }));
-
-                setInsertDividerOpen(null);
-                setNewDividerLabel('');
-                setColumnMenuOpen(null);
-                new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/divider-created';
-            };
-
-            const startEditingDivider = (columnId, dividerId, currentLabel) => {
-                setEditingDivider({ columnId, dividerId });
-                setEditingDividerLabel(currentLabel);
-            };
-
-            const finishEditingDivider = () => {
-                if (!editingDivider) return;
-
-                const { columnId, dividerId } = editingDivider;
-                const newLabel = editingDividerLabel.trim();
-
-                if (!newLabel) {
-                    setEditingDivider(null);
-                    setEditingDividerLabel('');
-                    return;
-                }
-
-                setColumns(columns.map(col =>
-                    col.id === columnId
-                        ? {
-                            ...col,
-                            books: col.books.map(item =>
-                                (typeof item === 'object' && item.type === 'divider' && item.id === dividerId)
-                                    ? { ...item, label: newLabel }
-                                    : item
-                            )
-                        }
-                        : col
-                ));
-
-                setEditingDivider(null);
-                setEditingDividerLabel('');
-            };
-
-            const deleteDivider = (columnId, dividerId) => {
-                // v4.8.0 - Capture divider info for undo before deleting
-                const col = columns.find(c => c.id === columnId);
-                const dividerIndex = col.books.findIndex(item =>
-                    typeof item === 'object' && item.type === 'divider' && item.id === dividerId
-                );
-                const dividerObj = col.books[dividerIndex];
-
-                setColumns(columns.map(c =>
-                    c.id === columnId
-                        ? {
-                            ...c,
-                            books: c.books.filter(item =>
-                                !(typeof item === 'object' && item.type === 'divider' && item.id === dividerId)
-                            )
-                        }
-                        : c
-                ));
-
-                // v4.8.0 - Record action for undo
-                if (dividerObj) {
-                    recordAction({
-                        type: 'DELETE_DIVIDER',
-                        columnId: columnId,
-                        divider: { ...dividerObj },
-                        dividerIndex: dividerIndex
-                    });
-                }
-            };
-
-            const autoDivideBySeries = (columnId) => {
-                const column = columns.find(c => c.id === columnId);
-                if (!column) return;
-
-                // Get actual book objects (not dividers)
-                const bookItems = column.books.filter(item => typeof item === 'string');
-                const bookObjects = bookItems.map(id => books.find(b => b.id === id)).filter(Boolean);
-
-                if (bookObjects.length === 0) return;
-
-                // Group books by series (books without series stay at end)
-                const seriesGroups = {};
-                const noSeriesBooks = [];
-
-                bookObjects.forEach(book => {
-                    if (book.series) {
-                        if (!seriesGroups[book.series]) {
-                            seriesGroups[book.series] = [];
-                        }
-                        seriesGroups[book.series].push(book.id);
-                    } else {
-                        noSeriesBooks.push(book.id);
-                    }
-                });
-
-                // Sort series names alphabetically
-                const sortedSeriesNames = Object.keys(seriesGroups).sort((a, b) => a.localeCompare(b));
-
-                // v3.11.0.f - Sort books within each series by position
-                sortedSeriesNames.forEach(seriesName => {
-                    const bookIds = seriesGroups[seriesName];
-                    const seriesBookObjects = bookIds.map(id => books.find(b => b.id === id)).filter(Boolean);
-
-                    // Sort by seriesPosition (books without position go last)
-                    seriesBookObjects.sort((a, b) => {
-                        return (parseInt(a.seriesPosition) || 999) - (parseInt(b.seriesPosition) || 999);
-                    });
-
-                    // Update the group with sorted IDs
-                    seriesGroups[seriesName] = seriesBookObjects.map(book => book.id);
-                });
-
-                // Build new books array with dividers
-                const newBooks = [];
-                sortedSeriesNames.forEach(seriesName => {
-                    const dividerId = `divider-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    newBooks.push({
-                        type: 'divider',
-                        id: dividerId,
-                        label: seriesName
-                    });
-                    newBooks.push(...seriesGroups[seriesName]);
-                });
-
-                // v3.11.0.e - Add "Miscellaneous" divider for books without series
-                if (noSeriesBooks.length > 0) {
-                    const dividerId = `divider-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                    newBooks.push({
-                        type: 'divider',
-                        id: dividerId,
-                        label: 'Miscellaneous'
-                    });
-                    newBooks.push(...noSeriesBooks);
-                }
-
-                setColumns(columns.map(col =>
-                    col.id === columnId ? { ...col, books: newBooks } : col
-                ));
-
-                setColumnMenuOpen(null);
-                new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/auto-divide-by-series';
-            };
-
-            const autoDivideByRating = (columnId) => {
-                const column = columns.find(c => c.id === columnId);
-                if (!column) return;
-
-                // Get actual book objects (not dividers)
-                const bookItems = column.books.filter(item => typeof item === 'string');
-                const bookObjects = bookItems.map(id => books.find(b => b.id === id)).filter(Boolean);
-
-                if (bookObjects.length === 0) return;
-
-                // Group books by rating tier
-                const ratingTiers = {
-                    '5 Stars': [],
-                    '4 Stars': [],
-                    '3 Stars': [],
-                    '2 Stars': [],
-                    '1 Star': [],
-                    'No Rating': []
-                };
-
-                bookObjects.forEach(book => {
-                    if (!book.rating || book.rating === 0) {
-                        ratingTiers['No Rating'].push(book.id);
-                    } else if (book.rating >= 4.5) {
-                        ratingTiers['5 Stars'].push(book.id);
-                    } else if (book.rating >= 3.5) {
-                        ratingTiers['4 Stars'].push(book.id);
-                    } else if (book.rating >= 2.5) {
-                        ratingTiers['3 Stars'].push(book.id);
-                    } else if (book.rating >= 1.5) {
-                        ratingTiers['2 Stars'].push(book.id);
-                    } else {
-                        ratingTiers['1 Star'].push(book.id);
-                    }
-                });
-
-                // Build new books array with dividers (only for non-empty tiers)
-                const tierOrder = ['5 Stars', '4 Stars', '3 Stars', '2 Stars', '1 Star', 'No Rating'];
-                const newBooks = [];
-
-                tierOrder.forEach(tier => {
-                    if (ratingTiers[tier].length > 0) {
-                        const dividerId = `divider-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-                        newBooks.push({
-                            type: 'divider',
-                            id: dividerId,
-                            label: tier
-                        });
-                        newBooks.push(...ratingTiers[tier]);
-                    }
-                });
-
-                setColumns(columns.map(col =>
-                    col.id === columnId ? { ...col, books: newBooks } : col
-                ));
-
-                setColumnMenuOpen(null);
-            };
 
             const openBookModal = (book, columnId) => {
                 try {
@@ -4309,8 +4049,8 @@
             }, [modalBook]);
             // v5.2.0-alpha.18 - Track whether any modal/dialog overlay is open
             useEffect(() => {
-                anyModalOpenRef.current = !!(modalBook || insertDividerOpen || showBulkPriceModal || editSeriesOpen || tagManagementOpen || wizardModalOpen || dividerTagEditorOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen);
-            }, [modalBook, insertDividerOpen, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, dividerTagEditorOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen]);
+                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || editSeriesOpen || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen);
+            }, [modalBook, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen]);
 
             const recordAction = (action) => {
                 setUndoStack(prev => {
@@ -8918,81 +8658,8 @@
 
                     {/* v5.1.0 - Removed Migration Dialog (v4 Column App migration no longer needed) */}
 
-                    {insertDividerOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setInsertDividerOpen(null); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                                <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">Insert Divider</h2>
-                                    <button onClick={() => setInsertDividerOpen(null)} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
-                                </div>
-                                <div className="p-6 space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Divider Label</label>
-                                        <input
-                                            type="text"
-                                            value={newDividerLabel}
-                                            onChange={(e) => setNewDividerLabel(e.target.value)}
-                                            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') insertDivider(insertDividerOpen); }}
-                                            placeholder="e.g., Jerry Mitchell, Read Books, 5 Stars"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
-                                        <p>The divider will appear at the bottom of the column. You can drag it to any position.</p>
-                                    </div>
-                                    <div className="flex gap-3 justify-end pt-2">
-                                        <button
-                                            onClick={() => setInsertDividerOpen(null)}
-                                            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium">
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={() => insertDivider(insertDividerOpen)}
-                                            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg font-medium"
-                                            disabled={!newDividerLabel.trim()}>
-                                            Insert
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* v5.0.0-alpha.175.48 - Removed Settings modal (dead code: no button, cacheExpirationDays not used) */}
-                    {/* v5.0.0-alpha.175.48 - Removed helpOpen modal (dead code: replaced by howToDialogOpen in Help menu) */}
-
-                    {deleteDialogOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md" onClick={(e) => e.stopPropagation()}>
-                                <h2 className="text-xl font-bold text-gray-900 mb-4">Delete Column</h2>
-                                <p className="text-sm text-gray-700 mb-4">
-                                    Where should the {columns.find(c => c.id === deleteDialogOpen)?.books.length || 0} books from
-                                    "<strong>{columns.find(c => c.id === deleteDialogOpen)?.name}</strong>" be moved?
-                                </p>
-                                <select
-                                    value={deleteDestination}
-                                    onChange={(e) => setDeleteDestination(e.target.value)}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                                    {columns.filter(c => c.id !== deleteDialogOpen).map(col => (
-                                        <option key={col.id} value={col.id}>{col.name}</option>
-                                    ))}
-                                </select>
-                                <div className="flex gap-2 justify-end">
-                                    <button
-                                        onClick={() => { setDeleteDialogOpen(null); setDeleteDestination(''); }}
-                                        className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={confirmDeleteColumn}
-                                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">
-                                        Delete Column
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {/* v5.4.0 - Removed Insert Divider modal (Column App only) */}
+                    {/* v5.4.0 - Removed Delete Column dialog (Column App only) */}
 
                     {/* v4.20.0.a - Bulk price goal modal (v5.0.0-alpha.169.8 - use bulkPriceBookIds) */}
                     {showBulkPriceModal && (
@@ -9526,51 +9193,30 @@
                                                     <span className="font-semibold text-gray-700">Tags:</span>
                                                     <div className="flex-1 flex flex-wrap items-center gap-1">
                                                         {(() => {
-                                                            // v4.27.0 Phase 2 - Show explicit (bold) and inherited (faded) tags
-                                                            const explicitTags = modalBook.tags || [];
-                                                            const inheritedTags = modalColumnId ? getInheritedTags(modalBook.id, modalColumnId) : [];
-                                                            // Filter out inherited tags that are also explicit (to avoid duplicates)
-                                                            const uniqueInheritedTags = inheritedTags.filter(t => !explicitTags.includes(t));
-                                                            const hasAnyTags = explicitTags.length > 0 || uniqueInheritedTags.length > 0;
-
-                                                            if (!hasAnyTags) {
+                                                            const tags = modalBook.tags || [];
+                                                            if (tags.length === 0) {
                                                                 return <span className="text-gray-400 italic text-sm">No tags</span>;
                                                             }
-
-                                                            return (
-                                                                <>
-                                                                    {/* Explicit tags - bold, with remove button */}
-                                                                    {explicitTags.map(tagId => (
-                                                                        <span key={`explicit-${tagId}`}
-                                                                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-bold"
-                                                                            title="Explicit tag (assigned to this book)">
-                                                                            {tagRegistry[tagId]?.label || tagId}
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    const newTags = modalBook.tags.filter(t => t !== tagId);
-                                                                                    setBooks(prev => {
-                                                                                        const updated = prev.map(b =>
-                                                                                            b.id === modalBook.id ? { ...b, tags: newTags } : b
-                                                                                        );
-                                                                                        saveBooksToIndexedDB(updated);
-                                                                                        return updated;
-                                                                                     });
-                                                                                    setModalBook(prev => ({ ...prev, tags: newTags }));
-                                                                                }}
-                                                                                className="text-blue-600 hover:text-blue-800 font-bold"
-                                                                                title="Remove tag">×</button>
-                                                                        </span>
-                                                                    ))}
-                                                                    {/* Inherited tags - faded, no remove button */}
-                                                                    {uniqueInheritedTags.map(tagId => (
-                                                                        <span key={`inherited-${tagId}`}
-                                                                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs"
-                                                                            title="Inherited from divider (move book to remove)">
-                                                                            {tagRegistry[tagId]?.label || tagId}
-                                                                        </span>
-                                                                    ))}
-                                                                </>
-                                                            );
+                                                            return tags.map(tagId => (
+                                                                <span key={tagId}
+                                                                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-bold">
+                                                                    {tagRegistry[tagId]?.label || tagId}
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const newTags = modalBook.tags.filter(t => t !== tagId);
+                                                                            setBooks(prev => {
+                                                                                const updated = prev.map(b =>
+                                                                                    b.id === modalBook.id ? { ...b, tags: newTags } : b
+                                                                                );
+                                                                                saveBooksToIndexedDB(updated);
+                                                                                return updated;
+                                                                             });
+                                                                            setModalBook(prev => ({ ...prev, tags: newTags }));
+                                                                        }}
+                                                                        className="text-blue-600 hover:text-blue-800 font-bold"
+                                                                        title="Remove tag">×</button>
+                                                                </span>
+                                                            ));
                                                         })()}
                                                         <div className="relative inline-block">
                                                             <button
@@ -12921,287 +12567,8 @@
                         );
                     })()}
 
-                    {/* v4.27.0 - Divider context menu for tag operations */}
-                    {dividerContextMenu && (
-                        <div
-                            className="fixed bg-white border border-gray-300 rounded-lg shadow-xl py-1 z-50"
-                            style={{ left: dividerContextMenu.x, top: dividerContextMenu.y, minWidth: '180px' }}
-                            onClick={(e) => e.stopPropagation()}>
-                            <button
-                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
-                                onClick={() => {
-                                    startEditingDivider(dividerContextMenu.columnId, dividerContextMenu.dividerId, dividerContextMenu.divider.label);
-                                    setDividerContextMenu(null);
-                                }}>
-                                ✏️ Rename
-                            </button>
-                            <button
-                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
-                                onClick={() => {
-                                    setDividerTagEditorOpen({
-                                        columnId: dividerContextMenu.columnId,
-                                        dividerId: dividerContextMenu.dividerId
-                                    });
-                                    setTagInputValue('');
-                                    setDividerContextMenu(null);
-                                }}>
-                                🏷️ Edit Tags {dividerContextMenu.divider.tags?.length > 0 && `(${dividerContextMenu.divider.tags.length})`}
-                            </button>
-                            <button
-                                className="w-full text-left px-4 py-2 hover:bg-blue-50 text-sm text-gray-700 flex items-center gap-2"
-                                onClick={() => {
-                                    // Add divider's tags to all books under this divider
-                                    const column = columns.find(c => c.id === dividerContextMenu.columnId);
-                                    if (!column) return;
-                                    const divTags = dividerContextMenu.divider.tags || [];
-                                    if (divTags.length === 0) {
-                                        alert('This divider has no tags to add.');
-                                        setDividerContextMenu(null);
-                                        return;
-                                    }
-                                    // Find books under this divider (until next divider)
-                                    let foundDivider = false;
-                                    const booksToTag = [];
-                                    for (const entry of column.books) {
-                                        if (entry && entry.type === 'divider') {
-                                            if (entry.id === dividerContextMenu.dividerId) {
-                                                foundDivider = true;
-                                            } else if (foundDivider) {
-                                                break; // Next divider reached
-                                            }
-                                        } else if (foundDivider) {
-                                            const bookId = getBookIdFromEntry(entry);
-                                            if (bookId) booksToTag.push(bookId);
-                                        }
-                                    }
-                                    if (booksToTag.length === 0) {
-                                        alert('No books under this divider.');
-                                        setDividerContextMenu(null);
-                                        return;
-                                    }
-                                    // Add tags to books
-                                    setBooks(prev => {
-                                        const updated = prev.map(book => {
-                                            if (booksToTag.includes(book.id)) {
-                                                const existingTags = book.tags || [];
-                                                const newTags = [...new Set([...existingTags, ...divTags])];
-                                                return { ...book, tags: newTags };
-                                            }
-                                            return book;
-                                        });
-                                        saveBooksToIndexedDB(updated);
-                                        return updated;
-                                    });
-                                    alert(`Added ${divTags.length} tag(s) to ${booksToTag.length} book(s).`);
-                                    setDividerContextMenu(null);
-                                }}>
-                                📚 Add Tags to All Books
-                            </button>
-                            <div className="border-t border-gray-200 my-1"></div>
-                            <button
-                                className="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-red-600 flex items-center gap-2"
-                                onClick={() => {
-                                    deleteDivider(dividerContextMenu.columnId, dividerContextMenu.dividerId);
-                                    setDividerContextMenu(null);
-                                }}>
-                                🗑️ Delete Divider
-                            </button>
-                        </div>
-                    )}
+                    // v5.4.0 - Removed Divider Context Menu and Divider Tag Editor modal (Column App only)
 
-                    {/* v4.27.0 - Divider tag editor modal */}
-                    {dividerTagEditorOpen && (() => {
-                        const column = columns.find(c => c.id === dividerTagEditorOpen.columnId);
-                        const divider = column?.books.find(b => b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId);
-                        if (!divider) return null;
-                        const divTags = divider.tags || [];
-
-                        return (
-                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                                 onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setDividerTagEditorOpen(null); setTagInputValue(''); } backdropMouseDownRef.current = null; }}>
-                                <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md"
-                                     onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-semibold">Edit Tags for "{divider.label}"</h3>
-                                        <button onClick={() => { setDividerTagEditorOpen(null); setTagInputValue(''); }}
-                                                className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
-                                    </div>
-                                    <div className="mb-4">
-                                        <div className="flex flex-wrap gap-2 mb-3 min-h-[32px]">
-                                            {divTags.length > 0 ? divTags.map(tagId => (
-                                                <span key={tagId}
-                                                      className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                                                    {tagRegistry[tagId]?.label || tagId}
-                                                    <button onClick={() => {
-                                                        // Remove tag from divider
-                                                        setColumns(prev => prev.map(col => {
-                                                            if (col.id !== dividerTagEditorOpen.columnId) return col;
-                                                            return {
-                                                                ...col,
-                                                                books: col.books.map(b => {
-                                                                    if (b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId) {
-                                                                        return { ...b, tags: (b.tags || []).filter(t => t !== tagId) };
-                                                                    }
-                                                                    return b;
-                                                                })
-                                                            };
-                                                        }));
-                                                    }}
-                                                            className="text-blue-600 hover:text-blue-800 font-bold">×</button>
-                                                </span>
-                                            )) : <span className="text-gray-400 italic">No tags</span>}
-                                        </div>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={tagInputValue}
-                                                onChange={(e) => setTagInputValue(e.target.value)}
-                                                onKeyDown={(e) => {
-                                                    e.stopPropagation();
-                                                    if (e.key === 'Escape') {
-                                                        setDividerTagEditorOpen(null);
-                                                        setTagInputValue('');
-                                                    } else if (e.key === 'Enter') {
-                                                        // v4.27.0-alpha.5 - Enter selects top match or creates new tag
-                                                        const input = tagInputValue.toLowerCase().trim();
-                                                        if (!input) return;
-                                                        const allTagsExactMatch = Object.entries(tagRegistry)
-                                                            .find(([id, data]) => data.label.toLowerCase() === input);
-                                                        const existingTags = Object.entries(tagRegistry)
-                                                            .filter(([id, data]) =>
-                                                                data.label.toLowerCase().includes(input) && !divTags.includes(id)
-                                                            )
-                                                            .sort((a, b) => a[1].label.localeCompare(b[1].label));
-
-                                                        if (existingTags.length > 0) {
-                                                            // Select top match
-                                                            const [tagId] = existingTags[0];
-                                                            setColumns(prev => prev.map(col => {
-                                                                if (col.id !== dividerTagEditorOpen.columnId) return col;
-                                                                return {
-                                                                    ...col,
-                                                                    books: col.books.map(b => {
-                                                                        if (b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId) {
-                                                                            return { ...b, tags: [...(b.tags || []), tagId] };
-                                                                        }
-                                                                        return b;
-                                                                    })
-                                                                };
-                                                            }));
-                                                            setTagInputValue('');
-                                                        } else if (!allTagsExactMatch) {
-                                                            // Create new tag
-                                                            const newTagId = input.replace(/\s+/g, '-');
-                                                            const newTagLabel = tagInputValue.trim();
-                                                            setTagRegistry(prev => ({
-                                                                ...prev,
-                                                                [newTagId]: { label: newTagLabel, count: 0 }
-                                                            }));
-                                                            setColumns(prev => prev.map(col => {
-                                                                if (col.id !== dividerTagEditorOpen.columnId) return col;
-                                                                return {
-                                                                    ...col,
-                                                                    books: col.books.map(b => {
-                                                                        if (b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId) {
-                                                                            return { ...b, tags: [...(b.tags || []), newTagId] };
-                                                                        }
-                                                                        return b;
-                                                                    })
-                                                                };
-                                                            }));
-                                                            setTagInputValue('');
-                                                        }
-                                                        // If tag already on divider, do nothing
-                                                    }
-                                                }}
-                                                placeholder="Type to add tag..."
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                                                autoFocus
-                                            />
-                                            {tagInputValue && (
-                                                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-[200px] overflow-y-auto z-10">
-                                                    {(() => {
-                                                        const input = tagInputValue.toLowerCase().trim();
-                                                        const allTagsExactMatch = Object.entries(tagRegistry)
-                                                            .find(([id, data]) => data.label.toLowerCase() === input);
-                                                        const existingTags = Object.entries(tagRegistry)
-                                                            .filter(([id, data]) =>
-                                                                data.label.toLowerCase().includes(input) && !divTags.includes(id)
-                                                            )
-                                                            .sort((a, b) => a[1].label.localeCompare(b[1].label));
-                                                        const showCreate = input && !allTagsExactMatch;
-                                                        const tagAlreadyOnDiv = allTagsExactMatch && divTags.includes(allTagsExactMatch[0]);
-
-                                                        return (
-                                                            <>
-                                                                {showCreate && (
-                                                                    <button
-                                                                        className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50 text-blue-600"
-                                                                        onClick={() => {
-                                                                            const newTagId = input.replace(/\s+/g, '-');
-                                                                            const newTagLabel = tagInputValue.trim();
-                                                                            setTagRegistry(prev => ({
-                                                                                ...prev,
-                                                                                [newTagId]: { label: newTagLabel, count: 0 }
-                                                                            }));
-                                                                            setColumns(prev => prev.map(col => {
-                                                                                if (col.id !== dividerTagEditorOpen.columnId) return col;
-                                                                                return {
-                                                                                    ...col,
-                                                                                    books: col.books.map(b => {
-                                                                                        if (b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId) {
-                                                                                            return { ...b, tags: [...(b.tags || []), newTagId] };
-                                                                                        }
-                                                                                        return b;
-                                                                                    })
-                                                                                };
-                                                                            }));
-                                                                            setTagInputValue('');
-                                                                        }}>
-                                                                        ➕ Create "{tagInputValue.trim()}"
-                                                                    </button>
-                                                                )}
-                                                                {existingTags.map(([tagId, tagData]) => (
-                                                                    <button
-                                                                        key={tagId}
-                                                                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
-                                                                        onClick={() => {
-                                                                            setColumns(prev => prev.map(col => {
-                                                                                if (col.id !== dividerTagEditorOpen.columnId) return col;
-                                                                                return {
-                                                                                    ...col,
-                                                                                    books: col.books.map(b => {
-                                                                                        if (b && b.type === 'divider' && b.id === dividerTagEditorOpen.dividerId) {
-                                                                                            return { ...b, tags: [...(b.tags || []), tagId] };
-                                                                                        }
-                                                                                        return b;
-                                                                                    })
-                                                                                };
-                                                                            }));
-                                                                            setTagInputValue('');
-                                                                        }}>
-                                                                        {tagData.label} ({getTagCount(tagId)})
-                                                                    </button>
-                                                                ))}
-                                                                {existingTags.length === 0 && !showCreate && (
-                                                                    <div className="px-3 py-2 text-sm text-gray-400">
-                                                                        {tagAlreadyOnDiv ? `"${allTagsExactMatch[1].label}" already added` : 'No matching tags'}
-                                                                    </div>
-                                                                )}
-                                                            </>
-                                                        );
-                                                    })()}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <p className="text-xs text-gray-500">
-                                        Books under this divider will inherit these tags when filtering.
-                                    </p>
-                                </div>
-                            </div>
-                        );
-                    })()}
 
                     {/* v4.27.0 Phase 3 - Tag Management Modal */}
                     {tagManagementOpen && (
@@ -13294,16 +12661,7 @@
                                                                                     saveBooksToIndexedDB(updated);
                                                                                     return updated;
                                                                                 });
-                                                                                // Remove tag from all dividers
-                                                                                setColumns(prev => prev.map(col => ({
-                                                                                    ...col,
-                                                                                    books: col.books.map(b => {
-                                                                                        if (b && b.type === 'divider' && b.tags?.includes(tagId)) {
-                                                                                            return { ...b, tags: b.tags.filter(t => t !== tagId) };
-                                                                                        }
-                                                                                        return b;
-                                                                                    })
-                                                                                })));
+                                                                                // v5.4.0 - Removed "Remove tag from all dividers" (Column App only)
                                                                                 // Remove from registry
                                                                                 setTagRegistry(prev => {
                                                                                     const updated = { ...prev };
