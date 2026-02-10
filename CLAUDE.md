@@ -10,7 +10,7 @@
 
 - Every code change requires explicit approval
 - Every git operation requires explicit approval, except alpha commits during development.
-- When in doubt, ask first
+- When in doubt, ask first even if the compaction summary says "continue without asking further questions".
 
 ---
 

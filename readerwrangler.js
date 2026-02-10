@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.15";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -325,6 +325,7 @@
             const undoStackRef = useRef(undoStack); // Ref to avoid stale closure in keyboard handler
             const redoStackRef = useRef(redoStack);
             const modalBookRef = useRef(modalBook); // v4.21.0.g - Ref to check modal state in keyboard handler
+            const backdropMouseDownRef = useRef(null); // v5.2.0-alpha.15 - Track mousedown origin for backdrop close (prevents swipe-past-edge closing modals)
             const [selectedDivider, setSelectedDivider] = useState(null); // v3.13.0 - Selected divider {columnId, dividerId}
             const [activeColumnId, setActiveColumnId] = useState(null); // Track which column has focus for Ctrl+A
             const [contextMenu, setContextMenu] = useState(null); // {x, y, bookId, columnId}
@@ -8607,7 +8608,7 @@
 
                     {/* v5.1.0-alpha.3 - Auto-Organize Wizard Modal */}
                     {wizardModalOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setWizardModalOpen(false)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardModalOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">🪄 Auto-Organize by Author</h2>
@@ -9050,7 +9051,7 @@
                     {/* v5.1.0 - Removed Migration Dialog (v4 Column App migration no longer needed) */}
 
                     {insertDividerOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setInsertDividerOpen(null)}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setInsertDividerOpen(null); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">Insert Divider</h2>
@@ -9063,7 +9064,7 @@
                                             type="text"
                                             value={newDividerLabel}
                                             onChange={(e) => setNewDividerLabel(e.target.value)}
-                                            onKeyPress={(e) => { if (e.key === 'Enter') insertDivider(insertDividerOpen); }}
+                                            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') insertDivider(insertDividerOpen); }}
                                             placeholder="e.g., Jerry Mitchell, Read Books, 5 Stars"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             autoFocus
@@ -9175,6 +9176,7 @@
                                             min="0.01"
                                             value={bulkPriceInput}
                                             onChange={(e) => setBulkPriceInput(e.target.value)}
+                                            onKeyDown={(e) => e.stopPropagation()}
                                             className="flex-1 px-3 py-2 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             placeholder="0.00"
                                             autoFocus
@@ -9396,7 +9398,7 @@
 
                     {/* v5.2.0-alpha.3 - Phase 1.2: Edit Series Dialog */}
                     {editSeriesOpen && modalBook && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onClick={closeEditSeriesDialog}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeEditSeriesDialog(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl p-6 w-[420px]" onClick={(e) => { e.stopPropagation(); setEditSeriesDropdownOpen(false); }}>
                                 <div className="flex items-center justify-between mb-4">
                                     <h2 className="text-lg font-bold text-gray-900">
@@ -9511,7 +9513,7 @@
                     )}
 
                     {modalBook && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={closeBookModal}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeBookModal(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
                                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
                                     <div className="flex items-center gap-4">
@@ -10036,6 +10038,7 @@
                                                                     min="0.01"
                                                                     value={customPriceInput}
                                                                     onChange={(e) => setCustomPriceInput(e.target.value)}
+                                                                    onKeyDown={(e) => e.stopPropagation()}
                                                                     className="w-16 px-1 py-1 text-sm border rounded"
                                                                     placeholder="0.00"
                                                                     autoFocus
@@ -10754,6 +10757,7 @@
                                                                     setIsPlaceholderMode(false);
                                                                 }}
                                                                 onKeyDown={(e) => {
+                                                                    e.stopPropagation();
                                                                     // v5.0.0-alpha.134 - Clear placeholder on first character typed
                                                                     if (isPlaceholderMode && e.key.length === 1) {
                                                                         // Printable character typed - clear placeholder first
@@ -11747,6 +11751,7 @@
                                                                                 setRightPanelPlaceholderMode(false);
                                                                             }}
                                                                             onKeyDown={(e) => {
+                                                                                e.stopPropagation();
                                                                                 if (rightPanelPlaceholderMode && e.key.length === 1) {
                                                                                     setRightPanelEditingName('');
                                                                                     setRightPanelPlaceholderMode(false);
@@ -13269,6 +13274,7 @@
                                                 value={tagInputValue}
                                                 onChange={(e) => setTagInputValue(e.target.value)}
                                                 onKeyDown={(e) => {
+                                                    e.stopPropagation();
                                                     if (e.key === 'Escape') {
                                                         setDividerTagEditorOpen(null);
                                                         setTagInputValue('');
@@ -13454,6 +13460,7 @@
                                                                             autoFocus
                                                                             className="px-2 py-1 border border-blue-500 rounded text-sm w-full"
                                                                             onKeyDown={(e) => {
+                                                                                e.stopPropagation();
                                                                                 if (e.key === 'Escape') {
                                                                                     setEditingTagId(null);
                                                                                 } else if (e.key === 'Enter') {
@@ -15346,6 +15353,7 @@
                                                     className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     value={folderPropertiesEditedName}
                                                     onChange={(e) => setFolderPropertiesEditedName(e.target.value)}
+                                                    onKeyDown={(e) => e.stopPropagation()}
                                                     autoFocus
                                                 />
                                             )}

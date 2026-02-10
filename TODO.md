@@ -25,6 +25,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Needs brainstorming session to determine approach
    - Impact: Makes app usable on mobile devices
 
+**6. It would be nice if Author or Title had a dropdown memory
 ---
 
 ### ⚡ Priority 2: Core Enhancements
@@ -266,7 +267,13 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    -failures (especially in phase 0 - test API - should generate a report for a github issue with a link to github issues)
 
 
-**3. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
+**4. 🔄 Replace Inbox useEffect Collector with Explicit Import Logic** - LOW/LOW (1-2 hours)
+   - Current: Reactive useEffect watches `[books, folders, syncStatus]` and sweeps any unplaced books into Inbox
+   - Problem: Acts as a garbage collector rather than explicit logic. All book moves between folders are explicit actions (drag-drop, wizard organize, remove from folder), but the initial import of new books is the only case that legitimately needs Inbox placement. The reactive approach caused a subtle bug (v5.2.0-alpha.13/14) where a global keyboard handler accidentally removed a book from its folder, and the collector silently swept it into Inbox — masking the real bug.
+   - Fix: Replace with explicit Inbox placement in the import/load path only. When books are loaded from amazon-library.json, explicitly place new books (not already in any folder) into Inbox at that point.
+   - Impact: Eliminates a class of silent data-movement bugs; makes all book placement explicit and traceable
+
+**5. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
    - Current state: 3,862-line monolithic file with 50+ state variables, 80+ functions
    - **Recommended: Minimal Split (4 modules)**
 
