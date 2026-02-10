@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.3.1] - 2026-02-10
+
+### Improved
+- **Double-click to rename tags** - Double-click a tag name in Tag Management to enter rename mode (in addition to Rename button)
+
 ## [5.3.0] - 2026-02-10
 
 ### Added

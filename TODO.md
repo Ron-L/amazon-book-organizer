@@ -6,14 +6,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 🔥 Priority 0: Immediate
-
-**1. Double-click tag name in Tag Management should enter rename mode**
-   - Currently only the "Rename" button triggers edit mode
-   - Standard UX: double-click text to edit in-place
-
----
-
 ### 🎯 Priority 1: Current Focus
 
 **1. Remove column App vestigages**
