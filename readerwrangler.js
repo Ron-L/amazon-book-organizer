@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.19-test1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.20";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1881,9 +1881,6 @@
                     }
 
                     // v5.2.0-alpha.18 - Skip DEL when any modal/dialog is open (even without input focus)
-                    if (e.key === 'Delete') {
-                        console.log('🔑 DEL pressed — anyModalOpenRef:', anyModalOpenRef.current, 'activeElement:', document.activeElement?.tagName, document.activeElement?.className?.substring(0, 50));
-                    }
                     if (anyModalOpenRef.current && e.key === 'Delete') {
                         return;
                     }
