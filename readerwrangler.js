@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.1-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7515,6 +7515,25 @@
                                                     </div>
                                                 ))
                                             }
+                                            <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '4px', paddingTop: '4px' }}>
+                                                <div
+                                                    onClick={() => {
+                                                        setTagManagementOpen(true);
+                                                        setTagsDropdownOpen(false);
+                                                    }}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        fontSize: '13px',
+                                                        cursor: 'pointer',
+                                                        background: 'white',
+                                                        color: '#2563eb'
+                                                    }}
+                                                    onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                                    onMouseLeave={(e) => e.target.style.background = 'white'}
+                                                >
+                                                    Manage Tags...
+                                                </div>
+                                            </div>
                                         </>
                                     )}
                                 </div>
