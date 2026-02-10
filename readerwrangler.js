@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.3.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -288,8 +288,7 @@
             const [dividerTagEditorOpen, setDividerTagEditorOpen] = useState(null); // v4.27.0 - {columnId, dividerId} for editing div tags
             const [tagManagementOpen, setTagManagementOpen] = useState(false); // v4.27.0 Phase 3 - Tag management modal
             const [editingTagId, setEditingTagId] = useState(null); // v4.27.0 Phase 3 - Currently renaming tag
-            const [collectSeriesOpen, setCollectSeriesOpen] = useState(false);
-            const [seriesBooks, setSeriesBooks] = useState({ current: [], other: [] });
+            // v5.4.0 - Removed collectSeriesOpen, seriesBooks (Column App only)
             const [editSeriesOpen, setEditSeriesOpen] = useState(false); // v5.2.0-alpha.3 - Phase 1.2: Edit Series dialog
             const [editSeriesName, setEditSeriesName] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series name field
             const [editSeriesPosition, setEditSeriesPosition] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series position field
@@ -2899,102 +2898,7 @@
                 closeEditSeriesDialog();
             };
 
-            const openCollectSeriesDialog = () => {
-                if (!modalBook || !modalBook.series || !modalColumnId) return;
-
-                const currentColumn = columns.find(c => c.id === modalColumnId);
-                if (!currentColumn) return;
-
-                const allSeriesBooks = books.filter(b =>
-                    b.series && b.series === modalBook.series && b.id !== modalBook.id
-                );
-
-                // v4.16.0.s - Use helper for both legacy and new entry formats
-                const inCurrentColumn = allSeriesBooks.filter(b =>
-                    columnHasBook(currentColumn.books, b.id)
-                );
-
-                const inOtherColumns = allSeriesBooks.filter(b =>
-                    !columnHasBook(currentColumn.books, b.id)
-                ).map(b => {
-                    const col = columns.find(c => columnHasBook(c.books, b.id));
-                    return { ...b, columnName: col?.name || 'Unknown' };
-                });
-
-                const sortByPosition = (a, b) => {
-                    const posA = parseInt(a.seriesPosition) || 999;
-                    const posB = parseInt(b.seriesPosition) || 999;
-                    return posA - posB;
-                };
-
-                inCurrentColumn.sort(sortByPosition);
-                inOtherColumns.sort(sortByPosition);
-
-                setSeriesBooks({
-                    current: inCurrentColumn,
-                    other: inOtherColumns
-                });
-
-                setCollectSeriesOpen(true);
-            };
-
-            const collectSeriesBooks = (includeAllColumns) => {
-                if (!modalBook || !modalColumnId) return;
-
-                const targetColumn = columns.find(c => c.id === modalColumnId);
-                if (!targetColumn) return;
-
-                const booksToCollect = includeAllColumns
-                    ? [...seriesBooks.current, ...seriesBooks.other]
-                    : seriesBooks.current;
-
-                if (booksToCollect.length === 0) {
-                    setCollectSeriesOpen(false);
-                    return;
-                }
-
-                const allBooksInSeries = [modalBook, ...booksToCollect].sort((a, b) => {
-                    const posA = parseInt(a.seriesPosition) || 999;
-                    const posB = parseInt(b.seriesPosition) || 999;
-                    return posA - posB;
-                });
-
-                // v4.16.0.s - Use helper for index lookup with both entry formats
-                const currentBookIndexInTarget = findBookIndexInColumn(targetColumn.books, modalBook.id);
-
-                const newColumns = columns.map(col => {
-                    if (col.id === modalColumnId) {
-                        // v4.16.0.s - Filter using helper, create new GUID entries
-                        let newBooks = col.books.filter(entry => {
-                            const entryBookId = getBookIdFromEntry(entry);
-                            return !allBooksInSeries.find(b => b.id === entryBookId);
-                        });
-
-                        const insertIndex = Math.min(currentBookIndexInTarget, newBooks.length);
-                        // v4.16.0.s - Create new GUID entries for collected series books
-                        const newEntries = allBooksInSeries.map(b => ({
-                            instanceId: generateInstanceId(),
-                            bookId: b.id
-                        }));
-                        newBooks.splice(insertIndex, 0, ...newEntries);
-
-                        return { ...col, books: newBooks };
-                    } else if (includeAllColumns) {
-                        return {
-                            ...col,
-                            // v4.16.0.s - Filter using helper
-                            books: col.books.filter(entry => {
-                                const entryBookId = getBookIdFromEntry(entry);
-                                return !allBooksInSeries.find(b => b.id === entryBookId);
-                            })
-                        };
-                    }
-                    return col;
-                });
-
-                setColumns(newColumns);
-                setCollectSeriesOpen(false);
-            };
+            // v5.4.0 - Removed openCollectSeriesDialog() and collectSeriesBooks() (Column App only)
 
             const renderStars = (rating) => {
                 const fullStars = Math.floor(rating);
@@ -4405,8 +4309,8 @@
             }, [modalBook]);
             // v5.2.0-alpha.18 - Track whether any modal/dialog overlay is open
             useEffect(() => {
-                anyModalOpenRef.current = !!(modalBook || insertDividerOpen || showBulkPriceModal || editSeriesOpen || tagManagementOpen || wizardModalOpen || dividerTagEditorOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen || collectSeriesOpen);
-            }, [modalBook, insertDividerOpen, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, dividerTagEditorOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, collectSeriesOpen]);
+                anyModalOpenRef.current = !!(modalBook || insertDividerOpen || showBulkPriceModal || editSeriesOpen || tagManagementOpen || wizardModalOpen || dividerTagEditorOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen);
+            }, [modalBook, insertDividerOpen, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, dividerTagEditorOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen]);
 
             const recordAction = (action) => {
                 setUndoStack(prev => {
@@ -9278,87 +9182,7 @@
                         );
                     })()}
 
-                    {collectSeriesOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setCollectSeriesOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-2xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                                <h2 className="text-xl font-bold text-gray-900 mb-4">Group Series Books</h2>
-
-                                {modalBook && (
-                                    <p className="text-sm text-gray-700 mb-4">
-                                        Collecting books from: <strong style={{ color: '#621e31' }}>{modalBook.series}</strong>
-                                    </p>
-                                )}
-
-                                {seriesBooks.current.length > 0 && (
-                                    <div className="mb-4">
-                                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                                            Found in this column ({seriesBooks.current.length}):
-                                        </h3>
-                                        <ul className="space-y-1 ml-4">
-                                            {seriesBooks.current.map(book => (
-                                                <li key={book.id} className="text-sm text-gray-700">
-                                                    • {book.seriesPosition ? `Book ${book.seriesPosition}: ` : ''}{book.title}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-
-                                {seriesBooks.other.length > 0 && (
-                                    <div className="mb-6">
-                                        <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                                            Found in other columns ({seriesBooks.other.length}):
-                                        </h3>
-                                        <ul className="space-y-1 ml-4">
-                                            {seriesBooks.other.map(book => (
-                                                <li key={book.id} className="text-sm text-gray-700">
-                                                    • {book.seriesPosition ? `Book ${book.seriesPosition}: ` : ''}{book.title}
-                                                    <span className="text-gray-500 ml-2">({book.columnName})</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-
-                                {seriesBooks.current.length === 0 && seriesBooks.other.length === 0 && (
-                                    <p className="text-sm text-gray-600 mb-6 italic">
-                                        No other books from this series found in your library.
-                                    </p>
-                                )}
-
-                                <div className="flex gap-2 justify-end">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setCollectSeriesOpen(false);
-                                        }}
-                                        className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg">
-                                        Cancel
-                                    </button>
-                                    {seriesBooks.current.length > 0 && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                collectSeriesBooks(false);
-                                            }}
-                                            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg">
-                                            This Column Only
-                                        </button>
-                                    )}
-                                    {seriesBooks.other.length > 0 && (
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                collectSeriesBooks(true);
-                                            }}
-                                            className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg">
-                                            All Columns
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    {/* v5.4.0 - Removed Collect Series modal (Column App only) */}
 
                     {/* v5.2.0-alpha.3 - Phase 1.2: Edit Series Dialog */}
                     {editSeriesOpen && modalBook && (
@@ -9639,11 +9463,6 @@
                                                             ✏️
                                                         </button>
                                                     </div>
-                                                    <button
-                                                        onClick={openCollectSeriesDialog}
-                                                        className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-lg text-sm font-medium flex items-center gap-2">
-                                                        📚 Group Series Books
-                                                    </button>
                                                 </div>
                                             )}
 
