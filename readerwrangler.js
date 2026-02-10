@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9405,6 +9405,7 @@
                                             <button
                                                 type="button"
                                                 onClick={() => setEditSeriesDropdownOpen(!editSeriesDropdownOpen)}
+                                                onKeyDown={(e) => e.stopPropagation()}
                                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
                                                 tabIndex={-1}>
                                                 ▼
