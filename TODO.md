@@ -6,6 +6,19 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
+### 🔥 Priority 0: Immediate
+
+**1. Add "Manage Tags" link to Tags filter dropdown**
+   - Add a "Manage Tags" link at the bottom of the Tags filter dropdown (separated by a divider)
+   - Opens the same Tag Management dialog as View > Manage Tags
+   - UX rationale: Users working with tag filters naturally expect tag management to be accessible there (proximity principle, discoverability)
+
+**2. Double-click tag name in Tag Management should enter rename mode**
+   - Currently only the "Rename" button triggers edit mode
+   - Standard UX: double-click text to edit in-place
+
+---
+
 ### 🎯 Priority 1: Current Focus
 
 **1. Editable Series and Series Position**
@@ -27,14 +40,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 **6. It would be nice if Author or Title had a dropdown memory
 
-**8. Double-click tag name in Tag Management should enter rename mode**
-   - Currently only the "Rename" button triggers edit mode
-   - Standard UX: double-click text to edit in-place
-
-**7. Add "Manage Tags" link to Tags filter dropdown**
-   - Add a "Manage Tags" link at the bottom of the Tags filter dropdown (separated by a divider)
-   - Opens the same Tag Management dialog as View > Manage Tags
-   - UX rationale: Users working with tag filters naturally expect tag management to be accessible there (proximity principle, discoverability)
 ---
 
 ### ⚡ Priority 2: Core Enhancements
