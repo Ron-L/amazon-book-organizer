@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.17";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.18";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -325,6 +325,7 @@
             const undoStackRef = useRef(undoStack); // Ref to avoid stale closure in keyboard handler
             const redoStackRef = useRef(redoStack);
             const modalBookRef = useRef(modalBook); // v4.21.0.g - Ref to check modal state in keyboard handler
+            const anyModalOpenRef = useRef(false); // v5.2.0-alpha.18 - Track any modal open for global key guard
             const backdropMouseDownRef = useRef(null); // v5.2.0-alpha.15 - Track mousedown origin for backdrop close (prevents swipe-past-edge closing modals)
             const [selectedDivider, setSelectedDivider] = useState(null); // v3.13.0 - Selected divider {columnId, dividerId}
             const [activeColumnId, setActiveColumnId] = useState(null); // Track which column has focus for Ctrl+A
@@ -1879,9 +1880,8 @@
                         return; // Let browser handle text editing natively
                     }
 
-                    // v5.2.0-alpha.17 - Skip DEL when any modal overlay is open (even without input focus)
-                    // All modals use "fixed inset-0 bg-black" backdrop pattern
-                    if (document.querySelector('.fixed.inset-0.bg-black') && e.key === 'Delete') {
+                    // v5.2.0-alpha.18 - Skip DEL when any modal/dialog is open (even without input focus)
+                    if (anyModalOpenRef.current && e.key === 'Delete') {
                         return;
                     }
 
@@ -4403,6 +4403,10 @@
             useEffect(() => {
                 modalBookRef.current = modalBook;
             }, [modalBook]);
+            // v5.2.0-alpha.18 - Track whether any modal/dialog overlay is open
+            useEffect(() => {
+                anyModalOpenRef.current = !!(modalBook || insertDividerOpen || showBulkPriceModal || editSeriesOpen || tagManagementOpen || wizardModalOpen || dividerTagEditorOpen || folderPropertiesDialog);
+            }, [modalBook, insertDividerOpen, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, dividerTagEditorOpen, folderPropertiesDialog]);
 
             const recordAction = (action) => {
                 setUndoStack(prev => {
