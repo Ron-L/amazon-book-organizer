@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.2.0] - 2026-02-10
+
+### Added
+- **Editable Series** - Edit series name and position from book detail modal
+  - Combobox with dropdown for existing series names
+  - Numeric position field with validation
+  - "Remove from Series" clears fields without auto-save
+
+### Fixed
+- **Global keyboard handler leak** - DEL key in modal input fields no longer triggers book deletion or folder removal
+  - Added `anyModalOpenRef` guard to both `handleKeyDown` and `handleKeyboard` window listeners
+  - Added `isInputFocused` guard for DEL/arrow keys when any input/textarea has focus
+  - Added `e.stopPropagation()` to 8 input fields missing protection
+- **Backdrop swipe-close** - Dragging from inside a modal and releasing on the backdrop no longer closes the dialog
+  - All 17 modal backdrops now require both mousedown and click on the backdrop to close
+- **DEL key on Edit Series chevron** no longer triggers folder deletion
+- Removed 69 verbose undo/redo debug console.log statements
+
 ## [5.1.0] - 2026-02-09
 
 ### Added

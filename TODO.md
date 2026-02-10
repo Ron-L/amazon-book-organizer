@@ -21,14 +21,11 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Current Focus
 
-**1. Editable Series and Series Position**
+**1. Remove column App vestigages**
 
+**2. I can't select My Library in the left pane**
 
-**2. Remove column App vestigages**
-
-**3. I can't select My Library in the left pane**
-
-**4. Author list**
+**3. Author list**
    -  Should we have a way to generate a list? If so, how and where would be the output? A dialog? Maybe list view in right panel have a way of "collapsing" the book list by Author (show only 1 line per author, all fields except author are blank)???
 
 **5. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)

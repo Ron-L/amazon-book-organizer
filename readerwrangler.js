@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.23";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4417,14 +4417,11 @@
                 setRedoStack([]); // Clear redo on new action
             };
 
-            // TODO - Delete verbose console.log statements in executeUndo/executeRedo before release
             const executeUndo = (action) => {
                 switch (action.type) {
                     case 'MOVE_BOOKS':
                         // Move books back to source column at original positions
-                        console.log('[UNDO MOVE_BOOKS] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => {
-                            console.log('[UNDO MOVE_BOOKS] Processing columns...');
                             // v4.16.0.aj - Use entries if available, fallback to bookIds for legacy actions
                             const entriesToRestore = action.entries || action.bookIds;
                             return cols.map(col => {
@@ -4456,24 +4453,18 @@
                                             return !action.bookIds.includes(entryBookId);
                                         });
                                     }
-                                    console.log(`[UNDO MOVE_BOOKS] Target col "${col.name}": ${beforeCount} -> ${filtered.length} books (removed ${beforeCount - filtered.length})`);
                                     return { ...col, books: filtered };
                                 }
                                 if (col.id === action.fromColId) {
                                     // Re-insert entries at original positions
                                     const newBooks = [...col.books];
-                                    console.log(`[UNDO MOVE_BOOKS] Source col "${col.name}" before insert: ${newBooks.length} books`);
-                                    console.log(`[UNDO MOVE_BOOKS] Entries to insert: ${entriesToRestore.length}, at indices: ${action.fromIndices}`);
                                     // v4.16.0.aj - Sort by fromIndices ascending, use actual entries
                                     const sortedPairs = entriesToRestore
                                         .map((entry, i) => ({ entry, index: action.fromIndices[i] }))
                                         .sort((a, b) => a.index - b.index);
-                                    console.log('[UNDO MOVE_BOOKS] Sorted pairs count:', sortedPairs.length);
                                     sortedPairs.forEach(({ entry, index }) => {
-                                        console.log(`[UNDO MOVE_BOOKS] Splicing entry at index ${index}, array length: ${newBooks.length}`);
                                         newBooks.splice(index, 0, entry);
                                     });
-                                    console.log(`[UNDO MOVE_BOOKS] Source col "${col.name}" after insert: ${newBooks.length} books`);
                                     return { ...col, books: newBooks };
                                 }
                                 return col;
@@ -4482,7 +4473,6 @@
                         break;
                     case 'COPY_BOOKS':
                         // v4.16.0.au - Undo copy: just remove the copied entries from target column
-                        console.log('[UNDO COPY_BOOKS] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => {
                             return cols.map(col => {
                                 if (col.id === action.toColId) {
@@ -4497,7 +4487,6 @@
                                         }
                                         return true;
                                     });
-                                    console.log(`[UNDO COPY_BOOKS] Removed ${col.books.length - filtered.length} copied entries from "${col.name}"`);
                                     return { ...col, books: filtered };
                                 }
                                 return col;
@@ -4506,15 +4495,12 @@
                         break;
                     case 'REORDER_BOOKS':
                         // Move books back to original positions within same column
-                        console.log('[UNDO REORDER_BOOKS] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => {
-                            console.log('[UNDO REORDER_BOOKS] Processing columns...');
                             // v4.16.0.aj - Use entries if available, fallback to bookIds for legacy actions
                             const entriesToRestore = action.entries || action.bookIds;
                             return cols.map(col => {
                                 if (col.id === action.colId) {
                                     const newBooks = [...col.books];
-                                    console.log(`[UNDO REORDER_BOOKS] Col "${col.name}" before: ${newBooks.length} books`);
                                     // v4.16.0.aj - Remove entries by instanceId or bookId
                                     if (action.entries) {
                                         // New format: find and remove specific entries
@@ -4535,18 +4521,14 @@
                                             if (idx !== -1) newBooks.splice(idx, 1);
                                         });
                                     }
-                                    console.log(`[UNDO REORDER_BOOKS] After removal: ${newBooks.length} books`);
                                     // Then insert them back at their original positions (sorted ascending)
                                     // v4.16.0.aj - Use actual entries instead of bookIds
                                     const sortedPairs = entriesToRestore
                                         .map((entry, i) => ({ entry, index: action.fromIndices[i] }))
                                         .sort((a, b) => a.index - b.index);
-                                    console.log('[UNDO REORDER_BOOKS] Sorted pairs count:', sortedPairs.length);
                                     sortedPairs.forEach(({ entry, index }) => {
-                                        console.log(`[UNDO REORDER_BOOKS] Splicing entry at index ${index}, array length: ${newBooks.length}`);
                                         newBooks.splice(index, 0, entry);
                                     });
-                                    console.log(`[UNDO REORDER_BOOKS] After insert: ${newBooks.length} books`);
                                     return { ...col, books: newBooks };
                                 }
                                 return col;
@@ -4555,12 +4537,10 @@
                         break;
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Restore each book's previous hidden state
-                        console.log('[UNDO TOGGLE_HIDE] Action:', JSON.stringify(action, null, 2));
                         setBooks(prevBooks => {
                             const updatedBooks = prevBooks.map(book => {
                                 if (action.bookIds.includes(book.id)) {
                                     const prevState = action.previousStates[book.id];
-                                    console.log(`[UNDO TOGGLE_HIDE] Restoring "${book.title}" isHidden: ${book.isHidden} -> ${prevState}`);
                                     return { ...book, isHidden: prevState };
                                 }
                                 return book;
@@ -4571,7 +4551,6 @@
                         break;
                     case 'DELETE_COLUMN':
                         // v4.8.0 - Restore deleted column with its books
-                        console.log('[UNDO DELETE_COLUMN] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => {
                             // Remove books from destination column (if any were moved)
                             let updatedCols = cols;
@@ -4591,31 +4570,26 @@
                             };
                             const newCols = [...updatedCols];
                             newCols.splice(action.columnIndex, 0, restoredColumn);
-                            console.log(`[UNDO DELETE_COLUMN] Restored column "${action.columnName}" at index ${action.columnIndex} with ${action.books.length} books`);
                             return newCols;
                         });
                         break;
                     case 'REORDER_COLUMNS':
                         // v4.8.0 - Move column back to original position
-                        console.log('[UNDO REORDER_COLUMNS] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => {
                             const currentIndex = cols.findIndex(c => c.id === action.columnId);
                             if (currentIndex === -1) return cols;
                             const newCols = [...cols];
                             const [movedColumn] = newCols.splice(currentIndex, 1);
                             newCols.splice(action.fromIndex, 0, movedColumn);
-                            console.log(`[UNDO REORDER_COLUMNS] Moved column from index ${currentIndex} back to ${action.fromIndex}`);
                             return newCols;
                         });
                         break;
                     case 'DELETE_DIVIDER':
                         // v4.8.0 - Restore deleted divider at original position
-                        console.log('[UNDO DELETE_DIVIDER] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => cols.map(col => {
                             if (col.id === action.columnId) {
                                 const newBooks = [...col.books];
                                 newBooks.splice(action.dividerIndex, 0, { ...action.divider });
-                                console.log(`[UNDO DELETE_DIVIDER] Restored divider "${action.divider.label}" at index ${action.dividerIndex}`);
                                 return { ...col, books: newBooks };
                             }
                             return col;
@@ -4623,7 +4597,6 @@
                         break;
                     case 'REORDER_DIVIDER':
                         // v4.8.0 - Move divider back to original position
-                        console.log('[UNDO REORDER_DIVIDER] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => cols.map(col => {
                             if (col.id === action.colId) {
                                 const newBooks = [...col.books];
@@ -4635,7 +4608,6 @@
                                 const [divider] = newBooks.splice(currentIdx, 1);
                                 // Insert at original position
                                 newBooks.splice(action.fromIndex, 0, divider);
-                                console.log(`[UNDO REORDER_DIVIDER] Moved divider "${action.dividerLabel}" from index ${currentIdx} back to ${action.fromIndex}`);
                                 return { ...col, books: newBooks };
                             }
                             return col;
@@ -4644,7 +4616,6 @@
                     // v5.0.0-alpha.46 - Explorer folder operations
                     case 'MOVE_BOOKS_FOLDER':
                         // Undo move: remove from target folder, add back to source folder
-                        console.log('[UNDO MOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.toFolderId) {
                                 // Remove books from target
@@ -4666,7 +4637,6 @@
                         break;
                     case 'COPY_BOOKS_FOLDER':
                         // Undo copy: just remove from target folder
-                        console.log('[UNDO COPY_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.toFolderId) {
                                 return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
@@ -4676,7 +4646,6 @@
                         break;
                     case 'REMOVE_BOOKS_FOLDER':
                         // Undo remove: add books back to folder at original positions
-                        console.log('[UNDO REMOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.folderId) {
                                 const newBookIds = [...(folder.bookIds || [])];
@@ -4693,7 +4662,6 @@
                         break;
                     case 'REORDER_BOOKS_FOLDER':
                         // Undo reorder: restore original positions
-                        console.log('[UNDO REORDER_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.folderId) {
                                 const newBookIds = [...(folder.bookIds || [])];
@@ -4717,7 +4685,6 @@
                     case 'DELETE_FOLDERS':
                         // Undo delete: restore folders with their bookIds and hierarchy
                         // v5.0.0-alpha.56 - Also remove orphaned books from destination and restore selection
-                        console.log('[UNDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => {
                             let newFolders = [...prev];
 
@@ -4748,7 +4715,6 @@
                         break;
                     case 'CREATE_FOLDER':
                         // v5.0.0-alpha.51 - Undo folder creation: remove the created folder
-                        console.log('[UNDO CREATE_FOLDER] Removing folder:', action.folderId);
                         setFolders(prev => prev.filter(f => f.id !== action.folderId));
                         if (selectedFolderId === action.folderId) {
                             setSelectedFolderId(action.parentId || '__all__');
@@ -4756,7 +4722,6 @@
                         break;
                     case 'REPARENT_FOLDER':
                         // v5.0.0-alpha.78 - Undo reparent: restore old parentIds
-                        console.log('[UNDO REPARENT_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             const oldData = action.oldParentIds.find(o => o.folderId === folder.id);
                             if (oldData) {
@@ -4768,7 +4733,6 @@
                         break;
                     case 'MOVE_FOLDER':
                         // v5.0.0-alpha.135 - Undo single folder move: restore old parent
-                        console.log('[UNDO MOVE_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.folderId) {
                                 return { ...folder, parentId: action.oldParentId };
@@ -4778,7 +4742,6 @@
                         break;
                     case 'CUT_PASTE_FOLDER':
                         // v5.0.0-alpha.141 - Undo cut/paste: restore old parent
-                        console.log('[UNDO CUT_PASTE_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.folderId) {
                                 return { ...folder, parentId: action.oldParentId };
@@ -4788,12 +4751,10 @@
                         break;
                     case 'COPY_PASTE_FOLDER':
                         // v5.0.0-alpha.141 - Undo copy/paste: delete copied folders
-                        console.log('[UNDO COPY_PASTE_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.filter(folder => !action.newFolderIds.includes(folder.id)));
                         break;
                     case 'MOVE_BOOKS_TO_FOLDER':
                         // v5.0.0-alpha.166 - Undo book move: restore books to original folder
-                        console.log('[UNDO MOVE_BOOKS_TO_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.fromFolderId) {
                                 // Add books back to source folder (at top)
@@ -4808,7 +4769,6 @@
                         break;
                     case 'COPY_BOOKS_TO_FOLDER':
                         // v5.0.0-alpha.166 - Undo book copy: remove books from target folder
-                        console.log('[UNDO COPY_BOOKS_TO_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.toFolderId) {
                                 // Remove books from target folder
@@ -4819,7 +4779,6 @@
                         break;
                     case 'PASTE_BOOKS_CUT':
                         // v5.0.0-alpha.168 - Undo cut-paste: restore books to source folders, remove from target
-                        console.log('[UNDO PASTE_BOOKS_CUT] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => {
                             // Group books by source folder
                             const sourcesByFolder = {};
@@ -4843,7 +4802,6 @@
                         break;
                     case 'PASTE_BOOKS_COPY':
                         // v5.0.0-alpha.168 - Undo copy-paste: remove books from target folder
-                        console.log('[UNDO PASTE_BOOKS_COPY] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.targetFolderId) {
                                 return { ...folder, bookIds: folder.bookIds.filter(id => !action.bookIds.includes(id)) };
@@ -4853,7 +4811,6 @@
                         break;
                     case 'REORDER_FOLDER':
                         // v5.0.0-alpha.79 - Undo folder reorder: restore old order
-                        console.log('[UNDO REORDER_FOLDER] Action:', JSON.stringify(action, null, 2));
                         if (action.parentId) {
                             setFolders(prev => prev.map(folder => {
                                 if (folder.id === action.parentId) {
@@ -4879,7 +4836,6 @@
                     case 'WIZARD_ORGANIZE':
                         // v5.1.0-alpha.13 - Phase 1.5/1.6: Undo wizard organize
                         // v5.1.0-alpha.15.1 - Batch all sub-actions into single state update to avoid race conditions
-                        console.log('[UNDO WIZARD_ORGANIZE]', action.description);
                         setFolders(prev => {
                             let updated = [...prev];
 
@@ -5004,11 +4960,9 @@
                         break;
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Re-apply the hide/unhide action
-                        console.log('[REDO TOGGLE_HIDE] Action:', JSON.stringify(action, null, 2));
                         setBooks(prevBooks => {
                             const updatedBooks = prevBooks.map(book => {
                                 if (action.bookIds.includes(book.id)) {
-                                    console.log(`[REDO TOGGLE_HIDE] Setting "${book.title}" isHidden: ${book.isHidden} -> ${action.newState}`);
                                     return { ...book, isHidden: action.newState };
                                 }
                                 return book;
@@ -5019,7 +4973,6 @@
                         break;
                     case 'DELETE_COLUMN':
                         // v4.8.0 - Re-delete the column
-                        console.log('[REDO DELETE_COLUMN] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => {
                             // Move books to destination column (if any)
                             let updatedCols = cols;
@@ -5032,29 +4985,24 @@
                                 });
                             }
                             // Remove the column
-                            console.log(`[REDO DELETE_COLUMN] Deleting column "${action.columnName}"`);
                             return updatedCols.filter(col => col.id !== action.columnId);
                         });
                         break;
                     case 'REORDER_COLUMNS':
                         // v4.8.0 - Move column back to target position
-                        console.log('[REDO REORDER_COLUMNS] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => {
                             const currentIndex = cols.findIndex(c => c.id === action.columnId);
                             if (currentIndex === -1) return cols;
                             const newCols = [...cols];
                             const [movedColumn] = newCols.splice(currentIndex, 1);
                             newCols.splice(action.toIndex, 0, movedColumn);
-                            console.log(`[REDO REORDER_COLUMNS] Moved column from index ${currentIndex} to ${action.toIndex}`);
                             return newCols;
                         });
                         break;
                     case 'DELETE_DIVIDER':
                         // v4.8.0 - Re-delete the divider
-                        console.log('[REDO DELETE_DIVIDER] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => cols.map(col => {
                             if (col.id === action.columnId) {
-                                console.log(`[REDO DELETE_DIVIDER] Deleting divider "${action.divider.label}"`);
                                 return {
                                     ...col,
                                     books: col.books.filter(item =>
@@ -5067,7 +5015,6 @@
                         break;
                     case 'REORDER_DIVIDER':
                         // v4.8.0 - Move divider to target position
-                        console.log('[REDO REORDER_DIVIDER] Action:', JSON.stringify(action, null, 2));
                         setColumns(cols => cols.map(col => {
                             if (col.id === action.colId) {
                                 const newBooks = [...col.books];
@@ -5082,7 +5029,6 @@
                                 if (action.fromIndex < action.toIndex) adjustedIndex--;
                                 // Insert at target position
                                 newBooks.splice(adjustedIndex, 0, divider);
-                                console.log(`[REDO REORDER_DIVIDER] Moved divider "${action.dividerLabel}" from index ${currentIdx} to ${adjustedIndex}`);
                                 return { ...col, books: newBooks };
                             }
                             return col;
@@ -5091,7 +5037,6 @@
                     // v5.0.0-alpha.46 - Explorer folder operations
                     case 'MOVE_BOOKS_FOLDER':
                         // Redo move: remove from source, add to target
-                        console.log('[REDO MOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.fromFolderId) {
                                 return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
@@ -5106,7 +5051,6 @@
                         break;
                     case 'COPY_BOOKS_FOLDER':
                         // Redo copy: add to target folder
-                        console.log('[REDO COPY_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.toFolderId) {
                                 const newBookIds = [...(folder.bookIds || [])];
@@ -5118,7 +5062,6 @@
                         break;
                     case 'REMOVE_BOOKS_FOLDER':
                         // Redo remove: remove books from folder
-                        console.log('[REDO REMOVE_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.folderId) {
                                 return { ...folder, bookIds: (folder.bookIds || []).filter(id => !action.bookIds.includes(id)) };
@@ -5128,7 +5071,6 @@
                         break;
                     case 'REORDER_BOOKS_FOLDER':
                         // Redo reorder: apply the reorder again
-                        console.log('[REDO REORDER_BOOKS_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.folderId) {
                                 const newBookIds = [...(folder.bookIds || [])];
@@ -5152,7 +5094,6 @@
                     case 'DELETE_FOLDERS':
                         // Redo delete: move orphaned books to destination, then remove folders
                         // v5.0.0-alpha.56 - Handle orphaned books on redo and update selection
-                        console.log('[REDO DELETE_FOLDERS] Action:', JSON.stringify(action, null, 2));
                         const folderIdsToDeleteRedo = new Set(action.deletedFolders.map(f => f.id));
                         setFolders(prev => {
                             let updated = prev;
@@ -5177,13 +5118,11 @@
                         break;
                     case 'CREATE_FOLDER':
                         // v5.0.0-alpha.51 - Redo folder creation: re-add the folder
-                        console.log('[REDO CREATE_FOLDER] Re-adding folder:', action.folder.name);
                         setFolders(prev => [...prev, { ...action.folder }]);
                         setSelectedFolderId(action.folderId);
                         break;
                     case 'REPARENT_FOLDER':
                         // v5.0.0-alpha.78 - Redo reparent: apply the new parentId again
-                        console.log('[REDO REPARENT_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (action.folderIds.includes(folder.id)) {
                                 return { ...folder, parentId: action.newParentId };
@@ -5194,7 +5133,6 @@
                         break;
                     case 'MOVE_FOLDER':
                         // v5.0.0-alpha.135 - Redo single folder move: apply new parent
-                        console.log('[REDO MOVE_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.folderId) {
                                 return { ...folder, parentId: action.newParentId };
@@ -5204,7 +5142,6 @@
                         break;
                     case 'CUT_PASTE_FOLDER':
                         // v5.0.0-alpha.141 - Redo cut/paste: apply new parent
-                        console.log('[REDO CUT_PASTE_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.folderId) {
                                 return { ...folder, parentId: action.newParentId };
@@ -5214,7 +5151,6 @@
                         break;
                     case 'COPY_PASTE_FOLDER':
                         // v5.0.0-alpha.141 - Redo copy/paste: re-add copied folders
-                        console.log('[REDO COPY_PASTE_FOLDER] Action:', JSON.stringify(action, null, 2));
                         // Note: We need to store the copied folders in the action to redo properly
                         // For now, this is a limitation - we can't redo copy operations
                         // TODO: Store copied folder data in action for proper redo
@@ -5222,7 +5158,6 @@
                         break;
                     case 'MOVE_BOOKS_TO_FOLDER':
                         // v5.0.0-alpha.166 - Redo book move: move books to target folder again
-                        console.log('[REDO MOVE_BOOKS_TO_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.fromFolderId) {
                                 // Remove books from source folder
@@ -5237,7 +5172,6 @@
                         break;
                     case 'COPY_BOOKS_TO_FOLDER':
                         // v5.0.0-alpha.166 - Redo book copy: add books to target folder again
-                        console.log('[REDO COPY_BOOKS_TO_FOLDER] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.toFolderId) {
                                 // Add books to target folder (filter out duplicates first)
@@ -5250,7 +5184,6 @@
                         break;
                     case 'PASTE_BOOKS_CUT':
                         // v5.0.0-alpha.168 - Redo cut-paste: remove from source folders, add to target
-                        console.log('[REDO PASTE_BOOKS_CUT] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => {
                             // Group books by source folder
                             const sourcesByFolder = {};
@@ -5276,7 +5209,6 @@
                         break;
                     case 'PASTE_BOOKS_COPY':
                         // v5.0.0-alpha.168 - Redo copy-paste: add books to target folder
-                        console.log('[REDO PASTE_BOOKS_COPY] Action:', JSON.stringify(action, null, 2));
                         setFolders(prev => prev.map(folder => {
                             if (folder.id === action.targetFolderId) {
                                 const existingIds = new Set(folder.bookIds);
@@ -5288,7 +5220,6 @@
                         break;
                     case 'REORDER_FOLDER':
                         // v5.0.0-alpha.79 - Redo folder reorder: apply new order
-                        console.log('[REDO REORDER_FOLDER] Action:', JSON.stringify(action, null, 2));
                         if (action.parentId) {
                             setFolders(prev => prev.map(folder => {
                                 if (folder.id === action.parentId) {
@@ -5314,7 +5245,6 @@
                     case 'WIZARD_ORGANIZE':
                         // v5.1.0-alpha.13 - Phase 1.5/1.6: Redo wizard organize
                         // v5.1.0-alpha.15.1 - Batch all sub-actions into single state update to avoid race conditions
-                        console.log('[REDO WIZARD_ORGANIZE]', action.description);
                         setFolders(prev => {
                             let updated = [...prev];
 
@@ -13994,7 +13924,6 @@
                                             };
 
                                             // v5.0.0-alpha.139 - Removed hooks (useRef/useEffect) from conditional render
-                                            // TODO: Add viewport boundary detection properly later
                                             return (
                                                 <div
                                                     className="context-submenu absolute left-full top-0 ml-1 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto"
