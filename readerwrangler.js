@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.16";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.17";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1877,6 +1877,12 @@
                     // v5.2.0-alpha.15 - Skip DEL/arrow keys when input/textarea focused (prevent book deletion, navigation)
                     if (isInputFocused && ['Delete', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !e.altKey) {
                         return; // Let browser handle text editing natively
+                    }
+
+                    // v5.2.0-alpha.17 - Skip DEL when any modal overlay is open (even without input focus)
+                    // All modals use "fixed inset-0 bg-black" backdrop pattern
+                    if (document.querySelector('.fixed.inset-0.bg-black') && e.key === 'Delete') {
+                        return;
                     }
 
                     // v4.21.1.b - Let browser handle Ctrl+C if text is selected (user wants to copy text, not books)
