@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2416,14 +2416,7 @@
                 }
             }, [contextMenu]);
 
-            // v4.27.0 - Close divider context menu on click
-            useEffect(() => {
-                const handleClick = () => setDividerContextMenu(null);
-                if (dividerContextMenu) {
-                    window.addEventListener('click', handleClick);
-                    return () => window.removeEventListener('click', handleClick);
-                }
-            }, [dividerContextMenu]);
+            // v5.4.0 - Removed divider context menu click-outside handler (Column App only)
 
             // v3.11.0.d - Close column menu and sort submenu on ESC key
             useEffect(() => {
