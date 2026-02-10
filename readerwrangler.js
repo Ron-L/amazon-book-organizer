@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.2.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "5.2.0-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -294,6 +294,7 @@
             const [editSeriesName, setEditSeriesName] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series name field
             const [editSeriesPosition, setEditSeriesPosition] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series position field
             const [editSeriesDropdownOpen, setEditSeriesDropdownOpen] = useState(false); // v5.2.0-alpha.4 - Phase 1.3: Combobox dropdown
+            const [editSeriesRemoved, setEditSeriesRemoved] = useState(false); // v5.2.0-alpha.12 - Phase 1.5: Track explicit removal
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
             const [wizardMinBooksSlider, setWizardMinBooksSlider] = useState(5); // v5.1.0-alpha.10 - Slider value (immediate)
             const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0-alpha.10 - Debounced threshold for detection
@@ -2836,6 +2837,7 @@
                 setEditSeriesName('');
                 setEditSeriesPosition(modalBook?.seriesPosition != null ? String(modalBook.seriesPosition) : '');
                 setEditSeriesDropdownOpen(false);
+                setEditSeriesRemoved(false);
                 setEditSeriesOpen(true);
             };
 
@@ -2845,15 +2847,18 @@
                 setEditSeriesDropdownOpen(false);
                 setEditSeriesName('');
                 setEditSeriesPosition('');
+                setEditSeriesRemoved(false);
             };
 
             // v5.2.0-alpha.3 - Phase 1.2: Save series edits
             // v5.2.0-alpha.9 - Phase 1.4: Persist to IndexedDB, update modal
             // v5.2.0-alpha.10 - Blank field = keep original series (only Remove button clears)
+            // v5.2.0-alpha.12 - Phase 1.5: editSeriesRemoved flag for explicit removal
             const saveSeriesEdit = () => {
                 if (!modalBook) return;
-                // Blank field = keep original series name (user didn't select/type anything)
-                const newSeries = editSeriesName.trim() || modalBook.series || null;
+                // If user explicitly clicked "Remove from Series", save null
+                // Otherwise, blank field = keep original series name
+                const newSeries = editSeriesRemoved ? null : (editSeriesName.trim() || modalBook.series || null);
                 const newPosition = editSeriesPosition.trim() ? parseFloat(editSeriesPosition) : null;
                 console.log('[EDIT SERIES] Saving:', { bookId: modalBook.id, series: newSeries, position: newPosition, originalSeries: modalBook.series });
 
@@ -9463,9 +9468,11 @@
                                         {modalBook.series && (
                                             <button
                                                 onClick={() => {
-                                                    console.log('[EDIT SERIES] Remove from series clicked');
-                                                    // TODO: Phase 1.5 - Remove from series with confirmation
-                                                    closeEditSeriesDialog();
+                                                    console.log('[EDIT SERIES] Remove from series - clearing fields');
+                                                    setEditSeriesName('');
+                                                    setEditSeriesPosition('');
+                                                    setEditSeriesRemoved(true);
+                                                    setEditSeriesDropdownOpen(false);
                                                 }}
                                                 className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                                 Remove from Series
