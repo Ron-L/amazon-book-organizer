@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.3.0";  // Build version for this file
+        const ORGANIZER_VERSION = "5.3.1-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13451,7 +13451,7 @@
                                                                             }}
                                                                         />
                                                                     ) : (
-                                                                        <span>{tagData.label}</span>
+                                                                        <span onDoubleClick={() => setEditingTagId(tagId)} style={{ cursor: 'default' }}>{tagData.label}</span>
                                                                     )}
                                                                 </td>
                                                                 <td className="py-2 text-center text-gray-500">{getTagCount(tagId)}</td>
