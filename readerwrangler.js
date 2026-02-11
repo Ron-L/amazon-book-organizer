@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.3-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.3-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9329,6 +9329,10 @@
                                                         key={`folder-${folder.id}`}
                                                         className={`cursor-pointer hover:opacity-80 ${!isDraggable ? 'select-none' : ''} ${explorerSelectedFolders.has(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
                                                         style={(() => {
+                                                            // v5.4.3 - Book drop target feedback (checked before folder drag)
+                                                            if (explorerDropTargetId === folder.id) {
+                                                                return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' };
+                                                            }
                                                             // v5.0.0-alpha.73 - Phase C: Visual feedback (blue=valid, red=invalid)
                                                             if (!explorerFolderDragTarget) return {};
                                                             if (explorerFolderDragTarget.type === 'reorder' && explorerFolderDragTarget.index === folderIndex) {
@@ -9340,10 +9344,6 @@
                                                             }
                                                             if (explorerFolderDragTarget.type === 'reparent' && explorerFolderDragTarget.folderId === folder.id) {
                                                                 return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' }; // reparent always valid
-                                                            }
-                                                            // v5.4.3 - Book drop target feedback
-                                                            if (explorerDropTargetId === folder.id) {
-                                                                return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' };
                                                             }
                                                             return {};
                                                         })()}
@@ -9622,6 +9622,8 @@
                                                             setExplorerDragData(null);
                                                         }}
                                                         onClick={(e) => {
+                                                            // v5.4.3 - Clear folder selection when selecting book (matches table view behavior)
+                                                            setExplorerSelectedFolders(new Set());
                                                             if (e.shiftKey && explorerSelectionAnchor !== null) {
                                                                 const start = Math.min(explorerSelectionAnchor, index);
                                                                 const end = Math.max(explorerSelectionAnchor, index);
