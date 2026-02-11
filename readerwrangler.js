@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.5-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -337,6 +337,9 @@
             // v5.0.0-alpha.174 - Multi-column sorting: array of sort criteria (max 3)
             const [explorerSort, setExplorerSort] = useState([{ column: 'dateAdded', direction: 'desc' }]);
             const [folderSortSettings, setFolderSortSettings] = useState({}); // v5.0.0-alpha.100 - Per-folder sort settings map {folderId: sort array}
+            const [explorerGroupBy, setExplorerGroupBy] = useState(''); // v5.4.5 - '' = none, 'author' = group by author
+            const [explorerGroupByOpen, setExplorerGroupByOpen] = useState(false); // v5.4.5 - Group by dropdown open
+            const [collapsedGroups, setCollapsedGroups] = useState(new Set()); // v5.4.5 - Collapsed group names
             const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
             const [explorerCoverCols, setExplorerCoverCols] = useState(56); // Slider value (4-60), actual cols = 64-value
             const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed (left panel)
@@ -1216,6 +1219,7 @@
                                 setColumnWidths(sanitizedWidths);
                             }
                             if (explorerData.columnOrder) setColumnOrder(explorerData.columnOrder); // v5.0.0-alpha.172
+                            if (explorerData.explorerGroupBy) setExplorerGroupBy(explorerData.explorerGroupBy); // v5.4.5
                             console.log('📁 Restored Explorer settings from localStorage');
                         }
                         // v5.0.0-alpha.169.10 - Mark settings loaded (even if no saved data)
@@ -1530,10 +1534,11 @@
                     folderSortSettings, // v5.0.0-alpha.100 - Per-folder sort settings
                     visibleColumns, // v5.0.0-alpha.104 - Column visibility
                     columnWidths: sanitizedColumnWidths, // v5.0.0-alpha.109 - Column widths (sanitized)
-                    columnOrder // v5.0.0-alpha.172 - Column display order
+                    columnOrder, // v5.0.0-alpha.172 - Column display order
+                    explorerGroupBy // v5.4.5 - Group by setting
                 };
                 localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
-            }, [selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, visibleColumns, columnWidths, columnOrder]);
+            }, [selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, visibleColumns, columnWidths, columnOrder, explorerGroupBy]);
 
             // v5.0.0 - Save folders to localStorage
             useEffect(() => {
@@ -1562,6 +1567,10 @@
                     // Close More panel if clicking outside (v5.0.0-alpha.175.47.2 - Fixed to close when clicking Tier 1 filters)
                     if (morePanelOpen && !e.target.closest('[data-morepanel]')) {
                         setMorePanelOpen(false);
+                    }
+                    // v5.4.5 - Close Group By dropdown
+                    if (explorerGroupByOpen && !e.target.closest('[data-groupby-dropdown]')) {
+                        setExplorerGroupByOpen(false);
                     }
                     // v5.0.0-alpha.175.41 - Phase 5.2: Close Collections dropdown
                     if (collectionsDropdownOpen && !e.target.closest('[data-collections-dropdown]')) {
@@ -8348,7 +8357,7 @@
 
                                                         return (
                                                             <button
-                                                                onClick={() => !isReadOnlyView && setExplorerSort([{ column: 'custom', direction: 'asc' }])}
+                                                                onClick={() => { if (!isReadOnlyView) { setExplorerSort([{ column: 'custom', direction: 'asc' }]); setExplorerGroupBy(''); } }}
                                                                 className={`ml-1 text-base font-bold ${
                                                                     isReadOnlyView
                                                                         ? 'text-gray-300 cursor-not-allowed'
@@ -8361,6 +8370,79 @@
                                                         );
                                                     })()}
                                                 </>
+                                            )}
+                                        </div>
+                                        {/* v5.4.5 - Group By dropdown */}
+                                        <div className="relative border-l pl-4" data-groupby-dropdown="">
+                                            <button
+                                                onClick={() => setExplorerGroupByOpen(!explorerGroupByOpen)}
+                                                style={{
+                                                    height: '28px',
+                                                    padding: '0 10px',
+                                                    fontSize: '13px',
+                                                    border: '1px solid',
+                                                    borderColor: explorerGroupBy ? '#93c5fd' : '#cbd5e1',
+                                                    borderRadius: '4px',
+                                                    background: explorerGroupBy ? '#dbeafe' : 'white',
+                                                    color: explorerGroupBy ? '#1e40af' : '#475569',
+                                                    cursor: 'pointer',
+                                                    fontWeight: explorerGroupBy ? 500 : 400,
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                Group: {explorerGroupBy === 'author' ? 'Author' : 'None'} ▼
+                                            </button>
+                                            {explorerGroupByOpen && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: '32px',
+                                                    left: 0,
+                                                    background: 'white',
+                                                    border: '1px solid #cbd5e1',
+                                                    borderRadius: '4px',
+                                                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                                    zIndex: 1000,
+                                                    minWidth: '160px'
+                                                }}>
+                                                    <div
+                                                        onClick={() => { setExplorerGroupBy(''); setCollapsedGroups(new Set()); setExplorerGroupByOpen(false); }}
+                                                        style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '13px', color: !explorerGroupBy ? '#1e40af' : '#475569', background: !explorerGroupBy ? '#eff6ff' : 'transparent' }}
+                                                        onMouseEnter={(e) => { if (explorerGroupBy) e.currentTarget.style.background = '#f1f5f9'; }}
+                                                        onMouseLeave={(e) => { if (explorerGroupBy) e.currentTarget.style.background = 'transparent'; }}>
+                                                        {!explorerGroupBy && '✓ '}None
+                                                    </div>
+                                                    <div style={{ borderTop: '1px solid #e2e8f0' }}></div>
+                                                    <div
+                                                        onClick={() => { setExplorerGroupBy('author'); setCollapsedGroups(new Set()); setExplorerGroupByOpen(false); }}
+                                                        style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '13px', color: explorerGroupBy === 'author' ? '#1e40af' : '#475569', background: explorerGroupBy === 'author' ? '#eff6ff' : 'transparent' }}
+                                                        onMouseEnter={(e) => { if (explorerGroupBy !== 'author') e.currentTarget.style.background = '#f1f5f9'; }}
+                                                        onMouseLeave={(e) => { if (explorerGroupBy !== 'author') e.currentTarget.style.background = 'transparent'; }}>
+                                                        {explorerGroupBy === 'author' && '✓ '}Author
+                                                    </div>
+                                                    {explorerGroupBy && (
+                                                        <>
+                                                            <div style={{ borderTop: '1px solid #e2e8f0' }}></div>
+                                                            <div
+                                                                onClick={() => { setCollapsedGroups(new Set()); setExplorerGroupByOpen(false); }}
+                                                                style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '13px', color: '#475569' }}
+                                                                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                                                                Expand All
+                                                            </div>
+                                                            <div
+                                                                onClick={() => {
+                                                                    const allBooks = getFolderBookIds(selectedFolderId).map(id => books.find(b => b.id === id)).filter(Boolean);
+                                                                    const groupNames = new Set(allBooks.map(b => b.author || 'Unknown Author'));
+                                                                    setCollapsedGroups(groupNames);
+                                                                    setExplorerGroupByOpen(false);
+                                                                }}
+                                                                style={{ padding: '6px 12px', cursor: 'pointer', fontSize: '13px', color: '#475569' }}
+                                                                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                                                                Collapse All
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                         {/* v5.0.0-alpha.104 - Column chooser gear icon */}
@@ -8610,7 +8692,7 @@
                                                                         </span>
                                                                         {sortIndex === 0 && selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && (
                                                                             <button
-                                                                                onClick={(e) => { e.stopPropagation(); setExplorerSort([{ column: 'custom', direction: 'asc' }]); }}
+                                                                                onClick={(e) => { e.stopPropagation(); setExplorerSort([{ column: 'custom', direction: 'asc' }]); setExplorerGroupBy(''); }}
                                                                                 className="ml-2 text-gray-500 hover:text-red-500 font-bold"
                                                                                 title="Return to Manual Order"
                                                                             >✕</button>
@@ -9053,7 +9135,58 @@
 
                                                             return 0; // All levels equal
                                                         });
-                                                    return sortedBooks.map((book, index) => (
+                                                    // v5.4.5 - Group by: build flat display items (headers + books)
+                                                    const displayItems = (() => {
+                                                        if (!explorerGroupBy) {
+                                                            return sortedBooks.map((book, i) => ({ type: 'book', book, index: i }));
+                                                        }
+                                                        const groups = new Map();
+                                                        sortedBooks.forEach(book => {
+                                                            const key = explorerGroupBy === 'author' ? (book.author || 'Unknown Author') : '';
+                                                            if (!groups.has(key)) groups.set(key, []);
+                                                            groups.get(key).push(book);
+                                                        });
+                                                        const sorted = [...groups.entries()]
+                                                            .sort(([a], [b]) => a.localeCompare(b))
+                                                            .map(([name, grpBooks]) => ({ name, books: grpBooks }));
+                                                        const items = [];
+                                                        let flatIndex = 0;
+                                                        sorted.forEach(group => {
+                                                            const isCollapsed = collapsedGroups.has(group.name);
+                                                            items.push({ type: 'header', name: group.name, count: group.books.length, isCollapsed });
+                                                            if (!isCollapsed) {
+                                                                group.books.forEach(book => {
+                                                                    items.push({ type: 'book', book, index: flatIndex++ });
+                                                                });
+                                                            } else {
+                                                                flatIndex += group.books.length;
+                                                            }
+                                                        });
+                                                        return items;
+                                                    })();
+                                                    const totalVisibleCols = columnOrder.filter(c => visibleColumns[c]).length + 2;
+                                                    return displayItems.map(item => {
+                                                        if (item.type === 'header') {
+                                                            return (
+                                                                <tr
+                                                                    key={`group-${item.name}`}
+                                                                    className="bg-gray-100 border-b border-gray-200 cursor-pointer select-none"
+                                                                    onClick={() => setCollapsedGroups(prev => {
+                                                                        const next = new Set(prev);
+                                                                        if (next.has(item.name)) next.delete(item.name);
+                                                                        else next.add(item.name);
+                                                                        return next;
+                                                                    })}>
+                                                                    <td colSpan={totalVisibleCols} className="px-3 py-2">
+                                                                        <span className="text-gray-500 mr-2">{item.isCollapsed ? '▸' : '▾'}</span>
+                                                                        <span className="font-semibold text-gray-800">{item.name}</span>
+                                                                        <span className="text-gray-500 ml-2 text-sm">({item.count})</span>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        }
+                                                        const { book, index } = item;
+                                                        return (
                                                         <tr
                                                             key={book.id}
                                                             className={`group cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
@@ -9289,11 +9422,8 @@
                                                             })}
                                                             <td className="p-2"></td>
                                                         </tr>
-                                                    ));
-                                                })()}
-                                            </tbody>
-                                        </table>
-                                            );
+                                                        );
+                                                    });
                                         })()
                                     ) : (
                                         <div className="grid gap-4 pt-1" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(40px, 1fr))` }}>
@@ -9563,7 +9693,56 @@
                                                         }
                                                         return 0;
                                                     });
-                                                return sortedBooks.map((book, index) => (
+                                                // v5.4.5 - Group by: build flat display items (headers + books)
+                                                const displayItems = (() => {
+                                                    if (!explorerGroupBy) {
+                                                        return sortedBooks.map((book, i) => ({ type: 'book', book, index: i }));
+                                                    }
+                                                    const groups = new Map();
+                                                    sortedBooks.forEach(book => {
+                                                        const key = explorerGroupBy === 'author' ? (book.author || 'Unknown Author') : '';
+                                                        if (!groups.has(key)) groups.set(key, []);
+                                                        groups.get(key).push(book);
+                                                    });
+                                                    const sorted = [...groups.entries()]
+                                                        .sort(([a], [b]) => a.localeCompare(b))
+                                                        .map(([name, grpBooks]) => ({ name, books: grpBooks }));
+                                                    const items = [];
+                                                    let flatIndex = 0;
+                                                    sorted.forEach(group => {
+                                                        const isCollapsed = collapsedGroups.has(group.name);
+                                                        items.push({ type: 'header', name: group.name, count: group.books.length, isCollapsed });
+                                                        if (!isCollapsed) {
+                                                            group.books.forEach(book => {
+                                                                items.push({ type: 'book', book, index: flatIndex++ });
+                                                            });
+                                                        } else {
+                                                            flatIndex += group.books.length;
+                                                        }
+                                                    });
+                                                    return items;
+                                                })();
+                                                return displayItems.map(item => {
+                                                    if (item.type === 'header') {
+                                                        return (
+                                                            <div
+                                                                key={`group-${item.name}`}
+                                                                style={{ gridColumn: '1 / -1' }}
+                                                                className="flex items-center gap-2 py-2 border-b border-gray-200 cursor-pointer select-none"
+                                                                onClick={() => setCollapsedGroups(prev => {
+                                                                    const next = new Set(prev);
+                                                                    if (next.has(item.name)) next.delete(item.name);
+                                                                    else next.add(item.name);
+                                                                    return next;
+                                                                })}>
+                                                                <span className="text-gray-500">{item.isCollapsed ? '▸' : '▾'}</span>
+                                                                <span className="font-semibold text-gray-800">{item.name}</span>
+                                                                <span className="text-gray-500 text-sm">({item.count})</span>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    const { book, index } = item;
+                                                    return (
                                                     <div
                                                         key={book.id}
                                                         className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''}`}
@@ -9690,7 +9869,8 @@
                                                         </div>
                                                         <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
                                                     </div>
-                                                ));
+                                                    );
+                                                });
                                             })()}
                                         </div>
                                     )}
