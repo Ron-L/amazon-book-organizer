@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.5-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.5-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9424,7 +9424,9 @@
                                                         </tr>
                                                         );
                                                     });
-                                        })()
+                                                })()}
+                                            </tbody>
+                                        </table>
                                     ) : (
                                         <div className="grid gap-4 pt-1" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(40px, 1fr))` }}>
                                             {/* v5.0.0-alpha.54 - Folder tiles (before books) */}
