@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.0-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1591,22 +1591,6 @@
                 } else if (booksNotInAnyFolder.length > 0) {
                     // Add new books to Inbox (books imported that aren't in any folder yet)
                     console.log('📥 Adding', booksNotInAnyFolder.length, 'new books to Inbox');
-                    // v5.2.0-alpha.13 - Enhanced diagnostics for Inbox bug investigation
-                    console.warn('📥 [INBOX DIAG] === BOOK BEING ADDED TO INBOX ===');
-                    console.warn('📥 [INBOX DIAG] Trigger: books.length=' + books.length + ', folders.length=' + folders.length);
-                    console.warn('📥 [INBOX DIAG] Total books in all folders:', booksInAnyFolder.size, '/', books.length);
-                    booksNotInAnyFolder.forEach(id => {
-                        const b = books.find(bb => bb.id === id);
-                        console.warn('📥 [INBOX DIAG] Unplaced book:', id, b ? `"${b.title}" by ${b.author} (series: ${b.series || 'none'})` : '(book not found!)');
-                        // Check every folder for this ID
-                        folders.forEach(f => {
-                            if ((f.bookIds || []).includes(id)) {
-                                console.warn('📥 [INBOX DIAG]   WAIT - book IS in folder "' + f.name + '" (id: ' + f.id + ') - THIS SHOULD NOT HAPPEN');
-                            }
-                        });
-                    });
-                    console.warn('📥 [INBOX DIAG] Stack trace:', new Error().stack);
-                    console.warn('📥 [INBOX DIAG] === END DIAGNOSTICS ===');
                     setFolders(prev => prev.map(f => {
                         if (f.id !== '__inbox__') return f;
                         return { ...f, bookIds: [...booksNotInAnyFolder.reverse(), ...(f.bookIds || [])] };
