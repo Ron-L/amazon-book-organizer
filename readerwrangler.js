@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.4-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7460,12 +7460,35 @@
                                     </div>
                                     {/* Divider line to separate All Books from folders */}
                                     <div className="border-b border-gray-200 my-1 mx-2"></div>
-                                    {/* v5.0.0-alpha.63 - My Library (organizational root container) */}
+                                    {/* v5.4.4 - My Library: selectable + folder drop target */}
                                     <div
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}>
-                                        <span className="pointer-events-none cursor-pointer" onClick={() => navigateToFolder('__library__')}>{FOLDER_LIBRARY.icon}</span>
-                                        <span className="flex-1 pointer-events-none cursor-pointer" onClick={() => navigateToFolder('__library__')}>{FOLDER_LIBRARY.name}</span>
-                                        <span className="text-xs text-gray-500 pointer-events-none cursor-pointer" onClick={() => navigateToFolder('__library__')}>
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__library__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                        onClick={() => navigateToFolder('__library__')}
+                                        onDragOver={(e) => {
+                                            // Accept folder drags only — books go to Inbox, not root
+                                            if (Array.from(e.dataTransfer.types).includes('application/x-folder-reorder')) {
+                                                e.preventDefault();
+                                                e.dataTransfer.dropEffect = 'move';
+                                                setExplorerDropTargetId('__library__');
+                                            }
+                                        }}
+                                        onDragLeave={(e) => {
+                                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                setExplorerDropTargetId(null);
+                                            }
+                                        }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            const folderData = e.dataTransfer.getData('application/x-folder-reorder');
+                                            if (folderData) {
+                                                const { folderIds } = JSON.parse(folderData);
+                                                reparentFolder(folderIds, null);
+                                            }
+                                            setExplorerDropTargetId(null);
+                                        }}>
+                                        <span className="pointer-events-none">{FOLDER_LIBRARY.icon}</span>
+                                        <span className="flex-1 pointer-events-none">{FOLDER_LIBRARY.name}</span>
+                                        <span className="text-xs text-gray-500 pointer-events-none">
                                             ({getChildFolders(null).length} folders)
                                         </span>
                                         {/* v5.1.0-alpha.14 - Collapse/Expand all controls (moved from top, only applies to My Library folders) */}
