@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3841,122 +3841,7 @@
 
             const executeUndo = (action) => {
                 switch (action.type) {
-                    case 'MOVE_BOOKS':
-                        // Move books back to source column at original positions
-                        setColumns(cols => {
-                            // v4.16.0.aj - Use entries if available, fallback to bookIds for legacy actions
-                            const entriesToRestore = action.entries || action.bookIds;
-                            return cols.map(col => {
-                                if (col.id === action.toColId) {
-                                    // v4.16.0.aj - Remove from target by matching entries or bookIds
-                                    const beforeCount = col.books.length;
-                                    let filtered;
-                                    if (action.entries) {
-                                        // New format: remove specific entries by instanceId or exact match
-                                        const instanceIdsToRemove = new Set(
-                                            action.entries
-                                                .filter(e => e && typeof e === 'object' && e.instanceId)
-                                                .map(e => e.instanceId)
-                                        );
-                                        const bookIdsToRemove = action.entries
-                                            .filter(e => typeof e === 'string')
-                                            .concat(action.entries.filter(e => e && typeof e === 'object' && !e.instanceId).map(e => e.bookId || e));
-                                        filtered = col.books.filter(entry => {
-                                            if (typeof entry === 'object' && entry.instanceId) {
-                                                return !instanceIdsToRemove.has(entry.instanceId);
-                                            }
-                                            const entryBookId = getBookIdFromEntry(entry);
-                                            return !bookIdsToRemove.includes(entryBookId);
-                                        });
-                                    } else {
-                                        // Legacy format: filter by bookId
-                                        filtered = col.books.filter(entry => {
-                                            const entryBookId = getBookIdFromEntry(entry);
-                                            return !action.bookIds.includes(entryBookId);
-                                        });
-                                    }
-                                    return { ...col, books: filtered };
-                                }
-                                if (col.id === action.fromColId) {
-                                    // Re-insert entries at original positions
-                                    const newBooks = [...col.books];
-                                    // v4.16.0.aj - Sort by fromIndices ascending, use actual entries
-                                    const sortedPairs = entriesToRestore
-                                        .map((entry, i) => ({ entry, index: action.fromIndices[i] }))
-                                        .sort((a, b) => a.index - b.index);
-                                    sortedPairs.forEach(({ entry, index }) => {
-                                        newBooks.splice(index, 0, entry);
-                                    });
-                                    return { ...col, books: newBooks };
-                                }
-                                return col;
-                            });
-                        });
-                        break;
-                    case 'COPY_BOOKS':
-                        // v4.16.0.au - Undo copy: just remove the copied entries from target column
-                        setColumns(cols => {
-                            return cols.map(col => {
-                                if (col.id === action.toColId) {
-                                    const instanceIdsToRemove = new Set(
-                                        action.entries
-                                            .filter(e => e && typeof e === 'object' && e.instanceId)
-                                            .map(e => e.instanceId)
-                                    );
-                                    const filtered = col.books.filter(entry => {
-                                        if (typeof entry === 'object' && entry.instanceId) {
-                                            return !instanceIdsToRemove.has(entry.instanceId);
-                                        }
-                                        return true;
-                                    });
-                                    return { ...col, books: filtered };
-                                }
-                                return col;
-                            });
-                        });
-                        break;
-                    case 'REORDER_BOOKS':
-                        // Move books back to original positions within same column
-                        setColumns(cols => {
-                            // v4.16.0.aj - Use entries if available, fallback to bookIds for legacy actions
-                            const entriesToRestore = action.entries || action.bookIds;
-                            return cols.map(col => {
-                                if (col.id === action.colId) {
-                                    const newBooks = [...col.books];
-                                    // v4.16.0.aj - Remove entries by instanceId or bookId
-                                    if (action.entries) {
-                                        // New format: find and remove specific entries
-                                        action.entries.forEach(entry => {
-                                            let idx = -1;
-                                            if (typeof entry === 'object' && entry.instanceId) {
-                                                idx = newBooks.findIndex(e => e && typeof e === 'object' && e.instanceId === entry.instanceId);
-                                            } else {
-                                                const bookId = getBookIdFromEntry(entry);
-                                                idx = newBooks.findIndex(e => getBookIdFromEntry(e) === bookId);
-                                            }
-                                            if (idx !== -1) newBooks.splice(idx, 1);
-                                        });
-                                    } else {
-                                        // Legacy format: remove by bookId
-                                        action.bookIds.forEach(bookId => {
-                                            const idx = newBooks.findIndex(e => getBookIdFromEntry(e) === bookId);
-                                            if (idx !== -1) newBooks.splice(idx, 1);
-                                        });
-                                    }
-                                    // Then insert them back at their original positions (sorted ascending)
-                                    // v4.16.0.aj - Use actual entries instead of bookIds
-                                    const sortedPairs = entriesToRestore
-                                        .map((entry, i) => ({ entry, index: action.fromIndices[i] }))
-                                        .sort((a, b) => a.index - b.index);
-                                    sortedPairs.forEach(({ entry, index }) => {
-                                        newBooks.splice(index, 0, entry);
-                                    });
-                                    return { ...col, books: newBooks };
-                                }
-                                return col;
-                            });
-                        });
-                        break;
+                    // v5.4.0 - Removed Column App undo cases: MOVE_BOOKS, COPY_BOOKS, REORDER_BOOKS
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Restore each book's previous hidden state
                         setBooks(prevBooks => {
@@ -3971,70 +3856,7 @@
                             return updatedBooks;
                         });
                         break;
-                    case 'DELETE_COLUMN':
-                        // v4.8.0 - Restore deleted column with its books
-                        setColumns(cols => {
-                            // Remove books from destination column (if any were moved)
-                            let updatedCols = cols;
-                            if (action.books.length > 0 && action.destinationColId) {
-                                updatedCols = cols.map(col => {
-                                    if (col.id === action.destinationColId) {
-                                        return { ...col, books: col.books.filter(id => !action.books.includes(id)) };
-                                    }
-                                    return col;
-                                });
-                            }
-                            // Re-insert the column at its original position
-                            const restoredColumn = {
-                                id: action.columnId,
-                                name: action.columnName,
-                                books: [...action.books]
-                            };
-                            const newCols = [...updatedCols];
-                            newCols.splice(action.columnIndex, 0, restoredColumn);
-                            return newCols;
-                        });
-                        break;
-                    case 'REORDER_COLUMNS':
-                        // v4.8.0 - Move column back to original position
-                        setColumns(cols => {
-                            const currentIndex = cols.findIndex(c => c.id === action.columnId);
-                            if (currentIndex === -1) return cols;
-                            const newCols = [...cols];
-                            const [movedColumn] = newCols.splice(currentIndex, 1);
-                            newCols.splice(action.fromIndex, 0, movedColumn);
-                            return newCols;
-                        });
-                        break;
-                    case 'DELETE_DIVIDER':
-                        // v4.8.0 - Restore deleted divider at original position
-                        setColumns(cols => cols.map(col => {
-                            if (col.id === action.columnId) {
-                                const newBooks = [...col.books];
-                                newBooks.splice(action.dividerIndex, 0, { ...action.divider });
-                                return { ...col, books: newBooks };
-                            }
-                            return col;
-                        }));
-                        break;
-                    case 'REORDER_DIVIDER':
-                        // v4.8.0 - Move divider back to original position
-                        setColumns(cols => cols.map(col => {
-                            if (col.id === action.colId) {
-                                const newBooks = [...col.books];
-                                // Find and remove divider from current position
-                                const currentIdx = newBooks.findIndex(b =>
-                                    typeof b === 'object' && b.type === 'divider' && b.id === action.dividerId
-                                );
-                                if (currentIdx === -1) return col;
-                                const [divider] = newBooks.splice(currentIdx, 1);
-                                // Insert at original position
-                                newBooks.splice(action.fromIndex, 0, divider);
-                                return { ...col, books: newBooks };
-                            }
-                            return col;
-                        }));
-                        break;
+                    // v5.4.0 - Removed Column App undo cases: DELETE_COLUMN, REORDER_COLUMNS, DELETE_DIVIDER, REORDER_DIVIDER
                     // v5.0.0-alpha.46 - Explorer folder operations
                     case 'MOVE_BOOKS_FOLDER':
                         // Undo move: remove from target folder, add back to source folder
@@ -4304,82 +4126,7 @@
 
             const executeRedo = (action) => {
                 switch (action.type) {
-                    case 'MOVE_BOOKS':
-                        // v4.16.0.ak - Move books to target column (use entries for GUID support)
-                        setColumns(cols => cols.map(col => {
-                            if (col.id === action.fromColId) {
-                                // v4.16.0.ak - Remove by instanceId if entries available, else by bookId
-                                if (action.entries) {
-                                    const instanceIdsToRemove = new Set(
-                                        action.entries
-                                            .filter(e => e && typeof e === 'object' && e.instanceId)
-                                            .map(e => e.instanceId)
-                                    );
-                                    const bookIdsToRemove = new Set(
-                                        action.entries
-                                            .filter(e => typeof e === 'string')
-                                            .concat(action.entries.filter(e => e && typeof e === 'object' && !e.instanceId).map(e => e.bookId || e))
-                                    );
-                                    return { ...col, books: col.books.filter((entry, idx) => {
-                                        if (typeof entry === 'object' && entry.instanceId) {
-                                            return !instanceIdsToRemove.has(entry.instanceId);
-                                        }
-                                        // For legacy string entries, check if this index matches fromIndices
-                                        if (typeof entry === 'string' && action.fromIndices) {
-                                            return !action.fromIndices.includes(idx);
-                                        }
-                                        return !bookIdsToRemove.has(entry);
-                                    }) };
-                                }
-                                return { ...col, books: col.books.filter(id => !action.bookIds.includes(id)) };
-                            }
-                            if (col.id === action.toColId) {
-                                const newBooks = [...col.books];
-                                // v4.16.0.ak - Insert entries if available, else bookIds
-                                const entriesToInsert = action.entries || action.bookIds;
-                                newBooks.splice(action.toIndex, 0, ...entriesToInsert);
-                                return { ...col, books: newBooks };
-                            }
-                            return col;
-                        }));
-                        break;
-                    case 'COPY_BOOKS':
-                        // v4.16.0.au - Redo copy: re-add the copied entries to target column
-                        setColumns(cols => cols.map(col => {
-                            if (col.id === action.toColId) {
-                                const newBooks = [...col.books];
-                                newBooks.splice(action.toIndex, 0, ...action.entries);
-                                return { ...col, books: newBooks };
-                            }
-                            return col;
-                        }));
-                        break;
-                    case 'REORDER_BOOKS':
-                        // v4.16.0.ak - Re-apply the reorder (use entries for GUID support)
-                        setColumns(cols => cols.map(col => {
-                            if (col.id === action.colId) {
-                                const newBooks = [...col.books];
-                                // v4.16.0.ak - Remove by index (fromIndices) for precise targeting
-                                // Sort indices descending to remove from end first
-                                const sortedIndices = [...action.fromIndices].sort((a, b) => b - a);
-                                sortedIndices.forEach(idx => {
-                                    if (idx >= 0 && idx < newBooks.length) {
-                                        newBooks.splice(idx, 1);
-                                    }
-                                });
-                                // Calculate adjusted insert index (same logic as original reorder)
-                                let adjustedIndex = action.toIndex;
-                                action.fromIndices.forEach(origIdx => {
-                                    if (origIdx < action.toIndex) adjustedIndex--;
-                                });
-                                // v4.16.0.ak - Insert entries if available, else bookIds
-                                const entriesToInsert = action.entries || action.bookIds;
-                                newBooks.splice(adjustedIndex, 0, ...entriesToInsert);
-                                return { ...col, books: newBooks };
-                            }
-                            return col;
-                        }));
-                        break;
+                    // v5.4.0 - Removed Column App redo cases: MOVE_BOOKS, COPY_BOOKS, REORDER_BOOKS
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Re-apply the hide/unhide action
                         setBooks(prevBooks => {
@@ -4393,69 +4140,7 @@
                             return updatedBooks;
                         });
                         break;
-                    case 'DELETE_COLUMN':
-                        // v4.8.0 - Re-delete the column
-                        setColumns(cols => {
-                            // Move books to destination column (if any)
-                            let updatedCols = cols;
-                            if (action.books.length > 0 && action.destinationColId) {
-                                updatedCols = cols.map(col => {
-                                    if (col.id === action.destinationColId) {
-                                        return { ...col, books: [...col.books, ...action.books] };
-                                    }
-                                    return col;
-                                });
-                            }
-                            // Remove the column
-                            return updatedCols.filter(col => col.id !== action.columnId);
-                        });
-                        break;
-                    case 'REORDER_COLUMNS':
-                        // v4.8.0 - Move column back to target position
-                        setColumns(cols => {
-                            const currentIndex = cols.findIndex(c => c.id === action.columnId);
-                            if (currentIndex === -1) return cols;
-                            const newCols = [...cols];
-                            const [movedColumn] = newCols.splice(currentIndex, 1);
-                            newCols.splice(action.toIndex, 0, movedColumn);
-                            return newCols;
-                        });
-                        break;
-                    case 'DELETE_DIVIDER':
-                        // v4.8.0 - Re-delete the divider
-                        setColumns(cols => cols.map(col => {
-                            if (col.id === action.columnId) {
-                                return {
-                                    ...col,
-                                    books: col.books.filter(item =>
-                                        !(typeof item === 'object' && item.type === 'divider' && item.id === action.divider.id)
-                                    )
-                                };
-                            }
-                            return col;
-                        }));
-                        break;
-                    case 'REORDER_DIVIDER':
-                        // v4.8.0 - Move divider to target position
-                        setColumns(cols => cols.map(col => {
-                            if (col.id === action.colId) {
-                                const newBooks = [...col.books];
-                                // Find and remove divider from current position
-                                const currentIdx = newBooks.findIndex(b =>
-                                    typeof b === 'object' && b.type === 'divider' && b.id === action.dividerId
-                                );
-                                if (currentIdx === -1) return col;
-                                const [divider] = newBooks.splice(currentIdx, 1);
-                                // Calculate adjusted target index (same logic as original reorder)
-                                let adjustedIndex = action.toIndex;
-                                if (action.fromIndex < action.toIndex) adjustedIndex--;
-                                // Insert at target position
-                                newBooks.splice(adjustedIndex, 0, divider);
-                                return { ...col, books: newBooks };
-                            }
-                            return col;
-                        }));
-                        break;
+                    // v5.4.0 - Removed Column App redo cases: DELETE_COLUMN, REORDER_COLUMNS, DELETE_DIVIDER, REORDER_DIVIDER
                     // v5.0.0-alpha.46 - Explorer folder operations
                     case 'MOVE_BOOKS_FOLDER':
                         // Redo move: remove from source, add to target
