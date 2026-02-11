@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -240,10 +240,7 @@
             // v3.14.0.w - dropTarget moved to ref (dropTargetRef) to avoid React re-renders
             const [dataSource, setDataSource] = useState('none');
             const [blankImageBooks, setBlankImageBooks] = useState(new Set());
-            const [editingColumn, setEditingColumn] = useState(null);
-            const [editingName, setEditingName] = useState('');
-            const [sortMenuOpen, setSortMenuOpen] = useState(null);
-            const [columnMenuOpen, setColumnMenuOpen] = useState(null); // v3.11.0 - Unified column dropdown menu
+            // v5.4.0 - Removed Column App state: editingColumn, editingName, sortMenuOpen, columnMenuOpen
             // v5.4.0 - Removed divider state variables (Column App only): editingDivider, editingDividerLabel, insertDividerOpen, newDividerLabel, hoveringDivider
             // v5.0.0-alpha.175.48 - Removed helpOpen and settingsOpen (dead code)
             // v5.0.0-alpha.175.1 - Menu bar state
@@ -267,8 +264,7 @@
             const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false);
             // v5.0.0-alpha.175.45 - Phase 5.6: Date dropdown
             const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
-            const [deleteDialogOpen, setDeleteDialogOpen] = useState(null);
-            const [deleteDestination, setDeleteDestination] = useState('');
+            // v5.4.0 - Removed Column App state: deleteDialogOpen, deleteDestination
             // v4.16.0.aq - State for "last copy" delete warning dialog
             const [lastCopyDialogData, setLastCopyDialogData] = useState(null); // {lastCopyEntries: [...], deletableEntries: [...], deletedCount: number}
             const [showAllReviews, setShowAllReviews] = useState(false);
@@ -321,8 +317,8 @@
             const modalBookRef = useRef(modalBook); // v4.21.0.g - Ref to check modal state in keyboard handler
             const anyModalOpenRef = useRef(false); // v5.2.0-alpha.18 - Track any modal open for global key guard
             const backdropMouseDownRef = useRef(null); // v5.2.0-alpha.15 - Track mousedown origin for backdrop close (prevents swipe-past-edge closing modals)
-            const [selectedDivider, setSelectedDivider] = useState(null); // v3.13.0 - Selected divider {columnId, dividerId}
-            const [activeColumnId, setActiveColumnId] = useState(null); // Track which column has focus for Ctrl+A
+            const [selectedDivider, setSelectedDivider] = useState(null); // v3.13.0 - Column App (will be removed in Phase 8)
+            const [activeColumnId, setActiveColumnId] = useState(null); // Column App (will be removed in Phase 8)
             const [contextMenu, setContextMenu] = useState(null); // {x, y, bookId, columnId}
             const [contextSubmenu, setContextSubmenu] = useState(null); // v4.16.0.ba - 'move' | 'copyTo' | 'priceGoal' | null for submenu hover
             const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
@@ -935,8 +931,7 @@
 
             // v5.1.0 - Removed migrateColumnsToFolders() function (v4 Column App migration no longer needed)
 
-            // v3.11.0.d - Ref for column menu click-outside detection
-            const columnMenuRef = useRef(null);
+            // v5.4.0 - Removed columnMenuRef (Column App only)
 
             // v3.14.0.h - Track previous dropTarget for debug logging
             const prevDropTargetRef = useRef(null);
@@ -2396,12 +2391,7 @@
                 return () => window.removeEventListener('keydown', handleKeyDown);
             }, [activeColumnId, columns, selectedBooks, clipboard, hiddenInstances, explorerSelectedBooks, selectedFolderId, folders]);
 
-            // Initialize activeColumnId to first column when columns are loaded
-            useEffect(() => {
-                if (columns.length > 0 && !activeColumnId) {
-                    setActiveColumnId(columns[0].id);
-                }
-            }, [columns, activeColumnId]);
+            // v5.4.0 - Removed activeColumnId initialization useEffect (Column App only)
 
             // Close context menu on click
             // v4.16.0.az - Also clear submenu state
@@ -2418,34 +2408,7 @@
 
             // v5.4.0 - Removed divider context menu click-outside handler (Column App only)
 
-            // v3.11.0.d - Close column menu and sort submenu on ESC key
-            useEffect(() => {
-                const handleEsc = (e) => {
-                    if (e.key === 'Escape') {
-                        if (sortMenuOpen !== null) {
-                            setSortMenuOpen(null);
-                        } else if (columnMenuOpen !== null) {
-                            setColumnMenuOpen(null);
-                        }
-                    }
-                };
-                window.addEventListener('keydown', handleEsc);
-                return () => window.removeEventListener('keydown', handleEsc);
-            }, [columnMenuOpen, sortMenuOpen]);
-
-            // v3.11.0.d - Close column menu on click outside
-            useEffect(() => {
-                const handleClickOutside = (e) => {
-                    if (columnMenuOpen !== null && columnMenuRef.current && !columnMenuRef.current.contains(e.target)) {
-                        setColumnMenuOpen(null);
-                        setSortMenuOpen(null);
-                    }
-                };
-                if (columnMenuOpen !== null) {
-                    document.addEventListener('mousedown', handleClickOutside);
-                    return () => document.removeEventListener('mousedown', handleClickOutside);
-                }
-            }, [columnMenuOpen]);
+            // v5.4.0 - Removed column menu ESC/click-outside handlers (Column App only)
 
             // v5.0.0-alpha.133 - Close folder context menu on Esc key
             useEffect(() => {
@@ -3711,138 +3674,9 @@
                 if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
             };
 
-            const addColumn = () => {
-                const newId = `col-${Date.now()}`;
-                setColumns([...columns, { id: newId, name: 'New Column', books: [] }]);
-                // Set this column to edit mode immediately
-                setTimeout(() => setEditingColumn(newId), 0);
-                new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/column-created';
-            };
 
-            // v4.12.0 - Insert column before or after a reference column
-            const insertColumn = (referenceColumnId, position) => {
-                const newId = `col-${Date.now()}`;
-                const newColumn = { id: newId, name: 'New Column', books: [] };
-                const refIndex = columns.findIndex(c => c.id === referenceColumnId);
-                if (refIndex === -1) return;
-
-                const insertIndex = position === 'before' ? refIndex : refIndex + 1;
-                const newColumns = [...columns];
-                newColumns.splice(insertIndex, 0, newColumn);
-                setColumns(newColumns);
-
-                // Set this column to edit mode immediately
-                setTimeout(() => setEditingColumn(newId), 0);
-                new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/column-created';
-            };
-
-            const startEditingColumn = (columnId, currentName) => {
-                setEditingColumn(columnId);
-                setEditingName(currentName);
-            };
-
-            const finishEditingColumn = (columnId) => {
-                if (editingName.trim()) {
-                    setColumns(columns.map(col =>
-                        col.id === columnId ? { ...col, name: editingName.trim() } : col
-                    ));
-                }
-                setEditingColumn(null);
-                setEditingName('');
-            };
-
-            const sortColumn = (columnId, sortType) => {
-                // Check for publication date availability when sorting by published
-                if (sortType === 'published-desc' || sortType === 'published-asc') {
-                    const column = columns.find(c => c.id === columnId);
-                    if (column) {
-                        const columnBooks = column.books.map(id => books.find(b => b.id === id)).filter(Boolean);
-                        const booksWithPubDate = columnBooks.filter(b => b.publicationDate);
-                        if (booksWithPubDate.length === 0) {
-                            alert('No publication dates found in this column.\n\nTo add publication dates:\n1. Re-run the Library Fetcher on Amazon\n2. Import the updated library file\n\nYour organization will be preserved - only metadata is updated.');
-                            return;
-                        }
-                    }
-                }
-
-                setColumns(columns.map(col => {
-                    if (col.id !== columnId) return col;
-
-                    const sortedBookIds = [...col.books].sort((aId, bId) => {
-                        const a = books.find(b => b.id === aId);
-                        const b = books.find(b => b.id === bId);
-                        if (!a || !b) return 0;
-
-                        switch(sortType) {
-                            case 'title-asc':
-                                return a.title.localeCompare(b.title);
-                            case 'title-desc':
-                                return b.title.localeCompare(a.title);
-                            case 'author-asc':
-                                return a.author.localeCompare(b.author);
-                            case 'author-desc':
-                                return b.author.localeCompare(a.author);
-                            case 'rating-desc':
-                                return (b.rating || 0) - (a.rating || 0);
-                            case 'rating-asc':
-                                return (a.rating || 0) - (b.rating || 0);
-                            case 'acquired-desc':
-                                // v5.0.0-alpha.169.5 - Use parseBookDate for proper date comparison
-                                return parseBookDate(b.acquired || b.addedToWishlist) - parseBookDate(a.acquired || a.addedToWishlist);
-                            case 'acquired-asc':
-                                return parseBookDate(a.acquired || a.addedToWishlist) - parseBookDate(b.acquired || b.addedToWishlist);
-                            case 'published-desc':
-                                // Books without publication date go to end
-                                if (!a.publicationDate && !b.publicationDate) return 0;
-                                if (!a.publicationDate) return 1;
-                                if (!b.publicationDate) return -1;
-                                return b.publicationDate.localeCompare(a.publicationDate);
-                            case 'published-asc':
-                                // Books without publication date go to end
-                                if (!a.publicationDate && !b.publicationDate) return 0;
-                                if (!a.publicationDate) return 1;
-                                if (!b.publicationDate) return -1;
-                                return a.publicationDate.localeCompare(b.publicationDate);
-                            case 'series-pos-asc':
-                                // v3.11.0.e - Books without series go to end, books with series but no position go last in their series
-                                const aHasSeriesAsc = a.series;
-                                const bHasSeriesAsc = b.series;
-
-                                if (!aHasSeriesAsc && !bHasSeriesAsc) return 0; // Both have no series, keep original order
-                                if (!aHasSeriesAsc) return 1; // a has no series, goes after b
-                                if (!bHasSeriesAsc) return -1; // b has no series, goes after a
-
-                                // Primary sort: group by series name (alphabetical)
-                                const seriesCompareAsc = a.series.localeCompare(b.series);
-                                if (seriesCompareAsc !== 0) return seriesCompareAsc;
-
-                                // Secondary sort: position within same series (books without position go last)
-                                return (parseInt(a.seriesPosition) || 999) - (parseInt(b.seriesPosition) || 999);
-                            case 'series-pos-desc':
-                                // v3.11.0.e - Books without series go to end, books with series but no position go last in their series
-                                const aHasSeriesDesc = a.series;
-                                const bHasSeriesDesc = b.series;
-
-                                if (!aHasSeriesDesc && !bHasSeriesDesc) return 0; // Both have no series, keep original order
-                                if (!aHasSeriesDesc) return 1; // a has no series, goes after b
-                                if (!bHasSeriesDesc) return -1; // b has no series, goes after a
-
-                                // Primary sort: group by series name (alphabetical)
-                                const seriesCompareDesc = a.series.localeCompare(b.series);
-                                if (seriesCompareDesc !== 0) return seriesCompareDesc;
-
-                                // Secondary sort: position within same series (REVERSED, books without position go last)
-                                return (parseInt(b.seriesPosition) || 999) - (parseInt(a.seriesPosition) || 999);
-                            default:
-                                return 0;
-                        }
-                    });
-
-                    return { ...col, books: sortedBookIds };
-                }));
-                setSortMenuOpen(null);
-                setColumnMenuOpen(null); // v3.11.0 - Also close parent menu
-            };
+            // v5.4.0 - Removed Column App CRUD functions: addColumn, insertColumn, startEditingColumn,
+            // finishEditingColumn, sortColumn, openDeleteDialog, confirmDeleteColumn
 
             const checkIfBlankImage = (img, bookId) => {
                 if (img.naturalWidth === 1 && img.naturalHeight === 1) {
@@ -3850,55 +3684,6 @@
                 }
             };
 
-            const openDeleteDialog = (columnId) => {
-                const col = columns.find(c => c.id === columnId);
-
-                if (col && col.books.length === 0) {
-                    // v4.8.0 - Record action for undo (empty column)
-                    const columnIndex = columns.findIndex(c => c.id === columnId);
-                    recordAction({
-                        type: 'DELETE_COLUMN',
-                        columnId: col.id,
-                        columnName: col.name,
-                        columnIndex: columnIndex,
-                        books: [],
-                        destinationColId: null
-                    });
-                    setColumns(columns.filter(c => c.id !== columnId));
-                    return;
-                }
-
-                const otherColumns = columns.filter(c => c.id !== columnId);
-                if (otherColumns.length > 0) {
-                    setDeleteDialogOpen(columnId);
-                    setDeleteDestination(otherColumns[0].id);
-                }
-            };
-
-            const confirmDeleteColumn = () => {
-                const columnToDelete = columns.find(c => c.id === deleteDialogOpen);
-                const destinationColumn = columns.find(c => c.id === deleteDestination);
-
-                if (!columnToDelete || !destinationColumn) return;
-
-                // v4.8.0 - Record action for undo (column with books)
-                const columnIndex = columns.findIndex(c => c.id === deleteDialogOpen);
-                recordAction({
-                    type: 'DELETE_COLUMN',
-                    columnId: columnToDelete.id,
-                    columnName: columnToDelete.name,
-                    columnIndex: columnIndex,
-                    books: [...columnToDelete.books],
-                    destinationColId: deleteDestination
-                });
-
-                setColumns(columns.filter(c => c.id !== deleteDialogOpen).map(c =>
-                    c.id === deleteDestination ? { ...c, books: [...c.books, ...columnToDelete.books] } : c
-                ));
-
-                setDeleteDialogOpen(null);
-                setDeleteDestination('');
-            };
 
             // v5.4.0 - Removed divider functions: insertDivider, startEditingDivider, finishEditingDivider,
             // deleteDivider, autoDivideBySeries, autoDivideByRating (Column App only)
