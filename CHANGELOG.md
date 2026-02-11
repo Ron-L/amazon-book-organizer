@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.1] - 2026-02-11
+
+### Fixed
+- **Add Tag dropdown not closing on click-away** - Clicking anywhere in the book dialog outside the tag dropdown now closes it
+- **Stale Add Tag dropdown** - Opening a new book dialog no longer shows a pre-opened tag dropdown from the previous dialog
+- **Dead state reference** - Removed `setModalColumnId` calls left over from Column App removal
+
 ## [5.4.0] - 2026-02-11
 
 ### Removed
