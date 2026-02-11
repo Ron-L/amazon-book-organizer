@@ -29,7 +29,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Current Focus
 
-**1. Remove column App vestigages**
+**1. ~~Remove column App vestiges~~ ✅ COMPLETE (v5.4.0)**
 
 **2. I can't select My Library in the left pane**
 

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.0] - 2026-02-11
+
+### Removed
+- **Column App (V4) backend code** - Removed ~3,100 lines of orphaned Column App code that was superseded by Book Explorer (V5) in v5.0.2
+  - Column CRUD operations, divider system, column drag-drop, column context menus
+  - Column-specific undo/redo actions (MOVE_BOOKS, COPY_BOOKS, REORDER_BOOKS, DELETE_COLUMN, REORDER_COLUMNS, DELETE_DIVIDER, REORDER_DIVIDER)
+  - Column persistence (save/load/export/restore)
+  - Collect Series dialog, column selection system, spatial indexing
+  - All related state variables, refs, and helper functions
+
+### Improved
+- **Footer selection display** now uses Explorer selection (was showing Column App selection which was always empty)
+- **Data Status dialog** shows folder count instead of column/divider count
+- **clearSelection()** now clears Explorer book selection
+
 ## [5.3.1] - 2026-02-10
 
 ### Improved
