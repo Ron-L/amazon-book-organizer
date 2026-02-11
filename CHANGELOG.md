@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.2] - 2026-02-11
+
+### Added
+- **ESC closes all dialogs** - Every dialog now responds to the Escape key with layered dismissal (innermost dialog closes first)
+
+### Fixed
+- **ESC blocked by focused text inputs** - Edit Series, Bulk Price Goal, and Folder Properties inputs no longer swallow the Escape key
+
 ## [5.4.1] - 2026-02-11
 
 ### Fixed
