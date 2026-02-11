@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.2-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3277,8 +3277,35 @@
             }, [modalBook]);
             // v5.2.0-alpha.18 - Track whether any modal/dialog overlay is open
             useEffect(() => {
-                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || editSeriesOpen || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen);
-            }, [modalBook, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen]);
+                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || editSeriesOpen || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData);
+            }, [modalBook, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+
+            // v5.4.2 - ESC closes innermost modal (layered dismissal)
+            // aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen handled separately in handleEscKey
+            useEffect(() => {
+                const handleModalEsc = (e) => {
+                    if (e.key !== 'Escape') return;
+                    // Wizard sub-dialogs (innermost)
+                    if (wizardResultsOpen) { setWizardResultsOpen(false); return; }
+                    if (wizardPreviewMode) { setWizardPreviewMode(false); return; }
+                    if (wizardHelpOpen) { setWizardHelpOpen(false); return; }
+                    // Edit Series (inside book modal)
+                    if (editSeriesOpen) { closeEditSeriesDialog(); return; }
+                    // Book modal
+                    if (modalBook) { closeBookModal(); return; }
+                    // Standalone modals
+                    if (showBulkPriceModal) { setShowBulkPriceModal(false); return; }
+                    if (tagManagementOpen) { setTagManagementOpen(false); return; }
+                    if (wizardModalOpen) { setWizardModalOpen(false); return; }
+                    if (folderPropertiesDialog) { setFolderPropertiesDialog(null); return; }
+                    // Confirmations / info
+                    if (lastCopyDialogData) { setLastCopyDialogData(null); return; }
+                    if (resetConfirmOpen) { setResetConfirmOpen(false); return; }
+                    if (statusModalOpen) { setStatusModalOpen(false); return; }
+                };
+                window.addEventListener('keydown', handleModalEsc);
+                return () => window.removeEventListener('keydown', handleModalEsc);
+            }, [modalBook, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             const recordAction = (action) => {
                 setUndoStack(prev => {
