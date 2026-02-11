@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.4] - 2026-02-11
+
+### Fixed
+- **My Library not selectable** - My Library in the left pane was unclickable due to `pointer-events-none` on inner spans with no onClick on the container div
+- **My Library now accepts folder drops** - Dragging a folder onto My Library in the sidebar reparents it to the top level (book drops intentionally excluded)
+
 ## [5.4.3] - 2026-02-11
 
 ### Added

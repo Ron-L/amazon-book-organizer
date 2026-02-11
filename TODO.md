@@ -8,32 +8,12 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔥 Priority 0: Immediate
 
-**1. Double-click tag name in Tag Management should enter rename mode**
-   - Currently only the "Rename" button triggers edit mode
-   - Standard UX: double-click text to edit in-place
-
-**2. Should Edit menu have cut/copy/paste with keyboard shortcuts?**
-
-**3. Implement drag book to subfolder in right pane**
-
-**4. Replace Inbox collector with intentional moves.**
-   - The problem: The Inbox useEffect watches [books, folders, syncStatus] and sweeps any book not in any folder into Inbox. It acts as a garbage collector rather  than explicit logic. This masks bugs — e.g., in v5.2.0-alpha.13/14, a global keyboard handler accidentally removed a book from its folder, and the collector silently swept it into Inbox instead of the bug being obvious.
-
-   - The agreed fix (TODO.md Priority 10, item 4): Replace with explicit Inbox placement in the import/load path only. When books are loaded from   amazon-library.json, explicitly place new books (not already in any folder) into Inbox at that point. All other book movements (drag-drop, DEL, wizard
-  organize, remove from folder) are already explicit actions.
-
-  - Effort: Rated LOW/LOW (1-2 hours) in TODO.md. Not substantial — but it's a separate task from the Column App removal. We agreed to leave it for later rather than mix it into this refactoring.
-
-  - The behavior you just saw (DEL removes book from folder → Inbox collector sweeps it up) is "by design" in the current implementation, even though the design is acknowledged as flawed.
 ---
 
 ### 🎯 Priority 1: Current Focus
 
-**1. ~~Remove column App vestiges~~ ✅ COMPLETE (v5.4.0)**
 
-**2. I can't select My Library in the left pane**
-
-**3. Author list**
+**2. Author list**
    -  Should we have a way to generate a list? If so, how and where would be the output? A dialog? Maybe list view in right panel have a way of "collapsing" the book list by Author (show only 1 line per author, all fields except author are blank)???
 
 **5. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)
@@ -284,6 +264,16 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 **2.  UI Error Handling** #FetcherImprovements
    -failures (especially in phase 0 - test API - should generate a report for a github issue with a link to github issues)
+
+**3. Replace Inbox collector with intentional moves.**
+   - The problem: The Inbox useEffect watches [books, folders, syncStatus] and sweeps any book not in any folder into Inbox. It acts as a garbage collector rather  than explicit logic. This masks bugs — e.g., in v5.2.0-alpha.13/14, a global keyboard handler accidentally removed a book from its folder, and the collector silently swept it into Inbox instead of the bug being obvious.
+
+   - The agreed fix (TODO.md Priority 10, item 4): Replace with explicit Inbox placement in the import/load path only. When books are loaded from   amazon-library.json, explicitly place new books (not already in any folder) into Inbox at that point. All other book movements (drag-drop, DEL, wizard
+  organize, remove from folder) are already explicit actions.
+
+  - Effort: Rated LOW/LOW (1-2 hours) in TODO.md. Not substantial — but it's a separate task from the Column App removal. We agreed to leave it for later rather than mix it into this refactoring.
+
+  - The behavior you just saw (DEL removes book from folder → Inbox collector sweeps it up) is "by design" in the current implementation, even though the design is acknowledged as flawed.
 
 
 **4. 🔄 Replace Inbox useEffect Collector with Explicit Import Logic** - LOW/LOW (1-2 hours)
