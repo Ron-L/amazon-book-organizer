@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.3] - 2026-02-11
+
+### Added
+- **Drag book to subfolder in right pane** - Books can now be dragged onto subfolders in both table and cover views, with visual highlight feedback, duplicate detection, and undo support
+- **Ctrl+drag to copy** - Hold Ctrl while dropping on a subfolder to copy instead of move
+
+### Fixed
+- **Cover view folder selection persists** - Clicking a book in cover view now clears folder selection ring (was already working in table view)
+
 ## [5.4.2] - 2026-02-11
 
 ### Added
