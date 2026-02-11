@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.3-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8696,6 +8696,12 @@
                                                                         }
                                                                     }
 
+                                                                    // v5.4.3 - Book drop target feedback
+                                                                    if (explorerDropTargetId === folder.id) {
+                                                                        styles.backgroundColor = '#dbeafe';
+                                                                        styles.outline = '2px solid #3b82f6';
+                                                                    }
+
                                                                     // Cut folder visual feedback
                                                                     if (folderClipboard.operation === 'cut' && folderClipboard.items.includes(folder.id)) {
                                                                         styles.opacity = 0.5;
@@ -8718,7 +8724,16 @@
                                                                     }
                                                                 } : undefined}
                                                                 onDragOver={(e) => {
-                                                                    // v5.0.0-alpha.70 - Phase B: Two-target zone detection (optimized)
+                                                                    // v5.4.3 - Book drag: highlight entire folder as drop target
+                                                                    if (e.dataTransfer.types.includes('application/x-readerwrangler')) {
+                                                                        e.preventDefault();
+                                                                        const isCopy = e.ctrlKey;
+                                                                        setExplorerIsCopyDrag(isCopy);
+                                                                        e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
+                                                                        setExplorerDropTargetId(folder.id);
+                                                                        return;
+                                                                    }
+                                                                    // v5.0.0-alpha.70 - Folder drag: Two-target zone detection (optimized)
                                                                     e.preventDefault();
                                                                     e.dataTransfer.dropEffect = 'move';
                                                                     const rect = e.currentTarget.getBoundingClientRect();
@@ -8743,7 +8758,12 @@
                                                                         setExplorerFolderDragTarget(newTarget);
                                                                     }
                                                                 }}
-                                                                onDragLeave={() => setExplorerFolderDragTarget(null)}
+                                                                onDragLeave={(e) => {
+                                                                    if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                                        setExplorerFolderDragTarget(null);
+                                                                        setExplorerDropTargetId(null);
+                                                                    }
+                                                                }}
                                                                 onDrop={(e) => {
                                                                     // v5.0.0-alpha.76 - Phase D: Handle reorder and reparent
                                                                     e.preventDefault();
@@ -8770,6 +8790,39 @@
                                                                         }
                                                                     } catch (err) {
                                                                         // Not a folder drag
+                                                                    }
+                                                                    // v5.4.3 - Book drop on subfolder in right pane
+                                                                    const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                                    if (bookDataStr) {
+                                                                        const dragData = JSON.parse(bookDataStr);
+                                                                        const { sourceFolder, bookIds } = dragData;
+                                                                        if (sourceFolder === '__all__') {
+                                                                            showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
+                                                                        } else {
+                                                                            const existing = new Set(folder.bookIds || []);
+                                                                            const newBookIds = bookIds.filter(id => !existing.has(id));
+                                                                            if (newBookIds.length === 0) {
+                                                                                showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder', e.clientX, e.clientY);
+                                                                            } else {
+                                                                                const sourceFolderObj = folders.find(f => f.id === sourceFolder);
+                                                                                const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
+                                                                                setFolders(prev => prev.map(f => {
+                                                                                    if (f.id === folder.id) return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                                                    if (!explorerIsCopyDrag && f.id === sourceFolder) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                                                    return f;
+                                                                                }));
+                                                                                if (explorerIsCopyDrag) {
+                                                                                    recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId: folder.id, bookIds: newBookIds, toIndex: 0 });
+                                                                                    console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
+                                                                                } else {
+                                                                                    recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId: sourceFolder, toFolderId: folder.id, bookIds, fromIndices, toIndex: 0 });
+                                                                                    console.log(`📦 Moved ${bookIds.length} book(s) to "${folder.name}"`);
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        setExplorerDropTargetId(null);
+                                                                        setExplorerSelectedBooks(new Set());
+                                                                        setExplorerIsCopyDrag(false);
                                                                     }
                                                                     setExplorerFolderDragTarget(null);
                                                                 }}
@@ -9288,6 +9341,10 @@
                                                             if (explorerFolderDragTarget.type === 'reparent' && explorerFolderDragTarget.folderId === folder.id) {
                                                                 return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' }; // reparent always valid
                                                             }
+                                                            // v5.4.3 - Book drop target feedback
+                                                            if (explorerDropTargetId === folder.id) {
+                                                                return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' };
+                                                            }
                                                             return {};
                                                         })()}
                                                         draggable={isDraggable}
@@ -9305,7 +9362,16 @@
                                                             }
                                                         } : undefined}
                                                         onDragOver={(e) => {
-                                                            // v5.0.0-alpha.70 - Phase B: Two-target zone detection (optimized)
+                                                            // v5.4.3 - Book drag: highlight entire folder as drop target
+                                                            if (e.dataTransfer.types.includes('application/x-readerwrangler')) {
+                                                                e.preventDefault();
+                                                                const isCopy = e.ctrlKey;
+                                                                setExplorerIsCopyDrag(isCopy);
+                                                                e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
+                                                                setExplorerDropTargetId(folder.id);
+                                                                return;
+                                                            }
+                                                            // v5.0.0-alpha.70 - Folder drag: Two-target zone detection (optimized)
                                                             e.preventDefault();
                                                             e.dataTransfer.dropEffect = 'move';
                                                             const rect = e.currentTarget.getBoundingClientRect();
@@ -9330,7 +9396,12 @@
                                                                 setExplorerFolderDragTarget(newTarget);
                                                             }
                                                         }}
-                                                        onDragLeave={() => setExplorerFolderDragTarget(null)}
+                                                        onDragLeave={(e) => {
+                                                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                                setExplorerFolderDragTarget(null);
+                                                                setExplorerDropTargetId(null);
+                                                            }
+                                                        }}
                                                         onDrop={(e) => {
                                                             // v5.0.0-alpha.76 - Phase D: Handle reorder and reparent
                                                             e.preventDefault();
@@ -9357,6 +9428,39 @@
                                                                 }
                                                             } catch (err) {
                                                                 // Not a folder drag
+                                                            }
+                                                            // v5.4.3 - Book drop on subfolder in right pane
+                                                            const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                            if (bookDataStr) {
+                                                                const dragData = JSON.parse(bookDataStr);
+                                                                const { sourceFolder, bookIds } = dragData;
+                                                                if (sourceFolder === '__all__') {
+                                                                    showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
+                                                                } else {
+                                                                    const existing = new Set(folder.bookIds || []);
+                                                                    const newBookIds = bookIds.filter(id => !existing.has(id));
+                                                                    if (newBookIds.length === 0) {
+                                                                        showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder', e.clientX, e.clientY);
+                                                                    } else {
+                                                                        const sourceFolderObj = folders.find(f => f.id === sourceFolder);
+                                                                        const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
+                                                                        setFolders(prev => prev.map(f => {
+                                                                            if (f.id === folder.id) return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                                                                            if (!explorerIsCopyDrag && f.id === sourceFolder) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                                            return f;
+                                                                        }));
+                                                                        if (explorerIsCopyDrag) {
+                                                                            recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId: folder.id, bookIds: newBookIds, toIndex: 0 });
+                                                                            console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
+                                                                        } else {
+                                                                            recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId: sourceFolder, toFolderId: folder.id, bookIds, fromIndices, toIndex: 0 });
+                                                                            console.log(`📦 Moved ${bookIds.length} book(s) to "${folder.name}"`);
+                                                                        }
+                                                                    }
+                                                                }
+                                                                setExplorerDropTargetId(null);
+                                                                setExplorerSelectedBooks(new Set());
+                                                                setExplorerIsCopyDrag(false);
                                                             }
                                                             setExplorerFolderDragTarget(null);
                                                         }}
