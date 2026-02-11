@@ -16,7 +16,7 @@
 
 ## Behaviors
 
-* **Response start** →  display `📋 [YYYY-MM-DD HH:MM:SS Local]` + separator (read time from `.claude-timestamp`)
+* **Response start** →  display `📋 [YYYY-MM-DD HH:MM:SS Local]` + separator (use `powershell -Command "Get-Date -Format 'yyyy-MM-dd HH:mm:ss'"` via Bash)
 * **Discussion question** → STOP, answer, don't act until directed
 * **Before code/file change** → Ask approval first
 * **Problem report** → STOP, acknowledge, ask to analyze, wait for decision
