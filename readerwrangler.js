@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.2-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.2-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6411,7 +6411,7 @@
                                             min="0.01"
                                             value={bulkPriceInput}
                                             onChange={(e) => setBulkPriceInput(e.target.value)}
-                                            onKeyDown={(e) => e.stopPropagation()}
+                                            onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
                                             className="flex-1 px-3 py-2 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                             placeholder="0.00"
                                             autoFocus
@@ -6572,7 +6572,7 @@
                                                     setEditSeriesName(e.target.value);
                                                     setEditSeriesDropdownOpen(true);
                                                 }}
-                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { setEditSeriesDropdownOpen(false); saveSeriesEdit(); } }}
+                                                onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); if (e.key === 'Enter') { setEditSeriesDropdownOpen(false); saveSeriesEdit(); } }}
                                                 placeholder="Type to filter or click ▼..."
                                                 className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                                 autoFocus
@@ -6580,7 +6580,7 @@
                                             <button
                                                 type="button"
                                                 onClick={() => setEditSeriesDropdownOpen(!editSeriesDropdownOpen)}
-                                                onKeyDown={(e) => e.stopPropagation()}
+                                                onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
                                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
                                                 tabIndex={-1}>
                                                 ▼
@@ -6625,7 +6625,7 @@
                                                     setEditSeriesPosition(val);
                                                 }
                                             }}
-                                            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') saveSeriesEdit(); }}
+                                            onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); if (e.key === 'Enter') saveSeriesEdit(); }}
                                             placeholder="e.g., 141"
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                                         />
@@ -11393,7 +11393,7 @@
                                                     className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     value={folderPropertiesEditedName}
                                                     onChange={(e) => setFolderPropertiesEditedName(e.target.value)}
-                                                    onKeyDown={(e) => e.stopPropagation()}
+                                                    onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
                                                     autoFocus
                                                 />
                                             )}
