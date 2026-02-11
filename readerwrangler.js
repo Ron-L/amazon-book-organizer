@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.0";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.1-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3247,18 +3247,15 @@
                 }
 
                 setModalBook(book);
-                setModalColumnId(columnId);
                 setShowAllReviews(false);
             };
 
             const closeBookModal = () => {
                 setModalBook(null);
-                setModalColumnId(null);
-                setIsEditingNote(false); // v4.21.0.a - reset note editor state
-                // v4.27.0 - reset tag input state
-                if (contextSubmenu === 'addTagModal') setContextSubmenu(null);
+                setIsEditingNote(false);
+                setContextSubmenu(null);
                 setTagInputValue('');
-                setNoteEditContent(''); // v4.21.0.a
+                setNoteEditContent('');
             };
 
             const clearSelection = () => {
@@ -6644,7 +6641,7 @@
 
                     {modalBook && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeBookModal(); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => { e.stopPropagation(); if (contextSubmenu === 'addTagModal') { setContextSubmenu(null); setTagInputValue(''); } }}>
                                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-end">
                                     <button onClick={closeBookModal} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                                 </div>
