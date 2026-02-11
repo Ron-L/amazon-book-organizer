@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.0-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1362,13 +1362,7 @@
                             const saved = localStorage.getItem(STORAGE_KEY);
                             if (saved) {
                                 const state = JSON.parse(saved);
-                                if (state.organization?.columns) {
-                                    const restoredColumns = state.organization.columns.map(col => ({
-                                        id: col.id,
-                                        name: col.name,
-                                        books: col.bookIds || col.books
-                                    }));
-                                    setColumns(restoredColumns);
+                                if (state.organization) {
                                     setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
                                     setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
                                     setTagRegistry(state.organization.tagRegistry || {}); // v4.27.0
@@ -1378,15 +1372,13 @@
                                     setLastSyncTime(effectiveLastSync);
                                     console.log('✅ Restored organization from localStorage');
                                 } else {
-                                    // No organization saved, put all books in first column
-                                    setColumns([{ id: 'unorganized', name: 'Unorganized', books: loadedBooks.map(b => b.id) }]);
+                                    // No organization saved
                                     setDataSource('enriched');
                                     effectiveLastSync = Date.now();
                                     setLastSyncTime(effectiveLastSync);
                                 }
                             } else {
-                                // No saved state, put all books in first column
-                                setColumns([{ id: 'unorganized', name: 'Unorganized', books: loadedBooks.map(b => b.id) }]);
+                                // No saved state
                                 setDataSource('enriched');
                                 effectiveLastSync = Date.now();
                                 setLastSyncTime(effectiveLastSync);
@@ -1421,15 +1413,10 @@
             // v4.16.0.ab - Guard: Skip save while loading to prevent race condition
             useEffect(() => {
                 if (syncStatus === 'loading') return;
-                if (books.length > 0 && columns.length > 0) {
+                if (books.length > 0) {
                     try {
                         const state = {
                             organization: {
-                                columns: columns.map(col => ({
-                                    id: col.id,
-                                    name: col.name,
-                                    bookIds: col.books
-                                })),
                                 folders,  // v5.0.0 - Book Explorer folders
                                 dataSource,
                                 blankImageBooks: Array.from(blankImageBooks),
@@ -1444,7 +1431,7 @@
                         console.warn('Could not auto-save organization:', e);
                     }
                 }
-            }, [syncStatus, columns, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
+            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
 
             // v5.1.0-alpha.7 - Helper: Get all books in folder (including subfolders recursively)
             const getAllBooksInFolder = (folderId, folders) => {
@@ -2591,7 +2578,7 @@
                     // v4.15.1.b: Only include collections section if we have real collections data
                     const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
                     const exportData = {
-                        schemaVersion: "2.3",
+                        schemaVersion: "2.4",
                         isBackup: true,
                         books: {
                             fetchDate: libraryStatus.loadDate || new Date().toISOString(),
@@ -2600,12 +2587,6 @@
                             items: bookItems
                         },
                         organization: {
-                            columns: columns.map(col => ({
-                                id: col.id,
-                                name: col.name,
-                                items: col.books  // Array of book IDs and divider IDs
-                            })),
-                            columnOrder: columns.map(col => col.id),
                             blankImageBooks: Array.from(blankImageBooks),
                             // v5.0.0-alpha.99 - Include folder organization for Explorer view
                             folders: folders.map(folder => ({
@@ -2700,7 +2681,6 @@
                     setShowHidden(true); // v4.8.0 - Default to showing all books on reset
 
                     setBooks([]);
-                    setColumns([{ id: 'unorganized', name: 'Unorganized', books: [] }]);
                     setDataSource('none');
                     setBlankImageBooks(new Set());
                     setLastSyncTime(null);
@@ -2777,7 +2757,6 @@
                 }
 
                 setBooks(parsedBooks);
-                setColumns([{ id: 'unorganized', name: 'Unorganized', books: parsedBooks.map(b => b.id) }]);
                 setDataSource('csv');
             };
 
@@ -3231,7 +3210,7 @@
                         const saved = localStorage.getItem(STORAGE_KEY);
                         if (saved) {
                             const state = JSON.parse(saved);
-                            if (state.organization?.columns) {
+                            if (state.organization) {
                                 orgToRestore = state.organization;
                                 orgSource = 'localStorage';
                             }
@@ -3241,32 +3220,7 @@
                     }
                 }
 
-                if (orgToRestore?.columns) {
-                    const restoredColumns = orgToRestore.columns.map(col => ({
-                        id: col.id,
-                        name: col.name,
-                        books: col.bookIds || col.books || col.items || []  // v4.0.0.c: support items from backup export
-                    }));
-
-                    // v4.0.0.d: Find new books not in any column and add to Unorganized
-                    const allColumnBookIds = new Set(restoredColumns.flatMap(col => col.books));
-                    const allLibraryBookIds = processedBooks.map(b => b.id);
-                    const orphanedBooks = allLibraryBookIds.filter(id => !allColumnBookIds.has(id));
-
-                    if (orphanedBooks.length > 0) {
-                        // Find or create Unorganized column
-                        let unorganizedCol = restoredColumns.find(col => col.id === 'unorganized');
-                        if (unorganizedCol) {
-                            // Prepend new books to Unorganized (newest first)
-                            unorganizedCol.books = [...orphanedBooks, ...unorganizedCol.books];
-                        } else {
-                            // Create Unorganized column with orphaned books
-                            restoredColumns.unshift({ id: 'unorganized', name: 'Unorganized', books: orphanedBooks });
-                        }
-                        console.log(`📚 Added ${orphanedBooks.length} new book${orphanedBooks.length === 1 ? '' : 's'} to Unorganized`);
-                    }
-
-                    setColumns(restoredColumns);
+                if (orgToRestore) {
                     setBlankImageBooks(new Set(orgToRestore.blankImageBooks || []));
                     setTagRegistry(orgToRestore.tagRegistry || {}); // v5.0.0-alpha.175.17
 
@@ -3359,7 +3313,6 @@
                 }
 
                 // No organization found, start fresh
-                setColumns([{ id: 'unorganized', name: 'Unorganized', books: processedBooks.map(b => b.id) }]);
                 setDataSource('enriched');
                 setLastSyncTime(Date.now());
                 setSyncStatus('fresh');
