@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.0-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -224,25 +224,10 @@
 
         function ReaderWrangler() {
             const [books, setBooks] = useState([]);
-            const [columns, setColumns] = useState([{ id: 'unorganized', name: 'Unorganized', books: [] }]);
             const [searchTerm, setSearchTerm] = useState('');
-            const [draggedBook, setDraggedBook] = useState(null);
-            const [draggedFromColumn, setDraggedFromColumn] = useState(null);
-            const [draggedBookIndex, setDraggedBookIndex] = useState(null); // v4.16.0.d - Track dragged book's index
-            const [draggedColumn, setDraggedColumn] = useState(null);
-            const [columnDropTarget, setColumnDropTarget] = useState(null);
             const [modalBook, setModalBook] = useState(null);
-            const [modalColumnId, setModalColumnId] = useState(null);
-            const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
-            const [dragCurrentPos, setDragCurrentPos] = useState({ x: 0, y: 0 });
-            const [isDragging, setIsDragging] = useState(false);
-            const [isDraggingColumn, setIsDraggingColumn] = useState(false);
-            // v3.14.0.w - dropTarget moved to ref (dropTargetRef) to avoid React re-renders
             const [dataSource, setDataSource] = useState('none');
             const [blankImageBooks, setBlankImageBooks] = useState(new Set());
-            // v5.4.0 - Removed Column App state: editingColumn, editingName, sortMenuOpen, columnMenuOpen
-            // v5.4.0 - Removed divider state variables (Column App only): editingDivider, editingDividerLabel, insertDividerOpen, newDividerLabel, hoveringDivider
-            // v5.0.0-alpha.175.48 - Removed helpOpen and settingsOpen (dead code)
             // v5.0.0-alpha.175.1 - Menu bar state
             const [openMenuBar, setOpenMenuBar] = useState(null); // 'file' | 'view' | 'help' | null
             const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
@@ -264,7 +249,6 @@
             const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false);
             // v5.0.0-alpha.175.45 - Phase 5.6: Date dropdown
             const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
-            // v5.4.0 - Removed Column App state: deleteDialogOpen, deleteDestination
             // v4.16.0.aq - State for "last copy" delete warning dialog
             const [lastCopyDialogData, setLastCopyDialogData] = useState(null); // {lastCopyEntries: [...], deletableEntries: [...], deletedCount: number}
             const [showAllReviews, setShowAllReviews] = useState(false);
@@ -276,10 +260,8 @@
             const [isEditingNote, setIsEditingNote] = useState(false); // v4.21.0.a - book note edit mode
             const [noteEditContent, setNoteEditContent] = useState(''); // v4.21.0.a - book note editor content
             const [tagInputValue, setTagInputValue] = useState(''); // v4.27.0 - tag input autocomplete value
-            // v5.4.0 - Removed dividerContextMenu, dividerTagEditorOpen (Column App only)
             const [tagManagementOpen, setTagManagementOpen] = useState(false); // v4.27.0 Phase 3 - Tag management modal
             const [editingTagId, setEditingTagId] = useState(null); // v4.27.0 Phase 3 - Currently renaming tag
-            // v5.4.0 - Removed collectSeriesOpen, seriesBooks (Column App only)
             const [editSeriesOpen, setEditSeriesOpen] = useState(false); // v5.2.0-alpha.3 - Phase 1.2: Edit Series dialog
             const [editSeriesName, setEditSeriesName] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series name field
             const [editSeriesPosition, setEditSeriesPosition] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series position field
@@ -307,8 +289,6 @@
             const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
             const [collectionsData, setCollectionsData] = useState(null); // Map of ASIN -> {readStatus, collections[]}
             const [collectionFilter, setCollectionFilter] = useState(''); // Filter by collection name or special values
-            const [selectedBooks, setSelectedBooks] = useState(new Set()); // Multi-select state
-            const [lastClickedBook, setLastClickedBook] = useState(null); // For shift+click range selection
             // v4.8.0 - Undo/Redo state
             const [undoStack, setUndoStack] = useState([]); // Array of action records
             const [redoStack, setRedoStack] = useState([]); // Array of action records
@@ -317,8 +297,6 @@
             const modalBookRef = useRef(modalBook); // v4.21.0.g - Ref to check modal state in keyboard handler
             const anyModalOpenRef = useRef(false); // v5.2.0-alpha.18 - Track any modal open for global key guard
             const backdropMouseDownRef = useRef(null); // v5.2.0-alpha.15 - Track mousedown origin for backdrop close (prevents swipe-past-edge closing modals)
-            const [selectedDivider, setSelectedDivider] = useState(null); // v3.13.0 - Column App (will be removed in Phase 8)
-            const [activeColumnId, setActiveColumnId] = useState(null); // Column App (will be removed in Phase 8)
             const [contextMenu, setContextMenu] = useState(null); // {x, y, bookId, columnId}
             const [contextSubmenu, setContextSubmenu] = useState(null); // v4.16.0.ba - 'move' | 'copyTo' | 'priceGoal' | null for submenu hover
             const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
@@ -354,7 +332,6 @@
             const [hiddenInstances, setHiddenInstances] = useState(new Set());
 
             // v5.0.0 - Book Explorer state
-            // v5.0.2 - Removed viewMode (app always uses Explorer mode, v4 Column App fully removed)
             const [folders, setFolders] = useState([]); // User-created folders
             const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
             // v5.0.0-alpha.174 - Multi-column sorting: array of sort criteria (max 3)
@@ -380,7 +357,6 @@
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
             const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
             const [sidebarFolderDragTarget, setSidebarFolderDragTarget] = useState(null); // v5.0.0-alpha.86 - { type: 'reorder'|'reparent', folderId, position? }
-            // v5.1.0 - Removed showMigrationDialog (v4 Column App migration no longer needed)
             const [leftPaneWidth, setLeftPaneWidth] = useState(256); // v5.0.0-alpha.91 - Resizable left pane width (px)
             const [isResizingPane, setIsResizingPane] = useState(false); // v5.0.0-alpha.91 - Pane resize in progress
             const [navHistory, setNavHistory] = useState(['__all__']); // v5.0.0-alpha.92 - Navigation history stack
@@ -433,39 +409,6 @@
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
             const FOLDER_LIBRARY = { id: '__library__', name: 'My Library', virtual: true, icon: '📚' }; // v5.0.0-alpha.63
             const FOLDER_INBOX = { id: '__inbox__', name: 'Inbox', virtual: false, icon: '📥', isInbox: true };
-
-            // v4.16.0.s - Helper to extract bookId from column entry (handles legacy string and new object format)
-            // Entry types: string (legacy bookId), {type:'divider',...}, {instanceId, bookId} (new format)
-            const getBookIdFromEntry = (entry) => {
-                if (typeof entry === 'string') return entry;  // Legacy format
-                if (entry && entry.type === 'divider') return null;  // Divider
-                if (entry && entry.bookId) return entry.bookId;  // New instance format
-                return null;
-            };
-
-            // v4.16.0.s - Helper to get instanceId from entry (null for legacy entries)
-            const getInstanceId = (entry) => {
-                if (typeof entry === 'string') return null;  // Legacy format has no instanceId
-                if (entry && entry.instanceId) return entry.instanceId;
-                return null;
-            };
-
-            // v4.16.0.s - Generate UUID for new instances
-            const generateInstanceId = () => {
-                return 'inst-' + crypto.randomUUID();
-            };
-
-            // v4.16.0.s - Helper to check if a column contains a specific bookId
-            const columnHasBook = (columnBooks, bookId) => {
-                return columnBooks.some(entry => getBookIdFromEntry(entry) === bookId);
-            };
-
-            // v5.4.0 - Removed getInheritedTags() (Column App divider tag inheritance)
-
-            // v4.16.0.s - Helper to find index of bookId in column (first occurrence)
-            const findBookIndexInColumn = (columnBooks, bookId) => {
-                return columnBooks.findIndex(entry => getBookIdFromEntry(entry) === bookId);
-            };
 
             // v5.0.0 - Book Explorer folder helpers
             // Get all book IDs that are in any user folder (not Inbox)
@@ -929,36 +872,8 @@
                 return true;
             };
 
-            // v5.1.0 - Removed migrateColumnsToFolders() function (v4 Column App migration no longer needed)
-
-            // v5.4.0 - Removed columnMenuRef (Column App only)
-
-            // v3.14.0.h - Track previous dropTarget for debug logging
-            const prevDropTargetRef = useRef(null);
-
-            // v3.14.0.w - Use refs instead of state for dropTarget to avoid React re-renders
-            const dropTargetRef = useRef(null);
-            const indicatorRef = useRef(null);
-
-            // v3.14.0.x - Use refs for ghost position to eliminate ALL React re-renders during drag
-            const dragGhostRef = useRef(null);
-            const dragPosRef = useRef({ x: 0, y: 0 });
-
-            // v4.16.0.au - Copy-drag tracking (Ctrl+Drag to copy instead of move)
-            const isCopyDragRef = useRef(false);
-            const dragTooltipRef = useRef(null);
-
             // v5.0.0-alpha.132 - Tooltip hide delay (prevents tooltip from disappearing when moving cursor to it)
             const tooltipHideTimeoutRef = useRef(null);
-
-            // v3.14.0.r - Row-based grid index for O(log R) drop position lookup
-            // Structure: { columnId: { rowBoundaries: [y1, y2, ...], rows: [{type, startIndex, items, top, bottom}, ...], columnRect } }
-            const columnIndexRef = useRef({});
-
-            // v5.4.0 - Removed filteredBooksRef (Column App only)
-
-            // v3.12.0 - Auto-scroll during drag
-            const [autoScrollInterval, setAutoScrollInterval] = useState(null);
 
             // Status bar state (v3.9.0 - Load-state-only, 4 states)
             const [libraryStatus, setLibraryStatus] = useState({
@@ -1398,7 +1313,6 @@
                 loadData();
             }, []);
 
-            // v5.1.0 - Removed migration detection useEffect (v4 Column App migration no longer needed)
 
             // v5.0.0-alpha.132 - Cleanup tooltip timeout on unmount
             useEffect(() => {
@@ -1545,10 +1459,9 @@
                 window.DEBUG = {
                     tagRegistry,
                     books,
-                    columns,
                     folders
                 };
-            }, [tagRegistry, books, columns, folders]);
+            }, [tagRegistry, books, folders]);
 
             // v5.0.0 - Sync Inbox folder: add books not in ANY folder to Inbox
             // Note: Only adds, doesn't remove (removal happens via move drop handler)
@@ -1859,10 +1772,8 @@
                         if (!modalBookRef.current) redo();
                     }
 
-                    // v5.4.0 - Removed Column App Ctrl+A select-all handler
 
-                    // v5.0.0-alpha.102 - Ctrl+A in Explorer view: Select all visible books/folders
-                    // v5.0.0-alpha.103 - Fixed: Check viewMode first (activeColumnId is set even in Explorer view)
+                    // v5.0.0-alpha.102 - Ctrl+A: Select all visible books/folders
                     if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
                         e.preventDefault(); // Prevent browser's select-all
 
@@ -2022,11 +1933,6 @@
                         return; // Don't fall through to Columns App handler
                     }
 
-                    // v5.4.0 - Removed Column App Ctrl+X cut handler
-
-                    // v5.4.0 - Removed Column App Ctrl+C copy handler
-
-                    // v5.4.0 - Removed Column App Ctrl+V paste handler
 
                     // v5.0.0-alpha.46 - DEL key in Explorer: Remove selected books from current folder
                     if (e.key === 'Delete' && explorerSelectedBooks.size > 0) {
@@ -2063,14 +1969,12 @@
                         return; // Don't fall through to column delete
                     }
 
-                    // v5.4.0 - Removed Column App DEL key handler
                 };
 
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
             }, [hiddenInstances, explorerSelectedBooks, selectedFolderId, folders]);
 
-            // v5.4.0 - Removed activeColumnId initialization useEffect (Column App only)
 
             // Close context menu on click
             // v4.16.0.az - Also clear submenu state
@@ -2085,9 +1989,6 @@
                 }
             }, [contextMenu]);
 
-            // v5.4.0 - Removed divider context menu click-outside handler (Column App only)
-
-            // v5.4.0 - Removed column menu ESC/click-outside handlers (Column App only)
 
             // v5.0.0-alpha.133 - Close folder context menu on Esc key
             useEffect(() => {
@@ -2510,7 +2411,6 @@
                 closeEditSeriesDialog();
             };
 
-            // v5.4.0 - Removed openCollectSeriesDialog() and collectSeriesBooks() (Column App only)
 
             const renderStars = (rating) => {
                 const fullStars = Math.floor(rating);
@@ -3319,19 +3219,11 @@
                 if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
             };
 
-
-            // v5.4.0 - Removed Column App CRUD functions: addColumn, insertColumn, startEditingColumn,
-            // finishEditingColumn, sortColumn, openDeleteDialog, confirmDeleteColumn
-
             const checkIfBlankImage = (img, bookId) => {
                 if (img.naturalWidth === 1 && img.naturalHeight === 1) {
                     setBlankImageBooks(prev => new Set([...prev, bookId]));
                 }
             };
-
-
-            // v5.4.0 - Removed divider functions: insertDivider, startEditingDivider, finishEditingDivider,
-            // deleteDivider, autoDivideBySeries, autoDivideByRating (Column App only)
 
 
             const openBookModal = (book, columnId) => {
@@ -3369,92 +3261,8 @@
                 setNoteEditContent(''); // v4.21.0.a
             };
 
-            // Multi-select helper functions
-            // v4.16.0.c - Selection now uses composite keys "columnId:bookId:index" to support selecting individual instances
-            // v4.16.0.d - Added index to support multiple copies of same book in same column
-            const toggleBookSelection = (bookId, columnId, index) => {
-                const key = `${columnId}:${bookId}:${index}`;
-                setSelectedBooks(prev => {
-                    const newSet = new Set(prev);
-                    if (newSet.has(key)) {
-                        newSet.delete(key);
-                    } else {
-                        newSet.add(key);
-                    }
-                    return newSet;
-                });
-            };
-
-            // v4.19.1 - Now includes dividers in range selection
-            const selectBookRange = (startBookId, endBookId, columnId, startIndex, endIndex) => {
-                // Only select within the same column
-                const column = columns.find(col => col.id === columnId);
-                if (!column) return;
-
-                // Use raw indices directly - simpler and works with dividers
-                const [min, max] = [Math.min(startIndex, endIndex), Math.max(startIndex, endIndex)];
-
-                // Build composite keys for all items in range (books AND dividers)
-                const rangeKeys = [];
-                for (let i = min; i <= max; i++) {
-                    const item = column.books[i];
-                    if (!item) continue;
-
-                    if (typeof item === 'object' && item.type === 'divider') {
-                        // Divider: use special key format
-                        rangeKeys.push(`${columnId}:divider:${item.id}:${i}`);
-                    } else {
-                        // Book: use standard composite key
-                        const bookId = getBookIdFromEntry(item);
-                        if (bookId) rangeKeys.push(`${columnId}:${bookId}:${i}`);
-                    }
-                }
-
-                setSelectedBooks(new Set(rangeKeys));
-
-                // Also set selectedDivider if any dividers are in range (for visual consistency)
-                const firstDividerInRange = column.books.slice(min, max + 1).find(
-                    item => typeof item === 'object' && item.type === 'divider'
-                );
-                if (firstDividerInRange) {
-                    setSelectedDivider({ columnId, dividerId: firstDividerInRange.id });
-                }
-            };
-
             const clearSelection = () => {
-                setSelectedBooks(new Set());
-                setLastClickedBook(null);
-                setSelectedDivider(null); // v3.13.0 - Clear divider selection too
-            };
-
-            // v4.16.0.c - Helper to get book IDs from composite selection keys
-            const getSelectedBookIds = () => {
-                return Array.from(selectedBooks).map(key => key.split(':')[1]);
-            };
-
-            // v4.16.0.c - Helper to get book objects from composite selection keys
-            const getSelectedBooksList = () => {
-                return getSelectedBookIds().map(id => books.find(b => b.id === id)).filter(Boolean);
-            };
-
-            // v4.16.0.w - Helper to get full entry info from composite selection keys
-            // Returns array of {columnId, index, entry, bookId, instanceId} for each selection
-            const getSelectedEntries = () => {
-                return Array.from(selectedBooks).map(key => {
-                    const [columnId, bookId, indexStr] = key.split(':');
-                    const index = parseInt(indexStr, 10);
-                    const column = columns.find(c => c.id === columnId);
-                    if (!column) return null;
-                    const entry = column.books[index];
-                    if (!entry) return null;
-                    return {
-                        columnId,
-                        index,
-                        entry,
-                        bookId: getBookIdFromEntry(entry),
-                        instanceId: getInstanceId(entry)
-                    };
-                }).filter(Boolean);
+                setExplorerSelectedBooks(new Set());
             };
 
             // v4.8.0 - Undo/Redo core functions
@@ -3486,7 +3294,6 @@
 
             const executeUndo = (action) => {
                 switch (action.type) {
-                    // v5.4.0 - Removed Column App undo cases: MOVE_BOOKS, COPY_BOOKS, REORDER_BOOKS
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Restore each book's previous hidden state
                         setBooks(prevBooks => {
@@ -3501,7 +3308,6 @@
                             return updatedBooks;
                         });
                         break;
-                    // v5.4.0 - Removed Column App undo cases: DELETE_COLUMN, REORDER_COLUMNS, DELETE_DIVIDER, REORDER_DIVIDER
                     // v5.0.0-alpha.46 - Explorer folder operations
                     case 'MOVE_BOOKS_FOLDER':
                         // Undo move: remove from target folder, add back to source folder
@@ -3771,7 +3577,6 @@
 
             const executeRedo = (action) => {
                 switch (action.type) {
-                    // v5.4.0 - Removed Column App redo cases: MOVE_BOOKS, COPY_BOOKS, REORDER_BOOKS
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Re-apply the hide/unhide action
                         setBooks(prevBooks => {
@@ -3785,7 +3590,6 @@
                             return updatedBooks;
                         });
                         break;
-                    // v5.4.0 - Removed Column App redo cases: DELETE_COLUMN, REORDER_COLUMNS, DELETE_DIVIDER, REORDER_DIVIDER
                     // v5.0.0-alpha.46 - Explorer folder operations
                     case 'MOVE_BOOKS_FOLDER':
                         // Redo move: remove from source, add to target
@@ -4062,56 +3866,6 @@
                 setUndoStack(prev => [...prev, action]);
             };
 
-            // v3.13.0 - Select divider and all books in its group
-            // v4.19.1 - Fixed to use composite keys for books, include divider in selection
-            const selectDividerGroup = (columnId, dividerId) => {
-                const column = columns.find(col => col.id === columnId);
-                if (!column) return;
-
-                // Find divider index
-                const dividerIndex = column.books.findIndex(item =>
-                    typeof item === 'object' && item.type === 'divider' && item.id === dividerId
-                );
-                if (dividerIndex === -1) return;
-
-                // Build composite keys for divider + all books until next divider
-                const selectionKeys = [];
-
-                // Add the divider itself (special key format: columnId:divider:dividerId:index)
-                selectionKeys.push(`${columnId}:divider:${dividerId}:${dividerIndex}`);
-
-                // Add books from this divider until next divider (or end of column)
-                for (let i = dividerIndex + 1; i < column.books.length; i++) {
-                    const item = column.books[i];
-                    // Stop at next divider
-                    if (typeof item === 'object' && item.type === 'divider') break;
-                    // Add book with composite key (columnId:bookId:index)
-                    const bookId = getBookIdFromEntry(item);
-                    if (bookId) selectionKeys.push(`${columnId}:${bookId}:${i}`);
-                }
-
-                // Select all items in this group
-                setSelectedBooks(new Set(selectionKeys));
-                setSelectedDivider({ columnId, dividerId });
-                setActiveColumnId(columnId);
-
-                // Set anchor for shift+click (use first book after divider, or divider position if no books)
-                if (selectionKeys.length > 1) {
-                    const firstBookKey = selectionKeys[1]; // Skip divider key
-                    const [, bookId, indexStr] = firstBookKey.split(':');
-                    setLastClickedBook({ id: bookId, columnId, index: parseInt(indexStr, 10) });
-                } else {
-                    // No books under divider - set anchor at divider position
-                    setLastClickedBook({ id: dividerId, columnId, index: dividerIndex, isDivider: true });
-                }
-            };
-
-
-            // v5.4.0 - Removed Column App drag-drop system: navigateBook, getBookPosition,
-            // handleColumnDragStart, calculateColumnDropPosition, handleMouseDown,
-            // handleDividerMouseDown, buildColumnIndex, buildAllColumnIndexes, findRowByY,
-            // calculateDropPosition, updateIndicatorPosition, updateGhostPosition, updateDragTooltip
-
 
             const handleMouseMove = (e) => {
                 // v5.0.0-alpha.111 - Handle column resizing (min width 35px, table-layout fixed)
@@ -4134,7 +3888,6 @@
                     return;
                 }
 
-                // v5.4.0 - Removed Column App drag handling (column drag, book drag, auto-scroll)
             };
 
             const handleMouseUp = (e) => {
@@ -4161,15 +3914,6 @@
                     return;
                 }
 
-                // v5.4.0 - Removed Column App drag-drop handling (auto-scroll, column drop, book drop)
-
-                // Reset any stale drag state
-                setDraggedBook(null);
-                setDraggedFromColumn(null);
-                setIsDragging(false);
-                setDraggedColumn(null);
-                setIsDraggingColumn(false);
-                setColumnDropTarget(null);
             };
 
             const getAllCollectionNames = () => {
@@ -4192,9 +3936,8 @@
                 return Array.from(seriesNames).sort();
             };
 
-            // v5.4.0 - Removed filteredBooks function and filteredBooksRef (Column App only)
 
-            // v4.16.0.a - Check if any filter is active (for hiding empty columns/dividers)
+            // v4.16.0.a - Check if any filter is active
             const hasActiveFilters = !!(searchTerm || readStatusFilter || collectionFilter ||
                 ratingFilter || ownershipFilter || seriesFilter || dateFrom || dateTo ||
                 (tagFilter && tagFilter.length > 0));
@@ -5957,9 +5700,6 @@
 
                     {statusModalOpen && (() => {
                         // Schema v2.0: Simplified informational modal (no action buttons)
-                        // Count dividers in columns - dividers are stored as objects {type: 'divider', id, label}
-                        const dividerCount = columns.reduce((count, col) =>
-                            count + col.books.filter(item => typeof item === 'object' && item.type === 'divider').length, 0);
                         const booksWithCollections = books.filter(b => b.collections && b.collections.length > 0).length;
 
                         return (
@@ -6004,7 +5744,7 @@
                                     {/* Organization stats */}
                                     <div>
                                         <p className="text-sm text-gray-700">
-                                            📊 <strong>Organization:</strong> {columns.length} column{columns.length !== 1 ? 's' : ''}, {dividerCount} divider{dividerCount !== 1 ? 's' : ''}
+                                            📊 <strong>Organization:</strong> {folders.length} folder{folders.length !== 1 ? 's' : ''}
                                         </p>
                                     </div>
 
@@ -6033,7 +5773,7 @@
                                         <p className="font-semibold mb-2">This will:</p>
                                         <ul className="list-disc list-inside space-y-1 ml-2">
                                             <li>Unload library and collections</li>
-                                            <li>Remove all columns and organization</li>
+                                            <li>Remove all folders and organization</li>
                                             <li>Reset all filters</li>
                                         </ul>
                                     </div>
@@ -6596,10 +6336,6 @@
                         </div>
                     )}
 
-                    {/* v5.1.0 - Removed Migration Dialog (v4 Column App migration no longer needed) */}
-
-                    {/* v5.4.0 - Removed Insert Divider modal (Column App only) */}
-                    {/* v5.4.0 - Removed Delete Column dialog (Column App only) */}
 
                     {/* v4.20.0.a - Bulk price goal modal (v5.0.0-alpha.169.8 - use bulkPriceBookIds) */}
                     {showBulkPriceModal && (
@@ -6789,7 +6525,6 @@
                         );
                     })()}
 
-                    {/* v5.4.0 - Removed Collect Series modal (Column App only) */}
 
                     {/* v5.2.0-alpha.3 - Phase 1.2: Edit Series Dialog */}
                     {editSeriesOpen && modalBook && (
@@ -6910,7 +6645,6 @@
                     {modalBook && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeBookModal(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                                {/* v5.4.0 - Removed Column App book navigation (prev/next arrows). Was non-functional in Book Explorer. */}
                                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-end">
                                     <button onClick={closeBookModal} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                                 </div>
@@ -9814,11 +9548,6 @@
                     {/* v4.16.0.n - Removed floating selection box, now shown in footer */}
 
 
-                    {/* v5.4.0 - Removed Column App context menu (Move to/Copy to column, Cut/Copy/Paste, Hide/Delete) */}
-
-                    // v5.4.0 - Removed Divider Context Menu and Divider Tag Editor modal (Column App only)
-
-
                     {/* v4.27.0 Phase 3 - Tag Management Modal */}
                     {tagManagementOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
@@ -9910,7 +9639,6 @@
                                                                                     saveBooksToIndexedDB(updated);
                                                                                     return updated;
                                                                                 });
-                                                                                // v5.4.0 - Removed "Remove tag from all dividers" (Column App only)
                                                                                 // Remove from registry
                                                                                 setTagRegistry(prev => {
                                                                                     const updated = { ...prev };
@@ -9977,107 +9705,6 @@
                             </div>
                         </div>
                     )}
-
-                    {/* v3.14.0.x - Ghost position controlled via ref in updateGhostPosition */}
-                    {isDragging && draggedBook && (
-                        <div className="drag-ghost"
-                             ref={dragGhostRef}
-                             style={{
-                                 left: dragPosRef.current.x - 50,
-                                 top: dragPosRef.current.y - 75,
-                                 width: '100px'
-                             }}>
-                            {/* Show stacked effect if dragging multiple books */}
-                            {/* v4.16.0.d - Use composite key with index for selection check */}
-                            {selectedBooks.size > 1 && selectedBooks.has(`${draggedFromColumn}:${draggedBook.id}:${draggedBookIndex}`) && (
-                                <>
-                                    <div className="absolute" style={{ left: '8px', top: '8px', opacity: 0.4 }}>
-                                        <div className="w-full aspect-[2/3] rounded drag-ghost-border bg-blue-100" style={{ width: '100px' }}></div>
-                                    </div>
-                                    <div className="absolute" style={{ left: '4px', top: '4px', opacity: 0.6 }}>
-                                        <div className="w-full aspect-[2/3] rounded drag-ghost-border bg-blue-200" style={{ width: '100px' }}></div>
-                                    </div>
-                                </>
-                            )}
-                            {/* Main dragged book */}
-                            <div className="relative">
-                                {blankImageBooks.has(draggedBook.id) ? (
-                                    <div className="w-full aspect-[2/3] rounded drag-ghost-border"
-                                         style={{ backgroundColor: '#d4c5a9' }}>
-                                        <div className="flex items-center justify-center h-full px-1">
-                                            <div className="text-xs font-serif font-bold text-gray-800 text-center leading-tight">
-                                                {draggedBook.title.length > 20 ? draggedBook.title.substring(0, 20) + '...' : draggedBook.title}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <img src={coverUrlMap[draggedBook.coverUrl] || draggedBook.coverUrl}
-                                         alt={draggedBook.title}
-                                         className="w-full rounded drag-ghost-border" />
-                                )}
-                                {/* Count badge for multiple books */}
-                                {/* v4.16.0.d - Use composite key with index for selection check */}
-                                {selectedBooks.size > 1 && selectedBooks.has(`${draggedFromColumn}:${draggedBook.id}:${draggedBookIndex}`) && (
-                                    <div className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold border-2 border-white">
-                                        {selectedBooks.size}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* v4.16.0.au - Drag tooltip showing "Move to X" or "+ Copy to X" */}
-                    {isDragging && draggedBook && (
-                        <div
-                            ref={dragTooltipRef}
-                            style={{
-                                position: 'fixed',
-                                left: dragPosRef.current.x - 50,
-                                top: dragPosRef.current.y + 80,
-                                display: 'none',
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                color: 'white',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                whiteSpace: 'nowrap',
-                                pointerEvents: 'none',
-                                zIndex: 10001
-                            }}
-                        />
-                    )}
-
-                    {/* v3.14.0.w - Overlay drop indicator using ref for direct DOM updates */}
-                    <div
-                        ref={indicatorRef}
-                        className="drop-indicator-overlay"
-                        style={{
-                            display: 'none',
-                            position: 'fixed',
-                            height: '6px',
-                            pointerEvents: 'none',
-                            zIndex: 9998
-                        }}
-                    >
-                        <div className="drop-indicator-line" style={{
-                            position: 'absolute',
-                            top: '2px',
-                            left: 0,
-                            right: 0,
-                            height: '2px',
-                            backgroundColor: '#3b82f6',
-                            borderRadius: '1px'
-                        }} />
-                        <div className="drop-indicator-dot" style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: '-3px',
-                            width: '6px',
-                            height: '6px',
-                            backgroundColor: '#3b82f6',
-                            borderRadius: '50%'
-                        }} />
-                    </div>
 
                     {/* v4.16.0.l - Toast notification that animates to footer */}
                     {/* v4.16.0.m - Position above last clicked book, ease-in animation */}
@@ -11814,11 +11441,11 @@
                                 </span>
                             )}
                             {/* Separator when both present */}
-                            {clipboardMessage && footerClipboardVisible && selectedBooks.size > 0 && <span className="text-gray-400">•</span>}
+                            {clipboardMessage && footerClipboardVisible && explorerSelectedBooks.size > 0 && <span className="text-gray-400">•</span>}
                             {/* Selection count */}
-                            {selectedBooks.size > 0 && (
+                            {explorerSelectedBooks.size > 0 && (
                                 <span className="flex items-center gap-1">
-                                    {selectedBooks.size} book{selectedBooks.size !== 1 ? 's' : ''} selected
+                                    {explorerSelectedBooks.size} book{explorerSelectedBooks.size !== 1 ? 's' : ''} selected
                                     <button
                                         onClick={() => clearSelection()}
                                         className="ml-1 text-gray-400 hover:text-gray-600"
@@ -11828,7 +11455,7 @@
                                 </span>
                             )}
                             {/* Non-breaking space when both empty to maintain layout */}
-                            {!clipboardMessage && selectedBooks.size === 0 && '\u00A0'}
+                            {!clipboardMessage && explorerSelectedBooks.size === 0 && '\u00A0'}
                         </div>
                         {/* Center: Affiliate disclosure */}
                         <div className="text-center flex-1">
