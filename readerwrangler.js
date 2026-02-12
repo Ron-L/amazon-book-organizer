@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.6-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.6-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6845,14 +6845,14 @@
                                                                     editBookSeriesFilterRef.current = true;
                                                                     setEditBookSeriesDropdownOpen(true);
                                                                 }}
-                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { setEditBookSeriesDropdownOpen(false); e.target.blur(); } if (e.key === 'Escape') { setEditBookSeriesDropdownOpen(false); e.target.blur(); } }}
+                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { setEditBookSeriesDropdownOpen(false); e.target.blur(); } if (e.key === 'Escape') { if (editBookSeriesDropdownOpen) { setEditBookSeriesDropdownOpen(false); } else { e.target.blur(); } } }}
                                                                 placeholder="Type to filter series..."
                                                                 className="w-full px-3 py-2 pr-8 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                                             />
                                                             <button
                                                                 type="button"
                                                                 onClick={() => { editBookSeriesFilterRef.current = false; setEditBookSeriesDropdownOpen(!editBookSeriesDropdownOpen); }}
-                                                                onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); if (editBookSeriesDropdownOpen) { setEditBookSeriesDropdownOpen(false); } else { e.target.blur(); } return; } e.stopPropagation(); }}
+                                                                onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); if (editBookSeriesDropdownOpen) { setEditBookSeriesDropdownOpen(false); if (editBookSeriesInputRef.current) editBookSeriesInputRef.current.focus(); } else { e.target.blur(); } return; } e.stopPropagation(); }}
                                                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs focus:outline-none"
                                                                 tabIndex={-1}>
                                                                 ▼
