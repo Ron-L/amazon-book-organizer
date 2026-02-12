@@ -25,20 +25,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Current Focus
 
-
-**1. 📊 Group in Book Explorer** - MEDIUM/MEDIUM (6-10 hours) — IN PROGRESS (v5.4.5)
-   - Simple on/off toggle button in toolbar (hidden when sort is Manual Order)
-   - Group key always mirrors the current sort column — sort by Author → groups by author, sort by Series → groups by series, etc. Change sort → dividers update automatically.
-   - Dividers inserted at value transitions in sort order (sequential scan, not alphabetical re-sort)
-   - **Table view**: Full-width header `<tr>` rows with chevron, group name, book count. Click to collapse/expand.
-   - **Cover view**: Full-width section dividers (`gridColumn: 1 / -1`) with same collapse behavior.
-   - All books always shown (dividers are additive). Collapsed groups hide their books.
-   - Collapse All / Expand All as inline text buttons next to the Group toggle.
-   - Works with existing filters (groups with 0 matching books hidden).
-   - `getGroupLabel()` handles all column types (dates bucketed by month/year, ratings as "N Stars", etc.)
-   - Persisted as boolean `explorerGroupOn` in localStorage. Collapsed groups session-only.
-
-**2. 🔀 Cover View Sort Picker** - LOW/LOW (2-3 hours)
+**1. 🔀 Cover View Sort Picker** - LOW/LOW (2-3 hours)
    - Currently cover view shows "Sort: Author ▲ ×" but you can only reverse direction or clear — can't pick a different sort key without switching to list view.
    - Fix: Click "Sort: Author ▲" → dropdown with all sortable columns (Title, Author, Rating, Published, Date Added, Series, Position, Price, Custom Order).
    - Checkmark on current key, arrow shows direction. Click same key toggles direction. Click different key sorts by it.
@@ -46,12 +33,12 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Display: `Sort: Author ▲, Position ▲ ×` for multi-key sorts.
    - All sort infrastructure already exists (`explorerSort` state handles multi-key). This is purely a UI control.
 
-**3. It would be nice if Author or Title had a dropdown memory
+**2. It would be nice if Author or Title had a dropdown memory
 
-**4. I think wishlist import overwrote my owned books?**
+**3. I think wishlist import overwrote my owned books?**
    - Destroyer shows no owned books now.
 
-**5. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)
+**4. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)
    - Problem: Portrait mode shows only 1-2 book rows, left pane too wide, headers consume vertical space
    - Current state: App works on mobile but layout unusable (landscape shows 2 rows, portrait ~0 rows)
    - Solution TBD: May require UX paradigm shift (hamburger nav, tab switching, overlay panels) vs. basic responsive CSS

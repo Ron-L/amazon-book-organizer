@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.5] - 2026-02-11
+
+### Added
+- **Group toggle in Book Explorer** - Simple on/off toggle inserts collapsible divider rows between groups of books
+  - Group key always mirrors the current sort column (sort by Author → groups by author, sort by Series → groups by series, etc.)
+  - Dividers appear at value transitions in sort order — change the sort and dividers update automatically
+  - Works in both table view (full-width header rows) and cover view (full-width section dividers)
+  - Click chevron on any group header to collapse/expand that group
+  - Expand All (▾) and Collapse All (▸) buttons in toolbar when grouping is active
+  - Dates bucketed by month/year, ratings shown as "N Stars", all other columns use raw values
+  - Hidden when sort is Manual Order (incompatible). Switching to Manual Order auto-disables grouping.
+  - Collapsed groups reset when sort column changes (group names become invalid)
+  - Group state persisted to localStorage; collapsed groups are session-only
+  - Tooltip on Group button shows what it will group by (e.g., "Group by Author")
+
 ## [5.4.4] - 2026-02-11
 
 ### Fixed
