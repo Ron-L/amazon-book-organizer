@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.5";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.6-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -262,11 +262,10 @@
             const [tagInputValue, setTagInputValue] = useState(''); // v4.27.0 - tag input autocomplete value
             const [tagManagementOpen, setTagManagementOpen] = useState(false); // v4.27.0 Phase 3 - Tag management modal
             const [editingTagId, setEditingTagId] = useState(null); // v4.27.0 Phase 3 - Currently renaming tag
-            const [editSeriesOpen, setEditSeriesOpen] = useState(false); // v5.2.0-alpha.3 - Phase 1.2: Edit Series dialog
-            const [editSeriesName, setEditSeriesName] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series name field
-            const [editSeriesPosition, setEditSeriesPosition] = useState(''); // v5.2.0-alpha.3 - Phase 1.2: Series position field
-            const [editSeriesDropdownOpen, setEditSeriesDropdownOpen] = useState(false); // v5.2.0-alpha.4 - Phase 1.3: Combobox dropdown
-            const [editSeriesRemoved, setEditSeriesRemoved] = useState(false); // v5.2.0-alpha.12 - Phase 1.5: Track explicit removal
+            // v5.4.6 - Book dialog edit mode
+            const [isEditingBook, setIsEditingBook] = useState(false);
+            const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '' });
+            const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
             const [wizardMinBooksSlider, setWizardMinBooksSlider] = useState(5); // v5.1.0-alpha.10 - Slider value (immediate)
             const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0-alpha.10 - Debounced threshold for detection
@@ -1612,6 +1611,10 @@
                     if (dateDropdownOpen && !e.target.closest('[data-date-dropdown]')) {
                         setDateDropdownOpen(false);
                     }
+                    // v5.4.6 - Close inline series dropdown in book edit mode
+                    if (editBookSeriesDropdownOpen && !e.target.closest('[data-edit-series-dropdown]')) {
+                        setEditBookSeriesDropdownOpen(false);
+                    }
                 };
 
                 const handleEscKey = (e) => {
@@ -2402,53 +2405,6 @@
                     .map(([name, count]) => ({ name, count }))
                     .sort((a, b) => a.name.localeCompare(b.name));
             };
-
-            // v5.2.0-alpha.1 - Phase 1.1: Edit Series button handler
-            // v5.2.0-alpha.3 - Phase 1.2: Opens Edit Series dialog modal
-            // v5.2.0-alpha.5 - Tags pattern: blank field, current series highlighted in dropdown
-            const openEditSeriesDialog = () => {
-                console.log('[EDIT SERIES] Opening edit dialog for book:', modalBook?.title);
-                console.log('[EDIT SERIES] Current series:', modalBook?.series);
-                console.log('[EDIT SERIES] Current position:', modalBook?.seriesPosition);
-                setEditSeriesName('');
-                setEditSeriesPosition(modalBook?.seriesPosition != null ? String(modalBook.seriesPosition) : '');
-                setEditSeriesDropdownOpen(false);
-                setEditSeriesRemoved(false);
-                setEditSeriesOpen(true);
-            };
-
-            // v5.2.0-alpha.3 - Phase 1.2: Close Edit Series dialog
-            const closeEditSeriesDialog = () => {
-                setEditSeriesOpen(false);
-                setEditSeriesDropdownOpen(false);
-                setEditSeriesName('');
-                setEditSeriesPosition('');
-                setEditSeriesRemoved(false);
-            };
-
-            // v5.2.0-alpha.3 - Phase 1.2: Save series edits
-            // v5.2.0-alpha.9 - Phase 1.4: Persist to IndexedDB, update modal
-            // v5.2.0-alpha.10 - Blank field = keep original series (only Remove button clears)
-            // v5.2.0-alpha.12 - Phase 1.5: editSeriesRemoved flag for explicit removal
-            const saveSeriesEdit = () => {
-                if (!modalBook) return;
-                // If user explicitly clicked "Remove from Series", save null
-                // Otherwise, blank field = keep original series name
-                const newSeries = editSeriesRemoved ? null : (editSeriesName.trim() || modalBook.series || null);
-                const newPosition = editSeriesPosition.trim() ? parseFloat(editSeriesPosition) : null;
-                console.log('[EDIT SERIES] Saving:', { bookId: modalBook.id, series: newSeries, position: newPosition, originalSeries: modalBook.series });
-
-                setBooks(prev => {
-                    const updated = prev.map(b =>
-                        b.id === modalBook.id ? { ...b, series: newSeries, seriesPosition: newPosition } : b
-                    );
-                    saveBooksToIndexedDB(updated);
-                    return updated;
-                });
-                setModalBook(prev => ({ ...prev, series: newSeries, seriesPosition: newPosition }));
-                closeEditSeriesDialog();
-            };
-
 
             const renderStars = (rating) => {
                 const fullStars = Math.floor(rating);
@@ -3291,9 +3247,90 @@
             const closeBookModal = () => {
                 setModalBook(null);
                 setIsEditingNote(false);
+                setIsEditingBook(false);
+                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '' });
+                setEditBookSeriesDropdownOpen(false);
                 setContextSubmenu(null);
                 setTagInputValue('');
                 setNoteEditContent('');
+            };
+
+            // v5.4.6 - Book dialog edit mode functions
+            const enterEditMode = () => {
+                setEditBookFields({
+                    title: modalBook.title || '',
+                    author: modalBook.author || '',
+                    series: modalBook.series || '',
+                    seriesPosition: modalBook.seriesPosition != null ? String(modalBook.seriesPosition) : '',
+                    userNote: modalBook.userNote || ''
+                });
+                setEditBookSeriesDropdownOpen(false);
+                setIsEditingBook(true);
+            };
+
+            const cancelEditMode = () => {
+                setIsEditingBook(false);
+                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '' });
+                setEditBookSeriesDropdownOpen(false);
+            };
+
+            const saveEditMode = () => {
+                if (!modalBook) return;
+                // Compare editBookFields with modalBook to find changed fields
+                const previousValues = {};
+                const newValues = {};
+
+                if (editBookFields.title !== (modalBook.title || '')) {
+                    previousValues.title = modalBook.title;
+                    newValues.title = editBookFields.title || null;
+                }
+                if (editBookFields.author !== (modalBook.author || '')) {
+                    previousValues.author = modalBook.author;
+                    newValues.author = editBookFields.author || null;
+                }
+                const newSeries = editBookFields.series.trim() || null;
+                if (newSeries !== (modalBook.series || null)) {
+                    previousValues.series = modalBook.series || null;
+                    newValues.series = newSeries;
+                }
+                const newPosition = editBookFields.seriesPosition.trim() ? parseFloat(editBookFields.seriesPosition) : null;
+                const oldPosition = modalBook.seriesPosition != null ? modalBook.seriesPosition : null;
+                if (newPosition !== oldPosition) {
+                    previousValues.seriesPosition = oldPosition;
+                    newValues.seriesPosition = newPosition;
+                }
+                const newNote = editBookFields.userNote.trim() || undefined;
+                const oldNote = modalBook.userNote || undefined;
+                if (newNote !== oldNote) {
+                    previousValues.userNote = oldNote;
+                    newValues.userNote = newNote;
+                }
+
+                if (Object.keys(newValues).length === 0) {
+                    // Nothing changed, just exit edit mode
+                    cancelEditMode();
+                    return;
+                }
+
+                // Save to books array + IndexedDB
+                setBooks(prev => {
+                    const updated = prev.map(b =>
+                        b.id === modalBook.id ? { ...b, ...newValues } : b
+                    );
+                    saveBooksToIndexedDB(updated);
+                    return updated;
+                });
+                setModalBook(prev => ({ ...prev, ...newValues }));
+
+                // Record undo action
+                recordAction({
+                    type: 'EDIT_BOOK',
+                    bookId: modalBook.id,
+                    previousValues,
+                    newValues
+                });
+
+                cancelEditMode();
             };
 
             const clearSelection = () => {
@@ -3315,8 +3352,8 @@
             }, [modalBook]);
             // v5.2.0-alpha.18 - Track whether any modal/dialog overlay is open
             useEffect(() => {
-                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || editSeriesOpen || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData);
-            }, [modalBook, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData);
+            }, [modalBook, showBulkPriceModal, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             // v5.4.2 - ESC closes innermost modal (layered dismissal)
             // aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen handled separately in handleEscKey
@@ -3327,8 +3364,8 @@
                     if (wizardResultsOpen) { setWizardResultsOpen(false); return; }
                     if (wizardPreviewMode) { setWizardPreviewMode(false); return; }
                     if (wizardHelpOpen) { setWizardHelpOpen(false); return; }
-                    // Edit Series (inside book modal)
-                    if (editSeriesOpen) { closeEditSeriesDialog(); return; }
+                    // v5.4.6 - Book edit mode (cancel without closing dialog)
+                    if (isEditingBook) { cancelEditMode(); return; }
                     // Book modal
                     if (modalBook) { closeBookModal(); return; }
                     // Standalone modals
@@ -3343,7 +3380,7 @@
                 };
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
-            }, [modalBook, showBulkPriceModal, editSeriesOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+            }, [modalBook, showBulkPriceModal, isEditingBook, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             const recordAction = (action) => {
                 setUndoStack(prev => {
@@ -3369,6 +3406,19 @@
                             saveBooksToIndexedDB(updatedBooks);
                             return updatedBooks;
                         });
+                        break;
+                    // v5.4.6 - Undo book field edit
+                    case 'EDIT_BOOK':
+                        setBooks(prev => {
+                            const updated = prev.map(b =>
+                                b.id === action.bookId ? { ...b, ...action.previousValues } : b
+                            );
+                            saveBooksToIndexedDB(updated);
+                            return updated;
+                        });
+                        if (modalBookRef.current?.id === action.bookId) {
+                            setModalBook(prev => prev?.id === action.bookId ? { ...prev, ...action.previousValues } : prev);
+                        }
                         break;
                     // v5.0.0-alpha.46 - Explorer folder operations
                     case 'MOVE_BOOKS_FOLDER':
@@ -3651,6 +3701,19 @@
                             saveBooksToIndexedDB(updatedBooks);
                             return updatedBooks;
                         });
+                        break;
+                    // v5.4.6 - Redo book field edit
+                    case 'EDIT_BOOK':
+                        setBooks(prev => {
+                            const updated = prev.map(b =>
+                                b.id === action.bookId ? { ...b, ...action.newValues } : b
+                            );
+                            saveBooksToIndexedDB(updated);
+                            return updated;
+                        });
+                        if (modalBookRef.current?.id === action.bookId) {
+                            setModalBook(prev => prev?.id === action.bookId ? { ...prev, ...action.newValues } : prev);
+                        }
                         break;
                     // v5.0.0-alpha.46 - Explorer folder operations
                     case 'MOVE_BOOKS_FOLDER':
@@ -6588,126 +6651,24 @@
                     })()}
 
 
-                    {/* v5.2.0-alpha.3 - Phase 1.2: Edit Series Dialog */}
-                    {editSeriesOpen && modalBook && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeEditSeriesDialog(); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl p-6 w-[420px]" onClick={(e) => { e.stopPropagation(); setEditSeriesDropdownOpen(false); }}>
-                                <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-lg font-bold text-gray-900">
-                                        {modalBook.series ? '✏️ Edit Series Information' : '✏️ Add to Series'}
-                                    </h2>
-                                    <button onClick={closeEditSeriesDialog} className="text-gray-500 hover:text-gray-700 text-xl">×</button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div className="relative" onClick={(e) => e.stopPropagation()}>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Series Name</label>
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={editSeriesName}
-                                                onChange={(e) => {
-                                                    setEditSeriesName(e.target.value);
-                                                    setEditSeriesDropdownOpen(true);
-                                                }}
-                                                onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); if (e.key === 'Enter') { setEditSeriesDropdownOpen(false); saveSeriesEdit(); } }}
-                                                placeholder="Type to filter or click ▼..."
-                                                className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                                autoFocus
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => setEditSeriesDropdownOpen(!editSeriesDropdownOpen)}
-                                                onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
-                                                tabIndex={-1}>
-                                                ▼
-                                            </button>
-                                        </div>
-                                        {editSeriesDropdownOpen && (() => {
-                                            const allSeries = getUniqueSeriesList();
-                                            const filtered = editSeriesName.trim()
-                                                ? allSeries.filter(s => s.name.toLowerCase().includes(editSeriesName.toLowerCase()))
-                                                : allSeries;
-                                            return filtered.length > 0 ? (
-                                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                                    {filtered.map(s => (
-                                                        <button
-                                                            key={s.name}
-                                                            ref={s.name === modalBook?.series ? (el) => { if (el) requestAnimationFrame(() => el.scrollIntoView({ block: 'start' })); } : null}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setEditSeriesName(s.name);
-                                                                setEditSeriesDropdownOpen(false);
-                                                            }}
-                                                            className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex justify-between items-center ${
-                                                                s.name === modalBook?.series ? 'bg-blue-100 font-medium' : ''
-                                                            }`}>
-                                                            <span className="truncate">{s.name}</span>
-                                                            <span className="text-xs text-gray-400 ml-2 shrink-0">({s.count})</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            ) : null;
-                                        })()}
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Position / Number</label>
-                                        <input
-                                            type="text"
-                                            value={editSeriesPosition}
-                                            onChange={(e) => {
-                                                const val = e.target.value;
-                                                if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                                                    setEditSeriesPosition(val);
-                                                }
-                                            }}
-                                            onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); if (e.key === 'Enter') saveSeriesEdit(); }}
-                                            placeholder="e.g., 141"
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                        />
-                                        <p className="text-xs text-gray-400 mt-1">Supports decimals (e.g., 1.5 for books between #1 and #2)</p>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
-                                    <div>
-                                        {modalBook.series && (
-                                            <button
-                                                onClick={() => {
-                                                    console.log('[EDIT SERIES] Remove from series - clearing fields');
-                                                    setEditSeriesName('');
-                                                    setEditSeriesPosition('');
-                                                    setEditSeriesRemoved(true);
-                                                    setEditSeriesDropdownOpen(false);
-                                                }}
-                                                className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                                                Remove from Series
-                                            </button>
-                                        )}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={closeEditSeriesDialog}
-                                            className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
-                                            Cancel
-                                        </button>
-                                        <button
-                                            onClick={saveSeriesEdit}
-                                            className="px-4 py-2 text-sm bg-blue-700 hover:bg-blue-800 text-white rounded-lg transition-colors">
-                                            Save
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                     {modalBook && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeBookModal(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => { e.stopPropagation(); if (contextSubmenu === 'addTagModal') { setContextSubmenu(null); setTagInputValue(''); } }}>
-                                <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-end">
+                                <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-end gap-2">
+                                    {isEditingBook ? (
+                                        <>
+                                            <button onClick={saveEditMode} className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors" title="Save changes">
+                                                ✓ Save
+                                            </button>
+                                            <button onClick={cancelEditMode} className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors" title="Cancel editing (ESC)">
+                                                Cancel
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button onClick={enterEditMode} className="text-gray-400 hover:text-gray-600 text-lg transition-colors" title="Edit book fields">
+                                            ✏️
+                                        </button>
+                                    )}
                                     <button onClick={closeBookModal} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                                 </div>
 
@@ -6732,7 +6693,18 @@
                                                  onError={(e) => e.target.src = 'https://via.placeholder.com/192x288/4f46e5/fff?text=No+Cover'} />
                                         )}
                                         <div className="flex-1">
-                                            <h2 className="text-3xl font-bold text-gray-900 mb-3">{modalBook.title}</h2>
+                                            {isEditingBook ? (
+                                                <input
+                                                    type="text"
+                                                    value={editBookFields.title}
+                                                    onChange={(e) => setEditBookFields(prev => ({ ...prev, title: e.target.value }))}
+                                                    onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); }}
+                                                    className="text-3xl font-bold text-gray-900 mb-3 w-full border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    placeholder="Title"
+                                                />
+                                            ) : (
+                                                <h2 className="text-3xl font-bold text-gray-900 mb-3">{modalBook.title}</h2>
+                                            )}
                                             {modalBook.onWishlist && (
                                                 <div className="mb-3 flex items-center gap-3">
                                                     <span className="inline-flex items-center bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
@@ -6752,7 +6724,21 @@
                                                     })()}
                                                 </div>
                                             )}
-                                            <p className="text-xl text-gray-700 mb-4">by {modalBook.author}</p>
+                                            {isEditingBook ? (
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <span className="text-xl text-gray-700">by</span>
+                                                    <input
+                                                        type="text"
+                                                        value={editBookFields.author}
+                                                        onChange={(e) => setEditBookFields(prev => ({ ...prev, author: e.target.value }))}
+                                                        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); }}
+                                                        className="text-xl text-gray-700 flex-1 border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        placeholder="Author"
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <p className="text-xl text-gray-700 mb-4">by {modalBook.author}</p>
+                                            )}
 
                                             {modalBook.rating > 0 && (
                                                 <div className="flex items-center gap-3 mb-4">
@@ -6830,7 +6816,86 @@
                                                 </div>
                                             </div>
 
-                                            {modalBook.series && (
+                                            {isEditingBook ? (
+                                                <div className="mb-3 space-y-3">
+                                                    <div className="relative" data-edit-series-dropdown="">
+                                                        <label className="block text-sm font-medium text-gray-700 mb-1">Series</label>
+                                                        <div className="relative">
+                                                            <input
+                                                                type="text"
+                                                                value={editBookFields.series}
+                                                                onChange={(e) => {
+                                                                    setEditBookFields(prev => ({ ...prev, series: e.target.value }));
+                                                                    setEditBookSeriesDropdownOpen(true);
+                                                                }}
+                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { setEditBookSeriesDropdownOpen(false); e.target.blur(); } if (e.key === 'Escape') { setEditBookSeriesDropdownOpen(false); } }}
+                                                                placeholder="Type to filter series..."
+                                                                className="w-full px-3 py-2 pr-8 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setEditBookSeriesDropdownOpen(!editBookSeriesDropdownOpen)}
+                                                                onKeyDown={(e) => e.stopPropagation()}
+                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
+                                                                tabIndex={-1}>
+                                                                ▼
+                                                            </button>
+                                                        </div>
+                                                        {editBookSeriesDropdownOpen && (() => {
+                                                            const allSeries = getUniqueSeriesList();
+                                                            const filtered = editBookFields.series.trim()
+                                                                ? allSeries.filter(s => s.name.toLowerCase().includes(editBookFields.series.toLowerCase()))
+                                                                : allSeries;
+                                                            return filtered.length > 0 ? (
+                                                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                                    {filtered.map(s => (
+                                                                        <button
+                                                                            key={s.name}
+                                                                            ref={s.name === modalBook?.series ? (el) => { if (el) requestAnimationFrame(() => el.scrollIntoView({ block: 'start' })); } : null}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setEditBookFields(prev => ({ ...prev, series: s.name }));
+                                                                                setEditBookSeriesDropdownOpen(false);
+                                                                            }}
+                                                                            className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex justify-between items-center ${
+                                                                                s.name === modalBook?.series ? 'bg-blue-100 font-medium' : ''
+                                                                            }`}>
+                                                                            <span className="truncate">{s.name}</span>
+                                                                            <span className="text-xs text-gray-400 ml-2 shrink-0">({s.count})</span>
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            ) : null;
+                                                        })()}
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="flex-1">
+                                                            <label className="block text-sm font-medium text-gray-700 mb-1">Position / Number</label>
+                                                            <input
+                                                                type="text"
+                                                                value={editBookFields.seriesPosition}
+                                                                onChange={(e) => {
+                                                                    const val = e.target.value;
+                                                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                                        setEditBookFields(prev => ({ ...prev, seriesPosition: val }));
+                                                                    }
+                                                                }}
+                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); }}
+                                                                placeholder="e.g., 1, 1.5"
+                                                                className="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                                            />
+                                                        </div>
+                                                        {(editBookFields.series || editBookFields.seriesPosition) && (
+                                                            <button
+                                                                onClick={() => setEditBookFields(prev => ({ ...prev, series: '', seriesPosition: '' }))}
+                                                                className="mt-5 px-2 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                                title="Remove from series">
+                                                                Remove from Series
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : modalBook.series ? (
                                                 <div className="mb-3">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <p className="text-lg" style={{ color: '#621e31' }}>
@@ -6842,23 +6907,21 @@
                                                             }
                                                         </p>
                                                         <button
-                                                            onClick={openEditSeriesDialog}
+                                                            onClick={enterEditMode}
                                                             className="hover:bg-gray-100 rounded px-1 transition-colors"
                                                             title="Edit series information">
                                                             ✏️
                                                         </button>
                                                     </div>
                                                 </div>
-                                            )}
-
-                                            {!modalBook.series && (
+                                            ) : (
                                                 <div className="mb-3">
                                                     <div className="flex items-center gap-2">
                                                         <p className="text-sm text-gray-500 italic">
                                                             Not part of a series
                                                         </p>
                                                         <button
-                                                            onClick={openEditSeriesDialog}
+                                                            onClick={enterEditMode}
                                                             className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded transition-colors"
                                                             title="Add to series">
                                                             ✏️ Add to series
@@ -7227,8 +7290,20 @@
 
                                     {/* v4.21.0.a - Book Notes section */}
                                     <div className="mb-6 pb-6 border-b border-gray-200">
-                                        {isEditingNote ? (
-                                            // Edit mode - show textarea
+                                        {isEditingBook ? (
+                                            // v5.4.6 - Edit mode: always show textarea
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Note</h3>
+                                                <textarea
+                                                    className="book-note-editor"
+                                                    value={editBookFields.userNote}
+                                                    onChange={(e) => setEditBookFields(prev => ({ ...prev, userNote: e.target.value }))}
+                                                    placeholder="Add a personal note about this book..."
+                                                    onKeyDown={(e) => e.stopPropagation()}
+                                                />
+                                            </div>
+                                        ) : isEditingNote ? (
+                                            // Standalone note edit mode - show textarea with save/cancel
                                             <div>
                                                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Note</h3>
                                                 <textarea
@@ -7238,8 +7313,6 @@
                                                     placeholder="Add a personal note about this book..."
                                                     autoFocus
                                                     onKeyDown={(e) => {
-                                                        // Stop all key events from propagating to prevent
-                                                        // DEL from deleting books, etc.
                                                         e.stopPropagation();
                                                         if (e.key === 'Escape') {
                                                             setIsEditingNote(false);
@@ -7252,7 +7325,6 @@
                                                         onClick={() => {
                                                             const trimmedNote = noteEditContent.trim();
                                                             const newNote = trimmedNote || undefined;
-                                                            // Save note (or clear if empty) - no undo support for notes
                                                             setBooks(prev => {
                                                                 const updated = prev.map(b =>
                                                                     b.id === modalBook.id
