@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.6-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.6-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -265,6 +265,7 @@
             const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '' });
             const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
             const editBookSeriesFilterRef = useRef(false); // true = filter by typed text, false = show all
+            const editBookSeriesInputRef = useRef(null); // ref to series input for focus management
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
             const [wizardMinBooksSlider, setWizardMinBooksSlider] = useState(5); // v5.1.0-alpha.10 - Slider value (immediate)
             const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0-alpha.10 - Debounced threshold for detection
@@ -6834,6 +6835,7 @@
                                                         <label className="block text-sm font-medium text-gray-700 mb-1">Series</label>
                                                         <div className="relative">
                                                             <input
+                                                                ref={editBookSeriesInputRef}
                                                                 type="text"
                                                                 value={editBookFields.series}
                                                                 onChange={(e) => {
@@ -6870,7 +6872,7 @@
                                                                                 setEditBookFields(prev => ({ ...prev, series: s.name }));
                                                                                 setEditBookSeriesDropdownOpen(false);
                                                                             }}
-                                                                            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') { setEditBookSeriesDropdownOpen(false); e.target.blur(); } }}
+                                                                            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') { setEditBookSeriesDropdownOpen(false); if (editBookSeriesInputRef.current) editBookSeriesInputRef.current.focus(); } }}
                                                                             className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex justify-between items-center ${
                                                                                 s.name === modalBook?.series ? 'bg-blue-100 font-medium' : ''
                                                                             }`}>
