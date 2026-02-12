@@ -129,6 +129,9 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                     // v5.0.0-alpha.175.7 - Preserve tags, notes, hidden status
                     // v5.4.7 - Respect userEdited flags: keep user-edited fields from previous book
                     const ue = previousBook.userEdited || {};
+                    if (Object.keys(ue).length > 0) {
+                        console.log(`🛡️ Preserving user-edited fields for "${previousBook.title}":`, Object.keys(ue).join(', '));
+                    }
                     booksByAsin.set(book.asin, {
                         ...book,
                         title: ue.title ? previousBook.title : book.title,
