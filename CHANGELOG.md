@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.7] - 2026-02-12
+
+### Added
+- **Book dialog edit mode** - Click pencil icon in book dialog header to edit Title, Author, Series, Position, and Notes inline
+  - ESC cancels edit mode without closing dialog; Enter saves when no field is focused
+  - Series field uses combobox with dropdown of existing series (prefix filtering)
+  - Layered ESC dismissal: series dropdown → series input → cancel edit mode
+  - Undo/redo support for all edits
+  - Replaces the standalone Edit Series modal and standalone note editing
+- **Bulk edit via context menu** - Right-click selected books → Edit ▶ Author... / Series... / Position...
+  - Each opens a focused modal with a single field
+  - Pre-populates if all selected books share the same value; "Mixed (N values)" placeholder if different
+  - Series uses combobox with dropdown (matching book dialog pattern)
+  - Undo/redo support as single action per bulk edit
+  - Works in both table and cover views
+- **User edit protection on import** - Per-field `userEdited` flags track which fields the user has manually edited
+  - Amazon re-imports preserve user-edited Title, Author, Series, and Position
+  - Backup export/import preserves the flags for future Amazon imports
+  - Backup restore uses its own values as-is (true snapshot restore)
+
+### Removed
+- Edit Series modal (replaced by inline editing in book dialog)
+- Standalone note editing (+Add Note button, note pencil icon)
+
 ## [5.4.5] - 2026-02-11
 
 ### Added
