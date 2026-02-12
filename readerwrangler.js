@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.6-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.6-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3364,6 +3364,8 @@
                     if (wizardResultsOpen) { setWizardResultsOpen(false); return; }
                     if (wizardPreviewMode) { setWizardPreviewMode(false); return; }
                     if (wizardHelpOpen) { setWizardHelpOpen(false); return; }
+                    // v5.4.6 - Series dropdown inside edit mode (innermost)
+                    if (editBookSeriesDropdownOpen) { setEditBookSeriesDropdownOpen(false); return; }
                     // v5.4.6 - Book edit mode (cancel without closing dialog)
                     if (isEditingBook) { cancelEditMode(); return; }
                     // Book modal
@@ -3380,7 +3382,7 @@
                 };
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
-            }, [modalBook, showBulkPriceModal, isEditingBook, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+            }, [modalBook, showBulkPriceModal, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             // v5.4.6 - ENTER saves edit mode when no input is focused
             useEffect(() => {
