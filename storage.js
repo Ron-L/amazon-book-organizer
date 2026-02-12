@@ -89,8 +89,9 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                     // New book is owned, replace wishlist entry
                     // Preserve user metadata from wishlist entry (column assignment preserved via localStorage)
                     wishlistToOwned.push(book.asin);
-                    // v5.4.7 - Respect userEdited flags from existing wishlist entry
-                    const ueWish = existing.userEdited || {};
+                    // v5.4.7 - Respect userEdited flags (Amazon only, not backups)
+                    const isBackupWish = !!book.userEdited;
+                    const ueWish = isBackupWish ? {} : (existing.userEdited || {});
                     booksByAsin.set(book.asin, {
                         ...book,
                         title: ueWish.title ? existing.title : book.title,
@@ -102,7 +103,7 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         priceTrigger: existing.priceTrigger ?? book.priceTrigger,
                         targetPrice: existing.targetPrice ?? book.targetPrice,
                         myRating: existing.myRating ?? book.myRating,  // v5.0.0-alpha.175.31 - Personal rating
-                        userEdited: ueWish  // Preserve the flags
+                        userEdited: isBackupWish ? book.userEdited : ueWish
                     });
                 } else if (!existing.onWishlist && book.onWishlist) {
                     // Existing is owned, new is wishlist - keep existing
@@ -127,13 +128,15 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                     // v5.0.0-alpha.169.7 - Prefer incoming values, fall back to IndexedDB if null
                     // v5.0.0-alpha.173.1 - Only during imports (preserveUserData = true)
                     // v5.0.0-alpha.175.7 - Preserve tags, notes, hidden status
-                    // v5.4.7 - Respect userEdited flags: keep user-edited fields from previous book
-                    const ue = previousBook.userEdited || {};
+                    // v5.4.7 - Respect userEdited flags: only for Amazon imports (not backups)
+                    // If incoming book has userEdited, it's a backup — use its values as-is
+                    // If incoming book lacks userEdited, it's Amazon — check previousBook's flags
+                    const isBackupData = !!book.userEdited;
+                    const ue = isBackupData ? {} : (previousBook.userEdited || {});
                     if (Object.keys(ue).length > 0) {
                         console.log(`🛡️ Preserving user-edited fields for "${previousBook.title}":`, Object.keys(ue).join(', '));
-                        if (ue.author) console.log(`   previousBook.author="${previousBook.author}" vs import.author="${book.author}"`);
                     }
-                    const mergedBook = {
+                    booksByAsin.set(book.asin, {
                         ...book,
                         title: ue.title ? previousBook.title : book.title,
                         author: ue.author ? previousBook.author : book.author,
@@ -146,10 +149,8 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         note: book.note ?? previousBook.note,
                         hidden: book.hidden ?? previousBook.hidden,
                         myRating: book.myRating ?? previousBook.myRating,  // v5.0.0-alpha.175.31 - Personal rating
-                        userEdited: ue  // Preserve the flags themselves
-                    };
-                    if (ue.author) console.log(`   ✅ merged.author="${mergedBook.author}"`);
-                    booksByAsin.set(book.asin, mergedBook);
+                        userEdited: isBackupData ? book.userEdited : ue  // Backup: restore its flags; Amazon: preserve existing flags
+                    });
                 } else {
                     // React saves: just save as-is, no merge
                     booksByAsin.set(book.asin, book);
