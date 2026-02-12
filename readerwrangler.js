@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.7";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.8-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -262,7 +262,7 @@
             const [editingTagId, setEditingTagId] = useState(null); // v4.27.0 Phase 3 - Currently renaming tag
             // v5.4.6 - Book dialog edit mode
             const [isEditingBook, setIsEditingBook] = useState(false);
-            const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '' });
+            const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
             const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
             const editBookSeriesFilterRef = useRef(false); // true = filter by typed text, false = show all
             const editBookSeriesInputRef = useRef(null); // ref to series input for focus management
@@ -3261,7 +3261,7 @@
             const closeBookModal = () => {
                 setModalBook(null);
                 setIsEditingBook(false);
-                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '' });
+                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
                 setEditBookSeriesDropdownOpen(false);
                 setContextSubmenu(null);
                 setTagInputValue('');
@@ -3274,7 +3274,8 @@
                     author: modalBook.author || '',
                     series: modalBook.series || '',
                     seriesPosition: modalBook.seriesPosition != null ? String(modalBook.seriesPosition) : '',
-                    userNote: modalBook.userNote || ''
+                    userNote: modalBook.userNote || '',
+                    onWishlist: modalBook.onWishlist || false
                 });
                 setEditBookSeriesDropdownOpen(false);
                 setIsEditingBook(true);
@@ -3282,7 +3283,7 @@
 
             const cancelEditMode = () => {
                 setIsEditingBook(false);
-                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '' });
+                setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
                 setEditBookSeriesDropdownOpen(false);
             };
 
@@ -3317,6 +3318,13 @@
                     previousValues.userNote = oldNote;
                     newValues.userNote = newNote;
                 }
+                // v5.4.8 - Ownership toggle
+                if (editBookFields.onWishlist !== (modalBook.onWishlist || false)) {
+                    previousValues.onWishlist = modalBook.onWishlist || false;
+                    previousValues.ownershipType = modalBook.ownershipType || 'purchased';
+                    newValues.onWishlist = editBookFields.onWishlist;
+                    newValues.ownershipType = editBookFields.onWishlist ? 'wishlist' : 'purchased';
+                }
 
                 if (Object.keys(newValues).length === 0) {
                     // Nothing changed, just exit edit mode
@@ -3325,7 +3333,7 @@
                 }
 
                 // v5.4.7 - Build userEdited flags for changed fields
-                const editedFields = Object.keys(newValues).filter(k => k !== 'userNote');
+                const editedFields = Object.keys(newValues).filter(k => k !== 'userNote' && k !== 'ownershipType');
                 const userEditedUpdate = editedFields.length > 0
                     ? editedFields.reduce((acc, k) => { acc[k] = true; return acc; }, {})
                     : null;
@@ -3362,7 +3370,7 @@
             const openBulkEditModal = (field) => {
                 const selectedBookIds = Array.from(explorerSelectedBooks);
                 const selectedBooks = selectedBookIds.map(id => books.find(b => b.id === id)).filter(Boolean);
-                const fieldKey = field === 'position' ? 'seriesPosition' : field;
+                const fieldKey = field === 'position' ? 'seriesPosition' : (field === 'ownership' ? 'onWishlist' : field);
                 const values = new Set(selectedBooks.map(b => {
                     const val = b[fieldKey];
                     return val != null ? String(val) : '';
@@ -3380,10 +3388,12 @@
 
             const saveBulkEdit = () => {
                 if (!bulkEditField || bulkEditBookIds.length === 0) return;
-                const fieldKey = bulkEditField === 'position' ? 'seriesPosition' : bulkEditField;
+                const fieldKey = bulkEditField === 'position' ? 'seriesPosition' : (bulkEditField === 'ownership' ? 'onWishlist' : bulkEditField);
                 let newValue;
                 if (bulkEditField === 'position') {
                     newValue = bulkEditInput.trim() ? parseFloat(bulkEditInput) : null;
+                } else if (bulkEditField === 'ownership') {
+                    newValue = bulkEditInput === 'true';  // boolean
                 } else {
                     newValue = bulkEditInput.trim() || null;
                 }
@@ -3401,12 +3411,17 @@
                 setBooks(prev => {
                     const updated = prev.map(b => {
                         if (!bulkEditBookIds.includes(b.id)) return b;
-                        return { ...b, [fieldKey]: newValue, userEdited: { ...(b.userEdited || {}), [fieldKey]: true } };
+                        const updatedBook = { ...b, [fieldKey]: newValue, userEdited: { ...(b.userEdited || {}), [fieldKey]: true } };
+                        // v5.4.8 - Ownership toggle: also set ownershipType
+                        if (fieldKey === 'onWishlist') {
+                            updatedBook.ownershipType = newValue ? 'wishlist' : 'purchased';
+                        }
+                        return updatedBook;
                     });
                     saveBooksToIndexedDB(updated);
                     return updated;
                 });
-                const fieldLabel = bulkEditField === 'position' ? 'position' : bulkEditField;
+                const fieldLabel = bulkEditField === 'position' ? 'position' : (bulkEditField === 'ownership' ? 'ownership' : bulkEditField);
                 const count = bulkEditBookIds.length;
                 recordAction({
                     type: 'BULK_EDIT_BOOKS',
@@ -3531,7 +3546,12 @@
                         setBooks(prev => {
                             const updated = prev.map(b => {
                                 if (action.bookIds.includes(b.id) && action.previousValues[b.id] !== undefined) {
-                                    return { ...b, [action.fieldKey]: action.previousValues[b.id] };
+                                    const undone = { ...b, [action.fieldKey]: action.previousValues[b.id] };
+                                    // v5.4.8 - Derive ownershipType from onWishlist
+                                    if (action.fieldKey === 'onWishlist') {
+                                        undone.ownershipType = undone.onWishlist ? 'wishlist' : 'purchased';
+                                    }
+                                    return undone;
                                 }
                                 return b;
                             });
@@ -3541,7 +3561,9 @@
                         if (modalBookRef.current && action.bookIds.includes(modalBookRef.current.id)) {
                             const prevVal = action.previousValues[modalBookRef.current.id];
                             if (prevVal !== undefined) {
-                                setModalBook(prev => prev ? { ...prev, [action.fieldKey]: prevVal } : prev);
+                                const updates = { [action.fieldKey]: prevVal };
+                                if (action.fieldKey === 'onWishlist') updates.ownershipType = prevVal ? 'wishlist' : 'purchased';
+                                setModalBook(prev => prev ? { ...prev, ...updates } : prev);
                             }
                         }
                         break;
@@ -3843,14 +3865,22 @@
                     // v5.4.7 - Redo bulk edit
                     case 'BULK_EDIT_BOOKS':
                         setBooks(prev => {
-                            const updated = prev.map(b =>
-                                action.bookIds.includes(b.id) ? { ...b, [action.fieldKey]: action.newValue } : b
-                            );
+                            const updated = prev.map(b => {
+                                if (!action.bookIds.includes(b.id)) return b;
+                                const redone = { ...b, [action.fieldKey]: action.newValue };
+                                // v5.4.8 - Derive ownershipType from onWishlist
+                                if (action.fieldKey === 'onWishlist') {
+                                    redone.ownershipType = redone.onWishlist ? 'wishlist' : 'purchased';
+                                }
+                                return redone;
+                            });
                             saveBooksToIndexedDB(updated);
                             return updated;
                         });
                         if (modalBookRef.current && action.bookIds.includes(modalBookRef.current.id)) {
-                            setModalBook(prev => prev ? { ...prev, [action.fieldKey]: action.newValue } : prev);
+                            const updates = { [action.fieldKey]: action.newValue };
+                            if (action.fieldKey === 'onWishlist') updates.ownershipType = action.newValue ? 'wishlist' : 'purchased';
+                            setModalBook(prev => prev ? { ...prev, ...updates } : prev);
                         }
                         break;
                     // v5.0.0-alpha.46 - Explorer folder operations
@@ -6679,9 +6709,10 @@
                     {/* v5.4.7 - Bulk edit modal */}
                     {showBulkEditModal && (() => {
                         const fieldConfig = {
-                            author:   { title: 'Edit Author',   fieldKey: 'author' },
-                            series:   { title: 'Edit Series',   fieldKey: 'series' },
-                            position: { title: 'Edit Position', fieldKey: 'seriesPosition' }
+                            author:    { title: 'Edit Author',    fieldKey: 'author' },
+                            series:    { title: 'Edit Series',    fieldKey: 'series' },
+                            position:  { title: 'Edit Position',  fieldKey: 'seriesPosition' },
+                            ownership: { title: 'Edit Ownership', fieldKey: 'onWishlist' }
                         };
                         const config = fieldConfig[bulkEditField];
                         if (!config) return null;
@@ -6774,6 +6805,28 @@
                                                 placeholder={placeholder || 'e.g., 1, 1.5'}
                                                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                                 autoFocus />
+                                        )}
+                                        {bulkEditField === 'ownership' && (
+                                            <div className="flex gap-2">
+                                                <button type="button"
+                                                    onClick={() => setBulkEditInput('false')}
+                                                    className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                                                        bulkEditInput === 'false'
+                                                            ? 'bg-green-100 text-green-800 border-green-400 ring-2 ring-green-400'
+                                                            : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100'
+                                                    }`}>
+                                                    Purchased
+                                                </button>
+                                                <button type="button"
+                                                    onClick={() => setBulkEditInput('true')}
+                                                    className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                                                        bulkEditInput === 'true'
+                                                            ? 'bg-amber-100 text-amber-800 border-amber-400 ring-2 ring-amber-400'
+                                                            : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100'
+                                                    }`}>
+                                                    Wishlist
+                                                </button>
+                                            </div>
                                         )}
                                         <div className="flex justify-end gap-2">
                                             <button type="button"
@@ -6959,12 +7012,22 @@
                                             ) : (
                                                 <h2 className="text-3xl font-bold text-gray-900 mb-3">{modalBook.title}</h2>
                                             )}
-                                            {modalBook.onWishlist && (
+                                            {isEditingBook ? (
                                                 <div className="mb-3 flex items-center gap-3">
-                                                    <span className="inline-flex items-center bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
-                                                        ⭐ Wishlist Item
-                                                    </span>
-                                                    {/* v4.17.0.k - Green styling when at goal price */}
+                                                    <select
+                                                        value={editBookFields.onWishlist ? 'wishlist' : 'purchased'}
+                                                        onChange={(e) => setEditBookFields(prev => ({ ...prev, onWishlist: e.target.value === 'wishlist' }))}
+                                                        onKeyDown={(e) => e.stopPropagation()}
+                                                        className={`px-3 py-1 rounded-full text-sm font-medium border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                            editBookFields.onWishlist
+                                                                ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                                                : 'bg-green-100 text-green-800 border-green-300'
+                                                        }`}
+                                                    >
+                                                        <option value="purchased">Purchased</option>
+                                                        <option value="wishlist">Wishlist Item</option>
+                                                    </select>
+                                                    {/* v4.17.0.k - View on Amazon button */}
                                                     {(() => {
                                                         const atGoal = modalBook.priceTrigger != null && modalBook.currentPrice != null && modalBook.currentPrice <= modalBook.priceTrigger;
                                                         return (
@@ -6977,6 +7040,26 @@
                                                         );
                                                     })()}
                                                 </div>
+                                            ) : (
+                                                modalBook.onWishlist && (
+                                                    <div className="mb-3 flex items-center gap-3">
+                                                        <span className="inline-flex items-center bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
+                                                            ⭐ Wishlist Item
+                                                        </span>
+                                                        {/* v4.17.0.k - Green styling when at goal price */}
+                                                        {(() => {
+                                                            const atGoal = modalBook.priceTrigger != null && modalBook.currentPrice != null && modalBook.currentPrice <= modalBook.priceTrigger;
+                                                            return (
+                                                                <button
+                                                                    onClick={() => window.open(getAmazonUrl(modalBook.asin), '_blank')}
+                                                                    className={`px-3 py-1 ${atGoal ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'} text-white rounded text-sm font-medium`}
+                                                                    title="Opens Amazon with affiliate link">
+                                                                    View on Amazon {atGoal ? `— $${modalBook.currentPrice.toFixed(2)}` : '→'}
+                                                                </button>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                )
                                             )}
                                             {isEditingBook ? (
                                                 <div className="flex items-center gap-2 mb-4">
@@ -10878,7 +10961,7 @@
                         const tagsSubmenuOverflows = top + tagsItemOffset + tagsSubmenuHeight > viewportHeight;
                         // v5.4.7 - Edit submenu is ~8th item (~280px from menu top)
                         const editItemOffset = 280;
-                        const editSubmenuHeight = 120;
+                        const editSubmenuHeight = 165;
                         const editSubmenuOverflows = top + editItemOffset + editSubmenuHeight > viewportHeight;
 
                         // v5.0.0-alpha.166 - Phase 2: Helper functions for Move to / Copy to
@@ -11346,6 +11429,11 @@
                                                         <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                                                             onClick={() => openBulkEditModal('position')}>
                                                             Position...
+                                                        </div>
+                                                        <div className="border-t border-gray-200 my-1"></div>
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                            onClick={() => openBulkEditModal('ownership')}>
+                                                            Ownership...
                                                         </div>
                                                     </div>
                                                 )}

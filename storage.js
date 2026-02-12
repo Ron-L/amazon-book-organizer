@@ -92,12 +92,16 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                     // v5.4.7 - Respect userEdited flags (Amazon only, not backups)
                     const isBackupWish = !!book.userEdited;
                     const ueWish = isBackupWish ? {} : (existing.userEdited || {});
+                    // v5.4.8 - If user manually set ownership, preserve their choice
+                    const preserveOwnership = ueWish.onWishlist;
                     booksByAsin.set(book.asin, {
                         ...book,
                         title: ueWish.title ? existing.title : book.title,
                         author: ueWish.author ? existing.author : book.author,
                         series: ueWish.series ? existing.series : book.series,
                         seriesPosition: ueWish.seriesPosition ? existing.seriesPosition : book.seriesPosition,
+                        onWishlist: preserveOwnership ? existing.onWishlist : book.onWishlist,
+                        ownershipType: preserveOwnership ? existing.ownershipType : book.ownershipType,
                         addedToWishlist: existing.addedToWishlist,
                         // v5.0.0-alpha.163 - PRESERVE price goal when book transitions to owned
                         priceTrigger: existing.priceTrigger ?? book.priceTrigger,
@@ -142,6 +146,8 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         author: ue.author ? previousBook.author : book.author,
                         series: ue.series ? previousBook.series : book.series,
                         seriesPosition: ue.seriesPosition ? previousBook.seriesPosition : book.seriesPosition,
+                        onWishlist: ue.onWishlist ? previousBook.onWishlist : book.onWishlist,  // v5.4.8 - Ownership toggle
+                        ownershipType: ue.onWishlist ? previousBook.ownershipType : book.ownershipType,  // v5.4.8
                         addedToWishlist: book.addedToWishlist ?? previousBook.addedToWishlist,
                         priceTrigger: book.priceTrigger ?? previousBook.priceTrigger,
                         targetPrice: book.targetPrice ?? previousBook.targetPrice,
