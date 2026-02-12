@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.6-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.6-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -257,8 +257,6 @@
             const [showBulkPriceModal, setShowBulkPriceModal] = useState(false); // v4.20.0.a - bulk price goal modal
             const [bulkPriceInput, setBulkPriceInput] = useState(''); // v4.20.0.a - bulk price goal input
             const [bulkPriceBookIds, setBulkPriceBookIds] = useState([]); // v5.0.0-alpha.169.8 - store book IDs when modal opens
-            const [isEditingNote, setIsEditingNote] = useState(false); // v4.21.0.a - book note edit mode
-            const [noteEditContent, setNoteEditContent] = useState(''); // v4.21.0.a - book note editor content
             const [tagInputValue, setTagInputValue] = useState(''); // v4.27.0 - tag input autocomplete value
             const [tagManagementOpen, setTagManagementOpen] = useState(false); // v4.27.0 Phase 3 - Tag management modal
             const [editingTagId, setEditingTagId] = useState(null); // v4.27.0 Phase 3 - Currently renaming tag
@@ -3247,13 +3245,11 @@
 
             const closeBookModal = () => {
                 setModalBook(null);
-                setIsEditingNote(false);
                 setIsEditingBook(false);
                 setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '' });
                 setEditBookSeriesDropdownOpen(false);
                 setContextSubmenu(null);
                 setTagInputValue('');
-                setNoteEditContent('');
             };
 
             // v5.4.6 - Book dialog edit mode functions
@@ -3382,6 +3378,19 @@
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
             }, [modalBook, showBulkPriceModal, isEditingBook, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+
+            // v5.4.6 - ENTER saves edit mode when no input is focused
+            useEffect(() => {
+                if (!isEditingBook) return;
+                const handleEditEnter = (e) => {
+                    if (e.key === 'Enter' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
+                        e.preventDefault();
+                        saveEditMode();
+                    }
+                };
+                window.addEventListener('keydown', handleEditEnter);
+                return () => window.removeEventListener('keydown', handleEditEnter);
+            }, [isEditingBook]);
 
             const recordAction = (action) => {
                 setUndoStack(prev => {
@@ -6654,7 +6663,7 @@
 
                     {modalBook && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeBookModal(); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => { e.stopPropagation(); if (contextSubmenu === 'addTagModal') { setContextSubmenu(null); setTagInputValue(''); } }} onKeyDown={(e) => { if (isEditingBook && e.key === 'Enter' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) { e.preventDefault(); saveEditMode(); } }}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => { e.stopPropagation(); if (contextSubmenu === 'addTagModal') { setContextSubmenu(null); setTagInputValue(''); } }}>
                                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-end gap-2">
                                     {isEditingBook ? (
                                         <>
@@ -6846,7 +6855,7 @@
                                                         {editBookSeriesDropdownOpen && (() => {
                                                             const allSeries = getUniqueSeriesList();
                                                             const filtered = (editBookSeriesFilterRef.current && editBookFields.series.trim())
-                                                                ? allSeries.filter(s => s.name.toLowerCase().includes(editBookFields.series.toLowerCase()))
+                                                                ? allSeries.filter(s => s.name.toLowerCase().startsWith(editBookFields.series.toLowerCase()))
                                                                 : allSeries;
                                                             return filtered.length > 0 ? (
                                                                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -6859,6 +6868,7 @@
                                                                                 setEditBookFields(prev => ({ ...prev, series: s.name }));
                                                                                 setEditBookSeriesDropdownOpen(false);
                                                                             }}
+                                                                            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') { setEditBookSeriesDropdownOpen(false); } }}
                                                                             className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex justify-between items-center ${
                                                                                 s.name === modalBook?.series ? 'bg-blue-100 font-medium' : ''
                                                                             }`}>
@@ -7277,9 +7287,9 @@
                                     {/* v4.21.0.a - Book Notes section */}
                                     <div className="mb-6 pb-6 border-b border-gray-200">
                                         {isEditingBook ? (
-                                            // v5.4.6 - Edit mode: always show textarea
+                                            // v5.4.6 - Edit mode: editable textarea
                                             <div>
-                                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Note</h3>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
                                                 <textarea
                                                     className="book-note-editor"
                                                     value={editBookFields.userNote}
@@ -7288,86 +7298,16 @@
                                                     onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') e.target.blur(); }}
                                                 />
                                             </div>
-                                        ) : isEditingNote ? (
-                                            // Standalone note edit mode - show textarea with save/cancel
-                                            <div>
-                                                <h3 className="text-lg font-semibold text-gray-900 mb-3">Note</h3>
-                                                <textarea
-                                                    className="book-note-editor"
-                                                    value={noteEditContent}
-                                                    onChange={(e) => setNoteEditContent(e.target.value)}
-                                                    placeholder="Add a personal note about this book..."
-                                                    autoFocus
-                                                    onKeyDown={(e) => {
-                                                        e.stopPropagation();
-                                                        if (e.key === 'Escape') {
-                                                            setIsEditingNote(false);
-                                                            setNoteEditContent('');
-                                                        }
-                                                    }}
-                                                />
-                                                <div className="flex gap-2 mt-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            const trimmedNote = noteEditContent.trim();
-                                                            const newNote = trimmedNote || undefined;
-                                                            setBooks(prev => {
-                                                                const updated = prev.map(b =>
-                                                                    b.id === modalBook.id
-                                                                        ? { ...b, userNote: newNote }
-                                                                        : b
-                                                                );
-                                                                saveBooksToIndexedDB(updated);
-                                                                return updated;
-                                                            });
-                                                            setModalBook(prev => ({
-                                                                ...prev,
-                                                                userNote: newNote
-                                                            }));
-                                                            setIsEditingNote(false);
-                                                            setNoteEditContent('');
-                                                        }}
-                                                        className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-                                                    >
-                                                        Save
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setIsEditingNote(false);
-                                                            setNoteEditContent('');
-                                                        }}
-                                                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                                                    >
-                                                        Cancel
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ) : modalBook.userNote ? (
-                                            // Display mode - show sticky note
-                                            <div className="book-note">
-                                                <div className="book-note-text">{modalBook.userNote}</div>
-                                                <button
-                                                    className="book-note-edit-btn"
-                                                    onClick={() => {
-                                                        setNoteEditContent(modalBook.userNote);
-                                                        setIsEditingNote(true);
-                                                    }}
-                                                    title="Edit note"
-                                                >
-                                                    ✏️
-                                                </button>
-                                            </div>
                                         ) : (
-                                            // No note - show Add Note button
-                                            <button
-                                                onClick={() => {
-                                                    setNoteEditContent('');
-                                                    setIsEditingNote(true);
-                                                }}
-                                                className="px-3 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 hover:border-gray-400"
-                                            >
-                                                + Add Note
-                                            </button>
+                                            // v5.4.6 - View mode: read-only display
+                                            <div>
+                                                <span className="font-semibold text-gray-700 text-sm">Note:</span>
+                                                {modalBook.userNote ? (
+                                                    <p className="text-gray-700 mt-1 whitespace-pre-wrap">{modalBook.userNote}</p>
+                                                ) : (
+                                                    <span className="text-gray-400 italic text-sm ml-2">No note</span>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
 
@@ -11126,10 +11066,16 @@
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         const book = selectedBooksArray[0];
-                                                        // Open modal with note editor (v5.0.0-alpha.167.1 - Fixed to use openBookModal)
                                                         openBookModal(book, null);
-                                                        setNoteEditContent(book.userNote || '');
-                                                        setIsEditingNote(true);
+                                                        // v5.4.6 - Enter edit mode directly with book data
+                                                        setEditBookFields({
+                                                            title: book.title || '',
+                                                            author: book.author || '',
+                                                            series: book.series || '',
+                                                            seriesPosition: book.seriesPosition != null ? String(book.seriesPosition) : '',
+                                                            userNote: book.userNote || ''
+                                                        });
+                                                        setIsEditingBook(true);
                                                         setExplorerBookContextMenu(null);
                                                         setContextSubmenu(null);
                                                     }}>
