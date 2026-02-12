@@ -131,8 +131,9 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                     const ue = previousBook.userEdited || {};
                     if (Object.keys(ue).length > 0) {
                         console.log(`🛡️ Preserving user-edited fields for "${previousBook.title}":`, Object.keys(ue).join(', '));
+                        if (ue.author) console.log(`   previousBook.author="${previousBook.author}" vs import.author="${book.author}"`);
                     }
-                    booksByAsin.set(book.asin, {
+                    const mergedBook = {
                         ...book,
                         title: ue.title ? previousBook.title : book.title,
                         author: ue.author ? previousBook.author : book.author,
@@ -146,7 +147,9 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         hidden: book.hidden ?? previousBook.hidden,
                         myRating: book.myRating ?? previousBook.myRating,  // v5.0.0-alpha.175.31 - Personal rating
                         userEdited: ue  // Preserve the flags themselves
-                    });
+                    };
+                    if (ue.author) console.log(`   ✅ merged.author="${mergedBook.author}"`);
+                    booksByAsin.set(book.asin, mergedBook);
                 } else {
                     // React saves: just save as-is, no merge
                     booksByAsin.set(book.asin, book);
