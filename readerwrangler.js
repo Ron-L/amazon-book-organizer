@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.6-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.6-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -266,6 +266,7 @@
             const [isEditingBook, setIsEditingBook] = useState(false);
             const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '' });
             const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
+            const editBookSeriesFilterRef = useRef(false); // true = filter by typed text, false = show all
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
             const [wizardMinBooksSlider, setWizardMinBooksSlider] = useState(5); // v5.1.0-alpha.10 - Slider value (immediate)
             const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0-alpha.10 - Debounced threshold for detection
@@ -6653,7 +6654,7 @@
 
                     {modalBook && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeBookModal(); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => { e.stopPropagation(); if (contextSubmenu === 'addTagModal') { setContextSubmenu(null); setTagInputValue(''); } }}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => { e.stopPropagation(); if (contextSubmenu === 'addTagModal') { setContextSubmenu(null); setTagInputValue(''); } }} onKeyDown={(e) => { if (isEditingBook && e.key === 'Enter' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) { e.preventDefault(); saveEditMode(); } }}>
                                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-end gap-2">
                                     {isEditingBook ? (
                                         <>
@@ -6698,7 +6699,7 @@
                                                     type="text"
                                                     value={editBookFields.title}
                                                     onChange={(e) => setEditBookFields(prev => ({ ...prev, title: e.target.value }))}
-                                                    onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); }}
+                                                    onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') e.target.blur(); }}
                                                     className="text-3xl font-bold text-gray-900 mb-3 w-full border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     placeholder="Title"
                                                 />
@@ -6731,7 +6732,7 @@
                                                         type="text"
                                                         value={editBookFields.author}
                                                         onChange={(e) => setEditBookFields(prev => ({ ...prev, author: e.target.value }))}
-                                                        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); }}
+                                                        onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') e.target.blur(); }}
                                                         className="text-xl text-gray-700 flex-1 border border-blue-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                         placeholder="Author"
                                                     />
@@ -6826,15 +6827,16 @@
                                                                 value={editBookFields.series}
                                                                 onChange={(e) => {
                                                                     setEditBookFields(prev => ({ ...prev, series: e.target.value }));
+                                                                    editBookSeriesFilterRef.current = true;
                                                                     setEditBookSeriesDropdownOpen(true);
                                                                 }}
-                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { setEditBookSeriesDropdownOpen(false); e.target.blur(); } if (e.key === 'Escape') { setEditBookSeriesDropdownOpen(false); } }}
+                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { setEditBookSeriesDropdownOpen(false); e.target.blur(); } if (e.key === 'Escape') { setEditBookSeriesDropdownOpen(false); e.target.blur(); } }}
                                                                 placeholder="Type to filter series..."
                                                                 className="w-full px-3 py-2 pr-8 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                                             />
                                                             <button
                                                                 type="button"
-                                                                onClick={() => setEditBookSeriesDropdownOpen(!editBookSeriesDropdownOpen)}
+                                                                onClick={() => { editBookSeriesFilterRef.current = false; setEditBookSeriesDropdownOpen(!editBookSeriesDropdownOpen); }}
                                                                 onKeyDown={(e) => e.stopPropagation()}
                                                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs"
                                                                 tabIndex={-1}>
@@ -6843,7 +6845,7 @@
                                                         </div>
                                                         {editBookSeriesDropdownOpen && (() => {
                                                             const allSeries = getUniqueSeriesList();
-                                                            const filtered = editBookFields.series.trim()
+                                                            const filtered = (editBookSeriesFilterRef.current && editBookFields.series.trim())
                                                                 ? allSeries.filter(s => s.name.toLowerCase().includes(editBookFields.series.toLowerCase()))
                                                                 : allSeries;
                                                             return filtered.length > 0 ? (
@@ -6851,7 +6853,7 @@
                                                                     {filtered.map(s => (
                                                                         <button
                                                                             key={s.name}
-                                                                            ref={s.name === modalBook?.series ? (el) => { if (el) requestAnimationFrame(() => el.scrollIntoView({ block: 'start' })); } : null}
+                                                                            ref={s.name === (editBookFields.series || modalBook?.series) ? (el) => { if (el) requestAnimationFrame(() => { const container = el.closest('.overflow-y-auto'); if (container) { const top = el.offsetTop - container.offsetTop; container.scrollTop = top; } }); } : null}
                                                                             type="button"
                                                                             onClick={() => {
                                                                                 setEditBookFields(prev => ({ ...prev, series: s.name }));
@@ -6880,7 +6882,7 @@
                                                                         setEditBookFields(prev => ({ ...prev, seriesPosition: val }));
                                                                     }
                                                                 }}
-                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); }}
+                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter' || e.key === 'Escape') e.target.blur(); }}
                                                                 placeholder="e.g., 1, 1.5"
                                                                 className="w-full px-3 py-2 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                                                             />
@@ -6897,36 +6899,20 @@
                                                 </div>
                                             ) : modalBook.series ? (
                                                 <div className="mb-3">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <p className="text-lg" style={{ color: '#621e31' }}>
-                                                            {(modalBook.seriesPosition && modalBook.seriesTotal)
-                                                                ? `Book ${modalBook.seriesPosition} of ${modalBook.seriesTotal}: ${modalBook.series}`
-                                                                : modalBook.seriesPosition
-                                                                    ? `Book ${modalBook.seriesPosition}: ${modalBook.series}`
-                                                                    : modalBook.series
-                                                            }
-                                                        </p>
-                                                        <button
-                                                            onClick={enterEditMode}
-                                                            className="hover:bg-gray-100 rounded px-1 transition-colors"
-                                                            title="Edit series information">
-                                                            ✏️
-                                                        </button>
-                                                    </div>
+                                                    <p className="text-lg" style={{ color: '#621e31' }}>
+                                                        {(modalBook.seriesPosition && modalBook.seriesTotal)
+                                                            ? `Book ${modalBook.seriesPosition} of ${modalBook.seriesTotal}: ${modalBook.series}`
+                                                            : modalBook.seriesPosition
+                                                                ? `Book ${modalBook.seriesPosition}: ${modalBook.series}`
+                                                                : modalBook.series
+                                                        }
+                                                    </p>
                                                 </div>
                                             ) : (
                                                 <div className="mb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <p className="text-sm text-gray-500 italic">
-                                                            Not part of a series
-                                                        </p>
-                                                        <button
-                                                            onClick={enterEditMode}
-                                                            className="flex items-center gap-1 px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded transition-colors"
-                                                            title="Add to series">
-                                                            ✏️ Add to series
-                                                        </button>
-                                                    </div>
+                                                    <p className="text-sm text-gray-500 italic">
+                                                        Not part of a series
+                                                    </p>
                                                 </div>
                                             )}
 
@@ -7299,7 +7285,7 @@
                                                     value={editBookFields.userNote}
                                                     onChange={(e) => setEditBookFields(prev => ({ ...prev, userNote: e.target.value }))}
                                                     placeholder="Add a personal note about this book..."
-                                                    onKeyDown={(e) => e.stopPropagation()}
+                                                    onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') e.target.blur(); }}
                                                 />
                                             </div>
                                         ) : isEditingNote ? (
