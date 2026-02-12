@@ -2,7 +2,7 @@
 
 **Purpose:** Document all field mappings across transformation boundaries to prevent field-name-mismatch bugs.
 
-**Last Updated:** 2026-02-04 (v5.0.0-alpha.175.30)
+**Last Updated:** 2026-02-12 (v5.4.7)
 
 ---
 
@@ -53,6 +53,14 @@ Field names change at certain boundaries. This document maps those transformatio
   hidden: false,                  // User hidden state
   isDeal: false,                  // Computed: price < priceTrigger
 
+  // User edit tracking (v5.4.7)
+  userEdited: {                   // Per-field flags set when user edits via dialog or bulk edit
+    title: true,                  // Only present if user edited this field
+    author: true,
+    series: true,
+    seriesPosition: true
+  },                              // undefined if no fields edited
+
   // Internal-only fields (not exported)
   id: "unique-id",                // Internal unique identifier
   normalizedTitle: "book title",  // Lowercase for sorting
@@ -74,6 +82,7 @@ These fields have **different names** in different contexts:
 | **Tags** | `tags` | `tags` | `tags` | `tags` |
 | **Price Alert** | `priceTrigger` | `priceTrigger` | `priceTrigger` | `priceTrigger` |
 | **My Rating** | `myRating` | `myRating` | `myRating` | `myRating` |
+| **User Edited** | `userEdited` | `userEdited` | `userEdited` | `userEdited` |
 
 **Why the inconsistency?**
 - **Internal:** `userNote` distinguishes from potential Amazon `note` field
@@ -145,7 +154,8 @@ const bookItems = books.map(book => ({
   tags: book.tags,                    // ✓ Same name
   note: book.userNote,                // ⚠️ userNote → note
   priceTrigger: book.priceTrigger,    // ✓ Same name
-  myRating: book.myRating             // ✓ Same name [v5.0.0-alpha.175.31]
+  myRating: book.myRating,            // ✓ Same name [v5.0.0-alpha.175.31]
+  userEdited: book.userEdited         // ✓ Same name [v5.4.7] - undefined if no edits
 }));
 ```
 
@@ -181,7 +191,8 @@ const importedBooks = backupData.library.bookItems.map(item => ({
   tags: item.tags,                    // ✓ Same name
   userNote: item.note,                // ⚠️ note → userNote
   priceTrigger: item.priceTrigger,    // ✓ Same name
-  myRating: item.myRating || 0        // ✓ Same name, default to 0 [v5.0.0-alpha.175.31]
+  myRating: item.myRating || 0,       // ✓ Same name, default to 0 [v5.0.0-alpha.175.31]
+  userEdited: item.userEdited         // ✓ Same name [v5.4.7] - restored from backup
 }));
 ```
 
@@ -192,22 +203,38 @@ const importedBooks = backupData.library.bookItems.map(item => ({
 **Location:** `readerwrangler.js` - `importLibrary()`
 **Mapping:** Amazon JSON → Internal format
 
-**User metadata preservation:**
+**User metadata preservation** (storage.js merge logic):
 ```javascript
-const existingBook = books.find(b => b.asin === newBook.asin);
+const previousBook = existingByAsin.get(book.asin);
+
+// v5.4.7 - Distinguish Amazon import vs backup restore
+const isBackupData = !!book.userEdited;
+const ue = isBackupData ? {} : (previousBook.userEdited || {});
 
 const mergedBook = {
-  ...newBook,  // Amazon data (overwrites)
+  ...book,  // Amazon data (overwrites)
 
-  // Preserve user metadata from existing book
-  userNote: existingBook?.userNote,
-  tags: existingBook?.tags || [],
-  priceTrigger: existingBook?.priceTrigger,
-  myRating: existingBook?.myRating || 0,
-  readStatus: existingBook?.readStatus || 'unknown',
-  hidden: existingBook?.hidden || false
+  // v5.4.7 - User-edited fields: preserved from IndexedDB during Amazon imports
+  title: ue.title ? previousBook.title : book.title,
+  author: ue.author ? previousBook.author : book.author,
+  series: ue.series ? previousBook.series : book.series,
+  seriesPosition: ue.seriesPosition ? previousBook.seriesPosition : book.seriesPosition,
+
+  // User metadata: always preserved from existing book
+  tags: book.tags ?? previousBook.tags,
+  note: book.note ?? previousBook.note,
+  priceTrigger: book.priceTrigger ?? previousBook.priceTrigger,
+  myRating: book.myRating ?? previousBook.myRating,
+  hidden: book.hidden ?? previousBook.hidden,
+
+  // Preserve flags: backup restores its own, Amazon preserves existing
+  userEdited: isBackupData ? book.userEdited : ue
 };
 ```
+
+**Import type detection:**
+- `book.userEdited` present → **backup restore** → use backup values as-is, restore its flags
+- `book.userEdited` absent → **Amazon import** → check `previousBook.userEdited`, preserve flagged fields
 
 ---
 
@@ -258,17 +285,19 @@ const COLUMN_CONFIG = {
 ### Complete Import Cycle
 
 ```
-User: File → Import Library
+User: File → Import Library (amazon-library.json)
   ↓
-Amazon JSON file
+Amazon JSON file (no userEdited field)
   ↓
-Parse JSON
+Parse JSON → processedBooks
   ↓
-Merge with existing books (preserve userNote, tags, priceTrigger, myRating)
+Merge with IndexedDB (preserveUserData=true):
+  - Always preserve: userNote, tags, priceTrigger, myRating, hidden
+  - Check userEdited flags: preserve title/author/series/seriesPosition if flagged
   ↓
 Update books[] state (in memory)
   ↓
-Auto-save to IndexedDB
+Save to IndexedDB
   ↓
 Auto-save organization to localStorage
 ```
@@ -280,7 +309,7 @@ User: File → Export Backup
   ↓
 Read books[] from memory
   ↓
-Transform: userNote → note
+Transform: userNote → note, include userEdited flags
   ↓
 Create backup JSON
   ↓
@@ -290,15 +319,17 @@ Download backup.json
 
 User: File → Import Backup
   ↓
-Read backup.json
+Read backup.json (has userEdited field on edited books)
   ↓
-Transform: note → userNote
+Transform: note → userNote, restore userEdited
   ↓
-Restore books[] state
+Merge: backup has userEdited → use backup values as-is (no previousBook override)
+  ↓
+Restore books[] state (with userEdited flags for future Amazon imports)
   ↓
 Restore tagRegistry state
   ↓
-Auto-save to IndexedDB
+Save to IndexedDB
   ↓
 Auto-save organization to localStorage
 ```
@@ -413,6 +444,7 @@ organization: {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 5.4.7 | 2026-02-12 | Added userEdited field for per-field edit tracking; Amazon imports respect flags; backup export/import preserves flags |
 | 5.0.4 | 2026-02-05 | Added 'wishlist' to ownershipType enum; documented onWishlist field; Source filter checks both fields for backward compatibility |
 | 5.0.0-alpha.175.31 | 2026-02-04 | Added myRating field (Phase 4.5) |
 | 5.0.0-alpha.175.20 | 2026-02-04 | Fixed note/userNote field name mismatch |
@@ -433,6 +465,9 @@ When adding new user metadata fields, verify:
 - [ ] Field included in auto-save to localStorage
 - [ ] Field included in IndexedDB storage
 - [ ] Export → Reset → Import cycle preserves field
+- [ ] If field is user-editable: set `userEdited` flag on save, check flag in merge
+- [ ] Amazon import respects `userEdited` flags (preserves user edits)
+- [ ] Backup import restores values as-is (ignores existing `userEdited` flags)
 - [ ] Column config added (if sortable/displayable)
 - [ ] Filter logic added (if filterable)
 
