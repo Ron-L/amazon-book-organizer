@@ -8,13 +8,48 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔥 Priority 0: Immediate
 
+**1. Bulk Edit Fields (Author / Title / Series / Position)** - MEDIUM/MEDIUM (6-10 hours)
+   - **Problem**: Amazon data has inconsistent author names (e.g., "C.J. Fielding" vs "CJ Fielding" vs "C.J.  Fielding" with extra spaces). No way to fix this in the app — discovered via Group feature showing fragmented author groups.
+   - **Multi-select context menu approach**: Select 1+ books → right-click → "Edit Author..." / "Edit Series..." / "Edit Title..." / "Edit Position..."
+   - Each opens a small modal/popover with a single text field:
+     - All selected books have same value → pre-populate with it
+     - Mixed values → empty field with placeholder "Mixed (N values)"
+     - User types new value → applies to all selected books
+   - One field at a time (not a multi-field form) — keeps it simple and focused
+   - Works in both table and cover views (same context menu)
+   - Changes persist to book data (same as existing series editing in book detail modal)
+   - **Undo support**: Record as a single undoable action ("Edit Author for N books")
+   - **Future**: Double-click cell in table view for inline single-book editing (bigger lift, separate feature)
+
 ---
 
 ### 🎯 Priority 1: Current Focus
 
 
-**2. Author list**
-   -  Should we have a way to generate a list? If so, how and where would be the output? A dialog? Maybe list view in right panel have a way of "collapsing" the book list by Author (show only 1 line per author, all fields except author are blank)???
+**1. 📊 Group in Book Explorer** - MEDIUM/MEDIUM (6-10 hours) — IN PROGRESS (v5.4.5)
+   - Simple on/off toggle button in toolbar (hidden when sort is Manual Order)
+   - Group key always mirrors the current sort column — sort by Author → groups by author, sort by Series → groups by series, etc. Change sort → dividers update automatically.
+   - Dividers inserted at value transitions in sort order (sequential scan, not alphabetical re-sort)
+   - **Table view**: Full-width header `<tr>` rows with chevron, group name, book count. Click to collapse/expand.
+   - **Cover view**: Full-width section dividers (`gridColumn: 1 / -1`) with same collapse behavior.
+   - All books always shown (dividers are additive). Collapsed groups hide their books.
+   - Collapse All / Expand All as inline text buttons next to the Group toggle.
+   - Works with existing filters (groups with 0 matching books hidden).
+   - `getGroupLabel()` handles all column types (dates bucketed by month/year, ratings as "N Stars", etc.)
+   - Persisted as boolean `explorerGroupOn` in localStorage. Collapsed groups session-only.
+
+**2. 🔀 Cover View Sort Picker** - LOW/LOW (2-3 hours)
+   - Currently cover view shows "Sort: Author ▲ ×" but you can only reverse direction or clear — can't pick a different sort key without switching to list view.
+   - Fix: Click "Sort: Author ▲" → dropdown with all sortable columns (Title, Author, Rating, Published, Date Added, Series, Position, Price, Custom Order).
+   - Checkmark on current key, arrow shows direction. Click same key toggles direction. Click different key sorts by it.
+   - Shift+click adds secondary sort (matches list view shift+click-on-column convention).
+   - Display: `Sort: Author ▲, Position ▲ ×` for multi-key sorts.
+   - All sort infrastructure already exists (`explorerSort` state handles multi-key). This is purely a UI control.
+
+**3. It would be nice if Author or Title had a dropdown memory
+
+**4. I think wishlist import overwrote my owned books?**
+   - Destroyer shows no owned books now.
 
 **5. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)
    - Problem: Portrait mode shows only 1-2 book rows, left pane too wide, headers consume vertical space
@@ -22,8 +57,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Solution TBD: May require UX paradigm shift (hamburger nav, tab switching, overlay panels) vs. basic responsive CSS
    - Needs brainstorming session to determine approach
    - Impact: Makes app usable on mobile devices
-
-**6. It would be nice if Author or Title had a dropdown memory
 
 ---
 

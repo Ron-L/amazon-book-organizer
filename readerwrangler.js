@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.5-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.5-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8406,6 +8406,7 @@
                                             <div className="flex items-center gap-2 border-l pl-4">
                                                 <button
                                                     onClick={() => { setExplorerGroupOn(!explorerGroupOn); setCollapsedGroups(new Set()); }}
+                                                    title={explorerGroupOn ? 'Turn off grouping' : `Group by ${COLUMN_CONFIG[explorerSort[0].column]?.label || explorerSort[0].column}`}
                                                     style={{
                                                         height: '28px',
                                                         padding: '0 10px',
@@ -8422,23 +8423,24 @@
                                                     {explorerGroupOn ? 'Grouped' : 'Group'}
                                                 </button>
                                                 {explorerGroupOn && (
-                                                    <span className="flex items-center gap-1 text-xs text-gray-500">
+                                                    <span className="flex items-center gap-0.5">
                                                         <button
                                                             onClick={() => setCollapsedGroups(new Set())}
-                                                            className="hover:text-blue-600 cursor-pointer"
+                                                            className="text-gray-400 hover:text-blue-600 cursor-pointer px-1 py-0.5 rounded hover:bg-gray-100"
+                                                            style={{ fontSize: '16px', lineHeight: 1 }}
                                                             title="Expand All Groups">
-                                                            Expand
+                                                            ▾
                                                         </button>
-                                                        <span>|</span>
                                                         <button
                                                             onClick={() => {
                                                                 const allBooks = getFolderBookIds(selectedFolderId).map(id => books.find(b => b.id === id)).filter(Boolean);
                                                                 const groupNames = new Set(allBooks.map(b => getGroupLabel(b)));
                                                                 setCollapsedGroups(groupNames);
                                                             }}
-                                                            className="hover:text-blue-600 cursor-pointer"
+                                                            className="text-gray-400 hover:text-blue-600 cursor-pointer px-1 py-0.5 rounded hover:bg-gray-100"
+                                                            style={{ fontSize: '16px', lineHeight: 1 }}
                                                             title="Collapse All Groups">
-                                                            Collapse
+                                                            ▸
                                                         </button>
                                                     </span>
                                                 )}
