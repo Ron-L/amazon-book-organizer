@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.6-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.6-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3329,6 +3329,8 @@
 
                 cancelEditMode();
             };
+            const saveEditModeRef = useRef(saveEditMode);
+            saveEditModeRef.current = saveEditMode;
 
             const clearSelection = () => {
                 setExplorerSelectedBooks(new Set());
@@ -3385,7 +3387,7 @@
                 const handleEditEnter = (e) => {
                     if (e.key === 'Enter' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
                         e.preventDefault();
-                        saveEditMode();
+                        saveEditModeRef.current();
                     }
                 };
                 window.addEventListener('keydown', handleEditEnter);
@@ -6868,7 +6870,7 @@
                                                                                 setEditBookFields(prev => ({ ...prev, series: s.name }));
                                                                                 setEditBookSeriesDropdownOpen(false);
                                                                             }}
-                                                                            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') { setEditBookSeriesDropdownOpen(false); } }}
+                                                                            onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') { setEditBookSeriesDropdownOpen(false); e.target.blur(); } }}
                                                                             className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex justify-between items-center ${
                                                                                 s.name === modalBook?.series ? 'bg-blue-100 font-medium' : ''
                                                                             }`}>
