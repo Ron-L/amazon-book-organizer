@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.6-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.7-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -266,6 +266,14 @@
             const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
             const editBookSeriesFilterRef = useRef(false); // true = filter by typed text, false = show all
             const editBookSeriesInputRef = useRef(null); // ref to series input for focus management
+            // v5.4.7 - Bulk edit via context menu
+            const [showBulkEditModal, setShowBulkEditModal] = useState(false);
+            const [bulkEditField, setBulkEditField] = useState(null); // 'author' | 'series' | 'position'
+            const [bulkEditInput, setBulkEditInput] = useState('');
+            const [bulkEditBookIds, setBulkEditBookIds] = useState([]);
+            const [bulkEditSeriesDropdownOpen, setBulkEditSeriesDropdownOpen] = useState(false);
+            const bulkEditSeriesFilterRef = useRef(false);
+            const bulkEditSeriesInputRef = useRef(null);
             const [wizardModalOpen, setWizardModalOpen] = useState(false); // v5.1.0 - Auto-organize wizard modal
             const [wizardMinBooksSlider, setWizardMinBooksSlider] = useState(5); // v5.1.0-alpha.10 - Slider value (immediate)
             const [wizardMinBooks, setWizardMinBooks] = useState(5); // v5.1.0-alpha.10 - Debounced threshold for detection
@@ -1614,6 +1622,10 @@
                     // v5.4.6 - Close inline series dropdown in book edit mode
                     if (editBookSeriesDropdownOpen && !e.target.closest('[data-edit-series-dropdown]')) {
                         setEditBookSeriesDropdownOpen(false);
+                    }
+                    // v5.4.7 - Close bulk edit series dropdown
+                    if (bulkEditSeriesDropdownOpen && !e.target.closest('[data-bulk-edit-series-dropdown]')) {
+                        setBulkEditSeriesDropdownOpen(false);
                     }
                 };
 
@@ -3333,6 +3345,68 @@
             const saveEditModeRef = useRef(saveEditMode);
             saveEditModeRef.current = saveEditMode;
 
+            // v5.4.7 - Bulk edit via context menu
+            const openBulkEditModal = (field) => {
+                const selectedBookIds = Array.from(explorerSelectedBooks);
+                const selectedBooks = selectedBookIds.map(id => books.find(b => b.id === id)).filter(Boolean);
+                const fieldKey = field === 'position' ? 'seriesPosition' : field;
+                const values = new Set(selectedBooks.map(b => {
+                    const val = b[fieldKey];
+                    return val != null ? String(val) : '';
+                }));
+                const prePopulate = values.size === 1 ? [...values][0] : '';
+                setBulkEditBookIds(selectedBookIds);
+                setBulkEditField(field);
+                setBulkEditInput(prePopulate);
+                setBulkEditSeriesDropdownOpen(false);
+                bulkEditSeriesFilterRef.current = false;
+                setShowBulkEditModal(true);
+                setExplorerBookContextMenu(null);
+                setContextSubmenu(null);
+            };
+
+            const saveBulkEdit = () => {
+                if (!bulkEditField || bulkEditBookIds.length === 0) return;
+                const fieldKey = bulkEditField === 'position' ? 'seriesPosition' : bulkEditField;
+                let newValue;
+                if (bulkEditField === 'position') {
+                    newValue = bulkEditInput.trim() ? parseFloat(bulkEditInput) : null;
+                } else {
+                    newValue = bulkEditInput.trim() || null;
+                }
+                const previousValues = {};
+                bulkEditBookIds.forEach(id => {
+                    const book = books.find(b => b.id === id);
+                    if (book) previousValues[id] = book[fieldKey] ?? null;
+                });
+                const anyChanged = bulkEditBookIds.some(id => previousValues[id] !== newValue);
+                if (!anyChanged) {
+                    setShowBulkEditModal(false);
+                    setBulkEditSeriesDropdownOpen(false);
+                    return;
+                }
+                setBooks(prev => {
+                    const updated = prev.map(b =>
+                        bulkEditBookIds.includes(b.id) ? { ...b, [fieldKey]: newValue } : b
+                    );
+                    saveBooksToIndexedDB(updated);
+                    return updated;
+                });
+                const fieldLabel = bulkEditField === 'position' ? 'position' : bulkEditField;
+                const count = bulkEditBookIds.length;
+                recordAction({
+                    type: 'BULK_EDIT_BOOKS',
+                    bookIds: bulkEditBookIds,
+                    fieldKey,
+                    previousValues,
+                    newValue,
+                    description: `Edit ${fieldLabel} for ${count} book${count !== 1 ? 's' : ''}`
+                });
+                showToast(`Updated ${fieldLabel} for ${count} book${count !== 1 ? 's' : ''}`);
+                setShowBulkEditModal(false);
+                setBulkEditSeriesDropdownOpen(false);
+            };
+
             const clearSelection = () => {
                 setExplorerSelectedBooks(new Set());
             };
@@ -3352,8 +3426,8 @@
             }, [modalBook]);
             // v5.2.0-alpha.18 - Track whether any modal/dialog overlay is open
             useEffect(() => {
-                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData);
-            }, [modalBook, showBulkPriceModal, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || showBulkEditModal || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData);
+            }, [modalBook, showBulkPriceModal, showBulkEditModal, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             // v5.4.2 - ESC closes innermost modal (layered dismissal)
             // aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen handled separately in handleEscKey
@@ -3371,6 +3445,9 @@
                     // Book modal
                     if (modalBook) { closeBookModal(); return; }
                     // Standalone modals
+                    // v5.4.7 - Bulk edit series dropdown (innermost within bulk edit modal)
+                    if (bulkEditSeriesDropdownOpen) { setBulkEditSeriesDropdownOpen(false); return; }
+                    if (showBulkEditModal) { setShowBulkEditModal(false); setBulkEditSeriesDropdownOpen(false); return; }
                     if (showBulkPriceModal) { setShowBulkPriceModal(false); return; }
                     if (tagManagementOpen) { setTagManagementOpen(false); return; }
                     if (wizardModalOpen) { setWizardModalOpen(false); return; }
@@ -3382,7 +3459,7 @@
                 };
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
-            }, [modalBook, showBulkPriceModal, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+            }, [modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             // v5.4.6 - ENTER saves edit mode when no input is focused
             useEffect(() => {
@@ -3433,6 +3510,25 @@
                         });
                         if (modalBookRef.current?.id === action.bookId) {
                             setModalBook(prev => prev?.id === action.bookId ? { ...prev, ...action.previousValues } : prev);
+                        }
+                        break;
+                    // v5.4.7 - Undo bulk edit
+                    case 'BULK_EDIT_BOOKS':
+                        setBooks(prev => {
+                            const updated = prev.map(b => {
+                                if (action.bookIds.includes(b.id) && action.previousValues[b.id] !== undefined) {
+                                    return { ...b, [action.fieldKey]: action.previousValues[b.id] };
+                                }
+                                return b;
+                            });
+                            saveBooksToIndexedDB(updated);
+                            return updated;
+                        });
+                        if (modalBookRef.current && action.bookIds.includes(modalBookRef.current.id)) {
+                            const prevVal = action.previousValues[modalBookRef.current.id];
+                            if (prevVal !== undefined) {
+                                setModalBook(prev => prev ? { ...prev, [action.fieldKey]: prevVal } : prev);
+                            }
                         }
                         break;
                     // v5.0.0-alpha.46 - Explorer folder operations
@@ -3728,6 +3824,19 @@
                         });
                         if (modalBookRef.current?.id === action.bookId) {
                             setModalBook(prev => prev?.id === action.bookId ? { ...prev, ...action.newValues } : prev);
+                        }
+                        break;
+                    // v5.4.7 - Redo bulk edit
+                    case 'BULK_EDIT_BOOKS':
+                        setBooks(prev => {
+                            const updated = prev.map(b =>
+                                action.bookIds.includes(b.id) ? { ...b, [action.fieldKey]: action.newValue } : b
+                            );
+                            saveBooksToIndexedDB(updated);
+                            return updated;
+                        });
+                        if (modalBookRef.current && action.bookIds.includes(modalBookRef.current.id)) {
+                            setModalBook(prev => prev ? { ...prev, [action.fieldKey]: action.newValue } : prev);
                         }
                         break;
                     // v5.0.0-alpha.46 - Explorer folder operations
@@ -6552,6 +6661,122 @@
                             </div>
                         </div>
                     )}
+
+                    {/* v5.4.7 - Bulk edit modal */}
+                    {showBulkEditModal && (() => {
+                        const fieldConfig = {
+                            author:   { title: 'Edit Author',   fieldKey: 'author' },
+                            series:   { title: 'Edit Series',   fieldKey: 'series' },
+                            position: { title: 'Edit Position', fieldKey: 'seriesPosition' }
+                        };
+                        const config = fieldConfig[bulkEditField];
+                        if (!config) return null;
+                        const bookCount = bulkEditBookIds.length;
+                        const selectedBooks = bulkEditBookIds.map(id => books.find(b => b.id === id)).filter(Boolean);
+                        const uniqueValues = new Set(selectedBooks.map(b => {
+                            const val = b[config.fieldKey];
+                            return val != null ? String(val) : '';
+                        }));
+                        const isMixed = uniqueValues.size > 1;
+                        const placeholder = isMixed
+                            ? `Mixed (${uniqueValues.size} values)`
+                            : (bulkEditField === 'position' ? 'e.g., 1, 1.5' : '');
+                        return (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                                 onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }}
+                                 onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setShowBulkEditModal(false); setBulkEditSeriesDropdownOpen(false); } backdropMouseDownRef.current = null; }}>
+                                <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-80" onClick={(e) => e.stopPropagation()}>
+                                    <h2 className="text-lg font-bold text-gray-900 mb-2">{config.title}</h2>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        Apply to {bookCount} selected book{bookCount !== 1 ? 's' : ''}
+                                    </p>
+                                    <form onSubmit={(e) => { e.preventDefault(); saveBulkEdit(); }} className="flex flex-col gap-4">
+                                        {bulkEditField === 'author' && (
+                                            <input type="text" value={bulkEditInput}
+                                                onChange={(e) => setBulkEditInput(e.target.value)}
+                                                onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
+                                                placeholder={placeholder}
+                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                autoFocus />
+                                        )}
+                                        {bulkEditField === 'series' && (
+                                            <div className="relative" data-bulk-edit-series-dropdown="">
+                                                <div className="relative">
+                                                    <input ref={bulkEditSeriesInputRef} type="text" value={bulkEditInput}
+                                                        onChange={(e) => {
+                                                            setBulkEditInput(e.target.value);
+                                                            bulkEditSeriesFilterRef.current = true;
+                                                            setBulkEditSeriesDropdownOpen(true);
+                                                        }}
+                                                        onKeyDown={(e) => {
+                                                            e.stopPropagation();
+                                                            if (e.key === 'Enter') { setBulkEditSeriesDropdownOpen(false); e.preventDefault(); saveBulkEdit(); }
+                                                            if (e.key === 'Escape') {
+                                                                if (bulkEditSeriesDropdownOpen) { setBulkEditSeriesDropdownOpen(false); }
+                                                            }
+                                                        }}
+                                                        placeholder={placeholder || 'Type to filter series...'}
+                                                        className="w-full px-3 py-2 pr-8 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                        autoFocus />
+                                                    <button type="button"
+                                                        onClick={() => { bulkEditSeriesFilterRef.current = false; setBulkEditSeriesDropdownOpen(!bulkEditSeriesDropdownOpen); }}
+                                                        onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); if (bulkEditSeriesDropdownOpen) { setBulkEditSeriesDropdownOpen(false); if (bulkEditSeriesInputRef.current) bulkEditSeriesInputRef.current.focus(); } } e.stopPropagation(); }}
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs focus:outline-none"
+                                                        tabIndex={-1}>
+                                                        ▼
+                                                    </button>
+                                                </div>
+                                                {bulkEditSeriesDropdownOpen && (() => {
+                                                    const allSeries = getUniqueSeriesList();
+                                                    const filtered = (bulkEditSeriesFilterRef.current && bulkEditInput.trim())
+                                                        ? allSeries.filter(s => s.name.toLowerCase().startsWith(bulkEditInput.toLowerCase()))
+                                                        : allSeries;
+                                                    return filtered.length > 0 ? (
+                                                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                                            {filtered.map(s => (
+                                                                <button key={s.name} type="button"
+                                                                    ref={s.name === bulkEditInput ? (el) => { if (el) requestAnimationFrame(() => { const container = el.closest('.overflow-y-auto'); if (container) { const top = el.offsetTop - container.offsetTop; container.scrollTop = top; } }); } : null}
+                                                                    onClick={() => { setBulkEditInput(s.name); setBulkEditSeriesDropdownOpen(false); }}
+                                                                    onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Escape') { setBulkEditSeriesDropdownOpen(false); if (bulkEditSeriesInputRef.current) bulkEditSeriesInputRef.current.focus(); } }}
+                                                                    className={`w-full text-left px-3 py-2 text-sm hover:bg-blue-50 flex justify-between items-center ${s.name === bulkEditInput ? 'bg-blue-100 font-medium' : ''}`}>
+                                                                    <span className="truncate">{s.name}</span>
+                                                                    <span className="text-xs text-gray-400 ml-2 shrink-0">({s.count})</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    ) : null;
+                                                })()}
+                                            </div>
+                                        )}
+                                        {bulkEditField === 'position' && (
+                                            <input type="text" value={bulkEditInput}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                                        setBulkEditInput(val);
+                                                    }
+                                                }}
+                                                onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
+                                                placeholder={placeholder || 'e.g., 1, 1.5'}
+                                                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                autoFocus />
+                                        )}
+                                        <div className="flex justify-end gap-2">
+                                            <button type="button"
+                                                onClick={() => { setShowBulkEditModal(false); setBulkEditSeriesDropdownOpen(false); }}
+                                                className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+                                                Cancel
+                                            </button>
+                                            <button type="submit"
+                                                className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg">
+                                                Apply
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     {/* v4.16.0.aq - Last copy warning dialog */}
                     {/* v4.16.0.ar - Handle already-hidden entries separately */}
@@ -10612,7 +10837,7 @@
                         // v5.0.0-alpha.166 - Phase 2: Full implementation with Move to / Copy to submenus
 
                         // Calculate menu position to avoid going off-screen
-                        const menuHeight = 530; // v5.0.0-alpha.170 - Increased for Tags submenu (15 items + separators)
+                        const menuHeight = 566; // v5.4.7 - Increased for Edit submenu
                         const menuWidth = 220;
                         const viewportHeight = window.innerHeight;
                         const viewportWidth = window.innerWidth;
@@ -10637,6 +10862,10 @@
                         const tagsItemOffset = 360;
                         const tagsSubmenuHeight = 300; // Tags submenu can be tall with many tags
                         const tagsSubmenuOverflows = top + tagsItemOffset + tagsSubmenuHeight > viewportHeight;
+                        // v5.4.7 - Edit submenu is ~8th item (~280px from menu top)
+                        const editItemOffset = 280;
+                        const editSubmenuHeight = 120;
+                        const editSubmenuOverflows = top + editItemOffset + editSubmenuHeight > viewportHeight;
 
                         // v5.0.0-alpha.166 - Phase 2: Helper functions for Move to / Copy to
 
@@ -11063,6 +11292,49 @@
                                                 }}>
                                                 <span>📝</span>
                                                 <span>Copy Title{count !== 1 ? 's' : ''}</span>
+                                            </div>
+
+                                            {/* v5.4.7 - Bulk Edit submenu */}
+                                            <div
+                                                className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                                onMouseEnter={() => setContextSubmenu('bulk-edit')}
+                                                onMouseLeave={(e) => {
+                                                    setTimeout(() => {
+                                                        const activeSubmenu = document.querySelector('.context-submenu:hover');
+                                                        const activeTrigger = document.querySelector('.submenu-trigger:hover');
+                                                        if (!activeSubmenu && !activeTrigger) {
+                                                            setContextSubmenu(null);
+                                                        }
+                                                    }, 600);
+                                                }}>
+                                                <span>✏️</span>
+                                                <span>Edit</span>
+                                                <span className="ml-auto">▶</span>
+
+                                                {contextSubmenu === 'bulk-edit' && (
+                                                    <div
+                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[160px] z-[70]"
+                                                        style={{
+                                                            [submenuOnLeft ? 'right' : 'left']: '100%',
+                                                            [editSubmenuOverflows ? 'bottom' : 'top']: '0'
+                                                        }}
+                                                        onMouseEnter={() => setContextSubmenu('bulk-edit')}
+                                                        onMouseLeave={() => setContextSubmenu(null)}
+                                                        onClick={(e) => e.stopPropagation()}>
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                            onClick={() => openBulkEditModal('author')}>
+                                                            Author...
+                                                        </div>
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                            onClick={() => openBulkEditModal('series')}>
+                                                            Series...
+                                                        </div>
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                            onClick={() => openBulkEditModal('position')}>
+                                                            Position...
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Add/Edit Note (single book only) */}
