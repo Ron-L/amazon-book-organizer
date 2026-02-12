@@ -8,17 +8,31 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔥 Priority 0: Immediate
 
-**1. Bulk Edit Fields (Author / Title / Series / Position)** - MEDIUM/MEDIUM (6-10 hours)
+**1. Edit Book Fields (Author / Title / Series / Position / Notes)** - MEDIUM/MEDIUM (6-10 hours)
    - **Problem**: Amazon data has inconsistent author names (e.g., "C.J. Fielding" vs "CJ Fielding" vs "C.J.  Fielding" with extra spaces). No way to fix this in the app — discovered via Group feature showing fragmented author groups.
-   - **Multi-select context menu approach**: Select 1+ books → right-click → "Edit Author..." / "Edit Series..." / "Edit Title..." / "Edit Position..."
+   - **Two entry points:**
+
+   **A. Book Dialog Edit Mode** (single book)
+   - Pencil icon in dialog header (top-right, next to close X)
+   - Click pencil → enters edit mode: Title, Author, Series, Position, Notes become editable text inputs pre-populated with current values
+     - Series: inline text input (replaces the current Edit Series dialog/combobox)
+     - Position: numeric decimal input
+     - Notes: text area (replaces "+Add Note" button)
+   - Fields that stay as-is (no edit mode needed): My Rating (already interactive stars), Price Goal (already has input), Tags (already has add/remove), Current Price / Amazon Rating / ASIN / Date Added / Cover (not user-editable)
+   - **Edit mode controls**: Pencil becomes checkmark (Save). Cancel button appears. ESC = Cancel.
+   - **Implementation**: Edit a local copy of the book (modalBook is already separate from books array). Only write to `books` on Save. Cancel just exits edit mode — no rollback needed. Browser crash/tab close = changes safely lost (never written to database).
+   - **Undo support**: Record as a single undoable action
+
+   **B. Bulk Edit via Context Menu** (multi-select)
+   - Select 1+ books in table or cover view → right-click → "Edit Author..." / "Edit Series..." / "Edit Title..." / "Edit Position..."
    - Each opens a small modal/popover with a single text field:
      - All selected books have same value → pre-populate with it
      - Mixed values → empty field with placeholder "Mixed (N values)"
      - User types new value → applies to all selected books
    - One field at a time (not a multi-field form) — keeps it simple and focused
    - Works in both table and cover views (same context menu)
-   - Changes persist to book data (same as existing series editing in book detail modal)
    - **Undo support**: Record as a single undoable action ("Edit Author for N books")
+
    - **Future**: Double-click cell in table view for inline single-book editing (bigger lift, separate feature)
 
 ---
