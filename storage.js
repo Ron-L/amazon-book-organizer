@@ -89,13 +89,20 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                     // New book is owned, replace wishlist entry
                     // Preserve user metadata from wishlist entry (column assignment preserved via localStorage)
                     wishlistToOwned.push(book.asin);
+                    // v5.4.7 - Respect userEdited flags from existing wishlist entry
+                    const ueWish = existing.userEdited || {};
                     booksByAsin.set(book.asin, {
                         ...book,
+                        title: ueWish.title ? existing.title : book.title,
+                        author: ueWish.author ? existing.author : book.author,
+                        series: ueWish.series ? existing.series : book.series,
+                        seriesPosition: ueWish.seriesPosition ? existing.seriesPosition : book.seriesPosition,
                         addedToWishlist: existing.addedToWishlist,
                         // v5.0.0-alpha.163 - PRESERVE price goal when book transitions to owned
                         priceTrigger: existing.priceTrigger ?? book.priceTrigger,
                         targetPrice: existing.targetPrice ?? book.targetPrice,
-                        myRating: existing.myRating ?? book.myRating  // v5.0.0-alpha.175.31 - Personal rating
+                        myRating: existing.myRating ?? book.myRating,  // v5.0.0-alpha.175.31 - Personal rating
+                        userEdited: ueWish  // Preserve the flags
                     });
                 } else if (!existing.onWishlist && book.onWishlist) {
                     // Existing is owned, new is wishlist - keep existing
@@ -120,15 +127,22 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                     // v5.0.0-alpha.169.7 - Prefer incoming values, fall back to IndexedDB if null
                     // v5.0.0-alpha.173.1 - Only during imports (preserveUserData = true)
                     // v5.0.0-alpha.175.7 - Preserve tags, notes, hidden status
+                    // v5.4.7 - Respect userEdited flags: keep user-edited fields from previous book
+                    const ue = previousBook.userEdited || {};
                     booksByAsin.set(book.asin, {
                         ...book,
+                        title: ue.title ? previousBook.title : book.title,
+                        author: ue.author ? previousBook.author : book.author,
+                        series: ue.series ? previousBook.series : book.series,
+                        seriesPosition: ue.seriesPosition ? previousBook.seriesPosition : book.seriesPosition,
                         addedToWishlist: book.addedToWishlist ?? previousBook.addedToWishlist,
                         priceTrigger: book.priceTrigger ?? previousBook.priceTrigger,
                         targetPrice: book.targetPrice ?? previousBook.targetPrice,
                         tags: book.tags ?? previousBook.tags,
                         note: book.note ?? previousBook.note,
                         hidden: book.hidden ?? previousBook.hidden,
-                        myRating: book.myRating ?? previousBook.myRating  // v5.0.0-alpha.175.31 - Personal rating
+                        myRating: book.myRating ?? previousBook.myRating,  // v5.0.0-alpha.175.31 - Personal rating
+                        userEdited: ue  // Preserve the flags themselves
                     });
                 } else {
                     // React saves: just save as-is, no merge

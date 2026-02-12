@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.7-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.7-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2468,7 +2468,8 @@
                         tags: book.tags,
                         note: book.userNote,
                         priceTrigger: book.priceTrigger,
-                        myRating: book.myRating || 0  // v5.0.0-alpha.175.31 - Personal rating (0=unrated, 1-5=rated)
+                        myRating: book.myRating || 0,  // v5.0.0-alpha.175.31 - Personal rating (0=unrated, 1-5=rated)
+                        userEdited: book.userEdited || undefined  // v5.4.7 - Track user-edited fields
                     }));
 
                     // Build collections.items from books that have collection data
@@ -2865,7 +2866,8 @@
                             // v5.0.0-alpha.175.28 - User metadata (tags, notes)
                             tags: item.tags,
                             userNote: item.note,
-                            myRating: item.myRating || 0  // v5.0.0-alpha.175.31 - Personal rating
+                            myRating: item.myRating || 0,  // v5.0.0-alpha.175.31 - Personal rating
+                            userEdited: item.userEdited || undefined  // v5.4.7 - Restore user-edited flags
                         };
                     } else {
                         // Legacy format with amazonData (v1.x format)
@@ -3322,11 +3324,22 @@
                     return;
                 }
 
+                // v5.4.7 - Build userEdited flags for changed fields
+                const editedFields = Object.keys(newValues).filter(k => k !== 'userNote');
+                const userEditedUpdate = editedFields.length > 0
+                    ? editedFields.reduce((acc, k) => { acc[k] = true; return acc; }, {})
+                    : null;
+
                 // Save to books array + IndexedDB
                 setBooks(prev => {
-                    const updated = prev.map(b =>
-                        b.id === modalBook.id ? { ...b, ...newValues } : b
-                    );
+                    const updated = prev.map(b => {
+                        if (b.id !== modalBook.id) return b;
+                        const updatedBook = { ...b, ...newValues };
+                        if (userEditedUpdate) {
+                            updatedBook.userEdited = { ...(b.userEdited || {}), ...userEditedUpdate };
+                        }
+                        return updatedBook;
+                    });
                     saveBooksToIndexedDB(updated);
                     return updated;
                 });
@@ -3386,9 +3399,10 @@
                     return;
                 }
                 setBooks(prev => {
-                    const updated = prev.map(b =>
-                        bulkEditBookIds.includes(b.id) ? { ...b, [fieldKey]: newValue } : b
-                    );
+                    const updated = prev.map(b => {
+                        if (!bulkEditBookIds.includes(b.id)) return b;
+                        return { ...b, [fieldKey]: newValue, userEdited: { ...(b.userEdited || {}), [fieldKey]: true } };
+                    });
                     saveBooksToIndexedDB(updated);
                     return updated;
                 });
