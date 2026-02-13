@@ -14,24 +14,19 @@ _(No active tasks)_
 
 ### ✨ Priority 3: Foundational UX
 
-**1. Tooltips for Control Buttons** - LOW/LOW (1 hour)
-   - Add tooltips to Backup, Restore, Reset, Clear buttons
-   - Problem: Users unsure what buttons do
-   - Impact: Discoverability, reduced confusion
-
-**2. First-run Welcome Dialog** - LOW/LOW (2 hours)
+**1. First-run Welcome Dialog** - LOW/LOW (2 hours)
    - Explain what ReaderWrangler is on first visit
    - Brief intro, link to documentation
    - Problem: New users don't know what the app does
    - Impact: Better onboarding
 
-**3. Keyboard Shortcuts Help** - LOW/LOW (2 hours)
+**2. Keyboard Shortcuts Help** - LOW/LOW (2 hours)
    - "?" icon or Ctrl+? to show shortcuts dialog
    - List: Undo/Redo, multi-select, navigation, etc.
    - Problem: Users don't know available shortcuts
    - Impact: Power user efficiency
 
-**4. Button Consistency Audit** - LOW/LOW (2-4 hours)
+**3. Button Consistency Audit** - LOW/LOW (2-4 hours)
    - Audit all button hover states across the app
    - Define 3 button styles: Primary/Secondary/Tertiary
    - Apply consistently everywhere (price goals, Add Tag, View on Amazon, Add Note, Edit Series, etc.)
@@ -39,11 +34,11 @@ _(No active tasks)_
    - Problem: Different buttons have different hover behaviors, users can't predict interaction
    - Impact: Consistent, predictable UI interactions
 
-**5. Enhanced Getting Started UX** - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
+**4. Enhanced Getting Started UX** - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
    - Status: Planned (post-rename enhancement)
    - Help menu links, enhanced empty library state
 
-**6. Quality Attribute Validation** - LOW/LOW (2-3 hours)
+**5. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
    - **Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second
    - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
@@ -51,7 +46,7 @@ _(No active tasks)_
    - Problem: Need confidence app handles edge cases for public release
    - Impact: Robustness validation before launch
 
-**7. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
+**6. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
    - Semantic HTML audit (use `<button>` not `<div onclick>`)
    - ARIA labels for key interactions (context menus, drag operations)
    - Keyboard-only navigation validation (tab order, focus indicators)
@@ -59,7 +54,7 @@ _(No active tasks)_
    - Problem: Potential public users may need accessibility features
    - Impact: Broader user base support with minimal effort
 
-**8. Browser Compatibility Documentation** - LOW/LOW (30 min)
+**7. Browser Compatibility Documentation** - LOW/LOW (30 min)
    - Document Chrome-only requirement in README and app footer
    - Note: Firefox/Edge may work but untested
    - Optional: 30-min Firefox smoke test before public release

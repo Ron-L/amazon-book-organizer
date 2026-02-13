@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.1] - 2026-02-13
+
+### Improved
+- **Tooltip audit** - Comprehensive tooltip coverage across the app
+  - Added tooltips to all 7 toolbar filter buttons (Status, Tags, Types, More, Amazon Rating, My Rating, Series)
+  - Added "Close" tooltip to all 11 modal close buttons
+  - Added tooltips to search clear button and Add tag button
+  - Improved cover size slider tooltip ("Cover size: X columns")
+  - Improved clear rating tooltip ("Clear my rating")
+
 ## [5.5.0] - 2026-02-13
 
 ### Added
