@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.8] - 2026-02-12
+
+### Added
+- **Ownership toggle** - Change book ownership between Purchased and Wishlist
+  - Book dialog: Click pencil icon to edit, dropdown replaces the Wishlist Item badge
+  - Bulk edit: Right-click → Edit ▶ Ownership... with Purchased/Wishlist toggle buttons
+  - Changes protected from Amazon re-import overwrite via `userEdited` flags
+  - Full undo/redo support
+
 ## [5.4.7] - 2026-02-12
 
 ### Added
