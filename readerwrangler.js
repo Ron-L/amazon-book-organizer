@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.8";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.9-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -225,6 +225,8 @@
         function ReaderWrangler() {
             const [books, setBooks] = useState([]);
             const [searchTerm, setSearchTerm] = useState('');
+            const [searchHistory, setSearchHistory] = useState([]);
+            const [searchHistoryOpen, setSearchHistoryOpen] = useState(false);
             const [modalBook, setModalBook] = useState(null);
             const [dataSource, setDataSource] = useState('none');
             const [blankImageBooks, setBlankImageBooks] = useState(new Set());
@@ -1024,6 +1026,11 @@
                             setSelectedSeries(filters.selectedSeries);
                         }
                     }
+                    // v5.4.9: Load search history (separate from filters)
+                    const savedHistory = localStorage.getItem(SEARCH_HISTORY_KEY);
+                    if (savedHistory) {
+                        try { setSearchHistory(JSON.parse(savedHistory)); } catch(e) {}
+                    }
                 } catch (e) {
                     console.error('Failed to load filters from localStorage:', e);
                 }
@@ -1060,6 +1067,30 @@
                     console.error('Failed to save filters to localStorage:', e);
                 }
             }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden, tagFilter, selectedCollections, minAmazonRating, minMyRating, selectedSeries]);
+
+            // v5.4.9 - Search history helpers
+            const addToSearchHistory = (term) => {
+                const trimmed = term.trim();
+                if (trimmed.length < 3) return;
+                setSearchHistory(prev => {
+                    const filtered = prev.filter(t => t.toLowerCase() !== trimmed.toLowerCase());
+                    const updated = [trimmed, ...filtered].slice(0, 15);
+                    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
+                    return updated;
+                });
+            };
+            const removeFromSearchHistory = (term) => {
+                setSearchHistory(prev => {
+                    const updated = prev.filter(t => t !== term);
+                    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
+                    return updated;
+                });
+            };
+            const clearSearchHistory = () => {
+                setSearchHistory([]);
+                localStorage.removeItem(SEARCH_HISTORY_KEY);
+                setSearchHistoryOpen(false);
+            };
 
             // v5.1.0-alpha.23 - Load wizard settings from localStorage on mount
             React.useEffect(() => {
@@ -1627,6 +1658,10 @@
                     if (bulkEditSeriesDropdownOpen && !e.target.closest('[data-bulk-edit-series-dropdown]')) {
                         setBulkEditSeriesDropdownOpen(false);
                     }
+                    // v5.4.9 - Close search history dropdown
+                    if (searchHistoryOpen && !e.target.closest('[data-search-history-dropdown]')) {
+                        setSearchHistoryOpen(false);
+                    }
                 };
 
                 const handleEscKey = (e) => {
@@ -1644,6 +1679,7 @@
                         setMyRatingDropdownOpen(false); // v5.0.0-alpha.175.43 - Phase 5.4: Close My Rating dropdown
                         setSeriesDropdownOpen(false); // v5.0.0-alpha.175.44 - Phase 5.5: Close Series dropdown
                         setDateDropdownOpen(false); // v5.0.0-alpha.175.45 - Phase 5.6: Close Date dropdown
+                        setSearchHistoryOpen(false); // v5.4.9 - Close search history dropdown
                     }
                 };
 
@@ -1654,7 +1690,7 @@
                     document.removeEventListener('mousedown', handleClickOutside);
                     document.removeEventListener('keydown', handleEscKey);
                 };
-            }, [openMenuBar, statusDropdownOpen, tagsDropdownOpen, typesDropdownOpen, morePanelOpen, collectionsDropdownOpen]);
+            }, [openMenuBar, statusDropdownOpen, tagsDropdownOpen, typesDropdownOpen, morePanelOpen, collectionsDropdownOpen, searchHistoryOpen]);
 
             // v5.0.0-alpha.100 - Restore per-folder sort when folder changes
             useEffect(() => {
@@ -4907,13 +4943,16 @@
                         padding: '0 12px',
                         gap: '12px'
                     }}>
-                        {/* Search input */}
-                        <div style={{ position: 'relative', flex: '0 0 300px' }}>
+                        {/* Search input with history dropdown (v5.4.9) */}
+                        <div style={{ position: 'relative', flex: '0 0 300px' }} data-search-history-dropdown="">
                             <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' }}>🔍</span>
                             <input
                                 type="text"
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    if (searchHistory.length > 0) setSearchHistoryOpen(true);
+                                }}
                                 placeholder="Title or author..."
                                 style={{
                                     width: '100%',
@@ -4924,12 +4963,30 @@
                                     borderRadius: '4px',
                                     outline: 'none'
                                 }}
-                                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                                onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = '#3b82f6';
+                                    if (searchHistory.length > 0) setSearchHistoryOpen(true);
+                                }}
+                                onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; addToSearchHistory(searchTerm); }}
+                                onKeyDown={(e) => {
+                                    e.stopPropagation();
+                                    if (e.key === 'Enter') {
+                                        addToSearchHistory(searchTerm);
+                                        setSearchHistoryOpen(false);
+                                        e.target.blur();
+                                    } else if (e.key === 'Escape') {
+                                        if (searchHistoryOpen) {
+                                            setSearchHistoryOpen(false);
+                                        } else {
+                                            setSearchTerm('');
+                                        }
+                                        e.target.blur();
+                                    }
+                                }}
                             />
                             {searchTerm && (
                                 <button
-                                    onClick={() => setSearchTerm('')}
+                                    onClick={() => { setSearchTerm(''); setSearchHistoryOpen(false); }}
                                     style={{
                                         position: 'absolute',
                                         right: '6px',
@@ -4949,6 +5006,47 @@
                                     ×
                                 </button>
                             )}
+                            {/* Search history dropdown */}
+                            {searchHistoryOpen && (() => {
+                                const filtered = searchTerm.trim()
+                                    ? searchHistory.filter(h => h.toLowerCase().includes(searchTerm.toLowerCase()))
+                                    : searchHistory;
+                                if (filtered.length === 0) return null;
+                                return (
+                                    <div style={{
+                                        position: 'absolute', top: '32px', left: 0, right: 0,
+                                        background: 'white', border: '1px solid #cbd5e1',
+                                        borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                        zIndex: 1000, maxHeight: '200px', overflowY: 'auto'
+                                    }}>
+                                        {filtered.map((term, i) => (
+                                            <div key={i}
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => { setSearchTerm(term); setSearchHistoryOpen(false); addToSearchHistory(term); }}
+                                                style={{ padding: '6px 12px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                            >
+                                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{term}</span>
+                                                <button
+                                                    onMouseDown={(e) => e.preventDefault()}
+                                                    onClick={(e) => { e.stopPropagation(); removeFromSearchHistory(term); }}
+                                                    style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '14px', cursor: 'pointer', padding: '0 2px', flexShrink: 0, marginLeft: '8px' }}
+                                                    onMouseEnter={(e) => e.target.style.color = '#ef4444'}
+                                                    onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+                                                >×</button>
+                                            </div>
+                                        ))}
+                                        <div
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={clearSearchHistory}
+                                            style={{ borderTop: '1px solid #e2e8f0', padding: '6px 12px', fontSize: '12px', color: '#94a3b8', cursor: 'pointer', textAlign: 'center' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.color = '#64748b'}
+                                            onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                                        >Clear history</div>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* v5.0.0-alpha.175.4 - Toolbar Tier 1 Filters */}

@@ -11,6 +11,7 @@ const FILTERS_KEY = "readerwrangler-filters";
 const EXPLORER_KEY = "readerwrangler-explorer"; // v5.0.0 - Explorer view settings
 const FOLDERS_KEY = "readerwrangler-folders"; // v5.0.0 - User folder organization
 const WIZARD_KEY = "readerwrangler-wizard"; // v5.1.0-alpha.23 - Wizard settings
+const SEARCH_HISTORY_KEY = "readerwrangler-search-history"; // v5.4.9 - Search history
 
 // ===== Amazon =====
 const AMAZON_AFFILIATE_TAG = 'rclewent-20';
