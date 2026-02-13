@@ -37,7 +37,7 @@ _(No active tasks)_
    - Impact: Robustness validation before launch
 
 **2. 📱 Mobile Support Clarity** - HIGH/LOW (1 hour)
-   - Document whether app works on mobile devices
+   - Document that desktop is the primary UI; mobile viewer planned as separate purpose-built UI (see P7-T1)
    - Add to FAQ and main page
    - Problem: Major omission for users who browse libraries on phones/tablets
    - Impact: Sets correct expectations
@@ -132,12 +132,14 @@ _(No active tasks)_
 
 ### 🚀 Priority 7: Post-Launch Enhancements
 
-**1. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)
-   - Problem: Portrait mode shows only 1-2 book rows, left pane too wide, headers consume vertical space
-   - Current state: App works on mobile but layout unusable (landscape shows 2 rows, portrait ~0 rows)
-   - Solution TBD: May require UX paradigm shift (hamburger nav, tab switching, overlay panels) vs. basic responsive CSS
-   - Needs brainstorming session to determine approach
-   - Impact: Makes app usable on mobile devices
+**1. 📱 Mobile Viewer** - MEDIUM/MEDIUM (12-16 hours)
+   - Purpose-built read-only mobile UI (separate `mobile.js`), not responsive CSS
+   - Dashboard home: configurable tag-based shelves (e.g., "Next Reads") + folder shelves + "Recently Added"
+   - Cover grid folder view (3-wide portrait, 5-wide landscape), folder drawer, book detail view
+   - Search ("do I own this?"), sort, filter — all read-only for v1
+   - Reuses `storage.js` / `uiHelpers.js`, same IndexedDB data, no changes to desktop code
+   - Design doc: `docs/design/MOBILE-VIEWER.md`
+   - Impact: Makes library browsable on phone; key use case is checking ownership while away from desktop
 
 **2. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
    - Show reading progress percentage/position for each book in dialog and a column in explorer
