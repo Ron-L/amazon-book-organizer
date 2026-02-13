@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.4.9] - 2026-02-12
+
+### Added
+- **Search history dropdown** - Search field remembers recent searches (up to 15)
+  - Type to filter history, arrow keys to navigate, Enter to select
+  - Per-entry remove (×) and "Clear history" option
+  - Persists across sessions via localStorage
+  - Terms under 3 characters are not recorded
+
 ## [5.4.8] - 2026-02-12
 
 ### Added

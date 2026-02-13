@@ -24,14 +24,14 @@
     <div id="root"></div>
 
     <!-- Shared modules (pure JS, no Babel needed) -->
-    <script src="uiHelpers.js?v=5.4.8"></script>
-    <script src="storage.js?v=5.4.8"></script>
+    <script src="uiHelpers.js?v=5.4.9"></script>
+    <script src="storage.js?v=5.4.9"></script>
 
     <!-- Main app with JSX (needs Babel) - Dynamic loading for cache busting -->
     <script>
         // APP_VERSION - Single source of truth for cache busting
         // Update this on each release to force browsers to fetch new code
-        const APP_VERSION = "5.4.8";
+        const APP_VERSION = "5.4.9";
 
         // Dynamically load main app with version-based cache busting
         const script = document.createElement('script');
