@@ -8,47 +8,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Current Focus
 
-**1. 🔀 Cover View Sort Picker** - LOW/LOW (2-3 hours)
-   - Currently cover view shows "Sort: Author ▲ ×" but you can only reverse direction or clear — can't pick a different sort key without switching to list view.
-   - Fix: Click "Sort: Author ▲" → dropdown with all sortable columns (Title, Author, Rating, Published, Date Added, Series, Position, Price, Custom Order).
-   - Checkmark on current key, arrow shows direction. Click same key toggles direction. Click different key sorts by it.
-   - Shift+click adds secondary sort (matches list view shift+click-on-column convention).
-   - Display: `Sort: Author ▲, Position ▲ ×` for multi-key sorts.
-   - All sort infrastructure already exists (`explorerSort` state handles multi-key). This is purely a UI control.
-
-**2. It would be nice if Author or Title had a dropdown memory
-
-**3. I think wishlist import overwrote my owned books?**
-   - Destroyer shows no owned books now.
-
-**4. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)
-   - Problem: Portrait mode shows only 1-2 book rows, left pane too wide, headers consume vertical space
-   - Current state: App works on mobile but layout unusable (landscape shows 2 rows, portrait ~0 rows)
-   - Solution TBD: May require UX paradigm shift (hamburger nav, tab switching, overlay panels) vs. basic responsive CSS
-   - Needs brainstorming session to determine approach
-   - Impact: Makes app usable on mobile devices
-
----
-
-### ⚡ Priority 2: Core Enhancements
-
-**1. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
-   - Show reading progress percentage/position for each book in dialog and a column in explorer
-   - Implementation guidance: [Amazon Organizer Reading Progress conversation](https://claude.ai/chat/6e6f23c8-b84e-4900-8c64-fecb6a6e0bd1)
-   - Note: Collections data already merged (line 452 LOG.md), this adds progress visualization
-   - Problem: Users can't see reading progress in organizer
-   - Impact: Better tracking of currently-reading books; transforms app from "organizer" to "reading companion"
-
-**2. 📚 Book Recommendations** - LOW/LOW (2-3 hours)
-   - See [docs/design/BOOK-RECOMMENDATIONS.md](docs/design/BOOK-RECOMMENDATIONS.md) for full spec
-   - Display "Similar Books" in book detail modal (collapsible, hidden by default)
-   - Data already fetched in Phase 3 (tags API) but currently discarded
-   - Store: `recommendations: [{asin, title, coverUrl}]` per book (~1KB/book)
-   - Click opens Amazon product page; "Owned" badge if book is in library
-   - Future: "You own these similar books you haven't read yet" cross-reference
-   - Future: Highlight forgotten purchases based on high ratings
-   - Problem: No discovery of related books from within the app
-   - Impact: Book discovery without leaving ReaderWrangler
+_(No active tasks)_
 
 ---
 
@@ -179,7 +139,32 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🚀 Priority 7: Post-Launch Enhancements
 
-**1. 👨‍👩‍👧 Family Sharing Info** - LOW/LOW (2-4 hours)
+**1. 📱 Mobile Responsive Design** - MEDIUM/MEDIUM (8-12 hours)
+   - Problem: Portrait mode shows only 1-2 book rows, left pane too wide, headers consume vertical space
+   - Current state: App works on mobile but layout unusable (landscape shows 2 rows, portrait ~0 rows)
+   - Solution TBD: May require UX paradigm shift (hamburger nav, tab switching, overlay panels) vs. basic responsive CSS
+   - Needs brainstorming session to determine approach
+   - Impact: Makes app usable on mobile devices
+
+**2. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
+   - Show reading progress percentage/position for each book in dialog and a column in explorer
+   - Implementation guidance: [Amazon Organizer Reading Progress conversation](https://claude.ai/chat/6e6f23c8-b84e-4900-8c64-fecb6a6e0bd1)
+   - Note: Collections data already merged (line 452 LOG.md), this adds progress visualization
+   - Problem: Users can't see reading progress in organizer
+   - Impact: Better tracking of currently-reading books; transforms app from "organizer" to "reading companion"
+
+**3. 📚 Book Recommendations** - LOW/LOW (2-3 hours)
+   - See [docs/design/BOOK-RECOMMENDATIONS.md](docs/design/BOOK-RECOMMENDATIONS.md) for full spec
+   - Display "Similar Books" in book detail modal (collapsible, hidden by default)
+   - Data already fetched in Phase 3 (tags API) but currently discarded
+   - Store: `recommendations: [{asin, title, coverUrl}]` per book (~1KB/book)
+   - Click opens Amazon product page; "Owned" badge if book is in library
+   - Future: "You own these similar books you haven't read yet" cross-reference
+   - Future: Highlight forgotten purchases based on high ratings
+   - Problem: No discovery of related books from within the app
+   - Impact: Book discovery without leaving ReaderWrangler
+
+**4. 👨‍👩‍👧 Family Sharing Info** - LOW/LOW (2-4 hours)
    - See [docs/design/FAMILY-SHARING.md](docs/design/FAMILY-SHARING.md) for full spec
    - Fetch which books user has shared with family members
    - Display "Shared with: Name" in book detail modal
@@ -188,13 +173,13 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: No visibility into which books are shared with family
    - Impact: Better awareness of Family Library sharing status
 
-**2. 📖 Series Management** - ✅ COMPLETE (v5.1.0)
+**5. 📖 Series Management** - ✅ COMPLETE (v5.1.0)
    - See [docs/design/WIZARD-MODE.md](docs/design/WIZARD-MODE.md)
    - Implemented: Auto-organize by author/series, automatic series detection, series subfolders, series reading order
    - Future enhancement: Missing book detection ("You have Dresden Files #1-15 but missing #7")
    - Impact: Better management for series readers
 
-**3. 🖼️ V2 Dual-Pane Split** - MEDIUM/MEDIUM (8-12 hours)
+**6. 🖼️ V2 Dual-Pane Split** - MEDIUM/MEDIUM (8-12 hours)
    - See [docs/design/DUAL-PANE-SPLIT.md](docs/design/DUAL-PANE-SPLIT.md) for full analysis
    - Two folder views side by side for power users
    - Option A: Built-in split pane (8-12 hours, native drag works)
@@ -202,7 +187,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Precise cross-folder positioning requires navigation
    - Impact: 10% power-user case; 90% covered by drag-to-folder-tree
 
-**4. Multi-Store Architecture** #Architecture - LOW/VERY HIGH (60-80 hours)
+**7. Multi-Store Architecture** #Architecture - LOW/VERY HIGH (60-80 hours)
    - See [docs/design/MULTI-STORE-ARCHITECTURE.md](docs/design/MULTI-STORE-ARCHITECTURE.md) for full spec
    - Status: Future enhancement (Amazon first, other stores later)
    - Covers: File naming, bookmarklet detection, data structure, migration path

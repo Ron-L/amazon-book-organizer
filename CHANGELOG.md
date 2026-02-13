@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.0] - 2026-02-13
+
+### Added
+- **Sort picker dropdown** - Click "Sort: Author ▲ ▾" to open a dropdown with all sortable columns
+  - Works in both cover view and list view
+  - Click a column to sort by it; click current sort to toggle direction
+  - Shift+click to add secondary sort (hint shown in dropdown footer)
+  - "Manual Order" grayed out when viewing All Books
+  - Dropdown caret (▾) signals clickability
+- **Bug fix**: "My Rating" sort now displays correctly (was showing raw key name "myRating")
+
 ## [5.4.9] - 2026-02-12
 
 ### Added
