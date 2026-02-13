@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.9";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -346,6 +346,7 @@
             const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
             // v5.0.0-alpha.174 - Multi-column sorting: array of sort criteria (max 3)
             const [explorerSort, setExplorerSort] = useState([{ column: 'dateAdded', direction: 'desc' }]);
+            const [sortPickerOpen, setSortPickerOpen] = useState(false); // v5.5.0 - Cover view sort picker dropdown
             const [folderSortSettings, setFolderSortSettings] = useState({}); // v5.0.0-alpha.100 - Per-folder sort settings map {folderId: sort array}
             const [explorerGroupOn, setExplorerGroupOn] = useState(false); // v5.4.5 - Group toggle (dividers between sort groups)
             const [collapsedGroups, setCollapsedGroups] = useState(new Set()); // v5.4.5 - Collapsed group names
@@ -1663,6 +1664,10 @@
                     if (searchHistoryOpen && !e.target.closest('[data-search-history-dropdown]')) {
                         setSearchHistoryOpen(false);
                     }
+                    // v5.5.0 - Close sort picker dropdown
+                    if (sortPickerOpen && !e.target.closest('[data-sort-picker]')) {
+                        setSortPickerOpen(false);
+                    }
                 };
 
                 const handleEscKey = (e) => {
@@ -1681,6 +1686,7 @@
                         setSeriesDropdownOpen(false); // v5.0.0-alpha.175.44 - Phase 5.5: Close Series dropdown
                         setDateDropdownOpen(false); // v5.0.0-alpha.175.45 - Phase 5.6: Close Date dropdown
                         setSearchHistoryOpen(false); // v5.4.9 - Close search history dropdown
+                        setSortPickerOpen(false); // v5.5.0 - Close sort picker dropdown
                     }
                 };
 
@@ -1691,7 +1697,7 @@
                     document.removeEventListener('mousedown', handleClickOutside);
                     document.removeEventListener('keydown', handleEscKey);
                 };
-            }, [openMenuBar, statusDropdownOpen, tagsDropdownOpen, typesDropdownOpen, morePanelOpen, collectionsDropdownOpen, searchHistoryOpen]);
+            }, [openMenuBar, statusDropdownOpen, tagsDropdownOpen, typesDropdownOpen, morePanelOpen, collectionsDropdownOpen, searchHistoryOpen, sortPickerOpen]);
 
             // v5.0.0-alpha.100 - Restore per-folder sort when folder changes
             useEffect(() => {
@@ -8804,36 +8810,41 @@
                                                 />
                                             </div>
                                         )}
-                                        {/* Sort status display (in both views) */}
-                                        <div className="flex items-center gap-1 border-l pl-4 text-sm">
-                                            <span className="text-gray-500">Sort:</span>
-                                            <span className="text-gray-700">
-                                                {/* v5.0.0-alpha.174 - Multi-column sort display */}
-                                                {explorerSort.map((s, i) => {
-                                                    const label = s.column === 'custom' ? 'Manual Order' :
-                                                                  s.column === 'title' ? 'Name' :
-                                                                  s.column === 'author' ? 'Author' :
-                                                                  s.column === 'series' ? 'Series' :
-                                                                  s.column === 'seriesNum' ? '#' :
-                                                                  s.column === 'rating' ? 'Rating' :
-                                                                  s.column === 'dateAdded' ? 'Date Added' :
-                                                                  s.column === 'price' ? 'Price' :
-                                                                  s.column === 'priceGoal' ? 'Goal' :
-                                                                  s.column === 'delta' ? 'Under' : s.column;
-                                                    const arrow = s.direction === 'asc' ? '▲' : '▼';
-                                                    return (i === 0 ? `${label} ${arrow}` : ` → ${label}${arrow}`);
-                                                }).join('')}
-                                            </span>
+                                        {/* Sort status display with picker dropdown (v5.5.0) */}
+                                        <div className="flex items-center gap-1 border-l pl-4 text-sm" style={{ position: 'relative' }} data-sort-picker="">
+                                            <button
+                                                onClick={() => setSortPickerOpen(!sortPickerOpen)}
+                                                className="flex items-center gap-1 hover:bg-gray-100 rounded px-1 py-0.5 -mx-1"
+                                                style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '13px' }}
+                                                title="Click to change sort"
+                                            >
+                                                <span className="text-gray-500">Sort:</span>
+                                                <span className="text-gray-700">
+                                                    {explorerSort.map((s, i) => {
+                                                        const label = s.column === 'custom' ? 'Manual Order' :
+                                                                      s.column === 'title' ? 'Name' :
+                                                                      s.column === 'author' ? 'Author' :
+                                                                      s.column === 'series' ? 'Series' :
+                                                                      s.column === 'seriesNum' ? '#' :
+                                                                      s.column === 'rating' ? 'Rating' :
+                                                                      s.column === 'myRating' ? 'My Rating' :
+                                                                      s.column === 'dateAdded' ? 'Date Added' :
+                                                                      s.column === 'price' ? 'Price' :
+                                                                      s.column === 'priceGoal' ? 'Goal' :
+                                                                      s.column === 'delta' ? 'Under' : s.column;
+                                                        const arrow = s.direction === 'asc' ? '▲' : '▼';
+                                                        return (i === 0 ? `${label} ${arrow}` : ` → ${label} ${arrow}`);
+                                                    }).join('')}
+                                                </span>
+                                                <span className="text-gray-400 text-xs ml-0.5">▾</span>
+                                            </button>
                                             {explorerSort[0].column !== 'custom' && (
                                                 <>
                                                     {(() => {
-                                                        // v5.0.8 - Only All Books blocks manual ordering (books can't be reordered)
-                                                        // My Library allows folder reordering in manual mode
                                                         const isReadOnlyView = selectedFolderId === '__all__';
                                                         const tooltipText = isReadOnlyView
                                                             ? 'All Books is a read-only view - no manual ordering'
                                                             : 'Return to Manual Order';
-
                                                         return (
                                                             <button
                                                                 onClick={() => { if (!isReadOnlyView) { setExplorerSort([{ column: 'custom', direction: 'asc' }]); setExplorerGroupOn(false); } }}
@@ -8850,6 +8861,85 @@
                                                     })()}
                                                 </>
                                             )}
+                                            {/* Sort picker dropdown */}
+                                            {sortPickerOpen && (() => {
+                                                const isAllBooks = selectedFolderId === '__all__';
+                                                const sortOptions = [
+                                                    { key: 'custom', label: 'Manual Order', defaultDir: 'asc' },
+                                                    ...Object.values(COLUMN_CONFIG).filter(c => c.sortKey).map(c => ({
+                                                        key: c.sortKey, label: c.label, defaultDir: c.defaultDir
+                                                    }))
+                                                ];
+                                                return (
+                                                    <div style={{
+                                                        position: 'absolute', top: '28px', left: 0,
+                                                        background: 'white', border: '1px solid #cbd5e1',
+                                                        borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                                        zIndex: 1000, minWidth: '180px', whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {sortOptions.map(opt => {
+                                                            const sortIndex = explorerSort.findIndex(s => s.column === opt.key);
+                                                            const isSorted = sortIndex >= 0;
+                                                            const direction = isSorted ? explorerSort[sortIndex].direction : null;
+                                                            const isCustomDisabled = opt.key === 'custom' && isAllBooks;
+                                                            return (
+                                                                <div key={opt.key}
+                                                                    onClick={isCustomDisabled ? undefined : (e) => {
+                                                                        const isShift = e.shiftKey && explorerSort[0].column !== 'custom';
+                                                                        setExplorerSort(prev => {
+                                                                            if (opt.key === 'custom') {
+                                                                                setExplorerGroupOn(false);
+                                                                                return [{ column: 'custom', direction: 'asc' }];
+                                                                            }
+                                                                            if (!isShift) {
+                                                                                const isPrimary = prev[0]?.column === opt.key;
+                                                                                return [{
+                                                                                    column: opt.key,
+                                                                                    direction: isPrimary
+                                                                                        ? (prev[0].direction === opt.defaultDir ? (opt.defaultDir === 'asc' ? 'desc' : 'asc') : opt.defaultDir)
+                                                                                        : opt.defaultDir
+                                                                                }];
+                                                                            } else {
+                                                                                const existingIndex = prev.findIndex(s => s.column === opt.key);
+                                                                                if (existingIndex >= 0) {
+                                                                                    const updated = [...prev];
+                                                                                    updated[existingIndex] = { ...updated[existingIndex], direction: updated[existingIndex].direction === 'asc' ? 'desc' : 'asc' };
+                                                                                    return updated;
+                                                                                } else {
+                                                                                    if (prev.length >= 3) {
+                                                                                        return [...prev.slice(0, 2), { column: opt.key, direction: opt.defaultDir }];
+                                                                                    }
+                                                                                    return [...prev, { column: opt.key, direction: opt.defaultDir }];
+                                                                                }
+                                                                            }
+                                                                        });
+                                                                        setSortPickerOpen(false);
+                                                                    }}
+                                                                    style={{
+                                                                        padding: '6px 12px', fontSize: '13px',
+                                                                        cursor: isCustomDisabled ? 'not-allowed' : 'pointer',
+                                                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                                                        color: isCustomDisabled ? '#cbd5e1' : isSorted ? '#1e40af' : '#334155',
+                                                                        background: 'white'
+                                                                    }}
+                                                                    onMouseEnter={(e) => { if (!isCustomDisabled) e.currentTarget.style.background = '#f1f5f9'; }}
+                                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                                                    title={isCustomDisabled ? 'All Books is a read-only view - no manual ordering' : undefined}
+                                                                >
+                                                                    <span style={{ width: '16px', textAlign: 'center', fontSize: '12px' }}>
+                                                                        {isSorted ? (direction === 'asc' ? '▲' : '▼') : ''}
+                                                                    </span>
+                                                                    <span style={{ flex: 1 }}>{opt.label}</span>
+                                                                    {isSorted && <span style={{ fontSize: '11px', color: '#94a3b8' }}>{sortIndex === 0 ? '' : sortIndex + 1}</span>}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                        <div style={{ borderTop: '1px solid #e2e8f0', padding: '5px 12px', fontSize: '11px', color: '#94a3b8' }}>
+                                                            Shift+click for secondary sort
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                         {/* v5.4.5 - Group toggle + Collapse/Expand All */}
                                         {explorerSort[0].column !== 'custom' && (
