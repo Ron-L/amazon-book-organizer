@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -228,21 +228,29 @@
             const [historyOpen, setHistoryOpen] = useState(false);
             const [historyIndex, setHistoryIndex] = useState(-1);
             const debounceRef = useRef(null);
+            const lastSentRef = useRef(value); // Track what we last sent to parent
 
-            // Sync from parent when value changes externally (e.g., Clear All filters)
-            useEffect(() => { setInputValue(value); }, [value]);
+            // Sync from parent only for external changes (e.g., Clear All filters),
+            // not when parent echoes back our own debounced value
+            useEffect(() => {
+                if (value !== lastSentRef.current) {
+                    setInputValue(value);
+                    lastSentRef.current = value;
+                }
+            }, [value]);
 
             const handleChange = (val) => {
                 setInputValue(val);
                 setHistoryIndex(-1);
                 if (searchHistory.length > 0) setHistoryOpen(true);
                 if (debounceRef.current) clearTimeout(debounceRef.current);
-                debounceRef.current = setTimeout(() => onSearch(val), 300);
+                debounceRef.current = setTimeout(() => { lastSentRef.current = val; onSearch(val); }, 300);
             };
 
             const commitSearch = (val) => {
                 setInputValue(val);
                 if (debounceRef.current) clearTimeout(debounceRef.current);
+                lastSentRef.current = val;
                 onSearch(val);
             };
 
