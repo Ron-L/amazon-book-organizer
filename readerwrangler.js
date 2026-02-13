@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.3-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.3-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9116,7 +9116,7 @@
                                                     background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
                                                     padding: '20px', textAlign: 'left'
                                                 }}>
-                                                    <p style={{ fontWeight: '600', color: '#334155', marginBottom: '8px', fontSize: '14px' }}>Already have a library file?</p>
+                                                    <p style={{ fontWeight: '600', color: '#334155', marginBottom: '8px', fontSize: '14px' }}>Already have a library or backup file?</p>
                                                     <button onClick={() => importLibrary()} style={{
                                                         background: 'white', color: '#2563eb',
                                                         border: '2px solid #2563eb', borderRadius: '6px', padding: '10px 20px',
