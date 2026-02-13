@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.4.9-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.4.9-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -227,6 +227,7 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [searchHistory, setSearchHistory] = useState([]);
             const [searchHistoryOpen, setSearchHistoryOpen] = useState(false);
+            const [searchHistoryIndex, setSearchHistoryIndex] = useState(-1);
             const [modalBook, setModalBook] = useState(null);
             const [dataSource, setDataSource] = useState('none');
             const [blankImageBooks, setBlankImageBooks] = useState(new Set());
@@ -4951,6 +4952,7 @@
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value);
+                                    setSearchHistoryIndex(-1);
                                     if (searchHistory.length > 0) setSearchHistoryOpen(true);
                                 }}
                                 placeholder="Title or author..."
@@ -4970,13 +4972,37 @@
                                 onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; addToSearchHistory(searchTerm); }}
                                 onKeyDown={(e) => {
                                     e.stopPropagation();
-                                    if (e.key === 'Enter') {
-                                        addToSearchHistory(searchTerm);
+                                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                                        if (!searchHistoryOpen || searchHistory.length === 0) return;
+                                        e.preventDefault();
+                                        const filtered = searchTerm.trim()
+                                            ? searchHistory.filter(h => h.toLowerCase().includes(searchTerm.toLowerCase()))
+                                            : searchHistory;
+                                        if (filtered.length === 0) return;
+                                        setSearchHistoryIndex(prev => {
+                                            if (e.key === 'ArrowDown') return prev < filtered.length - 1 ? prev + 1 : 0;
+                                            return prev > 0 ? prev - 1 : filtered.length - 1;
+                                        });
+                                    } else if (e.key === 'Enter') {
+                                        if (searchHistoryOpen && searchHistoryIndex >= 0) {
+                                            const filtered = searchTerm.trim()
+                                                ? searchHistory.filter(h => h.toLowerCase().includes(searchTerm.toLowerCase()))
+                                                : searchHistory;
+                                            if (searchHistoryIndex < filtered.length) {
+                                                const selected = filtered[searchHistoryIndex];
+                                                setSearchTerm(selected);
+                                                addToSearchHistory(selected);
+                                            }
+                                        } else {
+                                            addToSearchHistory(searchTerm);
+                                        }
                                         setSearchHistoryOpen(false);
+                                        setSearchHistoryIndex(-1);
                                         e.target.blur();
                                     } else if (e.key === 'Escape') {
                                         if (searchHistoryOpen) {
                                             setSearchHistoryOpen(false);
+                                            setSearchHistoryIndex(-1);
                                         } else {
                                             setSearchTerm('');
                                         }
@@ -5022,10 +5048,10 @@
                                         {filtered.map((term, i) => (
                                             <div key={i}
                                                 onMouseDown={(e) => e.preventDefault()}
-                                                onClick={() => { setSearchTerm(term); setSearchHistoryOpen(false); addToSearchHistory(term); }}
-                                                style={{ padding: '6px 12px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                                onClick={() => { setSearchTerm(term); setSearchHistoryOpen(false); setSearchHistoryIndex(-1); addToSearchHistory(term); }}
+                                                style={{ padding: '6px 12px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: i === searchHistoryIndex ? '#dbeafe' : 'white' }}
+                                                onMouseEnter={() => setSearchHistoryIndex(i)}
+                                                onMouseLeave={() => setSearchHistoryIndex(-1)}
                                             >
                                                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{term}</span>
                                                 <button
