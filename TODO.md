@@ -14,11 +14,7 @@ _(No active tasks)_
 
 ### ✨ Priority 2: Pre-Launch UX
 
-**1. First-run Welcome Dialog** - LOW/LOW (2 hours)
-   - Explain what ReaderWrangler is on first visit
-   - Brief intro, link to documentation
-   - Problem: New users don't know what the app does
-   - Impact: Better onboarding
+~~**1. First-run Welcome Dialog**~~ - DONE (v5.5.2) - Replaced with "Getting Started" link in Help menu
 
 **2. Enhanced Getting Started UX** - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
    - Status: Planned (post-rename enhancement)

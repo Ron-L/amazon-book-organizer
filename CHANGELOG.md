@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.2] - 2026-02-13
+
+### Added
+- **Getting Started link** in Help menu - opens landing page (readerwrangler.com) in new tab for users who need onboarding context
+
 ## [5.5.1] - 2026-02-13
 
 ### Improved
