@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.0";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.1-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5019,6 +5019,7 @@
                             {searchTerm && (
                                 <button
                                     onClick={() => { setSearchTerm(''); setSearchHistoryOpen(false); }}
+                                    title="Clear search"
                                     style={{
                                         position: 'absolute',
                                         right: '6px',
@@ -5087,6 +5088,7 @@
                         <div style={{ position: 'relative' }} data-status-dropdown="">
                             <button
                                 onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                                title="Filter by read status"
                                 style={{
                                     height: '28px',
                                     padding: '0 10px',
@@ -5178,6 +5180,7 @@
                         <div style={{ position: 'relative' }} data-tags-dropdown="">
                             <button
                                 onClick={() => setTagsDropdownOpen(!tagsDropdownOpen)}
+                                title="Filter by tags"
                                 style={{
                                     height: '28px',
                                     padding: '0 10px',
@@ -5294,6 +5297,7 @@
                         <div style={{ position: 'relative' }} data-types-dropdown="">
                             <button
                                 onClick={() => setTypesDropdownOpen(!typesDropdownOpen)}
+                                title="Filter by ownership type"
                                 style={{
                                     height: '28px',
                                     padding: '0 10px',
@@ -5383,6 +5387,7 @@
                         <button
                             data-morepanel="true"
                             onClick={() => setMorePanelOpen(!morePanelOpen)}
+                            title={morePanelOpen ? 'Hide additional filters' : 'Show additional filters'}
                             className={`px-3 py-1.5 rounded border ${morePanelOpen
                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
                                 : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
@@ -5727,6 +5732,7 @@
                                 <div style={{ position: 'relative' }} data-amazon-rating-dropdown="">
                                     <button
                                         onClick={() => setAmazonRatingDropdownOpen(!amazonRatingDropdownOpen)}
+                                        title="Filter by Amazon rating"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             minAmazonRating
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -5774,6 +5780,7 @@
                                 <div style={{ position: 'relative' }} data-my-rating-dropdown="">
                                     <button
                                         onClick={() => setMyRatingDropdownOpen(!myRatingDropdownOpen)}
+                                        title="Filter by your rating"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             minMyRating
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -5839,6 +5846,7 @@
                                 <div style={{ position: 'relative' }} data-series-dropdown="">
                                     <button
                                         onClick={() => setSeriesDropdownOpen(!seriesDropdownOpen)}
+                                        title="Filter by series"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             selectedSeries.length > 0
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -6131,7 +6139,7 @@
                                 {/* Header */}
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">Data Status</h2>
-                                    <button onClick={() => setStatusModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                    <button onClick={() => setStatusModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
                                 </div>
 
                                 {/* Content - informational only */}
@@ -6188,7 +6196,7 @@
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">Reset App Confirmation</h2>
-                                    <button onClick={() => setResetConfirmOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl font-bold">×</button>
+                                    <button onClick={() => setResetConfirmOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl font-bold" title="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <p className="text-gray-800 font-semibold">This will completely reset the app to its initial unused state.</p>
@@ -6229,7 +6237,7 @@
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">About ReaderWrangler™</h2>
-                                    <button onClick={() => setAboutDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                    <button onClick={() => setAboutDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-4 text-center">
                                     <img src="icons/ReaderWranglerXparent.png" alt="ReaderWrangler" style={{ width: '200px', height: '200px', margin: '0 auto' }} />
@@ -6252,7 +6260,7 @@
                             <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">Keyboard Shortcuts</h2>
-                                    <button onClick={() => setShortcutsDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                    <button onClick={() => setShortcutsDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-3">
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -6297,7 +6305,7 @@
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">How To Use ReaderWrangler</h2>
-                                    <button onClick={() => setHowToDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                    <button onClick={() => setHowToDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-gray-700">
@@ -6331,7 +6339,7 @@
                                             title="Show tips">
                                             ?
                                         </button>
-                                        <button onClick={() => setWizardModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                        <button onClick={() => setWizardModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
                                     </div>
                                 </div>
                                 <div className="p-6 space-y-4">
@@ -6553,7 +6561,7 @@
                             <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">📖 Auto-Organize Tips</h2>
-                                    <button onClick={() => setWizardHelpOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                    <button onClick={() => setWizardHelpOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div className="space-y-4 text-sm text-gray-700">
@@ -6612,7 +6620,7 @@
                             <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
                                     <h2 className="text-xl font-bold text-gray-900">🪄 Preview - Folders to Create</h2>
-                                    <button onClick={() => setWizardPreviewMode(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                    <button onClick={() => setWizardPreviewMode(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
                                 </div>
 
                                 {/* Scrollable preview content */}
@@ -6688,7 +6696,7 @@
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-green-100 rounded-t-lg border-b border-green-300">
                                     <h2 className="text-xl font-bold text-gray-900">🪄 Organization Complete</h2>
-                                    <button onClick={() => setWizardResultsOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none">×</button>
+                                    <button onClick={() => setWizardResultsOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
                                 </div>
 
                                 <div className="p-6">
@@ -7106,7 +7114,7 @@
                                             ✏️
                                         </button>
                                     )}
-                                    <button onClick={closeBookModal} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+                                    <button onClick={closeBookModal} className="text-gray-500 hover:text-gray-700 text-2xl" title="Close">×</button>
                                 </div>
 
                                 <div className="p-6">
@@ -7275,7 +7283,7 @@
                                                                 cursor: 'pointer',
                                                                 textDecoration: 'underline'
                                                             }}
-                                                            title="Clear rating"
+                                                            title="Clear my rating"
                                                         >
                                                             Clear
                                                         </button>
@@ -7461,7 +7469,8 @@
                                                                     }
                                                                     setContextSubmenu(contextSubmenu === 'addTagModal' ? null : 'addTagModal');
                                                                 }}
-                                                                className="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-0.5 border border-blue-300 rounded-full hover:bg-blue-50">
+                                                                className="text-blue-600 hover:text-blue-800 text-xs font-medium px-2 py-0.5 border border-blue-300 rounded-full hover:bg-blue-50"
+                                                                title="Add tag">
                                                                 + Add tag
                                                             </button>
                                                             {contextSubmenu === 'addTagModal' && (
@@ -8806,7 +8815,7 @@
                                                     value={explorerCoverCols}
                                                     onChange={(e) => setExplorerCoverCols(parseInt(e.target.value))}
                                                     className="w-24 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                                                    title={`${64 - explorerCoverCols} columns`}
+                                                    title={`Cover size: ${64 - explorerCoverCols} columns`}
                                                 />
                                             </div>
                                         )}
@@ -10423,7 +10432,7 @@
                                 <div className="flex items-center justify-between p-4 border-b border-gray-200">
                                     <h2 className="text-xl font-semibold">Manage Tags</h2>
                                     <button onClick={() => { setTagManagementOpen(false); setEditingTagId(null); }}
-                                            className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+                                            className="text-gray-400 hover:text-gray-600 text-2xl" title="Close">×</button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-4">
                                     {Object.keys(tagRegistry).length === 0 ? (
