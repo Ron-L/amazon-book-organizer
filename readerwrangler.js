@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.2-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4910,6 +4910,14 @@
                                         )}
                                         {menuName === 'Help' && (
                                             <>
+                                                {/* v5.5.2 - Getting Started link to landing page */}
+                                                <button onClick={() => { window.open('https://readerwrangler.com/', '_blank'); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: '#1e293b'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    Getting Started
+                                                </button>
                                                 <button onClick={() => { setHowToDialogOpen(true); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                     border: 'none', background: 'white', cursor: 'pointer',
