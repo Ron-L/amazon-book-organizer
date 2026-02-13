@@ -14,11 +14,7 @@ _(No active tasks)_
 
 ### ✨ Priority 2: Pre-Launch UX
 
-~~**1. First-run Welcome Dialog**~~ - DONE (v5.5.2) - Replaced with "Getting Started" link in Help menu
-
-**2. Enhanced Getting Started UX** - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
-   - Status: Planned (post-rename enhancement)
-   - Help menu links, enhanced empty library state
+~~**2. Enhanced Getting Started UX**~~ - DONE (v5.5.2-5.5.3) - Help menu "Getting Started" link + welcome state panel in empty library
 
 ---
 

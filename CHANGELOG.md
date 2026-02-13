@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.3] - 2026-02-13
+
+### Added
+- **Welcome state** for empty library - centered panel in right pane with two clear paths:
+  - "Getting Started Guide" button for new users (opens landing page)
+  - "Load Library File" button for returning users (opens file picker directly)
+  - Disappears automatically when library is imported
+
 ## [5.5.2] - 2026-02-13
 
 ### Added
