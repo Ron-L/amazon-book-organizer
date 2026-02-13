@@ -12,7 +12,7 @@ _(No active tasks)_
 
 ---
 
-### ✨ Priority 3: Foundational UX
+### ✨ Priority 2: Pre-Launch UX
 
 **1. First-run Welcome Dialog** - LOW/LOW (2 hours)
    - Explain what ReaderWrangler is on first visit
@@ -20,25 +20,15 @@ _(No active tasks)_
    - Problem: New users don't know what the app does
    - Impact: Better onboarding
 
-**2. Keyboard Shortcuts Help** - LOW/LOW (2 hours)
-   - "?" icon or Ctrl+? to show shortcuts dialog
-   - List: Undo/Redo, multi-select, navigation, etc.
-   - Problem: Users don't know available shortcuts
-   - Impact: Power user efficiency
-
-**3. Button Consistency Audit** - LOW/LOW (2-4 hours)
-   - Audit all button hover states across the app
-   - Define 3 button styles: Primary/Secondary/Tertiary
-   - Apply consistently everywhere (price goals, Add Tag, View on Amazon, Add Note, Edit Series, etc.)
-   - Document button style patterns
-   - Problem: Different buttons have different hover behaviors, users can't predict interaction
-   - Impact: Consistent, predictable UI interactions
-
-**4. Enhanced Getting Started UX** - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
+**2. Enhanced Getting Started UX** - See [docs/design/ENHANCED-GETTING-STARTED-UX.md](docs/design/ENHANCED-GETTING-STARTED-UX.md)
    - Status: Planned (post-rename enhancement)
    - Help menu links, enhanced empty library state
 
-**5. Quality Attribute Validation** - LOW/LOW (2-3 hours)
+---
+
+### 🔒 Priority 3: Pre-Launch Gate
+
+**1. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
    - **Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second
    - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
@@ -46,15 +36,18 @@ _(No active tasks)_
    - Problem: Need confidence app handles edge cases for public release
    - Impact: Robustness validation before launch
 
-**6. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
-   - Semantic HTML audit (use `<button>` not `<div onclick>`)
-   - ARIA labels for key interactions (context menus, drag operations)
-   - Keyboard-only navigation validation (tab order, focus indicators)
-   - Note: Full accessibility audit deferred (personal-use project)
-   - Problem: Potential public users may need accessibility features
-   - Impact: Broader user base support with minimal effort
+**2. 📱 Mobile Support Clarity** - HIGH/LOW (1 hour)
+   - Document whether app works on mobile devices
+   - Add to FAQ and main page
+   - Problem: Major omission for users who browse libraries on phones/tablets
+   - Impact: Sets correct expectations
 
-**7. Browser Compatibility Documentation** - LOW/LOW (30 min)
+**3. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
+   - Link version display (e.g., "v3.6.0") to CHANGELOG.md
+   - Problem: Users see version numbers but no context
+   - Impact: Transparency about what changed
+
+**4. Browser Compatibility Documentation** - LOW/LOW (30 min)
    - Document Chrome-only requirement in README and app footer
    - Note: Firefox/Edge may work but untested
    - Optional: 30-min Firefox smoke test before public release
@@ -63,7 +56,7 @@ _(No active tasks)_
 
 ---
 
-### 📖 Priority 4: Documentation
+### 📖 Priority 4: Launch Documentation
 
 **1. 📖 Quick Start Video & Written Guide** - HIGH/LOW (2-4 hours) - See [docs/design/VIDEO-PRODUCTION-PLAN.md](docs/design/VIDEO-PRODUCTION-PLAN.md)
 
@@ -76,18 +69,7 @@ _(No active tasks)_
    - Problem: Users get stuck, have questions, can't find answers
    - Impact: Reduces support burden, improves user confidence
 
-**3. 📱 Mobile Support Clarity** - HIGH/LOW (1 hour)
-   - Document whether app works on mobile devices
-   - Add to FAQ and main page
-   - Problem: Major omission for users who browse libraries on phones/tablets
-   - Impact: Sets correct expectations
-
-**4. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
-   - Link version display (e.g., "v3.6.0") to CHANGELOG.md
-   - Problem: Users see version numbers but no context
-   - Impact: Transparency about what changed
-
-**5. Fill in Missing Sections in USER-GUIDE.md** - MEDIUM/LOW (2-3 hours)
+**3. Fill in Missing Sections in USER-GUIDE.md** - MEDIUM/LOW (2-3 hours)
    - Complete placeholder sections
    - Add screenshots/examples
    - Problem: Partial documentation confuses users
@@ -130,7 +112,23 @@ _(No active tasks)_
    - Problem: Orphaned books (samples replaced by purchase, returns, expired subscriptions) clutter library
    - Impact: Clean library management, safe deletion with restore capability
 
- ---
+**4. Button Consistency Audit** - LOW/LOW (2-4 hours)
+   - Audit all button hover states across the app
+   - Define 3 button styles: Primary/Secondary/Tertiary
+   - Apply consistently everywhere (price goals, Add Tag, View on Amazon, Add Note, Edit Series, etc.)
+   - Document button style patterns
+   - Problem: Different buttons have different hover behaviors, users can't predict interaction
+   - Impact: Consistent, predictable UI interactions
+
+**5. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
+   - Semantic HTML audit (use `<button>` not `<div onclick>`)
+   - ARIA labels for key interactions (context menus, drag operations)
+   - Keyboard-only navigation validation (tab order, focus indicators)
+   - Note: Full accessibility audit deferred (personal-use project)
+   - Problem: Potential public users may need accessibility features
+   - Impact: Broader user base support with minimal effort
+
+---
 
 ### 🚀 Priority 7: Post-Launch Enhancements
 
@@ -168,13 +166,7 @@ _(No active tasks)_
    - Problem: No visibility into which books are shared with family
    - Impact: Better awareness of Family Library sharing status
 
-**5. 📖 Series Management** - ✅ COMPLETE (v5.1.0)
-   - See [docs/design/WIZARD-MODE.md](docs/design/WIZARD-MODE.md)
-   - Implemented: Auto-organize by author/series, automatic series detection, series subfolders, series reading order
-   - Future enhancement: Missing book detection ("You have Dresden Files #1-15 but missing #7")
-   - Impact: Better management for series readers
-
-**6. 🖼️ V2 Dual-Pane Split** - MEDIUM/MEDIUM (8-12 hours)
+**5. 🖼️ V2 Dual-Pane Split** - MEDIUM/MEDIUM (8-12 hours)
    - See [docs/design/DUAL-PANE-SPLIT.md](docs/design/DUAL-PANE-SPLIT.md) for full analysis
    - Two folder views side by side for power users
    - Option A: Built-in split pane (8-12 hours, native drag works)
@@ -182,7 +174,7 @@ _(No active tasks)_
    - Problem: Precise cross-folder positioning requires navigation
    - Impact: 10% power-user case; 90% covered by drag-to-folder-tree
 
-**7. Multi-Store Architecture** #Architecture - LOW/VERY HIGH (60-80 hours)
+**6. Multi-Store Architecture** #Architecture - LOW/VERY HIGH (60-80 hours)
    - See [docs/design/MULTI-STORE-ARCHITECTURE.md](docs/design/MULTI-STORE-ARCHITECTURE.md) for full spec
    - Status: Future enhancement (Amazon first, other stores later)
    - Covers: File naming, bookmarklet detection, data structure, migration path
@@ -245,27 +237,13 @@ _(No active tasks)_
    - Problem: Users unaware of missing enrichment data
    - Impact: Transparency about data quality
 
-**2.  UI Error Handling** #FetcherImprovements
-   -failures (especially in phase 0 - test API - should generate a report for a github issue with a link to github issues)
-
-**3. Replace Inbox collector with intentional moves.**
-   - The problem: The Inbox useEffect watches [books, folders, syncStatus] and sweeps any book not in any folder into Inbox. It acts as a garbage collector rather  than explicit logic. This masks bugs — e.g., in v5.2.0-alpha.13/14, a global keyboard handler accidentally removed a book from its folder, and the collector silently swept it into Inbox instead of the bug being obvious.
-
-   - The agreed fix (TODO.md Priority 10, item 4): Replace with explicit Inbox placement in the import/load path only. When books are loaded from   amazon-library.json, explicitly place new books (not already in any folder) into Inbox at that point. All other book movements (drag-drop, DEL, wizard
-  organize, remove from folder) are already explicit actions.
-
-  - Effort: Rated LOW/LOW (1-2 hours) in TODO.md. Not substantial — but it's a separate task from the Column App removal. We agreed to leave it for later rather than mix it into this refactoring.
-
-  - The behavior you just saw (DEL removes book from folder → Inbox collector sweeps it up) is "by design" in the current implementation, even though the design is acknowledged as flawed.
-
-
-**4. 🔄 Replace Inbox useEffect Collector with Explicit Import Logic** - LOW/LOW (1-2 hours)
+**2. 🔄 Replace Inbox useEffect Collector with Explicit Import Logic** - LOW/LOW (1-2 hours)
    - Current: Reactive useEffect watches `[books, folders, syncStatus]` and sweeps any unplaced books into Inbox
    - Problem: Acts as a garbage collector rather than explicit logic. All book moves between folders are explicit actions (drag-drop, wizard organize, remove from folder), but the initial import of new books is the only case that legitimately needs Inbox placement. The reactive approach caused a subtle bug (v5.2.0-alpha.13/14) where a global keyboard handler accidentally removed a book from its folder, and the collector silently swept it into Inbox — masking the real bug.
    - Fix: Replace with explicit Inbox placement in the import/load path only. When books are loaded from amazon-library.json, explicitly place new books (not already in any folder) into Inbox at that point.
    - Impact: Eliminates a class of silent data-movement bugs; makes all book placement explicit and traceable
 
-**5. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
+**3. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
    - Current state: 3,862-line monolithic file with 50+ state variables, 80+ functions
    - **Recommended: Minimal Split (4 modules)**
 
@@ -304,7 +282,3 @@ _(No active tasks)_
    - Problem: Multiple Amazon accounts on same device
    - Impact: Household/family sharing
    - **Workaround Available**: See [USER-GUIDE.md FAQ](USER-GUIDE.md#faq) "Can I maintain separate organizational states?" for Backup/Restore method to swap between different organizational states (demo vs. actual collection, testing vs. production, etc.)
-
-
-
-
