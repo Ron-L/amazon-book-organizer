@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -225,6 +225,7 @@
         function ReaderWrangler() {
             const [books, setBooks] = useState([]);
             const [searchTerm, setSearchTerm] = useState('');
+            const [searchInput, setSearchInput] = useState(''); // v5.5.4 - Live input value (debounced → searchTerm)
             const [searchHistory, setSearchHistory] = useState([]);
             const [searchHistoryOpen, setSearchHistoryOpen] = useState(false);
             const [searchHistoryIndex, setSearchHistoryIndex] = useState(-1);
@@ -982,7 +983,7 @@
                     const savedFilters = localStorage.getItem(FILTERS_KEY);
                     if (savedFilters) {
                         const filters = JSON.parse(savedFilters);
-                        if (filters.searchTerm !== undefined) setSearchTerm(filters.searchTerm);
+                        if (filters.searchTerm !== undefined) { setSearchInput(filters.searchTerm); setSearchTerm(filters.searchTerm); }
                         if (filters.readStatusFilter !== undefined) setReadStatusFilter(filters.readStatusFilter);
                         if (filters.collectionFilter !== undefined) setCollectionFilter(filters.collectionFilter);
                         if (filters.ratingFilter !== undefined) setRatingFilter(filters.ratingFilter);
@@ -1381,6 +1382,12 @@
                 loadData();
             }, []);
 
+
+            // v5.5.4 - Debounce search input → searchTerm (300ms delay for performance)
+            useEffect(() => {
+                const timer = setTimeout(() => setSearchTerm(searchInput), 300);
+                return () => clearTimeout(timer);
+            }, [searchInput]);
 
             // v5.0.0-alpha.132 - Cleanup tooltip timeout on unmount
             useEffect(() => {
@@ -2621,7 +2628,7 @@
                     localStorage.removeItem(FOLDERS_KEY); // v5.0.0-alpha.99 - clear folder organization
 
                     // Reset all filters (v3.8.0.h, updated v3.8.0.k, v4.1.0.d)
-                    setSearchTerm('');
+                    setSearchInput(''); setSearchTerm('');
                     setReadStatusFilter('');
                     setCollectionFilter('');
                     setRatingFilter('');
@@ -3125,7 +3132,7 @@
                 }
 
                 // Reset all filters when loading new library (v3.8.0.g, updated v3.8.0.k)
-                setSearchTerm('');
+                setSearchInput(''); setSearchTerm('');
                 setReadStatusFilter('');
                 setCollectionFilter('');
                 setRatingFilter('');
@@ -4963,9 +4970,9 @@
                             <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' }}>🔍</span>
                             <input
                                 type="text"
-                                value={searchTerm}
+                                value={searchInput}
                                 onChange={(e) => {
-                                    setSearchTerm(e.target.value);
+                                    setSearchInput(e.target.value);
                                     setSearchHistoryIndex(-1);
                                     if (searchHistory.length > 0) setSearchHistoryOpen(true);
                                 }}
@@ -4983,14 +4990,14 @@
                                     e.target.style.borderColor = '#3b82f6';
                                     if (searchHistory.length > 0) setSearchHistoryOpen(true);
                                 }}
-                                onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; addToSearchHistory(searchTerm); }}
+                                onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; addToSearchHistory(searchInput); }}
                                 onKeyDown={(e) => {
                                     e.stopPropagation();
                                     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
                                         if (!searchHistoryOpen || searchHistory.length === 0) return;
                                         e.preventDefault();
-                                        const filtered = searchTerm.trim()
-                                            ? searchHistory.filter(h => h.toLowerCase().includes(searchTerm.toLowerCase()))
+                                        const filtered = searchInput.trim()
+                                            ? searchHistory.filter(h => h.toLowerCase().includes(searchInput.toLowerCase()))
                                             : searchHistory;
                                         if (filtered.length === 0) return;
                                         setSearchHistoryIndex(prev => {
@@ -4999,16 +5006,16 @@
                                         });
                                     } else if (e.key === 'Enter') {
                                         if (searchHistoryOpen && searchHistoryIndex >= 0) {
-                                            const filtered = searchTerm.trim()
-                                                ? searchHistory.filter(h => h.toLowerCase().includes(searchTerm.toLowerCase()))
+                                            const filtered = searchInput.trim()
+                                                ? searchHistory.filter(h => h.toLowerCase().includes(searchInput.toLowerCase()))
                                                 : searchHistory;
                                             if (searchHistoryIndex < filtered.length) {
                                                 const selected = filtered[searchHistoryIndex];
-                                                setSearchTerm(selected);
+                                                setSearchInput(selected); setSearchTerm(selected);
                                                 addToSearchHistory(selected);
                                             }
                                         } else {
-                                            addToSearchHistory(searchTerm);
+                                            addToSearchHistory(searchInput);
                                         }
                                         setSearchHistoryOpen(false);
                                         setSearchHistoryIndex(-1);
@@ -5018,15 +5025,15 @@
                                             setSearchHistoryOpen(false);
                                             setSearchHistoryIndex(-1);
                                         } else {
-                                            setSearchTerm('');
+                                            setSearchInput(''); setSearchTerm('');
                                         }
                                         e.target.blur();
                                     }
                                 }}
                             />
-                            {searchTerm && (
+                            {searchInput && (
                                 <button
-                                    onClick={() => { setSearchTerm(''); setSearchHistoryOpen(false); }}
+                                    onClick={() => { setSearchInput(''); setSearchTerm(''); setSearchHistoryOpen(false); }}
                                     title="Clear search"
                                     style={{
                                         position: 'absolute',
@@ -5049,8 +5056,8 @@
                             )}
                             {/* Search history dropdown */}
                             {searchHistoryOpen && (() => {
-                                const filtered = searchTerm.trim()
-                                    ? searchHistory.filter(h => h.toLowerCase().includes(searchTerm.toLowerCase()))
+                                const filtered = searchInput.trim()
+                                    ? searchHistory.filter(h => h.toLowerCase().includes(searchInput.toLowerCase()))
                                     : searchHistory;
                                 if (filtered.length === 0) return null;
                                 return (
@@ -5063,7 +5070,7 @@
                                         {filtered.map((term, i) => (
                                             <div key={i}
                                                 onMouseDown={(e) => e.preventDefault()}
-                                                onClick={() => { setSearchTerm(term); setSearchHistoryOpen(false); setSearchHistoryIndex(-1); addToSearchHistory(term); }}
+                                                onClick={() => { setSearchInput(term); setSearchTerm(term); setSearchHistoryOpen(false); setSearchHistoryIndex(-1); addToSearchHistory(term); }}
                                                 style={{ padding: '6px 12px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: i === searchHistoryIndex ? '#dbeafe' : 'white' }}
                                                 onMouseEnter={() => setSearchHistoryIndex(i)}
                                                 onMouseLeave={() => setSearchHistoryIndex(-1)}
@@ -6115,7 +6122,7 @@
                                 {selectedSeries.length > 0 && <span>Series: {selectedSeries.map(s => s === 'NOT_IN_SERIES' ? 'Not in series' : s).join(', ')}</span>}
                             <button
                                 onClick={() => {
-                                    setSearchTerm('');
+                                    setSearchInput(''); setSearchTerm('');
                                     setReadStatusFilter('');
                                     setCollectionFilter('');
                                     setRatingFilter('');
