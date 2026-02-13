@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.3-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9091,7 +9091,44 @@
                                     </div>
                                 </div>
                                 <div className="flex-1 overflow-auto px-4 pb-4">
-                                    {explorerView === 'list' ? (
+                                    {/* v5.5.2 - Welcome state for empty library */}
+                                    {books.length === 0 && syncStatus !== 'loading' ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                                            <div style={{ textAlign: 'center', maxWidth: '420px' }}>
+                                                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
+                                                <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>Welcome to ReaderWrangler</h2>
+                                                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '28px' }}>Import your Kindle library to get started.</p>
+                                                <div style={{
+                                                    background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px',
+                                                    padding: '20px', marginBottom: '16px', textAlign: 'left'
+                                                }}>
+                                                    <p style={{ fontWeight: '600', color: '#0c4a6e', marginBottom: '8px', fontSize: '14px' }}>New here?</p>
+                                                    <p style={{ color: '#475569', fontSize: '13px', marginBottom: '12px' }}>Install the bookmarklet to import your library from Amazon.</p>
+                                                    <button onClick={() => window.open('https://readerwrangler.com/', '_blank')} style={{
+                                                        background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white',
+                                                        border: 'none', borderRadius: '6px', padding: '10px 20px',
+                                                        fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%'
+                                                    }}>
+                                                        Getting Started Guide →
+                                                    </button>
+                                                </div>
+                                                <div style={{
+                                                    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
+                                                    padding: '20px', textAlign: 'left'
+                                                }}>
+                                                    <p style={{ fontWeight: '600', color: '#334155', marginBottom: '8px', fontSize: '14px' }}>Already have a library file?</p>
+                                                    <button onClick={() => importLibrary()} style={{
+                                                        background: 'white', color: '#2563eb',
+                                                        border: '2px solid #2563eb', borderRadius: '6px', padding: '10px 20px',
+                                                        fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%'
+                                                    }}>
+                                                        Load Library File
+                                                    </button>
+                                                </div>
+                                                <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '20px' }}>See the Help menu for tips and shortcuts.</p>
+                                            </div>
+                                        </div>
+                                    ) : explorerView === 'list' ? (
                                         (() => {
                                             // v5.0.0-alpha.172.1 - Drag handlers for column reordering (config moved to COLUMN_CONFIG)
                                             const handleColumnDragStart = (e, colKey) => {
