@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -832,10 +832,18 @@
             // v5.5.4 - Render cap: show first 200 items instantly, "Show all" button for rest
             const RENDER_CAP = 200;
             const [showAllItems, setShowAllItems] = useState(false);
+            const prevDisplayItemsRef = useRef(explorerDisplayItems);
+
+            // Synchronous reset: if explorerDisplayItems changed this render, force cap on
+            let effectiveShowAll = showAllItems;
+            if (prevDisplayItemsRef.current !== explorerDisplayItems) {
+                effectiveShowAll = false;
+                prevDisplayItemsRef.current = explorerDisplayItems;
+            }
 
             useEffect(() => {
-                // Reset cap when display items change (sort/filter/folder change)
-                setShowAllItems(false);
+                // Also reset the state so it stays in sync after the synchronous override
+                if (!effectiveShowAll && showAllItems) setShowAllItems(false);
             }, [explorerDisplayItems]);
 
             // Get folder by ID (handles All Books and My Library virtual folders)
@@ -9797,7 +9805,7 @@
                                                 {(() => {
                                                     console.time('⏱ list view: JSX map');
                                                     // v5.5.4 - Render cap with "Show all" option
-                                                    const isCapped = !showAllItems && explorerDisplayItems.length > RENDER_CAP;
+                                                    const isCapped = !effectiveShowAll && explorerDisplayItems.length > RENDER_CAP;
                                                     const displayItems = isCapped
                                                         ? explorerDisplayItems.slice(0, RENDER_CAP)
                                                         : explorerDisplayItems;
@@ -10320,7 +10328,7 @@
                                             {/* Book tiles */}
                                             {(() => {
                                                 // v5.5.4 - Render cap with "Show all" option
-                                                const isCapped = !showAllItems && explorerDisplayItems.length > RENDER_CAP;
+                                                const isCapped = !effectiveShowAll && explorerDisplayItems.length > RENDER_CAP;
                                                 const displayItems = isCapped
                                                     ? explorerDisplayItems.slice(0, RENDER_CAP)
                                                     : explorerDisplayItems;
@@ -10483,7 +10491,7 @@
                                                     );
                                                 });
                                             })()}
-                                            {!showAllItems && explorerDisplayItems.length > RENDER_CAP && (
+                                            {!effectiveShowAll && explorerDisplayItems.length > RENDER_CAP && (
                                                 <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '12px' }}>
                                                     <button
                                                         onClick={() => setShowAllItems(true)}
