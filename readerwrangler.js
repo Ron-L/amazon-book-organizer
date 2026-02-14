@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.14";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -533,6 +533,7 @@
                 explorerDropTargetRef.current = el;
             };
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
+            const bookRowsRef = useRef(null); // v5.5.4 - Book rows container for pointer-events toggle during drag
             const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
             const [sidebarFolderDragTarget, setSidebarFolderDragTarget] = useState(null); // v5.0.0-alpha.86 - { type: 'reorder'|'reparent', folderId, position? }
             const [leftPaneWidth, setLeftPaneWidth] = useState(256); // v5.0.0-alpha.91 - Resizable left pane width (px)
@@ -9806,6 +9807,8 @@
                                                         return [row];
                                                     });
                                                 })()}
+                                            </tbody>
+                                            <tbody ref={bookRowsRef}>
                                                 {/* Book rows */}
                                                 {(() => {
                                                     console.time('⏱ list view: JSX map');
@@ -9883,6 +9886,8 @@
                                                                     setExplorerSelectedBooks(new Set([book.id]));
                                                                 }
                                                                 setExplorerDragBookId(book.id);
+                                                                // v5.5.4 - Disable hit-testing on book rows during drag for perf
+                                                                if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = 'none';
                                                             }}
                                                             onDragOver={(e) => {
                                                                 e.preventDefault();
@@ -9919,6 +9924,7 @@
                                                                 setExplorerDragBookId(null);
                                                             }}
                                                             onDragEnd={() => {
+                                                                if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
                                                                 if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.borderTop = ''; explorerReorderTargetRef.current = null; }
                                                                 setExplorerDragBookId(null);
                                                                 setFolderDropHighlight(null);
