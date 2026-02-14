@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -828,6 +828,24 @@
                 ratingFilter, ownershipFilter, showHidden, seriesFilter, selectedSeries,
                 dateFrom, dateTo, dealsFilterActive, tagFilter, explorerSort,
                 explorerGroupOn, collapsedGroups]);
+
+            // v5.5.4 - Progressive rendering: render first batch instantly, then fill in rest
+            const RENDER_INITIAL = 200;
+            const RENDER_BATCH = 500;
+            const [renderLimit, setRenderLimit] = useState(RENDER_INITIAL);
+
+            useEffect(() => {
+                // Reset to initial batch when display items change
+                setRenderLimit(RENDER_INITIAL);
+            }, [explorerDisplayItems]);
+
+            useEffect(() => {
+                if (renderLimit >= explorerDisplayItems.length) return;
+                const timer = setTimeout(() => {
+                    setRenderLimit(prev => Math.min(prev + RENDER_BATCH, explorerDisplayItems.length));
+                }, 30);
+                return () => clearTimeout(timer);
+            }, [renderLimit, explorerDisplayItems.length]);
 
             // Get folder by ID (handles All Books and My Library virtual folders)
             const getFolderById = (folderId) => {
@@ -9787,8 +9805,10 @@
                                                 {/* Book rows */}
                                                 {(() => {
                                                     console.time('⏱ list view: JSX map');
-                                                    // v5.5.4 - Use memoized explorerDisplayItems (computed once, shared with cover view)
-                                                    const displayItems = explorerDisplayItems;
+                                                    // v5.5.4 - Use memoized explorerDisplayItems with progressive rendering
+                                                    const displayItems = explorerDisplayItems.length > RENDER_INITIAL
+                                                        ? explorerDisplayItems.slice(0, renderLimit)
+                                                        : explorerDisplayItems;
                                                     const totalVisibleCols = columnOrder.filter(c => visibleColumns[c]).length + 2;
                                                     const result = displayItems.map(item => {
                                                         if (item.type === 'header') {
@@ -10293,8 +10313,10 @@
                                             })()}
                                             {/* Book tiles */}
                                             {(() => {
-                                                // v5.5.4 - Use memoized explorerDisplayItems (computed once, shared with list view)
-                                                const displayItems = explorerDisplayItems;
+                                                // v5.5.4 - Use memoized explorerDisplayItems with progressive rendering
+                                                const displayItems = explorerDisplayItems.length > RENDER_INITIAL
+                                                    ? explorerDisplayItems.slice(0, renderLimit)
+                                                    : explorerDisplayItems;
                                                 return displayItems.map(item => {
                                                     if (item.type === 'header') {
                                                         return (
