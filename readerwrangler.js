@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.15";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9886,8 +9886,8 @@
                                                                     setExplorerSelectedBooks(new Set([book.id]));
                                                                 }
                                                                 setExplorerDragBookId(book.id);
-                                                                // v5.5.4 - Disable hit-testing on book rows during drag for perf
-                                                                if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = 'none';
+                                                                // v5.5.4 - Disable hit-testing on book rows during drag for perf (setTimeout lets browser capture drag first)
+                                                                setTimeout(() => { if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = 'none'; }, 0);
                                                             }}
                                                             onDragOver={(e) => {
                                                                 e.preventDefault();
