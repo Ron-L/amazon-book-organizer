@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.17";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.18";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8228,6 +8228,11 @@
                                             })));
                                             setFolderDropHighlight(null);
                                             setExplorerSelectedBooks(new Set());
+                                            // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
+                                            bookDragActiveRef.current = false;
+                                            if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
+                                            setExplorerDragBookId(null);
+                                            setExplorerDragData(null);
                                         }}>
                                         <span className="pointer-events-none">{FOLDER_INBOX.icon}</span>
                                         <span className="flex-1 pointer-events-none">{FOLDER_INBOX.name}</span>
@@ -8511,6 +8516,11 @@
                                                             setFolderDropHighlight(null);
                                                             setExplorerSelectedBooks(new Set());
                                                             explorerIsCopyDragRef.current = false;
+                                                            // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
+                                                            bookDragActiveRef.current = false;
+                                                            if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
+                                                            setExplorerDragBookId(null);
+                                                            setExplorerDragData(null);
                                                         }}
                                                         onContextMenu={(e) => {
                                                             // v5.0.0-alpha.133 - Show visual context menu (replaces prompt)
@@ -8859,6 +8869,11 @@
                                                                         console.log(`📦 Moved ${bookIds.length} book(s) to "${folder.name}" via breadcrumb`);
                                                                     }
                                                                     setExplorerSelectedBooks(new Set());
+                                                                    // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
+                                                                    bookDragActiveRef.current = false;
+                                                                    if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
+                                                                    setExplorerDragBookId(null);
+                                                                    setExplorerDragData(null);
                                                                 } catch (err) {
                                                                     console.error('Breadcrumb book drop error:', err);
                                                                 }
@@ -9677,6 +9692,11 @@
                                                                         setFolderDropHighlight(null);
                                                                         setExplorerSelectedBooks(new Set());
                                                                         explorerIsCopyDragRef.current = false;
+                                                                        // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
+                                                                        bookDragActiveRef.current = false;
+                                                                        if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
+                                                                        setExplorerDragBookId(null);
+                                                                        setExplorerDragData(null);
                                                                     }
                                                                     setExplorerFolderDragTarget(null);
                                                                 }}
@@ -10315,6 +10335,11 @@
                                                                 setFolderDropHighlight(null);
                                                                 setExplorerSelectedBooks(new Set());
                                                                 explorerIsCopyDragRef.current = false;
+                                                                // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
+                                                                bookDragActiveRef.current = false;
+                                                                if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
+                                                                setExplorerDragBookId(null);
+                                                                setExplorerDragData(null);
                                                             }
                                                             setExplorerFolderDragTarget(null);
                                                         }}
