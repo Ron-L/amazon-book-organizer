@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -518,7 +518,7 @@
             const [explorerSelectedFolders, setExplorerSelectedFolders] = useState(new Set()); // v5.0.0-alpha.54 - Folder selection in right pane
             const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select
             const [explorerBookContextMenu, setExplorerBookContextMenu] = useState(null); // v5.0.0-alpha.165 - Book context menu in Explorer (separate from Columns App menu)
-            const [explorerReorderTarget, setExplorerReorderTarget] = useState(null); // Index for reorder drop target
+            const explorerReorderTargetRef = useRef(null); // DOM element for reorder drop indicator (ref-based to avoid re-renders)
             const [explorerFolderDragTarget, setExplorerFolderDragTarget] = useState(null); // v5.0.0-alpha.69 - { type: 'reorder'|'reparent', index?, position?, folderId? }
             const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
@@ -9811,10 +9811,6 @@
                                                             className={`group cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
                                                             style={(() => {
                                                                 const styles = {};
-                                                                // Reorder target feedback
-                                                                if (explorerReorderTarget === index) {
-                                                                    styles.borderTop = `3px solid ${explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}`;
-                                                                }
                                                                 // v5.0.6 - Hidden book visual feedback (check both current and legacy formats)
                                                                 if (hiddenInstances.has(book._instanceId) || book.isHidden) {
                                                                     styles.opacity = 0.4;
@@ -9858,14 +9854,27 @@
                                                                 setExplorerDragBookId(book.id);
                                                             }}
                                                             onDragOver={(e) => {
-                                                                e.preventDefault(); // Allow drop event to fire
-                                                                e.dataTransfer.dropEffect = 'move'; // Must be 'move' for onDrop to fire
-                                                                setExplorerReorderTarget(index); // Always show target (styled by allowed state)
+                                                                e.preventDefault();
+                                                                e.dataTransfer.dropEffect = 'move';
+                                                                // Ref-based: apply indicator via DOM to avoid re-render
+                                                                const row = e.currentTarget;
+                                                                if (explorerReorderTargetRef.current !== row) {
+                                                                    if (explorerReorderTargetRef.current) explorerReorderTargetRef.current.style.borderTop = '';
+                                                                    const color = explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171';
+                                                                    row.style.borderTop = `3px solid ${color}`;
+                                                                    explorerReorderTargetRef.current = row;
+                                                                }
                                                             }}
-                                                            onDragLeave={() => setExplorerReorderTarget(null)}
+                                                            onDragLeave={(e) => {
+                                                                if (explorerReorderTargetRef.current === e.currentTarget) {
+                                                                    e.currentTarget.style.borderTop = '';
+                                                                    explorerReorderTargetRef.current = null;
+                                                                }
+                                                            }}
                                                             onDrop={(e) => {
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
+                                                                if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.borderTop = ''; explorerReorderTargetRef.current = null; }
                                                                 if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
                                                                     const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                                                     if (dragData.sourceFolder === selectedFolderId) {
@@ -9876,13 +9885,12 @@
                                                                 } else if (explorerSort[0].column !== 'custom') {
                                                                     showToast('Clear sort to reorder', e.clientX, e.clientY);
                                                                 }
-                                                                setExplorerReorderTarget(null);
                                                                 setExplorerDragBookId(null);
                                                             }}
                                                             onDragEnd={() => {
+                                                                if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.borderTop = ''; explorerReorderTargetRef.current = null; }
                                                                 setExplorerDragBookId(null);
                                                                 setExplorerDropTargetId(null);
-                                                                setExplorerReorderTarget(null);
                                                                 setExplorerDragData(null);
                                                             }}
                                                             onClick={(e) => {
@@ -10365,11 +10373,6 @@
                                                         className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''}`}
                                                         style={(() => {
                                                             const styles = {};
-                                                            // Reorder target feedback
-                                                            if (explorerReorderTarget === index) {
-                                                                styles.outline = `3px solid ${explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171'}`;
-                                                                styles.outlineOffset = '2px';
-                                                            }
                                                             // v5.0.6 - Hidden book visual feedback (check both current and legacy formats)
                                                             if (hiddenInstances.has(book._instanceId) || book.isHidden) {
                                                                 styles.opacity = 0.4;
@@ -10413,14 +10416,29 @@
                                                             setExplorerDragBookId(book.id);
                                                         }}
                                                         onDragOver={(e) => {
-                                                            e.preventDefault(); // Allow drop event to fire
-                                                            e.dataTransfer.dropEffect = 'move'; // Must be 'move' for onDrop to fire
-                                                            setExplorerReorderTarget(index); // Always show target (styled red if not allowed)
+                                                            e.preventDefault();
+                                                            e.dataTransfer.dropEffect = 'move';
+                                                            // Ref-based: apply indicator via DOM to avoid re-render
+                                                            const el = e.currentTarget;
+                                                            if (explorerReorderTargetRef.current !== el) {
+                                                                if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.outline = ''; explorerReorderTargetRef.current.style.outlineOffset = ''; }
+                                                                const color = explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171';
+                                                                el.style.outline = `3px solid ${color}`;
+                                                                el.style.outlineOffset = '2px';
+                                                                explorerReorderTargetRef.current = el;
+                                                            }
                                                         }}
-                                                        onDragLeave={() => setExplorerReorderTarget(null)}
+                                                        onDragLeave={(e) => {
+                                                            if (explorerReorderTargetRef.current === e.currentTarget) {
+                                                                e.currentTarget.style.outline = '';
+                                                                e.currentTarget.style.outlineOffset = '';
+                                                                explorerReorderTargetRef.current = null;
+                                                            }
+                                                        }}
                                                         onDrop={(e) => {
                                                             e.preventDefault();
                                                             e.stopPropagation();
+                                                            if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.outline = ''; explorerReorderTargetRef.current.style.outlineOffset = ''; explorerReorderTargetRef.current = null; }
                                                             if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
                                                                 const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                                                 if (dragData.sourceFolder === selectedFolderId) {
@@ -10431,13 +10449,12 @@
                                                             } else if (explorerSort[0].column !== 'custom') {
                                                                 showToast('Clear sort to reorder', e.clientX, e.clientY);
                                                             }
-                                                            setExplorerReorderTarget(null);
                                                             setExplorerDragBookId(null);
                                                         }}
                                                         onDragEnd={() => {
+                                                            if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.outline = ''; explorerReorderTargetRef.current.style.outlineOffset = ''; explorerReorderTargetRef.current = null; }
                                                             setExplorerDragBookId(null);
                                                             setExplorerDropTargetId(null);
-                                                            setExplorerReorderTarget(null);
                                                             setExplorerDragData(null);
                                                         }}
                                                         onClick={(e) => {
