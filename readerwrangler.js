@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.13";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -513,14 +513,25 @@
             const [rightPanelEditingName, setRightPanelEditingName] = useState(''); // v5.0.0-alpha.156 - Folder rename input (right panel)
             const [rightPanelPlaceholderMode, setRightPanelPlaceholderMode] = useState(false); // v5.0.0-alpha.156 - Placeholder mode (right panel)
             const [explorerDragBookId, setExplorerDragBookId] = useState(null); // Book being dragged in Explorer
-            const [explorerDropTargetId, setExplorerDropTargetId] = useState(null); // Folder being dragged over
+            const explorerDropTargetRef = useRef(null); // DOM element of folder being dragged over (ref-based to avoid re-renders)
             const [explorerSelectedBooks, setExplorerSelectedBooks] = useState(new Set()); // Multi-select in Explorer
             const [explorerSelectedFolders, setExplorerSelectedFolders] = useState(new Set()); // v5.0.0-alpha.54 - Folder selection in right pane
             const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select
             const [explorerBookContextMenu, setExplorerBookContextMenu] = useState(null); // v5.0.0-alpha.165 - Book context menu in Explorer (separate from Columns App menu)
             const explorerReorderTargetRef = useRef(null); // DOM element for reorder drop indicator (ref-based to avoid re-renders)
             const [explorerFolderDragTarget, setExplorerFolderDragTarget] = useState(null); // v5.0.0-alpha.69 - { type: 'reorder'|'reparent', index?, position?, folderId? }
-            const [explorerIsCopyDrag, setExplorerIsCopyDrag] = useState(false); // Ctrl key pressed during drag
+            const explorerIsCopyDragRef = useRef(false); // Ctrl key pressed during drag (ref-based, only read on drop)
+            // Helper: apply/clear folder drop highlight via DOM (avoids re-renders)
+            const setFolderDropHighlight = (el) => {
+                if (explorerDropTargetRef.current === el) return;
+                if (explorerDropTargetRef.current) {
+                    explorerDropTargetRef.current.classList.remove('ring-2', 'ring-blue-400', 'bg-blue-50');
+                }
+                if (el) {
+                    el.classList.add('ring-2', 'ring-blue-400', 'bg-blue-50');
+                }
+                explorerDropTargetRef.current = el;
+            };
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
             const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
             const [sidebarFolderDragTarget, setSidebarFolderDragTarget] = useState(null); // v5.0.0-alpha.86 - { type: 'reorder'|'reparent', folderId, position? }
@@ -8101,19 +8112,19 @@
                                     <div className="border-b border-gray-200 my-1 mx-2"></div>
                                     {/* v5.4.4 - My Library: selectable + folder drop target */}
                                     <div
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__library__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__library__')}
                                         onDragOver={(e) => {
                                             // Accept folder drags only — books go to Inbox, not root
                                             if (Array.from(e.dataTransfer.types).includes('application/x-folder-reorder')) {
                                                 e.preventDefault();
                                                 e.dataTransfer.dropEffect = 'move';
-                                                setExplorerDropTargetId('__library__');
+                                                setFolderDropHighlight(e.currentTarget);
                                             }
                                         }}
                                         onDragLeave={(e) => {
                                             if (!e.currentTarget.contains(e.relatedTarget)) {
-                                                setExplorerDropTargetId(null);
+                                                setFolderDropHighlight(null);
                                             }
                                         }}
                                         onDrop={(e) => {
@@ -8123,7 +8134,7 @@
                                                 const { folderIds } = JSON.parse(folderData);
                                                 reparentFolder(folderIds, null);
                                             }
-                                            setExplorerDropTargetId(null);
+                                            setFolderDropHighlight(null);
                                         }}>
                                         <span className="pointer-events-none">{FOLDER_LIBRARY.icon}</span>
                                         <span className="flex-1 pointer-events-none">{FOLDER_LIBRARY.name}</span>
@@ -8154,17 +8165,17 @@
                                     </div>
                                     {/* Inbox - indented as part of folder hierarchy */}
                                     <div
-                                        className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === '__inbox__' ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                        className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__inbox__')}
                                         onDragOver={(e) => {
                                             e.preventDefault();
                                             e.dataTransfer.dropEffect = 'move';
-                                            setExplorerDropTargetId('__inbox__');
+                                            setFolderDropHighlight(e.currentTarget);
                                         }}
                                         onDragLeave={(e) => {
                                             // Only clear if actually leaving container, not moving to child element
                                             if (!e.currentTarget.contains(e.relatedTarget)) {
-                                                setExplorerDropTargetId(null);
+                                                setFolderDropHighlight(null);
                                             }
                                         }}
                                         onDrop={(e) => {
@@ -8186,7 +8197,7 @@
                                                         setToastAnimating(false);
                                                     }, 1000);
                                                 }, 1500);
-                                                setExplorerDropTargetId(null);
+                                                setFolderDropHighlight(null);
                                                 setExplorerSelectedBooks(new Set());
                                                 return;
                                             }
@@ -8196,7 +8207,7 @@
                                                 ...folder,
                                                 bookIds: (folder.bookIds || []).filter(id => !bookIds.includes(id))
                                             })));
-                                            setExplorerDropTargetId(null);
+                                            setFolderDropHighlight(null);
                                             setExplorerSelectedBooks(new Set());
                                         }}>
                                         <span className="pointer-events-none">{FOLDER_INBOX.icon}</span>
@@ -8241,7 +8252,7 @@
                                             return (
                                                 <React.Fragment key={folder.id}>
                                                     <div
-                                                        className={`w-full flex items-center gap-1 pr-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${explorerDropTargetId === folder.id || (sidebarFolderDragTarget?.type === 'reparent' && sidebarFolderDragTarget?.folderId === folder.id) ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                                        className={`w-full flex items-center gap-1 pr-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${(sidebarFolderDragTarget?.type === 'reparent' && sidebarFolderDragTarget?.folderId === folder.id) ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                                         style={{
                                                             paddingLeft: `${16 + depth * 16}px`,
                                                             // v5.0.0-alpha.86 - Visual feedback for folder reorder
@@ -8282,9 +8293,9 @@
                                                             if (isBookDrag) {
                                                                 // Book drag - existing behavior
                                                                 const isCopy = e.ctrlKey;
-                                                                setExplorerIsCopyDrag(isCopy);
+                                                                explorerIsCopyDragRef.current = isCopy;
                                                                 e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
-                                                                setExplorerDropTargetId(folder.id);
+                                                                setFolderDropHighlight(e.currentTarget);
                                                             } else if (isFolderDrag) {
                                                                 // v5.0.0-alpha.86 - Folder drag with zone detection
                                                                 e.dataTransfer.dropEffect = 'move';
@@ -8324,7 +8335,7 @@
                                                         }}
                                                         onDragLeave={(e) => {
                                                             if (!e.currentTarget.contains(e.relatedTarget)) {
-                                                                setExplorerDropTargetId(null);
+                                                                setFolderDropHighlight(null);
                                                                 setSidebarFolderDragTarget(null);
                                                                 // v5.0.0-alpha.82 - Clear auto-expand timeout
                                                                 if (dragHoverExpandTimeoutRef.current) {
@@ -8433,7 +8444,7 @@
 
                                                             if (sourceFolder === '__all__') {
                                                                 showToastLocal('All Books is view-only. Organize from folders.');
-                                                                setExplorerDropTargetId(null);
+                                                                setFolderDropHighlight(null);
                                                                 setExplorerSelectedBooks(new Set());
                                                                 return;
                                                             }
@@ -8451,14 +8462,14 @@
                                                                     if (f.id === folder.id) {
                                                                         return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
                                                                     }
-                                                                    if (!explorerIsCopyDrag && f.id === sourceFolder) {
+                                                                    if (!explorerIsCopyDragRef.current && f.id === sourceFolder) {
                                                                         return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
                                                                     }
                                                                     return f;
                                                                 }));
 
                                                                 // v5.0.0-alpha.46 - Record action for undo
-                                                                if (explorerIsCopyDrag) {
+                                                                if (explorerIsCopyDragRef.current) {
                                                                     recordAction({
                                                                         type: 'COPY_BOOKS_FOLDER',
                                                                         toFolderId: folder.id,
@@ -8478,9 +8489,9 @@
                                                                     console.log(`📦 Moved ${bookIds.length} book(s) to "${folder.name}"`);
                                                                 }
                                                             }
-                                                            setExplorerDropTargetId(null);
+                                                            setFolderDropHighlight(null);
                                                             setExplorerSelectedBooks(new Set());
-                                                            setExplorerIsCopyDrag(false);
+                                                            explorerIsCopyDragRef.current = false;
                                                         }}
                                                         onContextMenu={(e) => {
                                                             // v5.0.0-alpha.133 - Show visual context menu (replaces prompt)
@@ -9524,11 +9535,7 @@
                                                                         }
                                                                     }
 
-                                                                    // v5.4.3 - Book drop target feedback
-                                                                    if (explorerDropTargetId === folder.id) {
-                                                                        styles.backgroundColor = '#dbeafe';
-                                                                        styles.outline = '2px solid #3b82f6';
-                                                                    }
+                                                                    // v5.4.3 - Book drop target feedback now handled by ref-based setFolderDropHighlight
 
                                                                     // Cut folder visual feedback
                                                                     if (folderClipboard.operation === 'cut' && folderClipboard.items.includes(folder.id)) {
@@ -9556,9 +9563,9 @@
                                                                     if (e.dataTransfer.types.includes('application/x-readerwrangler')) {
                                                                         e.preventDefault();
                                                                         const isCopy = e.ctrlKey;
-                                                                        setExplorerIsCopyDrag(isCopy);
+                                                                        explorerIsCopyDragRef.current = isCopy;
                                                                         e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
-                                                                        setExplorerDropTargetId(folder.id);
+                                                                        setFolderDropHighlight(e.currentTarget);
                                                                         return;
                                                                     }
                                                                     // v5.0.0-alpha.70 - Folder drag: Two-target zone detection (optimized)
@@ -9589,7 +9596,7 @@
                                                                 onDragLeave={(e) => {
                                                                     if (!e.currentTarget.contains(e.relatedTarget)) {
                                                                         setExplorerFolderDragTarget(null);
-                                                                        setExplorerDropTargetId(null);
+                                                                        setFolderDropHighlight(null);
                                                                     }
                                                                 }}
                                                                 onDrop={(e) => {
@@ -9636,10 +9643,10 @@
                                                                                 const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
                                                                                 setFolders(prev => prev.map(f => {
                                                                                     if (f.id === folder.id) return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
-                                                                                    if (!explorerIsCopyDrag && f.id === sourceFolder) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                                                    if (!explorerIsCopyDragRef.current && f.id === sourceFolder) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
                                                                                     return f;
                                                                                 }));
-                                                                                if (explorerIsCopyDrag) {
+                                                                                if (explorerIsCopyDragRef.current) {
                                                                                     recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId: folder.id, bookIds: newBookIds, toIndex: 0 });
                                                                                     console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
                                                                                 } else {
@@ -9648,9 +9655,9 @@
                                                                                 }
                                                                             }
                                                                         }
-                                                                        setExplorerDropTargetId(null);
+                                                                        setFolderDropHighlight(null);
                                                                         setExplorerSelectedBooks(new Set());
-                                                                        setExplorerIsCopyDrag(false);
+                                                                        explorerIsCopyDragRef.current = false;
                                                                     }
                                                                     setExplorerFolderDragTarget(null);
                                                                 }}
@@ -9914,7 +9921,7 @@
                                                             onDragEnd={() => {
                                                                 if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.borderTop = ''; explorerReorderTargetRef.current = null; }
                                                                 setExplorerDragBookId(null);
-                                                                setExplorerDropTargetId(null);
+                                                                setFolderDropHighlight(null);
                                                                 setExplorerDragData(null);
                                                             }}
                                                             onClick={(e) => {
@@ -10153,10 +10160,7 @@
                                                         key={`folder-${folder.id}`}
                                                         className={`cursor-pointer hover:opacity-80 ${!isDraggable ? 'select-none' : ''} ${explorerSelectedFolders.has(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
                                                         style={(() => {
-                                                            // v5.4.3 - Book drop target feedback (checked before folder drag)
-                                                            if (explorerDropTargetId === folder.id) {
-                                                                return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' };
-                                                            }
+                                                            // v5.4.3 - Book drop target feedback now handled by ref-based setFolderDropHighlight
                                                             // v5.0.0-alpha.73 - Phase C: Visual feedback (blue=valid, red=invalid)
                                                             if (!explorerFolderDragTarget) return {};
                                                             if (explorerFolderDragTarget.type === 'reorder' && explorerFolderDragTarget.index === folderIndex) {
@@ -10190,9 +10194,9 @@
                                                             if (e.dataTransfer.types.includes('application/x-readerwrangler')) {
                                                                 e.preventDefault();
                                                                 const isCopy = e.ctrlKey;
-                                                                setExplorerIsCopyDrag(isCopy);
+                                                                explorerIsCopyDragRef.current = isCopy;
                                                                 e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
-                                                                setExplorerDropTargetId(folder.id);
+                                                                setFolderDropHighlight(e.currentTarget);
                                                                 return;
                                                             }
                                                             // v5.0.0-alpha.70 - Folder drag: Two-target zone detection (optimized)
@@ -10223,7 +10227,7 @@
                                                         onDragLeave={(e) => {
                                                             if (!e.currentTarget.contains(e.relatedTarget)) {
                                                                 setExplorerFolderDragTarget(null);
-                                                                setExplorerDropTargetId(null);
+                                                                setFolderDropHighlight(null);
                                                             }
                                                         }}
                                                         onDrop={(e) => {
@@ -10270,10 +10274,10 @@
                                                                         const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
                                                                         setFolders(prev => prev.map(f => {
                                                                             if (f.id === folder.id) return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
-                                                                            if (!explorerIsCopyDrag && f.id === sourceFolder) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                                            if (!explorerIsCopyDragRef.current && f.id === sourceFolder) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
                                                                             return f;
                                                                         }));
-                                                                        if (explorerIsCopyDrag) {
+                                                                        if (explorerIsCopyDragRef.current) {
                                                                             recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId: folder.id, bookIds: newBookIds, toIndex: 0 });
                                                                             console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
                                                                         } else {
@@ -10282,9 +10286,9 @@
                                                                         }
                                                                     }
                                                                 }
-                                                                setExplorerDropTargetId(null);
+                                                                setFolderDropHighlight(null);
                                                                 setExplorerSelectedBooks(new Set());
-                                                                setExplorerIsCopyDrag(false);
+                                                                explorerIsCopyDragRef.current = false;
                                                             }
                                                             setExplorerFolderDragTarget(null);
                                                         }}
@@ -10437,7 +10441,7 @@
                                                         onDragEnd={() => {
                                                             if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.outline = ''; explorerReorderTargetRef.current.style.outlineOffset = ''; explorerReorderTargetRef.current = null; }
                                                             setExplorerDragBookId(null);
-                                                            setExplorerDropTargetId(null);
+                                                            setFolderDropHighlight(null);
                                                             setExplorerDragData(null);
                                                         }}
                                                         onClick={(e) => {
