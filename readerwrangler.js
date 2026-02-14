@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.15";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.16";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -534,6 +534,16 @@
             };
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
             const bookRowsRef = useRef(null); // v5.5.4 - Book rows container for pointer-events toggle during drag
+
+            // v5.5.4 - Global dragend safety net: always restore pointer-events
+            // (book row onDragEnd may not fire if the row is unmounted during folder state update)
+            useEffect(() => {
+                const handler = () => {
+                    if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
+                };
+                window.addEventListener('dragend', handler);
+                return () => window.removeEventListener('dragend', handler);
+            }, []);
             const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
             const [sidebarFolderDragTarget, setSidebarFolderDragTarget] = useState(null); // v5.0.0-alpha.86 - { type: 'reorder'|'reparent', folderId, position? }
             const [leftPaneWidth, setLeftPaneWidth] = useState(256); // v5.0.0-alpha.91 - Resizable left pane width (px)
