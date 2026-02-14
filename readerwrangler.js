@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.16";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.17";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -534,11 +534,19 @@
             };
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
             const bookRowsRef = useRef(null); // v5.5.4 - Book rows container for pointer-events toggle during drag
+            const bookDragActiveRef = useRef(false); // v5.5.4 - Guard for setTimeout race condition
 
-            // v5.5.4 - Global dragend safety net: always restore pointer-events
-            // (book row onDragEnd may not fire if the row is unmounted during folder state update)
+            // v5.5.4 - Always restore pointer-events after drag ends
+            useEffect(() => {
+                if (!explorerDragBookId && bookRowsRef.current) {
+                    bookDragActiveRef.current = false;
+                    bookRowsRef.current.style.pointerEvents = '';
+                }
+            }, [explorerDragBookId]);
+            // Safety net: global dragend fires even if React row is unmounted
             useEffect(() => {
                 const handler = () => {
+                    bookDragActiveRef.current = false;
                     if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
                 };
                 window.addEventListener('dragend', handler);
@@ -9896,8 +9904,9 @@
                                                                     setExplorerSelectedBooks(new Set([book.id]));
                                                                 }
                                                                 setExplorerDragBookId(book.id);
-                                                                // v5.5.4 - Disable hit-testing on book rows during drag for perf (setTimeout lets browser capture drag first)
-                                                                setTimeout(() => { if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = 'none'; }, 0);
+                                                                // v5.5.4 - Disable hit-testing on book rows during drag for perf
+                                                                bookDragActiveRef.current = true;
+                                                                setTimeout(() => { if (bookDragActiveRef.current && bookRowsRef.current) bookRowsRef.current.style.pointerEvents = 'none'; }, 0);
                                                             }}
                                                             onDragOver={(e) => {
                                                                 e.preventDefault();
@@ -9934,6 +9943,7 @@
                                                                 setExplorerDragBookId(null);
                                                             }}
                                                             onDragEnd={() => {
+                                                                bookDragActiveRef.current = false;
                                                                 if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
                                                                 if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.borderTop = ''; explorerReorderTargetRef.current = null; }
                                                                 setExplorerDragBookId(null);
