@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -746,6 +746,17 @@
                     matchesSeriesMulti && matchesDateRange && matchesDeals && matchesTags;
             };
 
+            // Parse date string to Date object (moved before useMemo which depends on it)
+            const parseBookDate = (dateStr) => {
+                if (!dateStr) return new Date(0);
+                const ts = typeof dateStr === 'string' ? parseInt(dateStr) : dateStr;
+                if (!isNaN(ts) && ts > 1000000000) {
+                    return new Date(ts > 9999999999 ? ts : ts * 1000);
+                }
+                const d = new Date(dateStr);
+                return isNaN(d.getTime()) ? new Date(0) : d;
+            };
+
             // v5.5.4 - Memoized sorted/filtered/grouped book list (shared by list and cover views)
             const bookMap = useMemo(() => {
                 const m = new Map();
@@ -1430,20 +1441,6 @@
                 setDateFrom(from);
                 setDateTo(to);
             }, [datePreset]);
-
-            // v5.0.0-alpha.169.5 - Unified date parsing for sorting
-            // Handles both numeric timestamps and string dates (e.g., "January 15, 2024")
-            const parseBookDate = (dateStr) => {
-                if (!dateStr) return new Date(0);
-                // Try as numeric timestamp first
-                const ts = typeof dateStr === 'string' ? parseInt(dateStr) : dateStr;
-                if (!isNaN(ts) && ts > 1000000000) {
-                    return new Date(ts > 9999999999 ? ts : ts * 1000);
-                }
-                // Try as date string (handles "January 15, 2024", "2024-01-15", etc.)
-                const d = new Date(dateStr);
-                return isNaN(d.getTime()) ? new Date(0) : d;
-            };
 
             // v5.0.0-alpha.169.5 - Unified date formatting for display
             // Uses parseBookDate to handle any format, returns consistent display
