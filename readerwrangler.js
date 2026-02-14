@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -829,23 +829,14 @@
                 dateFrom, dateTo, dealsFilterActive, tagFilter, explorerSort,
                 explorerGroupOn, collapsedGroups]);
 
-            // v5.5.4 - Progressive rendering: render first batch instantly, then fill in rest
-            const RENDER_INITIAL = 200;
-            const RENDER_BATCH = 500;
-            const [renderLimit, setRenderLimit] = useState(RENDER_INITIAL);
+            // v5.5.4 - Render cap: show first 200 items instantly, "Show all" button for rest
+            const RENDER_CAP = 200;
+            const [showAllItems, setShowAllItems] = useState(false);
 
             useEffect(() => {
-                // Reset to initial batch when display items change
-                setRenderLimit(RENDER_INITIAL);
+                // Reset cap when display items change (sort/filter/folder change)
+                setShowAllItems(false);
             }, [explorerDisplayItems]);
-
-            useEffect(() => {
-                if (renderLimit >= explorerDisplayItems.length) return;
-                const timer = setTimeout(() => {
-                    setRenderLimit(prev => Math.min(prev + RENDER_BATCH, explorerDisplayItems.length));
-                }, 30);
-                return () => clearTimeout(timer);
-            }, [renderLimit, explorerDisplayItems.length]);
 
             // Get folder by ID (handles All Books and My Library virtual folders)
             const getFolderById = (folderId) => {
@@ -9805,9 +9796,10 @@
                                                 {/* Book rows */}
                                                 {(() => {
                                                     console.time('⏱ list view: JSX map');
-                                                    // v5.5.4 - Use memoized explorerDisplayItems with progressive rendering
-                                                    const displayItems = explorerDisplayItems.length > RENDER_INITIAL
-                                                        ? explorerDisplayItems.slice(0, renderLimit)
+                                                    // v5.5.4 - Render cap with "Show all" option
+                                                    const isCapped = !showAllItems && explorerDisplayItems.length > RENDER_CAP;
+                                                    const displayItems = isCapped
+                                                        ? explorerDisplayItems.slice(0, RENDER_CAP)
                                                         : explorerDisplayItems;
                                                     const totalVisibleCols = columnOrder.filter(c => visibleColumns[c]).length + 2;
                                                     const result = displayItems.map(item => {
@@ -10078,6 +10070,20 @@
                                                         );
                                                     });
                                                     console.timeEnd('⏱ list view: JSX map');
+                                                    if (isCapped) {
+                                                        result.push(
+                                                            <tr key="__show-all__" className="border-b border-gray-100">
+                                                                <td colSpan={totalVisibleCols} className="p-3 text-center">
+                                                                    <button
+                                                                        onClick={() => setShowAllItems(true)}
+                                                                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                                                    >
+                                                                        Show all {explorerDisplayItems.length.toLocaleString()} items
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    }
                                                     return result;
                                                 })()}
                                             </tbody>
@@ -10313,9 +10319,10 @@
                                             })()}
                                             {/* Book tiles */}
                                             {(() => {
-                                                // v5.5.4 - Use memoized explorerDisplayItems with progressive rendering
-                                                const displayItems = explorerDisplayItems.length > RENDER_INITIAL
-                                                    ? explorerDisplayItems.slice(0, renderLimit)
+                                                // v5.5.4 - Render cap with "Show all" option
+                                                const isCapped = !showAllItems && explorerDisplayItems.length > RENDER_CAP;
+                                                const displayItems = isCapped
+                                                    ? explorerDisplayItems.slice(0, RENDER_CAP)
                                                     : explorerDisplayItems;
                                                 return displayItems.map(item => {
                                                     if (item.type === 'header') {
@@ -10476,6 +10483,16 @@
                                                     );
                                                 });
                                             })()}
+                                            {!showAllItems && explorerDisplayItems.length > RENDER_CAP && (
+                                                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '12px' }}>
+                                                    <button
+                                                        onClick={() => setShowAllItems(true)}
+                                                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                                    >
+                                                        Show all {explorerDisplayItems.length.toLocaleString()} items
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
