@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -754,6 +754,7 @@
             }, [books]);
 
             const explorerDisplayItems = useMemo(() => {
+                console.time('⏱ useMemo: sort/filter/group');
                 const sortedBooks = getFolderBookIds(selectedFolderId)
                     .map(id => bookMap.get(id))
                     .filter(book => book && filterBookForExplorer(book))
@@ -800,7 +801,9 @@
                     });
                 // Group: build flat display items (headers + books via sequential scan)
                 if (!explorerGroupOn || explorerSort[0].column === 'custom') {
-                    return sortedBooks.map((book, i) => ({ type: 'book', book, index: i }));
+                    const result = sortedBooks.map((book, i) => ({ type: 'book', book, index: i }));
+                    console.timeEnd('⏱ useMemo: sort/filter/group');
+                    return result;
                 }
                 const items = [];
                 let currentGroupKey = null;
@@ -818,6 +821,7 @@
                         items.push({ type: 'book', book, index: i });
                     }
                 });
+                console.timeEnd('⏱ useMemo: sort/filter/group');
                 return items;
             }, [bookMap, books, folders, selectedFolderId, searchTerm, readStatusFilter,
                 collectionFilter, selectedCollections, minAmazonRating, minMyRating,
@@ -9782,10 +9786,11 @@
                                                 })()}
                                                 {/* Book rows */}
                                                 {(() => {
+                                                    console.time('⏱ list view: JSX map');
                                                     // v5.5.4 - Use memoized explorerDisplayItems (computed once, shared with cover view)
                                                     const displayItems = explorerDisplayItems;
                                                     const totalVisibleCols = columnOrder.filter(c => visibleColumns[c]).length + 2;
-                                                    return displayItems.map(item => {
+                                                    const result = displayItems.map(item => {
                                                         if (item.type === 'header') {
                                                             return (
                                                                 <tr
@@ -10052,6 +10057,8 @@
                                                         </tr>
                                                         );
                                                     });
+                                                    console.timeEnd('⏱ list view: JSX map');
+                                                    return result;
                                                 })()}
                                             </tbody>
                                         </table>
