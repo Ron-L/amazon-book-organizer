@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -745,6 +745,85 @@
                     matchesMyRating && matchesRating && matchesOwnership && matchesHidden && matchesSeries &&
                     matchesSeriesMulti && matchesDateRange && matchesDeals && matchesTags;
             };
+
+            // v5.5.4 - Memoized sorted/filtered/grouped book list (shared by list and cover views)
+            const bookMap = useMemo(() => {
+                const m = new Map();
+                for (const b of books) m.set(b.id, b);
+                return m;
+            }, [books]);
+
+            const explorerDisplayItems = useMemo(() => {
+                const sortedBooks = getFolderBookIds(selectedFolderId)
+                    .map(id => bookMap.get(id))
+                    .filter(book => book && filterBookForExplorer(book))
+                    .sort((a, b) => {
+                        // Multi-level sorting
+                        if (explorerSort[0].column === 'custom') return 0;
+                        for (const sort of explorerSort) {
+                            const dir = sort.direction === 'asc' ? 1 : -1;
+                            let comparison = 0;
+                            if (sort.column === 'title') {
+                                comparison = (a.title || '').localeCompare(b.title || '');
+                            } else if (sort.column === 'author') {
+                                comparison = (a.author || '').localeCompare(b.author || '');
+                            } else if (sort.column === 'series') {
+                                comparison = (a.series || '').localeCompare(b.series || '');
+                            } else if (sort.column === 'seriesNum') {
+                                const posA = parseFloat(a.seriesPosition) || Infinity;
+                                const posB = parseFloat(b.seriesPosition) || Infinity;
+                                comparison = posA - posB;
+                            } else if (sort.column === 'rating') {
+                                comparison = (a.rating || 0) - (b.rating || 0);
+                            } else if (sort.column === 'myRating') {
+                                const ratingA = a.myRating || 0;
+                                const ratingB = b.myRating || 0;
+                                if (ratingA === 0 && ratingB > 0) comparison = 1;
+                                else if (ratingB === 0 && ratingA > 0) comparison = -1;
+                                else comparison = ratingA - ratingB;
+                            } else if (sort.column === 'dateAdded') {
+                                const dateA = parseBookDate(a.acquired || a.addedToWishlist);
+                                const dateB = parseBookDate(b.acquired || b.addedToWishlist);
+                                comparison = dateA - dateB;
+                            } else if (sort.column === 'price') {
+                                comparison = (a.currentPrice ?? Infinity) - (b.currentPrice ?? Infinity);
+                            } else if (sort.column === 'priceGoal') {
+                                comparison = (a.priceTrigger ?? Infinity) - (b.priceTrigger ?? Infinity);
+                            } else if (sort.column === 'delta') {
+                                const deltaA = (a.priceTrigger != null && a.currentPrice != null) ? (a.priceTrigger - a.currentPrice) : -Infinity;
+                                const deltaB = (b.priceTrigger != null && b.currentPrice != null) ? (b.priceTrigger - b.currentPrice) : -Infinity;
+                                comparison = deltaA - deltaB;
+                            }
+                            if (comparison !== 0) return dir * comparison;
+                        }
+                        return 0;
+                    });
+                // Group: build flat display items (headers + books via sequential scan)
+                if (!explorerGroupOn || explorerSort[0].column === 'custom') {
+                    return sortedBooks.map((book, i) => ({ type: 'book', book, index: i }));
+                }
+                const items = [];
+                let currentGroupKey = null;
+                let currentHeader = null;
+                sortedBooks.forEach((book, i) => {
+                    const key = getGroupLabel(book);
+                    if (key !== currentGroupKey) {
+                        currentGroupKey = key;
+                        const isCollapsed = collapsedGroups.has(key);
+                        currentHeader = { type: 'header', name: key, count: 0, isCollapsed };
+                        items.push(currentHeader);
+                    }
+                    currentHeader.count++;
+                    if (!currentHeader.isCollapsed) {
+                        items.push({ type: 'book', book, index: i });
+                    }
+                });
+                return items;
+            }, [bookMap, books, folders, selectedFolderId, searchTerm, readStatusFilter,
+                collectionFilter, selectedCollections, minAmazonRating, minMyRating,
+                ratingFilter, ownershipFilter, showHidden, seriesFilter, selectedSeries,
+                dateFrom, dateTo, dealsFilterActive, tagFilter, explorerSort,
+                explorerGroupOn, collapsedGroups]);
 
             // Get folder by ID (handles All Books and My Library virtual folders)
             const getFolderById = (folderId) => {
@@ -9703,86 +9782,8 @@
                                                 })()}
                                                 {/* Book rows */}
                                                 {(() => {
-                                                    // Build sorted book list for range selection (with filtering)
-                                                    const sortedBooks = getFolderBookIds(selectedFolderId)
-                                                        .map(id => books.find(b => b.id === id))
-                                                        .filter(book => filterBookForExplorer(book))
-                                                        .sort((a, b) => {
-                                                            // v5.0.0-alpha.174.2 - Multi-level sorting
-                                                            // Special case: custom sort (manual order)
-                                                            if (explorerSort[0].column === 'custom') return 0;
-
-                                                            // Apply each sort level in priority order
-                                                            for (const sort of explorerSort) {
-                                                                const dir = sort.direction === 'asc' ? 1 : -1;
-                                                                let comparison = 0;
-
-                                                                if (sort.column === 'title') {
-                                                                    comparison = (a.title || '').localeCompare(b.title || '');
-                                                                } else if (sort.column === 'author') {
-                                                                    comparison = (a.author || '').localeCompare(b.author || '');
-                                                                } else if (sort.column === 'series') {
-                                                                    comparison = (a.series || '').localeCompare(b.series || '');
-                                                                } else if (sort.column === 'seriesNum') {
-                                                                    const posA = parseFloat(a.seriesPosition) || Infinity;
-                                                                    const posB = parseFloat(b.seriesPosition) || Infinity;
-                                                                    comparison = posA - posB;
-                                                                } else if (sort.column === 'rating') {
-                                                                    comparison = (a.rating || 0) - (b.rating || 0);
-                                                                } else if (sort.column === 'myRating') {
-                                                                    // v5.0.0-alpha.175.31 - Personal rating (unrated books always sort to end)
-                                                                    const ratingA = a.myRating || 0;
-                                                                    const ratingB = b.myRating || 0;
-                                                                    // Unrated (0) always at end
-                                                                    if (ratingA === 0 && ratingB > 0) comparison = 1;
-                                                                    else if (ratingB === 0 && ratingA > 0) comparison = -1;
-                                                                    else comparison = ratingA - ratingB;
-                                                                } else if (sort.column === 'dateAdded') {
-                                                                    const dateA = parseBookDate(a.acquired || a.addedToWishlist);
-                                                                    const dateB = parseBookDate(b.acquired || b.addedToWishlist);
-                                                                    comparison = dateA - dateB;
-                                                                } else if (sort.column === 'price') {
-                                                                    comparison = (a.currentPrice ?? Infinity) - (b.currentPrice ?? Infinity);
-                                                                } else if (sort.column === 'priceGoal') {
-                                                                    comparison = (a.priceTrigger ?? Infinity) - (b.priceTrigger ?? Infinity);
-                                                                } else if (sort.column === 'delta') {
-                                                                    const deltaA = (a.priceTrigger != null && a.currentPrice != null) ? (a.priceTrigger - a.currentPrice) : -Infinity;
-                                                                    const deltaB = (b.priceTrigger != null && b.currentPrice != null) ? (b.priceTrigger - b.currentPrice) : -Infinity;
-                                                                    comparison = deltaA - deltaB;
-                                                                }
-
-                                                                // If this level produces a non-zero result, use it
-                                                                if (comparison !== 0) {
-                                                                    return dir * comparison;
-                                                                }
-                                                                // Otherwise continue to next sort level
-                                                            }
-
-                                                            return 0; // All levels equal
-                                                        });
-                                                    // v5.4.5 - Group: build flat display items (headers + books via sequential scan)
-                                                    const displayItems = (() => {
-                                                        if (!explorerGroupOn || explorerSort[0].column === 'custom') {
-                                                            return sortedBooks.map((book, i) => ({ type: 'book', book, index: i }));
-                                                        }
-                                                        const items = [];
-                                                        let currentGroupKey = null;
-                                                        let currentHeader = null;
-                                                        sortedBooks.forEach((book, i) => {
-                                                            const key = getGroupLabel(book);
-                                                            if (key !== currentGroupKey) {
-                                                                currentGroupKey = key;
-                                                                const isCollapsed = collapsedGroups.has(key);
-                                                                currentHeader = { type: 'header', name: key, count: 0, isCollapsed };
-                                                                items.push(currentHeader);
-                                                            }
-                                                            currentHeader.count++;
-                                                            if (!currentHeader.isCollapsed) {
-                                                                items.push({ type: 'book', book, index: i });
-                                                            }
-                                                        });
-                                                        return items;
-                                                    })();
+                                                    // v5.5.4 - Use memoized explorerDisplayItems (computed once, shared with cover view)
+                                                    const displayItems = explorerDisplayItems;
                                                     const totalVisibleCols = columnOrder.filter(c => visibleColumns[c]).length + 2;
                                                     return displayItems.map(item => {
                                                         if (item.type === 'header') {
@@ -10285,68 +10286,8 @@
                                             })()}
                                             {/* Book tiles */}
                                             {(() => {
-                                                const sortedBooks = getFolderBookIds(selectedFolderId)
-                                                    .map(id => books.find(b => b.id === id))
-                                                    .filter(book => filterBookForExplorer(book))
-                                                    .sort((a, b) => {
-                                                        if (explorerSort[0].column === 'custom') return 0;
-                                                        const dir = explorerSort[0].direction === 'asc' ? 1 : -1;
-                                                        if (explorerSort[0].column === 'title') return dir * (a.title || '').localeCompare(b.title || '');
-                                                        if (explorerSort[0].column === 'author') return dir * (a.author || '').localeCompare(b.author || '');
-                                                        // v5.0.0-alpha.171 - Series columns sorting
-                                                        if (explorerSort[0].column === 'series') return dir * (a.series || '').localeCompare(b.series || '');
-                                                        if (explorerSort[0].column === 'seriesNum') {
-                                                            const posA = parseFloat(a.seriesPosition) || Infinity;
-                                                            const posB = parseFloat(b.seriesPosition) || Infinity;
-                                                            return dir * (posA - posB);
-                                                        }
-                                                        if (explorerSort[0].column === 'rating') return dir * ((a.rating || 0) - (b.rating || 0));
-                                                        if (explorerSort[0].column === 'dateAdded') {
-                                                            // v5.0.0-alpha.169.5 - Use parseBookDate for proper date comparison
-                                                            const dateA = parseBookDate(a.acquired || a.addedToWishlist);
-                                                            const dateB = parseBookDate(b.acquired || b.addedToWishlist);
-                                                            return dir * (dateA - dateB);
-                                                        }
-                                                        if (explorerSort[0].column === 'price') {
-                                                            const priceA = a.currentPrice ?? Infinity;
-                                                            const priceB = b.currentPrice ?? Infinity;
-                                                            return dir * (priceA - priceB);
-                                                        }
-                                                        if (explorerSort[0].column === 'priceGoal') {
-                                                            const goalA = a.priceTrigger ?? Infinity;
-                                                            const goalB = b.priceTrigger ?? Infinity;
-                                                            return dir * (goalA - goalB);
-                                                        }
-                                                        if (explorerSort[0].column === 'delta') {
-                                                            const deltaA = (a.priceTrigger != null && a.currentPrice != null) ? (a.priceTrigger - a.currentPrice) : -Infinity;
-                                                            const deltaB = (b.priceTrigger != null && b.currentPrice != null) ? (b.priceTrigger - b.currentPrice) : -Infinity;
-                                                            return dir * (deltaA - deltaB);
-                                                        }
-                                                        return 0;
-                                                    });
-                                                // v5.4.5 - Group: build flat display items (headers + books via sequential scan)
-                                                const displayItems = (() => {
-                                                    if (!explorerGroupOn || explorerSort[0].column === 'custom') {
-                                                        return sortedBooks.map((book, i) => ({ type: 'book', book, index: i }));
-                                                    }
-                                                    const items = [];
-                                                    let currentGroupKey = null;
-                                                    let currentHeader = null;
-                                                    sortedBooks.forEach((book, i) => {
-                                                        const key = getGroupLabel(book);
-                                                        if (key !== currentGroupKey) {
-                                                            currentGroupKey = key;
-                                                            const isCollapsed = collapsedGroups.has(key);
-                                                            currentHeader = { type: 'header', name: key, count: 0, isCollapsed };
-                                                            items.push(currentHeader);
-                                                        }
-                                                        currentHeader.count++;
-                                                        if (!currentHeader.isCollapsed) {
-                                                            items.push({ type: 'book', book, index: i });
-                                                        }
-                                                    });
-                                                    return items;
-                                                })();
+                                                // v5.5.4 - Use memoized explorerDisplayItems (computed once, shared with list view)
+                                                const displayItems = explorerDisplayItems;
                                                 return displayItems.map(item => {
                                                     if (item.type === 'header') {
                                                         return (
