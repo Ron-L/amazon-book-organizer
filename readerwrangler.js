@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.18";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.19";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -533,25 +533,6 @@
                 explorerDropTargetRef.current = el;
             };
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
-            const bookRowsRef = useRef(null); // v5.5.4 - Book rows container for pointer-events toggle during drag
-            const bookDragActiveRef = useRef(false); // v5.5.4 - Guard for setTimeout race condition
-
-            // v5.5.4 - Always restore pointer-events after drag ends
-            useEffect(() => {
-                if (!explorerDragBookId && bookRowsRef.current) {
-                    bookDragActiveRef.current = false;
-                    bookRowsRef.current.style.pointerEvents = '';
-                }
-            }, [explorerDragBookId]);
-            // Safety net: global dragend fires even if React row is unmounted
-            useEffect(() => {
-                const handler = () => {
-                    bookDragActiveRef.current = false;
-                    if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
-                };
-                window.addEventListener('dragend', handler);
-                return () => window.removeEventListener('dragend', handler);
-            }, []);
             const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
             const [sidebarFolderDragTarget, setSidebarFolderDragTarget] = useState(null); // v5.0.0-alpha.86 - { type: 'reorder'|'reparent', folderId, position? }
             const [leftPaneWidth, setLeftPaneWidth] = useState(256); // v5.0.0-alpha.91 - Resizable left pane width (px)
@@ -8229,8 +8210,6 @@
                                             setFolderDropHighlight(null);
                                             setExplorerSelectedBooks(new Set());
                                             // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
-                                            bookDragActiveRef.current = false;
-                                            if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
                                             setExplorerDragBookId(null);
                                             setExplorerDragData(null);
                                         }}>
@@ -8517,8 +8496,6 @@
                                                             setExplorerSelectedBooks(new Set());
                                                             explorerIsCopyDragRef.current = false;
                                                             // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
-                                                            bookDragActiveRef.current = false;
-                                                            if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
                                                             setExplorerDragBookId(null);
                                                             setExplorerDragData(null);
                                                         }}
@@ -8870,8 +8847,6 @@
                                                                     }
                                                                     setExplorerSelectedBooks(new Set());
                                                                     // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
-                                                                    bookDragActiveRef.current = false;
-                                                                    if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
                                                                     setExplorerDragBookId(null);
                                                                     setExplorerDragData(null);
                                                                 } catch (err) {
@@ -9693,8 +9668,6 @@
                                                                         setExplorerSelectedBooks(new Set());
                                                                         explorerIsCopyDragRef.current = false;
                                                                         // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
-                                                                        bookDragActiveRef.current = false;
-                                                                        if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
                                                                         setExplorerDragBookId(null);
                                                                         setExplorerDragData(null);
                                                                     }
@@ -9846,7 +9819,7 @@
                                                     });
                                                 })()}
                                             </tbody>
-                                            <tbody ref={bookRowsRef}>
+                                            <tbody>
                                                 {/* Book rows */}
                                                 {(() => {
                                                     console.time('⏱ list view: JSX map');
@@ -9924,9 +9897,6 @@
                                                                     setExplorerSelectedBooks(new Set([book.id]));
                                                                 }
                                                                 setExplorerDragBookId(book.id);
-                                                                // v5.5.4 - Disable hit-testing on book rows during drag for perf
-                                                                bookDragActiveRef.current = true;
-                                                                setTimeout(() => { if (bookDragActiveRef.current && bookRowsRef.current) bookRowsRef.current.style.pointerEvents = 'none'; }, 0);
                                                             }}
                                                             onDragOver={(e) => {
                                                                 e.preventDefault();
@@ -9963,8 +9933,6 @@
                                                                 setExplorerDragBookId(null);
                                                             }}
                                                             onDragEnd={() => {
-                                                                bookDragActiveRef.current = false;
-                                                                if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
                                                                 if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.borderTop = ''; explorerReorderTargetRef.current = null; }
                                                                 setExplorerDragBookId(null);
                                                                 setFolderDropHighlight(null);
@@ -10336,8 +10304,6 @@
                                                                 setExplorerSelectedBooks(new Set());
                                                                 explorerIsCopyDragRef.current = false;
                                                                 // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
-                                                                bookDragActiveRef.current = false;
-                                                                if (bookRowsRef.current) bookRowsRef.current.style.pointerEvents = '';
                                                                 setExplorerDragBookId(null);
                                                                 setExplorerDragData(null);
                                                             }
