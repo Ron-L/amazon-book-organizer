@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -841,21 +841,22 @@
                 explorerGroupOn, collapsedGroups]);
 
             // v5.5.4 - Render cap: show first 200 items instantly, "Show all" button for rest
+            // Resets on navigation changes (sort/filter/folder), NOT on data mutations (reorder/tag edit)
             const RENDER_CAP = 200;
             const [showAllItems, setShowAllItems] = useState(false);
-            const prevDisplayItemsRef = useRef(explorerDisplayItems);
+            const navigationKey = `${selectedFolderId}|${JSON.stringify(explorerSort)}|${searchTerm}|${readStatusFilter}|${collectionFilter}|${JSON.stringify(selectedCollections)}|${minAmazonRating}|${minMyRating}|${ratingFilter}|${ownershipFilter}|${showHidden}|${seriesFilter}|${JSON.stringify(selectedSeries)}|${dateFrom}|${dateTo}|${dealsFilterActive}|${JSON.stringify(tagFilter)}|${explorerGroupOn}|${JSON.stringify([...collapsedGroups])}`;
+            const prevNavigationKeyRef = useRef(navigationKey);
 
-            // Synchronous reset: if explorerDisplayItems changed this render, force cap on
+            // Synchronous reset: only when navigation state changes (not data mutations like reorder)
             let effectiveShowAll = showAllItems;
-            if (prevDisplayItemsRef.current !== explorerDisplayItems) {
+            if (prevNavigationKeyRef.current !== navigationKey) {
                 effectiveShowAll = false;
-                prevDisplayItemsRef.current = explorerDisplayItems;
+                prevNavigationKeyRef.current = navigationKey;
             }
 
             useEffect(() => {
-                // Also reset the state so it stays in sync after the synchronous override
                 if (!effectiveShowAll && showAllItems) setShowAllItems(false);
-            }, [explorerDisplayItems]);
+            }, [navigationKey]);
 
             // Get folder by ID (handles All Books and My Library virtual folders)
             const getFolderById = (folderId) => {
