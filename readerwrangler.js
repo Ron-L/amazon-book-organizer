@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -266,7 +266,7 @@
 
             return (
                 <div style={{ position: 'relative', flex: '0 0 300px' }} data-search-history-dropdown="">
-                    <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' }}>🔍</span>
+                    <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', fontSize: '14px' }}>🔍</span>
                     <input
                         type="text"
                         value={inputValue}
@@ -274,13 +274,13 @@
                         placeholder="Title or author..."
                         style={{
                             width: '100%', height: '28px', padding: '0 28px 0 28px',
-                            fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '4px', outline: 'none'
+                            fontSize: '13px', border: '1px solid var(--border-strong)', borderRadius: '4px', outline: 'none'
                         }}
                         onFocus={(e) => {
-                            e.target.style.borderColor = '#3b82f6';
+                            e.target.style.borderColor = 'var(--border-focus)';
                             if (searchHistory.length > 0) setHistoryOpen(true);
                         }}
-                        onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; addToSearchHistory(inputValue); }}
+                        onBlur={(e) => { e.target.style.borderColor = 'var(--border-strong)'; addToSearchHistory(inputValue); }}
                         onKeyDown={(e) => {
                             e.stopPropagation();
                             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -327,11 +327,11 @@
                             title="Clear search"
                             style={{
                                 position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
-                                background: 'none', border: 'none', color: '#64748b',
+                                background: 'none', border: 'none', color: 'var(--text-secondary)',
                                 fontSize: '16px', cursor: 'pointer', padding: '0 4px', lineHeight: '1'
                             }}
-                            onMouseEnter={(e) => e.target.style.color = '#1e293b'}
-                            onMouseLeave={(e) => e.target.style.color = '#64748b'}
+                            onMouseEnter={(e) => e.target.style.color = 'var(--text-primary)'}
+                            onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                         >×</button>
                     )}
                     {historyOpen && (() => {
@@ -342,7 +342,7 @@
                         return (
                             <div style={{
                                 position: 'absolute', top: '32px', left: 0, right: 0,
-                                background: 'white', border: '1px solid #cbd5e1',
+                                background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
                                 borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                                 zIndex: 1000, maxHeight: '200px', overflowY: 'auto'
                             }}>
@@ -350,7 +350,7 @@
                                     <div key={i}
                                         onMouseDown={(e) => e.preventDefault()}
                                         onClick={() => { commitSearch(term); setHistoryOpen(false); setHistoryIndex(-1); addToSearchHistory(term); }}
-                                        style={{ padding: '6px 12px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: i === historyIndex ? '#dbeafe' : 'white' }}
+                                        style={{ padding: '6px 12px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: i === historyIndex ? 'var(--bg-selected)' : 'var(--bg-surface)' }}
                                         onMouseEnter={() => setHistoryIndex(i)}
                                         onMouseLeave={() => setHistoryIndex(-1)}
                                     >
@@ -358,18 +358,18 @@
                                         <button
                                             onMouseDown={(e) => e.preventDefault()}
                                             onClick={(e) => { e.stopPropagation(); removeFromSearchHistory(term); }}
-                                            style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '14px', cursor: 'pointer', padding: '0 2px', flexShrink: 0, marginLeft: '8px' }}
-                                            onMouseEnter={(e) => e.target.style.color = '#ef4444'}
-                                            onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+                                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '14px', cursor: 'pointer', padding: '0 2px', flexShrink: 0, marginLeft: '8px' }}
+                                            onMouseEnter={(e) => e.target.style.color = 'var(--text-danger)'}
+                                            onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}
                                         >×</button>
                                     </div>
                                 ))}
                                 <div
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => { clearSearchHistory(); setHistoryOpen(false); }}
-                                    style={{ borderTop: '1px solid #e2e8f0', padding: '6px 12px', fontSize: '12px', color: '#94a3b8', cursor: 'pointer', textAlign: 'center' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.color = '#64748b'}
-                                    onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                                    style={{ borderTop: '1px solid var(--border-default)', padding: '6px 12px', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', textAlign: 'center' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
                                 >Clear history</div>
                             </div>
                         );
