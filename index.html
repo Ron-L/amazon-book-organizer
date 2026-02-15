@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <script>const LANDING_VERSION = 'v1.2.4'; console.log('ReaderWrangler Landing Page ' + LANDING_VERSION);</script>
+    <script>const LANDING_VERSION = 'v2.0.0'; console.log('ReaderWrangler Landing Page ' + LANDING_VERSION);</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Free tool to import your Amazon Kindle library and organize books visually. See covers, ratings, reviews with a simple bookmarklet. Drag-and-drop organization. 100% private - works in your browser.">
     <meta name="keywords" content="amazon kindle library organizer, organize kindle books visually, amazon kindle organizer, kindle book manager, visual book organizer, kindle collection organizer, organize ebooks">
@@ -31,10 +31,10 @@
     <link rel="icon" type="image/png" sizes="16x16" href="icons/ReaderWranglerWordless16.png">
     <link rel="apple-touch-icon" sizes="180x180" href="icons/ReaderWrangler180.png">
 
-    <!-- Google Fonts - Libre Baskerville for headings, Lato for body, Gloria Hallelujah for sticky note -->
+    <!-- Google Fonts - Libre Baskerville for headings and callout, Lato for body -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Gloria+Hallelujah&family=Lato:wght@300;400;700&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
     <!-- Structured Data (Schema.org) for SEO -->
     <script type="application/ld+json">
@@ -59,7 +59,7 @@
         "Your data stays in your browser",
         "No installation required"
       ],
-      "softwareVersion": "4.16.0",
+      "softwareVersion": "5.5.4",
       "author": {
         "@type": "Person",
         "name": "Ron L"
@@ -761,6 +761,37 @@
             width: 100%;
             display: block;
         }
+
+        .media-overlay-wrapper {
+            position: relative;
+        }
+
+        .media-obsolete-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+
+        .media-obsolete-overlay span {
+            background: rgba(255, 255, 255, 0.95);
+            color: #1e293b;
+            padding: 16px 32px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: 600;
+            text-align: center;
+            line-height: 1.5;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
     </style>
 
     <!-- Image Comparison Slider -->
@@ -802,10 +833,10 @@
             <h2>Organize your Kindle library visually</h2>
             <p><strong>The problem:</strong> You have hundreds (or thousands) of Kindle books. Amazon shows beautiful covers but won't let you organize them. Great reads get buried.</p>
 
-            <p><strong>The solution:</strong> ReaderWrangler imports your Amazon Kindle library and lets you organize it with drag-and-drop columns—like Trello for your reading list.</p>
+            <p><strong>The solution:</strong> ReaderWrangler imports your Amazon Kindle library and lets you organize it with drag-and-drop folders—like a file manager for your reading list.</p>
 
             <h3 style="margin-top: 30px;">Your Books, Your Order</h3>
-            <p>See all your <a href="https://www.amazon.com/yourbooks">Kindle books from Amazon.com</a> in one dashboard—covers, ratings, descriptions, and reviews. Create custom groups like "Next to Read" or "Time Travel Books," drag and drop books into organized columns, and double-click any cover to see full details.</p>
+            <p>See all your <a href="https://www.amazon.com/yourbooks">Kindle books from Amazon.com</a> in one dashboard—covers, ratings, descriptions, and reviews. Organize with nested folders like Author / Series / Books (think Artist / Album / Song), tag books as "Next to Read" or "Time Travel," and double-click any cover to see full details. An All Books view lets you browse, filter, and sort your entire library at any time—your organization never hides anything.</p>
 
             <!-- v1.2.2.c: Mobile-only section -->
             <div class="mobile-only" style="display: none; margin-top: 40px;">
@@ -901,18 +932,19 @@
 
             <div class="feature">
                 <h3>Then the magic happens.</h3>
-                <p><strong>You</strong> create custom columns like "Next to Read," "Favorites," "Time Travel Books," or "Beach Reads"—whatever makes sense for you. Drag and drop books between columns, reorder them within groups, and use multi-select to move entire series at once. Search by author or title to quickly find and organize specific books. Double-click any book cover to see its full details—larger cover image, title, author, Amazon rating, description, and top reviews—then navigate through your filtered results without leaving the detail view.</p>
+                <p><strong>You</strong> build a folder hierarchy that fits how you think—by author, by series, by mood, whatever works. Or let Auto-Organize do it for you: it builds an Author / Series / Books structure automatically, one book at a time or your entire library at once. Tag books as "Next to Read," "Favorites," or "Beach Reads" for cross-cutting themes. Drag and drop books between folders, reorder them within a folder, and use multi-select to move entire series at once. Search by author or title to quickly find and organize specific books. Double-click any book cover to see its full details—larger cover image, title, author, Amazon rating, description, and top reviews—then navigate through your filtered results without leaving the detail view.</p>
             </div>
         </div>
     </div>
 
     <div class="comparison-section">
         <h2>See the Difference</h2>
-        <p>From chaos to control - slide to compare Amazon's view vs. ReaderWrangler's organized columns</p>
-        <div class="comparison-container">
+        <p>From chaos to control - slide to compare Amazon's view vs. ReaderWrangler</p>
+        <div class="comparison-container media-overlay-wrapper">
+            <div class="media-obsolete-overlay"><span>Screenshots from earlier version<br>Updated images coming soon</span></div>
             <img-comparison-slider>
                 <img slot="first" src="images/before.png" alt="Before: Amazon's chaotic book list" />
-                <img slot="second" src="images/after.png" alt="After: Organized ReaderWrangler columns" />
+                <img slot="second" src="images/after.png" alt="After: Organized ReaderWrangler" />
             </img-comparison-slider>
         </div>
     </div>
@@ -944,9 +976,10 @@
             <div class="feature">
                 <h3>Organization</h3>
                 <ul>
-                    <li>Drag-and-drop interface for organizing books into custom collections</li>
+                    <li>Drag-and-drop interface for organizing books into folders</li>
                     <li>Multi-select with Ctrl/Shift for bulk operations</li>
-                    <li>Custom columns for creating your own organization system</li>
+                    <li>Nested folder hierarchy with Auto-Organize</li>
+                    <li><strong>Tags</strong> - Label books across folders for cross-cutting themes</li>
                     <li><strong>Hide books</strong> - Soft-delete books you don't want to see</li>
                     <li><strong>Context menu</strong> - Right-click for quick actions (Open in Amazon, Copy Title)</li>
                 </ul>
@@ -979,12 +1012,12 @@
 
                 <div class="workflow-step">
                     <h4>2. Organize Your Collection</h4>
-                    <p>Once your library file is saved, launch ReaderWrangler and click the status line that says "No Library" to load it. Instantly see all your books in a visual grid. Now the fun begins—drag books into custom columns ("Next to Read," "Favorites," "Series to Binge"), rearrange them however you like, and finally take control of your reading chaos.</p>
+                    <p>Once your library file is saved, launch ReaderWrangler and click "Load Library File" (or File / Import) to load it. Instantly see all your books in a visual grid. Now the fun begins—run Auto-Organize to build an Author / Series / Books hierarchy, drag books between folders, tag them however you like, and finally take control of your reading chaos.</p>
                 </div>
 
                 <div class="workflow-step">
                     <h4>3. Keep It Fresh</h4>
-                    <p>Bought new books on Amazon? Just run the import again—ReaderWrangler will merge the new additions while preserving your organization. Your custom columns stay intact while your library stays current.</p>
+                    <p>Bought new books on Amazon? Just run the bookmarklet again to refresh your library file, then re-import it—ReaderWrangler will merge the new additions while preserving your organization. Your folders, tags, and sort order stay intact while your library stays current.</p>
                     <div class="note">
                         <strong>&#128161; Smart Recovery:</strong> Sometimes a few book details get missed during the initial import. No worries! Every time you refresh your library, ReaderWrangler re-attempts any missing descriptions or reviews. Your library gets more complete with each update.
                     </div>
@@ -1033,41 +1066,11 @@
     <div class="container">
         <h2>Recent Features</h2>
         <div class="section">
-            <p><strong>v4.17.0 - Wishlist Price Goals</strong> (January 2026)</p>
             <ul style="line-height: 1.8; margin-top: 10px;">
-                <li>Set price goals on wishlist books and see at a glance which ones are ready to buy</li>
-            </ul>
-            <p style="margin-top: 20px;"><strong>v4.16.0 - Cut/Copy/Paste & Book Copies</strong> (January 2026)</p>
-            <ul style="line-height: 1.8; margin-top: 10px;">
-                <li><strong>Clipboard operations</strong> - Ctrl+X cuts, Ctrl+C copies, Ctrl+V pastes books between columns</li>
-                <li><strong>Book copies</strong> - Same book can appear in multiple columns (Ctrl+C or Ctrl+Drag to copy)</li>
-                <li><strong>Delete key</strong> - DEL removes selected books with last-copy protection</li>
-            </ul>
-            <p style="margin-top: 20px;"><strong>v4.14.0 - Cover Image Caching</strong> (January 2026)</p>
-            <ul style="line-height: 1.8; margin-top: 10px;">
-                <li><strong>Local browser cache</strong> - Book covers cached locally for instant loading on subsequent visits</li>
-                <li><strong>~65% faster</strong> - Subsequent loads from cache vs network</li>
-            </ul>
-            <p style="margin-top: 20px;"><strong>v4.9.0 - Ownership Badges & Filter</strong> (January 2026)</p>
-            <ul style="line-height: 1.8; margin-top: 10px;">
-                <li><strong>Ownership badges</strong> - Visual badges on book covers showing non-purchased books (Sample, Borrowed, Prime/KU/KOLL/Comixology)</li>
-                <li><strong>Ownership filter</strong> - Filter library by ownership type in the filter panel</li>
-                <li><strong>Filter panel reorganization</strong> - Filters grouped by mental model (Discovery &#8594; Organization &#8594; Acquisition)</li>
-            </ul>
-            <p style="margin-top: 20px;"><strong>v4.8.0 - Undo/Redo</strong> (January 2026)</p>
-            <ul style="line-height: 1.8; margin-top: 10px;">
-                <li><strong>Undo/Redo</strong> - Ctrl+Z to undo, Ctrl+Y to redo (book moves, column/divider changes, hide/unhide)</li>
-            </ul>
-            <p style="margin-top: 20px;"><strong>v4.7.0 - Sort by Published</strong> (January 2026)</p>
-            <ul style="line-height: 1.8; margin-top: 10px;">
-                <li><strong>Sort by Published</strong> - Sort columns by publication date (oldest or newest first)</li>
-            </ul>
-            <p style="margin-top: 20px;"><strong>v4.1.0 - Wishlist & Hide Features</strong> (December 2025)</p>
-            <ul style="line-height: 1.8; margin-top: 10px;">
-                <li><strong>Wishlist</strong> - Add books from Amazon product/series pages to track what you want to buy</li>
-                <li><strong>Hide books</strong> - Soft-delete books you don't want to see (right-click context menu)</li>
-                <li><strong>Context menu enhancements</strong> - "Open in Amazon" and "Copy Title(s)" options</li>
-                <li>Progress bars showing exactly where you are in the import process</li>
+                <li><strong>v5.5 - Scalability</strong> — Drag virtualization and render cap for smooth performance with 10,000+ books</li>
+                <li><strong>v5.4 - Book Explorer</strong> — Folder-based organization with sidebar tree, list and cover grid views, and Auto-Organize</li>
+                <li><strong>v5.2 - Tags</strong> — Tag books and folders for cross-cutting thematic organization</li>
+                <li><strong>v5.0 - Notes & Series</strong> — Personal notes on books, series metadata editing, and the foundation of the new explorer</li>
             </ul>
             <p style="margin-top: 20px;">See <a href="CHANGELOG.md">CHANGELOG.md</a> for complete version history.</p>
         </div>
@@ -1078,13 +1081,10 @@
         <div class="section">
             <p>We're constantly improving ReaderWrangler based on user feedback. Here's what's on the horizon:</p>
             <ul style="line-height: 1.8; margin-top: 20px;">
-                <li><strong>Column Arranger</strong> - Side panel to collapse/expand and bulk-reorganize columns</li>
-                <li><strong>Book notes</strong> - Personal notes on individual books ("Why did I buy this?")</li>
-                <li><strong>Tags</strong> - Tag books and dividers for cross-library thematic organization</li>
-                <li><strong>Column carousel</strong> - Infinite horizontal carousel for navigating many columns</li>
-                <li><strong>Family sharing info</strong> - See which books you've shared with family members</li>
                 <li><strong>Reading progress tracking</strong> - See how far you've read in each book</li>
-                <li><strong>Multi-store support</strong> - Organize books from Barnes & Noble, Kobo, and other ebook stores</li>
+                <li><strong>Book recommendations</strong> - Discover related books from within ReaderWrangler</li>
+                <li><strong>Family sharing info</strong> - See which books you've shared with family members</li>
+                <li><strong>Mobile viewer</strong> - Browse your organized library on your phone</li>
             </ul>
             <p style="margin-top: 20px;">Have a feature request? <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank">Let us know on GitHub!</a></p>
         </div>
@@ -1094,7 +1094,8 @@
         <h2>See ReaderWrangler in Action</h2>
         <p>Watch this 10-minute walkthrough to see all the features in action</p>
         <div class="video-wrapper">
-            <div class="video-container">
+            <div class="video-container media-overlay-wrapper">
+                <div class="media-obsolete-overlay"><span>Walkthrough from earlier version<br>Updated video coming soon</span></div>
                 <video controls preload="metadata" poster="images/walkthrough-preview.png">
                     <source src="images/walk-through.mp4" type="video/mp4">
                     Your browser does not support the video tag.

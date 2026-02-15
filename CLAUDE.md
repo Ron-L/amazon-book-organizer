@@ -47,6 +47,7 @@ Standard semver with pre-release suffix for test iterations:
 - `grep -rn "TODO" *.js *.html`
 - Drop pre-release suffix from file versions
 - Update APP_VERSION
+- Update `softwareVersion` in index.html Schema.org structured data to match
 - Update CHANGELOG.md
 - Update TODO.md (remove completed tasks)
 - After push: "Ready for post-mortem?"
