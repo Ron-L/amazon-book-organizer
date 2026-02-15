@@ -125,6 +125,64 @@
 [data-theme="dark"] .editable-title:hover { background-color: rgba(96, 165, 250, 0.15); }
 [data-theme="dark"] .drop-target { background-color: rgba(96, 165, 250, 0.15); }
 
+/* ===== Dark Theme — Tailwind class overrides ===== */
+
+/* Backgrounds */
+[data-theme="dark"] .bg-white { background-color: #1e293b !important; }
+[data-theme="dark"] .bg-gray-50 { background-color: #1e293b !important; }
+[data-theme="dark"] .bg-gray-100 { background-color: #273548 !important; }
+[data-theme="dark"] .bg-gray-200 { background-color: #334155 !important; }
+[data-theme="dark"] .bg-gray-300 { background-color: #475569 !important; }
+[data-theme="dark"] .bg-gray-400 { background-color: #64748b !important; }
+[data-theme="dark"] .bg-blue-50 { background-color: #172554 !important; }
+[data-theme="dark"] .bg-blue-100 { background-color: #1e3a5f !important; }
+[data-theme="dark"] .bg-red-50 { background-color: #3b1c1c !important; }
+[data-theme="dark"] .bg-red-100 { background-color: #4a2020 !important; }
+[data-theme="dark"] .bg-red-200 { background-color: #5a2828 !important; }
+[data-theme="dark"] .bg-green-50 { background-color: #14332a !important; }
+[data-theme="dark"] .bg-green-100 { background-color: #1a3d30 !important; }
+[data-theme="dark"] .bg-yellow-50 { background-color: #3b3520 !important; }
+[data-theme="dark"] .bg-amber-50 { background-color: #3b3520 !important; }
+[data-theme="dark"] .bg-amber-100 { background-color: #4a4225 !important; }
+
+/* Text */
+[data-theme="dark"] .text-gray-300 { color: #94a3b8 !important; }
+[data-theme="dark"] .text-gray-400 { color: #94a3b8 !important; }
+[data-theme="dark"] .text-gray-500 { color: #94a3b8 !important; }
+[data-theme="dark"] .text-gray-600 { color: #cbd5e1 !important; }
+[data-theme="dark"] .text-gray-700 { color: #e2e8f0 !important; }
+[data-theme="dark"] .text-gray-800 { color: #e2e8f0 !important; }
+[data-theme="dark"] .text-gray-900 { color: #f1f5f9 !important; }
+[data-theme="dark"] .text-blue-600 { color: #60a5fa !important; }
+[data-theme="dark"] .text-blue-700 { color: #60a5fa !important; }
+[data-theme="dark"] .text-blue-800 { color: #93c5fd !important; }
+[data-theme="dark"] .text-red-500 { color: #f87171 !important; }
+[data-theme="dark"] .text-red-600 { color: #f87171 !important; }
+[data-theme="dark"] .text-red-700 { color: #fca5a5 !important; }
+[data-theme="dark"] .text-green-600 { color: #4ade80 !important; }
+[data-theme="dark"] .text-green-700 { color: #86efac !important; }
+[data-theme="dark"] .text-green-800 { color: #86efac !important; }
+[data-theme="dark"] .text-yellow-500 { color: #facc15 !important; }
+[data-theme="dark"] .text-orange-600 { color: #fb923c !important; }
+[data-theme="dark"] .text-amber-800 { color: #fbbf24 !important; }
+
+/* Borders */
+[data-theme="dark"] .border-gray-100 { border-color: #1e293b !important; }
+[data-theme="dark"] .border-gray-200 { border-color: #334155 !important; }
+[data-theme="dark"] .border-gray-300 { border-color: #475569 !important; }
+[data-theme="dark"] .border-gray-400 { border-color: #64748b !important; }
+[data-theme="dark"] .border-blue-200 { border-color: #1e3a5f !important; }
+[data-theme="dark"] .border-blue-300 { border-color: #2563eb !important; }
+[data-theme="dark"] .border-blue-500 { border-color: #3b82f6 !important; }
+[data-theme="dark"] .border-green-300 { border-color: #22c55e !important; }
+[data-theme="dark"] .border-green-400 { border-color: #4ade80 !important; }
+[data-theme="dark"] .border-red-200 { border-color: #7f1d1d !important; }
+[data-theme="dark"] .border-yellow-200 { border-color: #854d0e !important; }
+[data-theme="dark"] .border-yellow-300 { border-color: #a16207 !important; }
+[data-theme="dark"] .border-amber-200 { border-color: #92400e !important; }
+[data-theme="dark"] .border-amber-300 { border-color: #a16207 !important; }
+[data-theme="dark"] .border-amber-400 { border-color: #b45309 !important; }
+
 body { margin: 0; padding: 0; overflow: hidden; }
 
 /* App title styling - Alloid Labs branding */
