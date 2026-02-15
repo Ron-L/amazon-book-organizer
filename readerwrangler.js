@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.14";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2184,7 +2184,7 @@
 
             // ESC key to clear selection, Ctrl+A to select all in active column
             useEffect(() => {
-                const handleKeyDown = async (e) => {
+                const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
                         clearSelection();
                         setContextMenu(null);
@@ -2536,7 +2536,7 @@
 
             // v5.0.0-alpha.145 - Keyboard shortcuts for folder operations (Phase 6)
             useEffect(() => {
-                const handleKeyboard = (e) => {
+                const handleKeyboard = async (e) => {
                     // Skip if user is typing in an input/textarea
                     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
