@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.20";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.21";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -582,6 +582,28 @@
             ]);
             const [draggingColumn, setDraggingColumn] = useState(null); // v5.0.0-alpha.172 - Column header being dragged
             const [headerDropTarget, setHeaderDropTarget] = useState(null); // v5.0.0-alpha.172 - { column, side: 'left'|'right' }
+
+            // v5.5.4 - DIAGNOSTIC: Track what triggers re-renders during drag
+            const _diagRef = useRef({});
+            if (explorerDragBookId) {
+                const snap = {
+                    explorerDragBookId, explorerDragData: JSON.stringify(explorerDragData),
+                    sidebarFolderDragTarget: JSON.stringify(sidebarFolderDragTarget),
+                    breadcrumbDropTargetId, explorerFolderDragTarget: JSON.stringify(explorerFolderDragTarget),
+                    showAllItems, selectedFolderId, folders_len: folders.length,
+                    explorerSelectedBooks_size: explorerSelectedBooks.size,
+                    headerDropTarget: JSON.stringify(headerDropTarget),
+                    draggingColumn, bookTooltip: JSON.stringify(bookTooltip),
+                };
+                const prev = _diagRef.current;
+                const changed = Object.entries(snap).filter(([k, v]) => prev[k] !== v);
+                if (changed.length > 0) {
+                    console.log('⚡ DRAG RENDER - changed:', changed.map(([k]) => k).join(', '));
+                } else {
+                    console.log('⚡ DRAG RENDER - NO tracked state changed (mystery render)');
+                }
+                _diagRef.current = snap;
+            }
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
