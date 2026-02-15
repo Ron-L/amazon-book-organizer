@@ -12,17 +12,11 @@ _(No active tasks)_
 
 ---
 
-### ✨ Priority 2: Pre-Launch UX
-
-~~**2. Enhanced Getting Started UX**~~ - DONE (v5.5.2-5.5.3) - Help menu "Getting Started" link + welcome state panel in empty library
-
----
-
 ### 🔒 Priority 3: Pre-Launch Gate
 
 **1. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
-   - **Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second
+   - ~~**Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second~~ ✅ v5.5.4
    - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
    - **Storage monitoring:** 2300 books = 150 MB / 557 GB quota (0.03%) - NOT a concern
    - Problem: Need confidence app handles edge cases for public release

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.4] - 2026-02-14
+
+### Fixed
+- **Drag-to-folder stuck clicks** - Dragging a book to a sidebar folder no longer leaves the right pane unclickable (source row unmount prevented dragEnd cleanup)
+- **Within-folder reorder broken** - Removed pointer-events:none optimization that blocked reorder drop targets
+
+### Improved
+- **Drag performance with large libraries** - Drag virtualization hides off-screen book rows during drag, with a sliding window (100-row buffer, shifts 50 at a time) that follows scrolling. Reduces browser DOM overhead from 10K elements to ~300
+- **Render cap** - Show first 200 items instantly with "Show all" button for the rest. Resets on navigation changes (sort/filter/folder switch)
+- **CSS containment** - Paint isolation between left and right panes eliminates sidebar highlight lag during drag
+- **Auto-expand guard** - Disabled auto-expand of collapsed folders during drag when Show All is active with many items
+
 ## [5.5.3] - 2026-02-13
 
 ### Added
