@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -390,6 +390,22 @@
             const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
             const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false);
             const [howToDialogOpen, setHowToDialogOpen] = useState(false);
+            // v5.5.7-alpha.10 - Theme preference state
+            const [themePreference, setThemePreference] = useState(() => localStorage.getItem(THEME_KEY) || 'auto');
+            const [themeSubmenuOpen, setThemeSubmenuOpen] = useState(false);
+            const applyTheme = (pref) => {
+                setThemePreference(pref);
+                localStorage.setItem(THEME_KEY, pref);
+                let effective = pref;
+                if (pref === 'auto') {
+                    effective = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+                if (effective === 'light') {
+                    delete document.documentElement.dataset.theme;
+                } else {
+                    document.documentElement.dataset.theme = effective;
+                }
+            };
             // v5.0.0-alpha.175.4 - Toolbar filter dropdown state
             const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
             const [tagsDropdownOpen, setTagsDropdownOpen] = useState(false);
@@ -5289,6 +5305,45 @@
                                                 }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     Keyboard Shortcuts
                                                 </button>
+                                                {/* v5.5.7 - Theme submenu */}
+                                                <div style={{ position: 'relative' }}
+                                                    onMouseEnter={() => setThemeSubmenuOpen(true)}
+                                                    onMouseLeave={() => setThemeSubmenuOpen(false)}>
+                                                    <button style={{
+                                                        width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                        border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                        transition: 'background 0.1s', color: 'var(--text-primary)',
+                                                        display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                                    }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
+                                                        Theme <span style={{ fontSize: '10px' }}>▶</span>
+                                                    </button>
+                                                    {themeSubmenuOpen && (
+                                                        <div style={{
+                                                            position: 'absolute', left: '100%', top: 0,
+                                                            background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+                                                            borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                                                            minWidth: '160px', zIndex: 1001, padding: '4px 0'
+                                                        }}>
+                                                            {[
+                                                                { key: 'auto', label: 'Auto (System)' },
+                                                                { key: 'light', label: 'Light' },
+                                                                { key: 'dark', label: 'Dark' },
+                                                                { key: 'hc-light', label: 'High Contrast Light' },
+                                                                { key: 'hc-dark', label: 'High Contrast Dark' }
+                                                            ].map(opt => (
+                                                                <button key={opt.key} onClick={() => { applyTheme(opt.key); setOpenMenuBar(null); setThemeSubmenuOpen(false); }} style={{
+                                                                    width: '100%', textAlign: 'left', padding: '6px 16px', fontSize: '13px',
+                                                                    border: 'none', background: 'var(--bg-elevated)', cursor: 'pointer',
+                                                                    transition: 'background 0.1s', color: 'var(--text-primary)',
+                                                                    display: 'flex', alignItems: 'center', gap: '8px'
+                                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-elevated)'}>
+                                                                    <span style={{ width: '16px', textAlign: 'center' }}>{themePreference === opt.key ? '✓' : ''}</span>
+                                                                    {opt.label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 <button onClick={() => { setAboutDialogOpen(true); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
