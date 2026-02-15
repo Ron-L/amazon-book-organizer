@@ -66,12 +66,12 @@
     --bg-input: #1e293b;
     --bg-selected: #1e3a5f;
     --bg-hover: #334155;
-    --bg-accent: #3b82f6;
-    --bg-accent-hover: #2563eb;
+    --bg-accent: #2563eb;
+    --bg-accent-hover: #1d4ed8;
     --bg-danger-hover: #3b1c1c;
 
     --text-primary: #e2e8f0;
-    --text-secondary: #94a3b8;
+    --text-secondary: #a3b4c8;
     --text-muted: #64748b;
     --text-accent: #60a5fa;
     --text-accent-strong: #93c5fd;
