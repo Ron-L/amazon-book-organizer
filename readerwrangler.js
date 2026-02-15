@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5337,10 +5337,10 @@
                                     padding: '0 10px',
                                     fontSize: '13px',
                                     border: '1px solid',
-                                    borderColor: readStatusFilter ? '#93c5fd' : '#cbd5e1',
+                                    borderColor: readStatusFilter ? 'var(--border-accent)' : 'var(--border-strong)',
                                     borderRadius: '4px',
-                                    background: readStatusFilter ? '#dbeafe' : 'white',
-                                    color: readStatusFilter ? '#1e40af' : '#475569',
+                                    background: readStatusFilter ? 'var(--bg-selected)' : 'var(--bg-surface)',
+                                    color: readStatusFilter ? 'var(--text-accent-strong)' : 'var(--text-secondary)',
                                     cursor: 'pointer',
                                     fontWeight: readStatusFilter ? 500 : 400,
                                     whiteSpace: 'nowrap'
@@ -5357,7 +5357,7 @@
                                     top: '32px',
                                     left: 0,
                                     background: 'white',
-                                    border: '1px solid #cbd5e1',
+                                    border: '1px solid var(--border-strong)',
                                     borderRadius: '4px',
                                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                                     zIndex: 1000,
@@ -5369,10 +5369,10 @@
                                             padding: '8px 12px',
                                             fontSize: '13px',
                                             cursor: 'pointer',
-                                            background: !readStatusFilter ? '#f1f5f9' : 'white'
+                                            background: !readStatusFilter ? 'var(--bg-hover)' : 'var(--bg-surface)'
                                         }}
-                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-                                        onMouseLeave={(e) => e.target.style.background = !readStatusFilter ? '#f1f5f9' : 'white'}
+                                        onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
+                                        onMouseLeave={(e) => e.target.style.background = !readStatusFilter ? 'var(--bg-hover)' : 'var(--bg-surface)'}
                                     >
                                         All Status
                                     </div>
@@ -5382,10 +5382,10 @@
                                             padding: '8px 12px',
                                             fontSize: '13px',
                                             cursor: 'pointer',
-                                            background: readStatusFilter === 'READ' ? '#f1f5f9' : 'white'
+                                            background: readStatusFilter === 'READ' ? 'var(--bg-hover)' : 'var(--bg-surface)'
                                         }}
-                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-                                        onMouseLeave={(e) => e.target.style.background = readStatusFilter === 'READ' ? '#f1f5f9' : 'white'}
+                                        onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
+                                        onMouseLeave={(e) => e.target.style.background = readStatusFilter === 'READ' ? 'var(--bg-hover)' : 'var(--bg-surface)'}
                                     >
                                         ✓ Read
                                     </div>
@@ -5395,10 +5395,10 @@
                                             padding: '8px 12px',
                                             fontSize: '13px',
                                             cursor: 'pointer',
-                                            background: readStatusFilter === 'UNREAD' ? '#f1f5f9' : 'white'
+                                            background: readStatusFilter === 'UNREAD' ? 'var(--bg-hover)' : 'var(--bg-surface)'
                                         }}
-                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-                                        onMouseLeave={(e) => e.target.style.background = readStatusFilter === 'UNREAD' ? '#f1f5f9' : 'white'}
+                                        onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
+                                        onMouseLeave={(e) => e.target.style.background = readStatusFilter === 'UNREAD' ? 'var(--bg-hover)' : 'var(--bg-surface)'}
                                     >
                                         ○ Unread
                                     </div>
@@ -5408,10 +5408,10 @@
                                             padding: '8px 12px',
                                             fontSize: '13px',
                                             cursor: 'pointer',
-                                            background: readStatusFilter === 'UNKNOWN' ? '#f1f5f9' : 'white'
+                                            background: readStatusFilter === 'UNKNOWN' ? 'var(--bg-hover)' : 'var(--bg-surface)'
                                         }}
-                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-                                        onMouseLeave={(e) => e.target.style.background = readStatusFilter === 'UNKNOWN' ? '#f1f5f9' : 'white'}
+                                        onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
+                                        onMouseLeave={(e) => e.target.style.background = readStatusFilter === 'UNKNOWN' ? 'var(--bg-hover)' : 'var(--bg-surface)'}
                                     >
                                         ? Unknown
                                     </div>
@@ -5429,10 +5429,10 @@
                                     padding: '0 10px',
                                     fontSize: '13px',
                                     border: '1px solid',
-                                    borderColor: tagFilter.length > 0 ? '#93c5fd' : '#cbd5e1',
+                                    borderColor: tagFilter.length > 0 ? 'var(--border-accent)' : 'var(--border-strong)',
                                     borderRadius: '4px',
-                                    background: tagFilter.length > 0 ? '#dbeafe' : 'white',
-                                    color: tagFilter.length > 0 ? '#1e40af' : '#475569',
+                                    background: tagFilter.length > 0 ? 'var(--bg-selected)' : 'var(--bg-surface)',
+                                    color: tagFilter.length > 0 ? 'var(--text-accent-strong)' : 'var(--text-secondary)',
                                     cursor: 'pointer',
                                     fontWeight: tagFilter.length > 0 ? 500 : 400,
                                     whiteSpace: 'nowrap'
@@ -5446,7 +5446,7 @@
                                     top: '32px',
                                     left: 0,
                                     background: 'white',
-                                    border: '1px solid #cbd5e1',
+                                    border: '1px solid var(--border-strong)',
                                     borderRadius: '4px',
                                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                                     zIndex: 1000,
@@ -5455,7 +5455,7 @@
                                     overflowY: 'auto'
                                 }}>
                                     {Object.keys(tagRegistry).length === 0 ? (
-                                        <div style={{ padding: '8px 12px', fontSize: '13px', color: '#94a3b8' }}>
+                                        <div style={{ padding: '8px 12px', fontSize: '13px', color: 'var(--text-muted)' }}>
                                             No tags available
                                         </div>
                                     ) : (
@@ -5466,11 +5466,11 @@
                                                     padding: '8px 12px',
                                                     fontSize: '13px',
                                                     cursor: 'pointer',
-                                                    background: tagFilter.length === 0 ? '#f1f5f9' : 'white',
-                                                    borderBottom: '1px solid #e2e8f0'
+                                                    background: tagFilter.length === 0 ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                                                    borderBottom: '1px solid var(--border-default)'
                                                 }}
-                                                onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-                                                onMouseLeave={(e) => e.target.style.background = tagFilter.length === 0 ? '#f1f5f9' : 'white'}
+                                                onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
+                                                onMouseLeave={(e) => e.target.style.background = tagFilter.length === 0 ? 'var(--bg-hover)' : 'var(--bg-surface)'}
                                             >
                                                 Clear All
                                             </div>
@@ -5495,7 +5495,7 @@
                                                             alignItems: 'center',
                                                             gap: '8px'
                                                         }}
-                                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                                        onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
                                                         onMouseLeave={(e) => e.target.style.background = 'white'}
                                                     >
                                                         <input
@@ -5505,13 +5505,13 @@
                                                             style={{ cursor: 'pointer' }}
                                                         />
                                                         <span style={{ flex: 1 }}>{tagData.label}</span>
-                                                        <span style={{ color: '#94a3b8', fontSize: '12px' }}>
+                                                        <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                                                             {getTagCount(tagName)}
                                                         </span>
                                                     </div>
                                                 ))
                                             }
-                                            <div style={{ borderTop: '1px solid #e2e8f0', marginTop: '4px', paddingTop: '4px' }}>
+                                            <div style={{ borderTop: '1px solid var(--border-default)', marginTop: '4px', paddingTop: '4px' }}>
                                                 <div
                                                     onClick={() => {
                                                         setTagManagementOpen(true);
@@ -5522,9 +5522,9 @@
                                                         fontSize: '13px',
                                                         cursor: 'pointer',
                                                         background: 'white',
-                                                        color: '#2563eb'
+                                                        color: 'var(--text-accent)'
                                                     }}
-                                                    onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+                                                    onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
                                                     onMouseLeave={(e) => e.target.style.background = 'white'}
                                                 >
                                                     Manage Tags...
@@ -5546,10 +5546,10 @@
                                     padding: '0 10px',
                                     fontSize: '13px',
                                     border: '1px solid',
-                                    borderColor: ownershipFilter ? '#93c5fd' : '#cbd5e1',
+                                    borderColor: ownershipFilter ? 'var(--border-accent)' : 'var(--border-strong)',
                                     borderRadius: '4px',
-                                    background: ownershipFilter ? '#dbeafe' : 'white',
-                                    color: ownershipFilter ? '#1e40af' : '#475569',
+                                    background: ownershipFilter ? 'var(--bg-selected)' : 'var(--bg-surface)',
+                                    color: ownershipFilter ? 'var(--text-accent-strong)' : 'var(--text-secondary)',
                                     cursor: 'pointer',
                                     fontWeight: ownershipFilter ? 500 : 400,
                                     whiteSpace: 'nowrap'
@@ -5578,7 +5578,7 @@
                                     top: '32px',
                                     left: 0,
                                     background: 'white',
-                                    border: '1px solid #cbd5e1',
+                                    border: '1px solid var(--border-strong)',
                                     borderRadius: '4px',
                                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                                     zIndex: 1000,
@@ -5590,10 +5590,10 @@
                                             padding: '8px 12px',
                                             fontSize: '13px',
                                             cursor: 'pointer',
-                                            background: !ownershipFilter ? '#f1f5f9' : 'white'
+                                            background: !ownershipFilter ? 'var(--bg-hover)' : 'var(--bg-surface)'
                                         }}
-                                        onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-                                        onMouseLeave={(e) => e.target.style.background = !ownershipFilter ? '#f1f5f9' : 'white'}
+                                        onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
+                                        onMouseLeave={(e) => e.target.style.background = !ownershipFilter ? 'var(--bg-hover)' : 'var(--bg-surface)'}
                                     >
                                         All Types
                                     </div>
@@ -5614,10 +5614,10 @@
                                                 padding: '8px 12px',
                                                 fontSize: '13px',
                                                 cursor: 'pointer',
-                                                background: ownershipFilter === type.value ? '#f1f5f9' : 'white'
+                                                background: ownershipFilter === type.value ? 'var(--bg-hover)' : 'var(--bg-surface)'
                                             }}
-                                            onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-                                            onMouseLeave={(e) => e.target.style.background = ownershipFilter === type.value ? '#f1f5f9' : 'white'}
+                                            onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
+                                            onMouseLeave={(e) => e.target.style.background = ownershipFilter === type.value ? 'var(--bg-hover)' : 'var(--bg-surface)'}
                                         >
                                             {type.label}
                                         </div>
@@ -5646,7 +5646,7 @@
                         </button>
 
                         {/* Book count - positioned next to filters for immediate visual feedback */}
-                        <div style={{ fontSize: '13px', color: '#475569', fontWeight: 500, marginLeft: '12px' }}>
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500, marginLeft: '12px' }}>
                             {(() => {
                                 // Compute filtered book count based on all active filters
                                 let filtered = books;
@@ -5827,7 +5827,7 @@
                         <div
                             style={{
                                 display: 'inline-flex',
-                                border: '1px solid #cbd5e1',
+                                border: '1px solid var(--border-strong)',
                                 borderRadius: '4px',
                                 overflow: 'hidden',
                                 marginLeft: '8px',
@@ -5871,7 +5871,7 @@
                                 left: '16px',
                                 minWidth: '500px',
                                 background: 'white',
-                                border: '1px solid #cbd5e1',
+                                border: '1px solid var(--border-strong)',
                                 borderRadius: '6px',
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                                 padding: '16px',
@@ -5910,7 +5910,7 @@
                                                 maxHeight: '300px',
                                                 overflowY: 'auto',
                                                 background: 'white',
-                                                border: '1px solid #cbd5e1',
+                                                border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                                                 padding: '8px',
@@ -5936,7 +5936,7 @@
                                                     }}
                                                     style={{ marginRight: '8px' }}
                                                 />
-                                                <span style={{ fontStyle: 'italic', color: '#64748b' }}>
+                                                <span style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>
                                                     (Not in collection)
                                                 </span>
                                             </label>
@@ -5997,7 +5997,7 @@
                                                 left: 0,
                                                 minWidth: '160px',
                                                 background: 'white',
-                                                border: '1px solid #cbd5e1',
+                                                border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                                                 padding: '4px',
@@ -6045,7 +6045,7 @@
                                                 left: 0,
                                                 minWidth: '160px',
                                                 background: 'white',
-                                                border: '1px solid #cbd5e1',
+                                                border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                                                 padding: '4px',
@@ -6078,7 +6078,7 @@
                                                     setMyRatingDropdownOpen(false);
                                                 }}
                                                 className="w-full text-left px-3 py-1.5 hover:bg-gray-50 rounded"
-                                                style={{ fontSize: '13px', fontStyle: 'italic', color: '#64748b' }}>
+                                                style={{ fontSize: '13px', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
                                                 Unrated
                                             </button>
                                         </div>
@@ -6113,7 +6113,7 @@
                                                 maxHeight: '300px',
                                                 overflowY: 'auto',
                                                 background: 'white',
-                                                border: '1px solid #cbd5e1',
+                                                border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                                                 padding: '8px',
@@ -6139,7 +6139,7 @@
                                                     }}
                                                     style={{ marginRight: '8px' }}
                                                 />
-                                                <span style={{ fontStyle: 'italic', color: '#64748b' }}>
+                                                <span style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>
                                                     (Not in series)
                                                 </span>
                                             </label>
@@ -6208,7 +6208,7 @@
                                                 left: 0,
                                                 right: 0,
                                                 background: 'white',
-                                                border: '1px solid #cbd5e1',
+                                                border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
                                                 boxShadow: '0 2px 8px rgba(0,0,1,0.1)',
                                                 padding: '8px',
@@ -6244,10 +6244,10 @@
                                                 <div style={{
                                                     marginTop: '8px',
                                                     padding: '8px',
-                                                    borderTop: '1px solid #e2e8f0'
+                                                    borderTop: '1px solid var(--border-default)'
                                                 }}>
                                                     <div style={{ marginBottom: '8px' }}>
-                                                        <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>From:</label>
+                                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>From:</label>
                                                         <input
                                                             type="date"
                                                             value={dateFrom}
@@ -6255,14 +6255,14 @@
                                                             style={{
                                                                 width: '100%',
                                                                 padding: '4px 8px',
-                                                                border: '1px solid #cbd5e1',
+                                                                border: '1px solid var(--border-strong)',
                                                                 borderRadius: '4px',
                                                                 fontSize: '13px'
                                                             }}
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label style={{ fontSize: '12px', color: '#64748b', display: 'block', marginBottom: '4px' }}>To:</label>
+                                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>To:</label>
                                                         <input
                                                             type="date"
                                                             value={dateTo}
@@ -6270,7 +6270,7 @@
                                                             style={{
                                                                 width: '100%',
                                                                 padding: '4px 8px',
-                                                                border: '1px solid #cbd5e1',
+                                                                border: '1px solid var(--border-strong)',
                                                                 borderRadius: '4px',
                                                                 fontSize: '13px'
                                                             }}
@@ -7520,7 +7520,7 @@
                                                             style={{
                                                                 marginLeft: '8px',
                                                                 fontSize: '11px',
-                                                                color: '#94a3b8',
+                                                                color: 'var(--text-muted)',
                                                                 background: 'none',
                                                                 border: 'none',
                                                                 cursor: 'pointer',
@@ -9138,7 +9138,7 @@
                                                 return (
                                                     <div style={{
                                                         position: 'absolute', top: '28px', left: 0,
-                                                        background: 'white', border: '1px solid #cbd5e1',
+                                                        background: 'white', border: '1px solid var(--border-strong)',
                                                         borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                                                         zIndex: 1000, minWidth: '180px', whiteSpace: 'nowrap'
                                                     }}>
@@ -9195,11 +9195,11 @@
                                                                         {isSorted ? (direction === 'asc' ? '▲' : '▼') : ''}
                                                                     </span>
                                                                     <span style={{ flex: 1 }}>{opt.label}</span>
-                                                                    {isSorted && <span style={{ fontSize: '11px', color: '#94a3b8' }}>{sortIndex === 0 ? '' : sortIndex + 1}</span>}
+                                                                    {isSorted && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sortIndex === 0 ? '' : sortIndex + 1}</span>}
                                                                 </div>
                                                             );
                                                         })}
-                                                        <div style={{ borderTop: '1px solid #e2e8f0', padding: '5px 12px', fontSize: '11px', color: '#94a3b8' }}>
+                                                        <div style={{ borderTop: '1px solid var(--border-default)', padding: '5px 12px', fontSize: '11px', color: 'var(--text-muted)' }}>
                                                             Shift+click for secondary sort
                                                         </div>
                                                     </div>
@@ -9217,10 +9217,10 @@
                                                         padding: '0 10px',
                                                         fontSize: '13px',
                                                         border: '1px solid',
-                                                        borderColor: explorerGroupOn ? '#93c5fd' : '#cbd5e1',
+                                                        borderColor: explorerGroupOn ? 'var(--border-accent)' : 'var(--border-strong)',
                                                         borderRadius: '4px',
-                                                        background: explorerGroupOn ? '#dbeafe' : 'white',
-                                                        color: explorerGroupOn ? '#1e40af' : '#475569',
+                                                        background: explorerGroupOn ? 'var(--bg-selected)' : 'var(--bg-surface)',
+                                                        color: explorerGroupOn ? 'var(--text-accent-strong)' : 'var(--text-secondary)',
                                                         cursor: 'pointer',
                                                         fontWeight: explorerGroupOn ? 500 : 400,
                                                         whiteSpace: 'nowrap'
@@ -9345,13 +9345,13 @@
                                             <div style={{ textAlign: 'center', maxWidth: '420px' }}>
                                                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
                                                 <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>Welcome to ReaderWrangler</h2>
-                                                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '28px' }}>Import your Kindle library to get started.</p>
+                                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '28px' }}>Import your Kindle library to get started.</p>
                                                 <div style={{
                                                     background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px',
                                                     padding: '20px', marginBottom: '16px', textAlign: 'left'
                                                 }}>
                                                     <p style={{ fontWeight: '600', color: '#0c4a6e', marginBottom: '8px', fontSize: '14px' }}>New here?</p>
-                                                    <p style={{ color: '#475569', fontSize: '13px', marginBottom: '12px' }}>Install the bookmarklet to import your library from Amazon.</p>
+                                                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '12px' }}>Install the bookmarklet to import your library from Amazon.</p>
                                                     <button onClick={() => window.open('https://readerwrangler.com/', '_blank')} style={{
                                                         background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white',
                                                         border: 'none', borderRadius: '6px', padding: '10px 20px',
@@ -9366,14 +9366,14 @@
                                                 }}>
                                                     <p style={{ fontWeight: '600', color: '#334155', marginBottom: '8px', fontSize: '14px' }}>Already have a library or backup file?</p>
                                                     <button onClick={() => importLibrary()} style={{
-                                                        background: 'white', color: '#2563eb',
+                                                        background: 'white', color: 'var(--text-accent)',
                                                         border: '2px solid #2563eb', borderRadius: '6px', padding: '10px 20px',
                                                         fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%'
                                                     }}>
                                                         Load Library File
                                                     </button>
                                                 </div>
-                                                <p style={{ fontSize: '12px', color: '#94a3b8', marginTop: '20px' }}>See the Help menu for tips and shortcuts.</p>
+                                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '20px' }}>See the Help menu for tips and shortcuts.</p>
                                             </div>
                                         </div>
                                     ) : explorerView === 'list' ? (
