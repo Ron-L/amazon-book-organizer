@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.5] - 2026-02-15
+
+### Added
+- **Landing page link** - Logo and app name in the menu bar now link back to the landing page
+
 ## [5.5.4] - 2026-02-14
 
 ### Fixed
