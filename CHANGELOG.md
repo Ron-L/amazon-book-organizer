@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.6] - 2026-02-15
+
+### Improved
+- **Backup restore UX** - Skip "replace organization" warning when system is empty (after reset or first-time users)
+
 ## [5.5.5] - 2026-02-15
 
 ### Added
