@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.13";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -28,129 +28,139 @@
         // buildCoverUrlMap, populateCoverCache - see storage.js
 
         // v5.0.0-alpha.130: Reusable info dialog for large messages (avoids alert() scrollbar issues)
+        // v5.5.7-alpha.13: CSS variables for dark mode support
         function showInfoDialog(title, message) {
             return new Promise((resolve) => {
-                // Create overlay
                 const overlay = document.createElement('div');
                 overlay.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
                     background: rgba(0, 0, 0, 0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
+                    display: flex; align-items: center; justify-content: center;
                     z-index: 10000;
                 `;
 
-                // Create dialog
                 const dialog = document.createElement('div');
                 dialog.style.cssText = `
-                    background: white;
-                    border-radius: 8px;
-                    padding: 24px;
-                    max-width: 600px;
-                    width: 90%;
-                    max-height: 80vh;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    background: var(--bg-surface); border-radius: 8px; padding: 24px;
+                    max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+                    box-shadow: var(--shadow-modal);
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 `;
 
-                // Create title
                 const titleEl = document.createElement('h2');
                 titleEl.textContent = title;
-                titleEl.style.cssText = `
-                    margin: 0 0 16px 0;
-                    font-size: 20px;
-                    font-weight: 600;
-                    color: #333;
-                `;
+                titleEl.style.cssText = `margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: var(--text-primary);`;
 
-                // Create message
                 const messageEl = document.createElement('div');
-                messageEl.style.cssText = `
-                    margin-bottom: 24px;
-                    font-size: 14px;
-                    line-height: 1.6;
-                    color: #555;
-                    white-space: pre-line;
-                `;
+                messageEl.style.cssText = `margin-bottom: 24px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); white-space: pre-line;`;
                 messageEl.textContent = message;
 
-                // Create OK button
                 const button = document.createElement('button');
                 button.textContent = 'OK';
                 button.style.cssText = `
-                    background: #007bff;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    padding: 10px 24px;
-                    font-size: 14px;
-                    font-weight: 500;
-                    cursor: pointer;
-                    float: right;
+                    background: var(--bg-accent); color: var(--text-on-accent); border: none;
+                    border-radius: 4px; padding: 10px 24px; font-size: 14px; font-weight: 500; cursor: pointer; float: right;
                 `;
-                button.onmouseover = () => button.style.background = '#0056b3';
-                button.onmouseout = () => button.style.background = '#007bff';
+                button.onmouseover = () => button.style.background = 'var(--bg-accent-hover)';
+                button.onmouseout = () => button.style.background = 'var(--bg-accent)';
+                button.onclick = () => { document.body.removeChild(overlay); resolve(); };
 
-                button.onclick = () => {
-                    document.body.removeChild(overlay);
-                    resolve();
-                };
-
-                // Assemble dialog
                 dialog.appendChild(titleEl);
                 dialog.appendChild(messageEl);
                 dialog.appendChild(button);
                 overlay.appendChild(dialog);
+                document.body.appendChild(overlay);
+            });
+        }
 
-                // Show dialog
+        // v5.5.7-alpha.13: Themed confirm dialog (replaces window.confirm to avoid "localhost says")
+        function showConfirmDialog(title, message, confirmText = 'OK', cancelText = 'Cancel') {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex; align-items: center; justify-content: center;
+                    z-index: 10000;
+                `;
+
+                const dialog = document.createElement('div');
+                dialog.style.cssText = `
+                    background: var(--bg-surface); border-radius: 8px; padding: 24px;
+                    max-width: 500px; width: 90%;
+                    box-shadow: var(--shadow-modal);
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                `;
+
+                const titleEl = document.createElement('h2');
+                titleEl.textContent = title;
+                titleEl.style.cssText = `margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: var(--text-primary);`;
+
+                const messageEl = document.createElement('div');
+                messageEl.style.cssText = `margin-bottom: 24px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); white-space: pre-line;`;
+                messageEl.textContent = message;
+
+                const btnRow = document.createElement('div');
+                btnRow.style.cssText = `display: flex; gap: 8px; justify-content: flex-end;`;
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = cancelText;
+                cancelBtn.style.cssText = `
+                    background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-strong);
+                    border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;
+                `;
+                cancelBtn.onmouseover = () => cancelBtn.style.background = 'var(--bg-hover)';
+                cancelBtn.onmouseout = () => cancelBtn.style.background = 'var(--bg-elevated)';
+                cancelBtn.onclick = () => { document.body.removeChild(overlay); resolve(false); };
+
+                const confirmBtn = document.createElement('button');
+                confirmBtn.textContent = confirmText;
+                confirmBtn.style.cssText = `
+                    background: var(--bg-accent); color: var(--text-on-accent); border: none;
+                    border-radius: 4px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer;
+                `;
+                confirmBtn.onmouseover = () => confirmBtn.style.background = 'var(--bg-accent-hover)';
+                confirmBtn.onmouseout = () => confirmBtn.style.background = 'var(--bg-accent)';
+                confirmBtn.onclick = () => { document.body.removeChild(overlay); resolve(true); };
+
+                btnRow.appendChild(cancelBtn);
+                btnRow.appendChild(confirmBtn);
+                dialog.appendChild(titleEl);
+                dialog.appendChild(messageEl);
+                dialog.appendChild(btnRow);
+                overlay.appendChild(dialog);
                 document.body.appendChild(overlay);
             });
         }
 
         // v5.0.9 - Custom dialog for backup restore completion
+        // v5.5.7-alpha.13: CSS variables for dark mode support
         function showBackupRestoredDialog(bookCount) {
             return new Promise((resolve) => {
-                // Create overlay
                 const overlay = document.createElement('div');
                 overlay.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
                     background: rgba(0, 0, 0, 0.5);
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
+                    display: flex; align-items: center; justify-content: center;
                     z-index: 10000;
                 `;
 
-                // Create dialog
                 const dialog = document.createElement('div');
                 dialog.style.cssText = `
-                    background: white;
-                    border-radius: 8px;
-                    padding: 24px;
-                    max-width: 500px;
-                    width: 90%;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    background: var(--bg-surface); border-radius: 8px; padding: 24px;
+                    max-width: 500px; width: 90%;
+                    box-shadow: var(--shadow-modal);
                     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 `;
 
-                // Create content
                 dialog.innerHTML = `
-                    <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: #28a745;">
+                    <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: var(--color-success);">
                         ✓ Backup Restored (${bookCount} books)
                     </h2>
-                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #333;">
+                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
                         Next: Update your library file
                     </h3>
-                    <div style="margin-bottom: 16px; font-size: 14px; line-height: 1.6; color: #555;">
+                    <div style="margin-bottom: 16px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);">
                         <p style="margin: 0 0 8px 0; font-weight: 500;">When the save dialog appears:</p>
                         <div style="margin-left: 8px;">
                             <div style="margin: 4px 0;">✓ Keep filename: <strong>amazon-library.json</strong></div>
@@ -158,35 +168,34 @@
                             <div style="margin: 4px 0;">✗ Don't save as <strong>amazon-library(1).json</strong></div>
                         </div>
                     </div>
-                    <div style="margin-bottom: 20px; padding: 12px; background: #e7f3ff; border-left: 3px solid #007bff; font-size: 13px; color: #555;">
+                    <div style="margin-bottom: 20px; padding: 12px; background: var(--bg-selected); border-left: 3px solid var(--bg-accent); font-size: 13px; color: var(--text-secondary);">
                         💡 This keeps your bookmarklet in sync
                     </div>
                     <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                        <button id="whyReplaceBtn" style="background: transparent; color: #007bff; border: 1px solid #007bff; border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;">
+                        <button id="whyReplaceBtn" style="background: transparent; color: var(--text-accent); border: 1px solid var(--bg-accent); border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;">
                             ? Why replace?
                         </button>
-                        <button id="cancelBtn" style="background: #6c757d; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;">
+                        <button id="cancelBtn" style="background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;">
                             Cancel
                         </button>
-                        <button id="saveBtn" style="background: #28a745; color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                        <button id="saveBtn" style="background: var(--color-success); color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer;">
                             Save File
                         </button>
                     </div>
                 `;
 
-                // Add button hover effects and handlers
                 const whyBtn = dialog.querySelector('#whyReplaceBtn');
                 const cancelBtn = dialog.querySelector('#cancelBtn');
                 const saveBtn = dialog.querySelector('#saveBtn');
 
-                whyBtn.onmouseover = () => whyBtn.style.background = '#e7f3ff';
+                whyBtn.onmouseover = () => whyBtn.style.background = 'var(--bg-selected)';
                 whyBtn.onmouseout = () => whyBtn.style.background = 'transparent';
 
-                cancelBtn.onmouseover = () => cancelBtn.style.background = '#5a6268';
-                cancelBtn.onmouseout = () => cancelBtn.style.background = '#6c757d';
+                cancelBtn.onmouseover = () => cancelBtn.style.background = 'var(--bg-hover)';
+                cancelBtn.onmouseout = () => cancelBtn.style.background = 'var(--bg-elevated)';
 
-                saveBtn.onmouseover = () => saveBtn.style.background = '#218838';
-                saveBtn.onmouseout = () => saveBtn.style.background = '#28a745';
+                saveBtn.onmouseover = () => saveBtn.style.background = 'var(--color-success)'; // slightly darken would need a variable; keep same for now
+                saveBtn.onmouseout = () => saveBtn.style.background = 'var(--color-success)';
 
                 // Why replace? button - show help popup
                 whyBtn.onclick = () => {
@@ -2175,7 +2184,7 @@
 
             // ESC key to clear selection, Ctrl+A to select all in active column
             useEffect(() => {
-                const handleKeyDown = (e) => {
+                const handleKeyDown = async (e) => {
                     if (e.key === 'Escape') {
                         clearSelection();
                         setContextMenu(null);
@@ -2573,7 +2582,7 @@
                         };
 
                         if (currentFolder.id === folderId || isDescendantOf(currentFolder.id, folderId)) {
-                            alert("Cannot paste folder into itself or its descendants");
+                            showInfoDialog('Cannot Paste', 'Cannot paste folder into itself or its descendants.');
                             return;
                         }
 
@@ -2670,7 +2679,7 @@
                             confirmMsg = `Delete folder "${currentFolder.name}" and all its subfolders?`;
                         }
 
-                        if (!confirm(confirmMsg)) return;
+                        if (!(await showConfirmDialog('Delete Folder', confirmMsg))) return;
 
                         // Collect all folders to delete (folder + descendants)
                         const getAllDescendantIds = (folderId) => {
@@ -2758,8 +2767,9 @@
                             if (parsedData.isBackup === true) {
                                 // Backup file - skip warning if system is empty (e.g. after reset or first-time user)
                                 if (books.length > 0) {
-                                    const confirmed = window.confirm(
-                                        'Restore backup?\n\nThis will replace your current organization with the organization from the backup file.'
+                                    const confirmed = await showConfirmDialog(
+                                        'Restore backup?',
+                                        'This will replace your current organization with the organization from the backup file.'
                                     );
                                     if (!confirmed) {
                                         console.log('📋 Backup restore cancelled by user');
@@ -2792,7 +2802,7 @@
                                 if (!callbackFired) {
                                     console.error('⚠️ Status check timed out after 60 seconds');
                                     setSyncStatus('unknown');
-                                    alert('Library loaded but status check timed out. Please refresh the page.');
+                                    showInfoDialog('Import Warning', 'Library loaded but status check timed out. Please refresh the page.');
                                 }
                             }, 60000);
 
@@ -2809,10 +2819,10 @@
                             setSyncStatus('none'); // Clear loading spinner (v3.9.0.l)
                             if (error && error.message) {
                                 console.error('Error details:', error.message, error.stack);
-                                alert(`Failed to load library file: ${error.message}`);
+                                showInfoDialog('Import Error', `Failed to load library file: ${error.message}`);
                             } else {
                                 console.error('Error details: Unknown error (null or no message)');
-                                alert('Failed to load library file: Unknown error');
+                                showInfoDialog('Import Error', 'Failed to load library file: Unknown error');
                             }
                         }
                     }
@@ -2974,7 +2984,7 @@
                     new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/file-exported';
                 } catch (error) {
                     console.error('Failed to export library:', error);
-                    alert('Failed to export library');
+                    showInfoDialog('Export Error', 'Failed to export library.');
                 }
             };
 
@@ -3030,7 +3040,7 @@
                     new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/app-reset';
                 } catch (error) {
                     console.error('Failed to clear library:', error);
-                    alert('Failed to clear library data');
+                    showInfoDialog('Reset Error', 'Failed to clear library data.');
                 }
             };
 
@@ -4887,7 +4897,7 @@
                 const selectedAuthors = wizardAuthors.filter(a => wizardSelectedAuthors.has(a.normalizedName));
 
                 if (selectedAuthors.length === 0) {
-                    alert('Please select at least one author to organize.');
+                    showInfoDialog('No Selection', 'Please select at least one author to organize.');
                     return;
                 }
 
@@ -6803,7 +6813,7 @@
                                                 const selectedAuthors = wizardAuthors.filter(a => wizardSelectedAuthors.has(a.normalizedName));
 
                                                 if (selectedAuthors.length === 0) {
-                                                    alert('Please select at least one author to preview.');
+                                                    showInfoDialog('No Selection', 'Please select at least one author to preview.');
                                                     return;
                                                 }
 
@@ -8794,9 +8804,9 @@
                                                                     +
                                                                 </button>
                                                                 <button
-                                                                    onClick={(e) => {
+                                                                    onClick={async (e) => {
                                                                         e.stopPropagation();
-                                                                        if (window.confirm(`Delete folder "${folder.name}"?`)) {
+                                                                        if (await showConfirmDialog('Delete Folder', `Delete folder "${folder.name}"?`)) {
                                                                             // v5.0.0-alpha.55 - Move orphaned books up one level before deleting
                                                                             const getAllDescendants = (folderId, allFolders) => {
                                                                                 const children = allFolders.filter(f => f.parentId === folderId);
@@ -10742,8 +10752,8 @@
                                                                         Rename
                                                                     </button>
                                                                     <button
-                                                                        onClick={() => {
-                                                                            if (confirm(`Delete tag "${tagData.label}"? This will remove it from ${getTagCount(tagId)} book${getTagCount(tagId) !== 1 ? 's' : ''}.`)) {
+                                                                        onClick={async () => {
+                                                                            if (await showConfirmDialog('Delete Tag', `Delete tag "${tagData.label}"? This will remove it from ${getTagCount(tagId)} book${getTagCount(tagId) !== 1 ? 's' : ''}.`)) {
                                                                                 // Remove tag from all books
                                                                                 setBooks(prev => {
                                                                                     const updated = prev.map(b => {
@@ -10909,13 +10919,13 @@
                         };
 
                         // v5.0.0-alpha.135 - Helper: Move folder to new parent
-                        const moveFolder = (folderId, targetParentId) => {
+                        const moveFolder = async (folderId, targetParentId) => {
                             const folderToMove = folders.find(f => f.id === folderId);
                             if (!folderToMove) return;
 
                             // Prevent circular reference
                             if (targetParentId && (targetParentId === folderId || isDescendantOf(targetParentId, folderId))) {
-                                alert("Cannot move folder into itself or its descendants");
+                                showInfoDialog('Cannot Move', 'Cannot move folder into itself or its descendants.');
                                 return;
                             }
 
@@ -10930,7 +10940,7 @@
                             };
                             const descendants = getAllDescendants(folderId);
                             if (descendants.length > 20) {
-                                if (!window.confirm(`Move folder with ${descendants.length} subfolders?`)) {
+                                if (!(await showConfirmDialog('Move Folder', `Move folder with ${descendants.length} subfolders?`))) {
                                     return;
                                 }
                             }
@@ -11234,7 +11244,7 @@
                                                 return false;
                                             };
                                             if (folder.id === folderId || isDescendantOf(folder.id, folderId)) {
-                                                alert("Cannot paste folder into itself or its descendants");
+                                                showInfoDialog('Cannot Paste', 'Cannot paste folder into itself or its descendants.');
                                                 setFolderContextMenu(null);
                                                 return;
                                             }
@@ -11309,9 +11319,9 @@
                                 {!isSpecialFolder && (
                                     <div
                                         className="px-4 py-2 hover:bg-red-50 cursor-pointer flex items-center gap-3 text-red-600"
-                                        onClick={() => {
+                                        onClick={async () => {
                                             setFolderContextMenu(null);
-                                            if (window.confirm(`Delete folder "${folder.name}"?`)) {
+                                            if (await showConfirmDialog('Delete Folder', `Delete folder "${folder.name}"?`)) {
                                                 const getAllDescendants = (folderId, allFolders) => {
                                                     const children = allFolders.filter(f => f.parentId === folderId);
                                                     let descendants = [...children];
@@ -12476,14 +12486,14 @@
                         // v5.0.0-alpha.143 - Use top-level state for edited name to avoid hooks violation
                         const handleSave = () => {
                             if (!folderPropertiesEditedName.trim()) {
-                                alert('Folder name cannot be empty');
+                                showInfoDialog('Invalid Name', 'Folder name cannot be empty.');
                                 return;
                             }
 
                             // Check for duplicate names at same level
                             const siblings = folders.filter(f => f.parentId === folder.parentId && f.id !== folder.id);
                             if (siblings.some(f => f.name === folderPropertiesEditedName.trim())) {
-                                alert('A folder with this name already exists at this level');
+                                showInfoDialog('Duplicate Name', 'A folder with this name already exists at this level.');
                                 return;
                             }
 
