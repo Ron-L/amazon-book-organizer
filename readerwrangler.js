@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.20";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8325,7 +8325,8 @@
                                                             }
 
                                                             // v5.0.0-alpha.82 - Auto-expand collapsed folder after 500ms hover
-                                                            if (hasChildren && folder.collapsed) {
+                                                            // v5.5.4 - Skip when many items rendered (re-render blocks main thread)
+                                                            if (hasChildren && folder.collapsed && !(effectiveShowAll && explorerDisplayItems.length > RENDER_CAP)) {
                                                                 if (!dragHoverExpandTimeoutRef.current) {
                                                                     dragHoverExpandTimeoutRef.current = setTimeout(() => {
                                                                         setFolders(prev => prev.map(f =>
