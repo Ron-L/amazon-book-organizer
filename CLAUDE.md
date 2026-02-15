@@ -39,6 +39,8 @@ Standard semver with pre-release suffix for test iterations:
 
 **ORGANIZER_VERSION** (readerwrangler.js): Update in the same commit as each alpha iteration.
 
+**CSS cache-buster** (readerwrangler.html): `readerwrangler.css?v=X.Y.Z` must match ORGANIZER_VERSION on every commit that modifies readerwrangler.css. Update in the same commit as the CSS change.
+
 ---
 
 ## Release Checklist
