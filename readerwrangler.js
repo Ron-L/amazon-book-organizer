@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.24";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.25";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -614,7 +614,6 @@
                 };
                 scrollEl.addEventListener('scroll', onScroll);
                 dragVirtStateRef.current = { windowStart, windowEnd, scrollHandler: onScroll, origDisplay, children };
-                console.log(`🪟 Drag virtualization: showing rows ${windowStart}-${windowEnd} of ${children.length} (${windowEnd - windowStart + 1} visible)`);
             };
             const stopDragVirtualization = () => {
                 const state = dragVirtStateRef.current;
@@ -626,7 +625,6 @@
                     state.children[i].style.display = state.origDisplay[i];
                 }
                 dragVirtStateRef.current = null;
-                console.log('🪟 Drag virtualization: restored all rows');
             };
             const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
             const [sidebarFolderDragTarget, setSidebarFolderDragTarget] = useState(null); // v5.0.0-alpha.86 - { type: 'reorder'|'reparent', folderId, position? }
@@ -677,32 +675,6 @@
             ]);
             const [draggingColumn, setDraggingColumn] = useState(null); // v5.0.0-alpha.172 - Column header being dragged
             const [headerDropTarget, setHeaderDropTarget] = useState(null); // v5.0.0-alpha.172 - { column, side: 'left'|'right' }
-
-            // v5.5.4 - DIAGNOSTIC: Track what triggers re-renders
-            const _diagRef = useRef({ count: 0, snap: {} });
-            _diagRef.current.count++;
-            const _ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
-            const _snap = {
-                explorerDragBookId, explorerDragData: JSON.stringify(explorerDragData),
-                sidebarFolderDragTarget: JSON.stringify(sidebarFolderDragTarget),
-                breadcrumbDropTargetId, explorerFolderDragTarget: JSON.stringify(explorerFolderDragTarget),
-                showAllItems, selectedFolderId, folders_len: folders.length,
-                explorerSelectedBooks_size: explorerSelectedBooks.size,
-                headerDropTarget: JSON.stringify(headerDropTarget),
-                draggingColumn, bookTooltip: JSON.stringify(bookTooltip),
-                // Async state
-                syncStatus, books_len: books.length, coverUrlMap_keys: Object.keys(coverUrlMap).length,
-                blankImageBooks_size: blankImageBooks.size, hiddenInstances_size: hiddenInstances.size,
-                dataSource, lastSyncTime, tagRegistry_keys: Object.keys(tagRegistry).length,
-            };
-            const _prev = _diagRef.current.snap;
-            const _changed = Object.entries(_snap).filter(([k, v]) => _prev[k] !== v);
-            if (_changed.length > 0) {
-                console.log(`⚡ [${_ts}] RENDER #${_diagRef.current.count} - changed:`, _changed.map(([k, v]) => `${k}=${typeof v === 'string' && v.length > 30 ? v.slice(0,30)+'…' : v}`).join(', '));
-            } else {
-                console.log(`⚡ [${_ts}] RENDER #${_diagRef.current.count} - NO state changed (mystery)`);
-            }
-            _diagRef.current.snap = _snap;
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -897,7 +869,6 @@
             }, [books]);
 
             const explorerDisplayItems = useMemo(() => {
-                console.time('⏱ useMemo: sort/filter/group');
                 const sortedBooks = getFolderBookIds(selectedFolderId)
                     .map(id => bookMap.get(id))
                     .filter(book => book && filterBookForExplorer(book))
@@ -944,9 +915,7 @@
                     });
                 // Group: build flat display items (headers + books via sequential scan)
                 if (!explorerGroupOn || explorerSort[0].column === 'custom') {
-                    const result = sortedBooks.map((book, i) => ({ type: 'book', book, index: i }));
-                    console.timeEnd('⏱ useMemo: sort/filter/group');
-                    return result;
+                    return sortedBooks.map((book, i) => ({ type: 'book', book, index: i }));
                 }
                 const items = [];
                 let currentGroupKey = null;
@@ -964,7 +933,6 @@
                         items.push({ type: 'book', book, index: i });
                     }
                 });
-                console.timeEnd('⏱ useMemo: sort/filter/group');
                 return items;
             }, [bookMap, books, folders, selectedFolderId, searchTerm, readStatusFilter,
                 collectionFilter, selectedCollections, minAmazonRating, minMyRating,
@@ -9953,7 +9921,6 @@
                                             <tbody ref={explorerView === 'list' ? dragVirtContainerRef : undefined}>
                                                 {/* Book rows */}
                                                 {(() => {
-                                                    console.time('⏱ list view: JSX map');
                                                     // v5.5.4 - Render cap with "Show all" option
                                                     const isCapped = !effectiveShowAll && explorerDisplayItems.length > RENDER_CAP;
                                                     const displayItems = isCapped
@@ -10230,7 +10197,6 @@
                                                         </tr>
                                                         );
                                                     });
-                                                    console.timeEnd('⏱ list view: JSX map');
                                                     if (isCapped) {
                                                         result.push(
                                                             <tr key="__show-all__" className="border-b border-gray-100">
