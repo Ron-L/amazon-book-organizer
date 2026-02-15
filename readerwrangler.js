@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.5-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5133,13 +5133,13 @@
                         padding: '0 8px',
                         gap: '2px'
                     }}>
-                        {/* Logo + App Name */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '12px', marginRight: '4px', borderRight: '1px solid #cbd5e1' }}>
+                        {/* Logo + App Name - links to landing page */}
+                        <a href="index.html" style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '12px', marginRight: '4px', borderRight: '1px solid #cbd5e1', textDecoration: 'none' }}>
                             <img src="icons/ReaderWranglerWordlessXparent32.png" alt="" style={{ width: '20px', height: '20px' }} />
                             <span style={{ fontWeight: 700, fontSize: '13px', color: '#1e293b', letterSpacing: '-0.02em' }}>
                                 ReaderWrangler<span style={{ fontSize: '9px', verticalAlign: 'super', color: '#64748b' }}>™</span>
                             </span>
-                        </div>
+                        </a>
                         {/* v5.0.0-alpha.175.2 - File/View/Help menus */}
                         {['File', 'View', 'Help'].map(menuName => (
                             <div key={menuName} style={{ position: 'relative' }} data-menu-area="true">
