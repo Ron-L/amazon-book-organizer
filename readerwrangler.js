@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.21";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.22";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -583,27 +583,31 @@
             const [draggingColumn, setDraggingColumn] = useState(null); // v5.0.0-alpha.172 - Column header being dragged
             const [headerDropTarget, setHeaderDropTarget] = useState(null); // v5.0.0-alpha.172 - { column, side: 'left'|'right' }
 
-            // v5.5.4 - DIAGNOSTIC: Track what triggers re-renders during drag
-            const _diagRef = useRef({});
-            if (explorerDragBookId) {
-                const snap = {
-                    explorerDragBookId, explorerDragData: JSON.stringify(explorerDragData),
-                    sidebarFolderDragTarget: JSON.stringify(sidebarFolderDragTarget),
-                    breadcrumbDropTargetId, explorerFolderDragTarget: JSON.stringify(explorerFolderDragTarget),
-                    showAllItems, selectedFolderId, folders_len: folders.length,
-                    explorerSelectedBooks_size: explorerSelectedBooks.size,
-                    headerDropTarget: JSON.stringify(headerDropTarget),
-                    draggingColumn, bookTooltip: JSON.stringify(bookTooltip),
-                };
-                const prev = _diagRef.current;
-                const changed = Object.entries(snap).filter(([k, v]) => prev[k] !== v);
-                if (changed.length > 0) {
-                    console.log('⚡ DRAG RENDER - changed:', changed.map(([k]) => k).join(', '));
-                } else {
-                    console.log('⚡ DRAG RENDER - NO tracked state changed (mystery render)');
-                }
-                _diagRef.current = snap;
+            // v5.5.4 - DIAGNOSTIC: Track what triggers re-renders
+            const _diagRef = useRef({ count: 0, snap: {} });
+            _diagRef.current.count++;
+            const _ts = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 });
+            const _snap = {
+                explorerDragBookId, explorerDragData: JSON.stringify(explorerDragData),
+                sidebarFolderDragTarget: JSON.stringify(sidebarFolderDragTarget),
+                breadcrumbDropTargetId, explorerFolderDragTarget: JSON.stringify(explorerFolderDragTarget),
+                showAllItems, selectedFolderId, folders_len: folders.length,
+                explorerSelectedBooks_size: explorerSelectedBooks.size,
+                headerDropTarget: JSON.stringify(headerDropTarget),
+                draggingColumn, bookTooltip: JSON.stringify(bookTooltip),
+                // Async state
+                syncStatus, books_len: books.length, coverUrlMap_keys: Object.keys(coverUrlMap).length,
+                blankImageBooks_size: blankImageBooks.size, hiddenInstances_size: hiddenInstances.size,
+                dataSource, lastSyncTime, tagRegistry_keys: Object.keys(tagRegistry).length,
+            };
+            const _prev = _diagRef.current.snap;
+            const _changed = Object.entries(_snap).filter(([k, v]) => _prev[k] !== v);
+            if (_changed.length > 0) {
+                console.log(`⚡ [${_ts}] RENDER #${_diagRef.current.count} - changed:`, _changed.map(([k, v]) => `${k}=${typeof v === 'string' && v.length > 30 ? v.slice(0,30)+'…' : v}`).join(', '));
+            } else {
+                console.log(`⚡ [${_ts}] RENDER #${_diagRef.current.count} - NO state changed (mystery)`);
             }
+            _diagRef.current.snap = _snap;
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
