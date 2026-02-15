@@ -131,6 +131,11 @@ _(No active tasks)_
    - Problem: 14s initial load is noticeable, especially for first-time users
    - Impact: Estimated load time reduction to ~5-8s (Step 1) or ~3-5s (both steps)
 
+**8. 🐛 Clipboard Toast Position Bug** - LOW/LOW (30 min)
+   - Toast appears from top-left corner instead of near the current book
+   - Problem: Cut/Copy toast position is wrong
+   - Impact: Minor visual polish issue
+
 **7. Dark Mode Support** - LOW/MEDIUM (10-17 hours)
    - ~80% of users prefer having a dark mode option; ~65% actively use it
    - Add `tailwind.config = { darkMode: 'class' }`, toggle `.dark` on `<html>`, persist to localStorage
