@@ -81,77 +81,110 @@
         }
 
         .hero {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
-            color: white;
-            padding: 64px 20px;
+            position: relative;
+            z-index: 999;
+            background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
+            color: #1e293b;
+            padding: 48px 20px;
             text-align: center;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid #dbeafe;
         }
 
-        /* Sticky note callout */
-        .sticky-note {
+        /* Callout card - floats right of hero content (replaces sticky note) */
+        .hero-callout {
             position: absolute;
             top: 50%;
-            transform: translateY(-50%) rotate(-5deg);
+            transform: translateY(-50%);
             left: 50%;
-            margin-left: 380px;
-            background: linear-gradient(135deg, #fff9c4 0%, #fffde7 100%);
-            color: #5d4037;
-            padding: 35px 25px 30px 25px;
-            border-radius: 2px;
-            box-shadow:
-                3px 3px 0px rgba(0,0,0,0.1),
-                6px 6px 0px rgba(0,0,0,0.08),
-                9px 9px 0px rgba(0,0,0,0.06),
-                0 4px 8px rgba(0,0,0,0.15);
-            font-size: 1em;
+            margin-left: 340px;
+            background: white;
+            border-left: 4px solid #3b82f6;
+            padding: 20px 24px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-style: italic;
+            font-size: 1.05em;
+            color: #475569;
+            max-width: 240px;
+            text-align: left;
+            line-height: 1.5;
+        }
+
+        /* Thin sticky nav bar - hidden by default, shown on scroll */
+        .nav-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001;
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid #e2e8f0;
+            padding: 8px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: translateY(-100%);
+            transition: transform 0.25s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        }
+
+        .nav-bar.visible {
+            transform: translateY(0);
+        }
+
+        .nav-bar-brand {
+            position: absolute;
+            left: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-bar-brand img {
+            width: 24px;
+            height: 24px;
+        }
+
+        .nav-bar-brand span {
+            font-weight: 700;
+            font-size: 14px;
+            color: #1e293b;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-bar-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            padding: 6px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
             font-weight: 600;
-            width: 220px;
-            text-align: center;
-            font-family: 'Gloria Hallelujah', cursive;
+            transition: all 0.2s ease;
         }
 
-        /* Red thumbtack at top */
-        .sticky-note::before {
-            content: '';
-            position: absolute;
-            top: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 16px;
-            height: 16px;
-            background: radial-gradient(circle, #dc143c 0%, #8b0000 100%);
-            border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3), inset 0 1px 2px rgba(255,255,255,0.3);
+        .nav-btn-primary {
+            background: #3b82f6;
+            color: white;
         }
 
-        /* Pin shadow/attachment point */
-        .sticky-note::after {
-            content: '';
-            position: absolute;
-            top: 8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 8px;
-            height: 8px;
-            background: rgba(0,0,0,0.1);
-            border-radius: 50%;
+        .nav-btn-primary:hover {
+            background: #2563eb;
         }
 
-        .sticky-note .smiley {
-            position: absolute;
-            bottom: 15px;
-            right: 15px;
-            width: 28px;
-            height: 28px;
+        .nav-btn-secondary {
+            background: white;
+            color: #3b82f6;
+            border: 1.5px solid #3b82f6;
         }
 
-        .sticky-note .smiley svg {
-            width: 100%;
-            height: 100%;
+        .nav-btn-secondary:hover {
+            background: #eff6ff;
         }
 
         .hero-icon {
@@ -160,21 +193,22 @@
             margin-left: -500px;
             top: 50%;
             transform: translateY(-50%);
-            width: 160px;
+            width: 140px;
             height: auto;
         }
 
         .hero h1 {
             font-family: 'Libre Baskerville', Georgia, serif;
-            font-size: 3em;
-            margin-bottom: 16px;
+            font-size: 2.8em;
+            margin-bottom: 10px;
             font-weight: 700;
+            color: #1e293b;
         }
 
         .hero .tagline {
-            font-size: 1.5em;
-            margin-bottom: 32px;
-            opacity: 0.95;
+            font-size: 1.15em;
+            margin-bottom: 16px;
+            color: #475569;
         }
 
         .cta-buttons {
@@ -186,34 +220,50 @@
 
         .btn {
             display: inline-block;
-            padding: 18px 40px;
+            padding: 14px 32px;
             border-radius: 8px;
             text-decoration: none;
-            font-size: 1.2em;
+            font-size: 1.1em;
             font-weight: 600;
             transition: all 0.3s ease;
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
         .btn-primary {
-            background: white;
-            color: #2563eb;
+            background: #3b82f6;
+            color: white;
         }
 
         .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 2px solid white;
+            background: white;
+            color: #3b82f6;
+            border: 2px solid #3b82f6;
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-3px);
+            background: #dbeafe;
+            transform: translateY(-2px);
+        }
+
+        /* On medium screens: hide flanking elements, logo goes inline */
+        @media (max-width: 1200px) {
+            .hero-callout {
+                display: none;
+            }
+            .hero-icon {
+                position: static;
+                display: inline-block;
+                transform: none;
+                width: 90px;
+                margin-bottom: 14px;
+                margin-left: 0;
+            }
         }
 
         .container {
@@ -290,11 +340,6 @@
             .features-grid {
                 grid-template-columns: 1fr;
             }
-
-            /* Hide sticky note on mobile */
-            .sticky-note {
-                display: none;
-            }
         }
 
         .feature {
@@ -322,7 +367,7 @@
         }
 
         .feature li:before {
-            content: "✓";
+            content: "\2713";
             position: absolute;
             left: 0;
             color: #2563eb;
@@ -456,10 +501,11 @@
         }
 
         @media (max-width: 768px) {
-            /* v1.2.2: Mobile hero - remove sticky, reduce padding */
+            /* v1.2.2: Mobile hero - reduce padding */
             .hero {
-                position: relative;
                 padding: 32px 20px;
+                color: #1e293b;
+                background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
             }
 
             .hero h1 {
@@ -469,6 +515,26 @@
             .hero .tagline {
                 font-size: 1.2em;
                 margin-bottom: 20px;
+            }
+
+            /* Logo goes inline on mobile (no room for absolute positioning) */
+            .hero-icon {
+                position: static;
+                display: inline-block;
+                transform: none;
+                width: 80px;
+                margin-bottom: 12px;
+                margin-left: 0;
+            }
+
+            /* Hide callout card on mobile */
+            .hero-callout {
+                display: none;
+            }
+
+            /* Hide sticky nav on mobile */
+            .nav-bar {
+                display: none;
             }
 
             .section h2 {
@@ -530,6 +596,8 @@
                 width: 100%;
                 box-sizing: border-box;
                 overflow: hidden;
+                color: #1e293b;
+                background: linear-gradient(180deg, #eff6ff 0%, #f8fafc 100%);
             }
 
             .hero h1 {
@@ -551,28 +619,20 @@
                 font-size: 1em;
             }
 
-            /* v1.2.2.m: Reposition logo for landscape mobile - center-relative like desktop */
+            /* v1.2.2.m: Reposition logo for landscape mobile */
             .hero-icon {
-                position: absolute;
-                left: 50%;
-                margin-left: -350px;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 120px;
-                height: auto;
+                width: 70px;
+                display: inline-block;
+                position: static;
+                transform: none;
             }
 
-            /* v1.2.2.m: Reposition sticky note for landscape mobile - center-relative like desktop */
-            .sticky-note {
-                position: absolute;
-                left: 50%;
-                margin-left: 250px;
-                right: auto;
-                top: 50%;
-                transform: translateY(-50%) rotate(-3deg);
-                width: 120px;
-                padding: 15px 12px 12px 12px;
-                font-size: 0.7em;
+            .hero-callout {
+                display: none;
+            }
+
+            .nav-bar {
+                display: none;
             }
 
             /* v1.2.2.f/j: Full-width containers in landscape */
@@ -714,33 +774,27 @@
     />
 </head>
 <body>
-    <div class="hero">
-        <img src="icons/ReaderWranglerWordlessXparent.png" alt="" class="hero-icon">
-        <h1>ReaderWrangler™</h1>
-        <p class="tagline">Wrangle your reader chaos - Your books, your order</p>
-        <div class="sticky-note">
-            <div class="sticky-note-text">
-                It's Not Just Organization;<br>It's Rediscovery!
-            </div>
-            <div class="smiley">
-                <svg viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Left eye (hand-drawn dot) -->
-                    <circle cx="16" cy="18" r="2.5" fill="#5d4037"/>
-                    <!-- Right eye (hand-drawn dot) -->
-                    <circle cx="34" cy="18" r="2.5" fill="#5d4037"/>
-                    <!-- Smile (simple curved line) -->
-                    <path d="M 12,28 Q 25,36 38,28"
-                          fill="none"
-                          stroke="#5d4037"
-                          stroke-width="2.5"
-                          stroke-linecap="round"/>
-                </svg>
-            </div>
+    <!-- Thin sticky nav bar (appears on scroll) -->
+    <div class="nav-bar" id="navBar">
+        <div class="nav-bar-brand">
+            <img src="icons/ReaderWranglerWordlessXparent32.png" alt="">
+            <span>ReaderWrangler™</span>
         </div>
+        <div class="nav-bar-buttons">
+            <a href="install-bookmarklet.html" class="nav-btn nav-btn-primary">Get Started</a>
+            <a href="readerwrangler.html" class="nav-btn nav-btn-secondary">Launch App</a>
+        </div>
+    </div>
+
+    <div class="hero" id="hero">
+        <img src="icons/ReaderWranglerWordlessXparent.png" alt="" class="hero-icon">
+        <h1>ReaderWrangler&#8482;</h1>
+        <p class="tagline">Wrangle your reader chaos &#8212; Your books, your order</p>
         <div class="cta-buttons">
             <a href="install-bookmarklet.html" class="btn btn-primary">Get Started</a>
             <a href="readerwrangler.html" class="btn btn-secondary">Launch App</a>
         </div>
+        <div class="hero-callout">It's not just organization; it's rediscovery.</div>
     </div>
 
     <div class="container">
@@ -755,12 +809,12 @@
 
             <!-- v1.2.2.c: Mobile-only section -->
             <div class="mobile-only" style="display: none; margin-top: 40px;">
-                <h2>📱 Best on Desktop</h2>
+                <h2>&#128241; Best on Desktop</h2>
                 <p style="font-size: 1.1em; line-height: 1.7; margin-bottom: 20px;">ReaderWrangler shines on a big screen. The bookmarklet that imports your Amazon library requires a desktop browser, and drag-and-drop organization works best with a mouse and plenty of screen space.</p>
                 <p style="font-size: 1.1em; line-height: 1.7; margin-bottom: 25px;"><strong>But you can still browse on mobile!</strong> Once you've organized your collection on desktop, sync your data to your phone and view your curated reading lists anywhere—perfect for picking your next read from the couch or bookstore.</p>
 
                 <details style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-top: 20px;">
-                    <summary style="font-weight: 600; color: #2563eb; cursor: pointer; font-size: 1.1em;">How to View on Mobile ▾</summary>
+                    <summary style="font-weight: 600; color: #2563eb; cursor: pointer; font-size: 1.1em;">How to View on Mobile &#9662;</summary>
                     <div style="margin-top: 15px; padding-left: 10px;">
                         <p style="margin-bottom: 12px;"><strong>1.</strong> On desktop: Click <strong>"Export/Backup"</strong> in ReaderWrangler</p>
                         <p style="margin-bottom: 12px;"><strong>2.</strong> Save the backup file to cloud storage (Dropbox, Google Drive, iCloud)</p>
@@ -807,7 +861,7 @@
                             <p>D. <strong>Click the bookmarklet again</strong> and select "Import Collections"</p>
 
                             <div class="note">
-                                <strong>💡 Keeping Your Library Current:</strong> Do this once to get your complete library, then repeat occasionally to add newly purchased books. ReaderWrangler merges new books while preserving your organization.
+                                <strong>&#128161; Keeping Your Library Current:</strong> Do this once to get your complete library, then repeat occasionally to add newly purchased books. ReaderWrangler merges new books while preserving your organization.
                             </div>
                         </div>
 
@@ -817,7 +871,7 @@
                             <p>B. <strong>Load your library:</strong> Click the status line and select your downloaded JSON file</p>
 
                             <div class="note">
-                                <strong>🔒 Your Privacy:</strong> All processing happens in your browser—your data never leaves your computer.
+                                <strong>&#128274; Your Privacy:</strong> All processing happens in your browser—your data never leaves your computer.
                             </div>
                         </div>
                     </div>
@@ -919,8 +973,8 @@
                 <div class="workflow-step">
                     <h4>1. Import Your Kindle Library</h4>
                     <p>Your Amazon Kindle library already has your complete collection. Install the bookmarklet, visit your Amazon library page, and import your books—covers, descriptions, ratings, and reviews—into a local file on your computer.</p>
-                    <p style="margin-top: 12px; font-weight: 500;">⏱️ The initial import may take a while depending on your library size, but you only need to do it once</p>
-                    <p style="margin-top: 8px; font-weight: 500;">📥 Saved to your Downloads folder (or browser's default location)</p>
+                    <p style="margin-top: 12px; font-weight: 500;">&#9201;&#65039; The initial import may take a while depending on your library size, but you only need to do it once</p>
+                    <p style="margin-top: 8px; font-weight: 500;">&#128229; Saved to your Downloads folder (or browser's default location)</p>
                 </div>
 
                 <div class="workflow-step">
@@ -932,7 +986,7 @@
                     <h4>3. Keep It Fresh</h4>
                     <p>Bought new books on Amazon? Just run the import again—ReaderWrangler will merge the new additions while preserving your organization. Your custom columns stay intact while your library stays current.</p>
                     <div class="note">
-                        <strong>💡 Smart Recovery:</strong> Sometimes a few book details get missed during the initial import. No worries! Every time you refresh your library, ReaderWrangler re-attempts any missing descriptions or reviews. Your library gets more complete with each update.
+                        <strong>&#128161; Smart Recovery:</strong> Sometimes a few book details get missed during the initial import. No worries! Every time you refresh your library, ReaderWrangler re-attempts any missing descriptions or reviews. Your library gets more complete with each update.
                     </div>
                 </div>
             </div>
@@ -940,7 +994,7 @@
 
         <div class="section">
             <h2>Current Support</h2>
-            <p>Amazon Kindle™ Library</p>
+            <p>Amazon Kindle&#8482; Library</p>
         </div>
 
         <div class="section">
@@ -998,7 +1052,7 @@
             <ul style="line-height: 1.8; margin-top: 10px;">
                 <li><strong>Ownership badges</strong> - Visual badges on book covers showing non-purchased books (Sample, Borrowed, Prime/KU/KOLL/Comixology)</li>
                 <li><strong>Ownership filter</strong> - Filter library by ownership type in the filter panel</li>
-                <li><strong>Filter panel reorganization</strong> - Filters grouped by mental model (Discovery → Organization → Acquisition)</li>
+                <li><strong>Filter panel reorganization</strong> - Filters grouped by mental model (Discovery &#8594; Organization &#8594; Acquisition)</li>
             </ul>
             <p style="margin-top: 20px;"><strong>v4.8.0 - Undo/Redo</strong> (January 2026)</p>
             <ul style="line-height: 1.8; margin-top: 10px;">
@@ -1053,7 +1107,7 @@
         <p><a href="USER-GUIDE.md">User Guide</a> | <a href="https://github.com/Ron-L/readerwrangler" target="_blank">View on GitHub</a> | <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank">Report an Issue</a> | <a href="CHANGELOG.md">Changelog</a> | <a href="CONTRIBUTING.md">Contributing</a></p>
         <div class="notice">
             <p>Amazon, Kindle, and Amazon Kindle are trademarks of Amazon.com, Inc.</p>
-            <p>ReaderWrangler™ is not affiliated with, endorsed by, or sponsored by Amazon.</p>
+            <p>ReaderWrangler&#8482; is not affiliated with, endorsed by, or sponsored by Amazon.</p>
             <p>Special thanks to <a href="https://freedns.afraid.org/" target="_blank">FreeDNS</a> for providing free DNS hosting.</p>
             <p style="margin-top: 15px;">As an Amazon Associate, I earn from qualifying purchases.</p>
             <p style="margin-top: 20px; font-size: 0.85em;"><a href="reset.html" style="color: #999;">Having trouble? Emergency Reset</a></p>
@@ -1160,6 +1214,21 @@
                 </p>
             `;
         }
+    </script>
+    <script>
+        // Scroll-to-shrink: show thin nav bar when hero scrolls out of view
+        const hero = document.getElementById('hero');
+        const navBar = document.getElementById('navBar');
+        let navVisible = false;
+        const onScroll = () => {
+            const heroBottom = hero.getBoundingClientRect().bottom;
+            const shouldShow = heroBottom < 0;
+            if (shouldShow !== navVisible) {
+                navVisible = shouldShow;
+                navBar.classList.toggle('visible', shouldShow);
+            }
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
     </script>
     <script data-goatcounter="https://readerwrangler.goatcounter.com/count"
             async src="//gc.zgo.at/count.js"></script>
