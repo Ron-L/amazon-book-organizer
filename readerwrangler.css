@@ -28,6 +28,7 @@
     --border-strong: #cbd5e1;
     --border-accent: #93c5fd;
     --border-focus: #3b82f6;
+    --border-danger: #ef4444;
 
     /* Gradients (menu bar chrome) */
     --gradient-chrome-from: #f8fafc;

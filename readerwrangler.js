@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5106,8 +5106,8 @@
                     <style>{`
                         .clipboard-toast {
                             position: fixed;
-                            background: #f3f4f6;
-                            color: #374151;
+                            background: var(--bg-hover);
+                            color: var(--text-primary);
                             padding: 12px 24px;
                             border-radius: 8px;
                             font-size: 14px;
@@ -5119,7 +5119,7 @@
 
                         .clipboard-toast.animating {
                             background: transparent;
-                            color: #6b7280;
+                            color: var(--text-muted);
                             box-shadow: none;
                             font-size: 12px;
                             padding: 0;
@@ -5356,7 +5356,7 @@
                                     position: 'absolute',
                                     top: '32px',
                                     left: 0,
-                                    background: 'white',
+                                    background: 'var(--bg-elevated)',
                                     border: '1px solid var(--border-strong)',
                                     borderRadius: '4px',
                                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
@@ -5445,7 +5445,7 @@
                                     position: 'absolute',
                                     top: '32px',
                                     left: 0,
-                                    background: 'white',
+                                    background: 'var(--bg-elevated)',
                                     border: '1px solid var(--border-strong)',
                                     borderRadius: '4px',
                                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
@@ -5490,7 +5490,7 @@
                                                             padding: '8px 12px',
                                                             fontSize: '13px',
                                                             cursor: 'pointer',
-                                                            background: 'white',
+                                                            background: 'var(--bg-elevated)',
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             gap: '8px'
@@ -5521,7 +5521,7 @@
                                                         padding: '8px 12px',
                                                         fontSize: '13px',
                                                         cursor: 'pointer',
-                                                        background: 'white',
+                                                        background: 'var(--bg-elevated)',
                                                         color: 'var(--text-accent)'
                                                     }}
                                                     onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
@@ -5577,7 +5577,7 @@
                                     position: 'absolute',
                                     top: '32px',
                                     left: 0,
-                                    background: 'white',
+                                    background: 'var(--bg-elevated)',
                                     border: '1px solid var(--border-strong)',
                                     borderRadius: '4px',
                                     boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
@@ -5870,7 +5870,7 @@
                                 top: '64px',  // Below toolbar (32px menu + 36px toolbar - 4px overlap)
                                 left: '16px',
                                 minWidth: '500px',
-                                background: 'white',
+                                background: 'var(--bg-elevated)',
                                 border: '1px solid var(--border-strong)',
                                 borderRadius: '6px',
                                 boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
@@ -5909,7 +5909,7 @@
                                                 minWidth: '200px',
                                                 maxHeight: '300px',
                                                 overflowY: 'auto',
-                                                background: 'white',
+                                                background: 'var(--bg-elevated)',
                                                 border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -5996,7 +5996,7 @@
                                                 top: '32px',
                                                 left: 0,
                                                 minWidth: '160px',
-                                                background: 'white',
+                                                background: 'var(--bg-elevated)',
                                                 border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -6044,7 +6044,7 @@
                                                 top: '32px',
                                                 left: 0,
                                                 minWidth: '160px',
-                                                background: 'white',
+                                                background: 'var(--bg-elevated)',
                                                 border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -6112,7 +6112,7 @@
                                                 minWidth: '250px',
                                                 maxHeight: '300px',
                                                 overflowY: 'auto',
-                                                background: 'white',
+                                                background: 'var(--bg-elevated)',
                                                 border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
@@ -6207,7 +6207,7 @@
                                                 top: '32px',
                                                 left: 0,
                                                 right: 0,
-                                                background: 'white',
+                                                background: 'var(--bg-elevated)',
                                                 border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
                                                 boxShadow: '0 2px 8px rgba(0,0,1,0.1)',
@@ -7486,15 +7486,15 @@
                                                                 setModalBook(prev => ({ ...prev, myRating: rating }));
                                                             }}
                                                             onMouseEnter={(e) => {
-                                                                e.currentTarget.style.color = '#3b82f6';
+                                                                e.currentTarget.style.color = 'var(--border-focus)';
                                                             }}
                                                             onMouseLeave={(e) => {
-                                                                e.currentTarget.style.color = rating <= (modalBook.myRating || 0) ? '#3b82f6' : '#cbd5e1';
+                                                                e.currentTarget.style.color = rating <= (modalBook.myRating || 0) ? 'var(--border-focus)' : 'var(--border-strong)';
                                                             }}
                                                             style={{
                                                                 fontSize: '24px',
                                                                 cursor: 'pointer',
-                                                                color: rating <= (modalBook.myRating || 0) ? '#3b82f6' : '#cbd5e1',
+                                                                color: rating <= (modalBook.myRating || 0) ? 'var(--border-focus)' : 'var(--border-strong)',
                                                                 transition: 'color 0.1s',
                                                                 background: 'none',
                                                                 border: 'none',
@@ -8358,8 +8358,8 @@
                                                             // v5.0.0-alpha.86 - Visual feedback for folder reorder
                                                             ...(sidebarFolderDragTarget?.type === 'reorder' && sidebarFolderDragTarget?.folderId === folder.id
                                                                 ? sidebarFolderDragTarget.position === 'before'
-                                                                    ? { borderTop: '3px solid #3b82f6' }
-                                                                    : { borderBottom: '3px solid #3b82f6' }
+                                                                    ? { borderTop: '3px solid var(--border-focus)' }
+                                                                    : { borderBottom: '3px solid var(--border-focus)' }
                                                                 : {}),
                                                             // v5.0.0-alpha.141 - Dim cut folders
                                                             ...(folderClipboard.operation === 'cut' && folderClipboard.items.includes(folder.id)
@@ -9138,7 +9138,7 @@
                                                 return (
                                                     <div style={{
                                                         position: 'absolute', top: '28px', left: 0,
-                                                        background: 'white', border: '1px solid var(--border-strong)',
+                                                        background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
                                                         borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                                                         zIndex: 1000, minWidth: '180px', whiteSpace: 'nowrap'
                                                     }}>
@@ -9184,8 +9184,8 @@
                                                                         padding: '6px 12px', fontSize: '13px',
                                                                         cursor: isCustomDisabled ? 'not-allowed' : 'pointer',
                                                                         display: 'flex', alignItems: 'center', gap: '8px',
-                                                                        color: isCustomDisabled ? '#cbd5e1' : isSorted ? '#1e40af' : '#334155',
-                                                                        background: 'white'
+                                                                        color: isCustomDisabled ? 'var(--border-strong)' : isSorted ? 'var(--text-accent-strong)' : 'var(--text-primary)',
+                                                                        background: 'var(--bg-elevated)'
                                                                     }}
                                                                     onMouseEnter={(e) => { if (!isCustomDisabled) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                                                     onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
@@ -9344,16 +9344,16 @@
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                                             <div style={{ textAlign: 'center', maxWidth: '420px' }}>
                                                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
-                                                <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>Welcome to ReaderWrangler</h2>
+                                                <h2 style={{ fontSize: '22px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Welcome to ReaderWrangler</h2>
                                                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '28px' }}>Import your Kindle library to get started.</p>
                                                 <div style={{
-                                                    background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px',
+                                                    background: 'var(--bg-selected)', border: '1px solid var(--border-accent)', borderRadius: '8px',
                                                     padding: '20px', marginBottom: '16px', textAlign: 'left'
                                                 }}>
-                                                    <p style={{ fontWeight: '600', color: '#0c4a6e', marginBottom: '8px', fontSize: '14px' }}>New here?</p>
+                                                    <p style={{ fontWeight: '600', color: 'var(--text-accent-strong)', marginBottom: '8px', fontSize: '14px' }}>New here?</p>
                                                     <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '12px' }}>Install the bookmarklet to import your library from Amazon.</p>
                                                     <button onClick={() => window.open('https://readerwrangler.com/', '_blank')} style={{
-                                                        background: 'linear-gradient(135deg, #3b82f6, #2563eb)', color: 'white',
+                                                        background: 'linear-gradient(135deg, var(--bg-accent), var(--bg-accent-hover))', color: 'var(--text-on-accent)',
                                                         border: 'none', borderRadius: '6px', padding: '10px 20px',
                                                         fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%'
                                                     }}>
@@ -9361,13 +9361,13 @@
                                                     </button>
                                                 </div>
                                                 <div style={{
-                                                    background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px',
+                                                    background: 'var(--bg-surface-alt)', border: '1px solid var(--border-default)', borderRadius: '8px',
                                                     padding: '20px', textAlign: 'left'
                                                 }}>
-                                                    <p style={{ fontWeight: '600', color: '#334155', marginBottom: '8px', fontSize: '14px' }}>Already have a library or backup file?</p>
+                                                    <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px', fontSize: '14px' }}>Already have a library or backup file?</p>
                                                     <button onClick={() => importLibrary()} style={{
-                                                        background: 'white', color: 'var(--text-accent)',
-                                                        border: '2px solid #2563eb', borderRadius: '6px', padding: '10px 20px',
+                                                        background: 'var(--bg-surface)', color: 'var(--text-accent)',
+                                                        border: '2px solid var(--text-accent)', borderRadius: '6px', padding: '10px 20px',
                                                         fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%'
                                                     }}>
                                                         Load Library File
@@ -9632,7 +9632,7 @@
                                                                     if (explorerFolderDragTarget) {
                                                                         if (explorerFolderDragTarget.type === 'reorder' && explorerFolderDragTarget.index === folderIndex) {
                                                                             // Reorder: blue if allowed (custom mode), red if not
-                                                                            const color = canReorderFolders ? '#3b82f6' : '#ef4444';
+                                                                            const color = canReorderFolders ? 'var(--bg-accent)' : 'var(--border-danger)';
                                                                             if (explorerFolderDragTarget.position === 'before') {
                                                                                 styles.borderTop = `3px solid ${color}`;
                                                                             } else {
@@ -9640,7 +9640,7 @@
                                                                             }
                                                                         }
                                                                         if (explorerFolderDragTarget.type === 'reparent' && explorerFolderDragTarget.folderId === folder.id) {
-                                                                            styles.backgroundColor = '#dbeafe'; // blue-100 (reparent always valid)
+                                                                            styles.backgroundColor = 'var(--bg-selected)'; // reparent always valid
                                                                         }
                                                                     }
 
@@ -9894,7 +9894,7 @@
                                                                             }}
                                                                             autoFocus
                                                                             className="w-full px-1 py-0.5 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                                                            style={{ color: rightPanelPlaceholderMode ? '#9ca3af' : 'inherit' }}
+                                                                            style={{ color: rightPanelPlaceholderMode ? 'var(--text-muted)' : 'inherit' }}
                                                                             onClick={(e) => e.stopPropagation()}
                                                                         />
                                                                     ) : (
@@ -10007,7 +10007,7 @@
                                                                 const row = e.currentTarget;
                                                                 if (explorerReorderTargetRef.current !== row) {
                                                                     if (explorerReorderTargetRef.current) explorerReorderTargetRef.current.style.borderTop = '';
-                                                                    const color = explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171';
+                                                                    const color = explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? 'var(--bg-accent)' : 'var(--border-danger)';
                                                                     row.style.borderTop = `3px solid ${color}`;
                                                                     explorerReorderTargetRef.current = row;
                                                                 }
@@ -10140,11 +10140,11 @@
                                                                     case 'myRating':
                                                                         // v5.0.0-alpha.175.31 - Personal rating (blue stars)
                                                                         if (book.myRating && book.myRating > 0) {
-                                                                            content = <span style={{ color: '#3b82f6' }}>
+                                                                            content = <span style={{ color: 'var(--border-focus)' }}>
                                                                                 {`${'★'.repeat(book.myRating)}${'☆'.repeat(5 - book.myRating)}`}
                                                                             </span>;
                                                                         } else {
-                                                                            content = <span style={{ color: '#cbd5e1' }}>—</span>;
+                                                                            content = <span style={{ color: 'var(--border-strong)' }}>—</span>;
                                                                         }
                                                                         break;
                                                                     case 'dateAdded': {
@@ -10281,13 +10281,13 @@
                                                             if (!explorerFolderDragTarget) return {};
                                                             if (explorerFolderDragTarget.type === 'reorder' && explorerFolderDragTarget.index === folderIndex) {
                                                                 // Reorder: blue if allowed (custom mode), red if not
-                                                                const color = canReorderFolders ? '#3b82f6' : '#ef4444';
+                                                                const color = canReorderFolders ? 'var(--bg-accent)' : 'var(--border-danger)';
                                                                 return explorerFolderDragTarget.position === 'before'
                                                                     ? { outline: `3px solid ${color}`, outlineOffset: '2px', borderTop: `3px solid ${color}` }
                                                                     : { outline: `3px solid ${color}`, outlineOffset: '2px', borderBottom: `3px solid ${color}` };
                                                             }
                                                             if (explorerFolderDragTarget.type === 'reparent' && explorerFolderDragTarget.folderId === folder.id) {
-                                                                return { outline: '3px solid #3b82f6', outlineOffset: '2px', backgroundColor: '#dbeafe' }; // reparent always valid
+                                                                return { outline: '3px solid var(--bg-accent)', outlineOffset: '2px', backgroundColor: 'var(--bg-selected)' }; // reparent always valid
                                                             }
                                                             return {};
                                                         })()}
@@ -10531,7 +10531,7 @@
                                                             const el = e.currentTarget;
                                                             if (explorerReorderTargetRef.current !== el) {
                                                                 if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.outline = ''; explorerReorderTargetRef.current.style.outlineOffset = ''; }
-                                                                const color = explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? '#3b82f6' : '#f87171';
+                                                                const color = explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' ? 'var(--bg-accent)' : 'var(--border-danger)';
                                                                 el.style.outline = `3px solid ${color}`;
                                                                 el.style.outlineOffset = '2px';
                                                                 explorerReorderTargetRef.current = el;

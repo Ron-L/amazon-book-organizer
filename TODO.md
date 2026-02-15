@@ -8,6 +8,14 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Current Focus
 
+**1. 1/2 star ratings**
+   -discussed with claude code. Options:
+      1. Use ⯨ (U+2BE8) — cleaner if it renders, but risky without a webfont guarantee
+      2. Keep ½ — universally supported, current approach
+      3. CSS approach — render a ★ clipped to 50% width (many rating libraries do this), which looks like a true half-filled star regardless of font
+      4. SVG stars — most robust visual approach
+
+
 _(No active tasks)_
 
 ---
@@ -113,6 +121,24 @@ _(No active tasks)_
    - Note: Full accessibility audit deferred (personal-use project)
    - Problem: Potential public users may need accessibility features
    - Impact: Broader user base support with minimal effort
+
+**6. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
+   - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
+   - Step 1 (Babel): `npm install --save-dev @babel/cli @babel/core @babel/preset-react`, add `build.bat` that runs `npx babel readerwrangler.js --presets=@babel/preset-react -o dist/readerwrangler.js`. Update HTML to load `dist/readerwrangler.js` as regular `<script>` instead of `type="text/babel"`. Remove Babel CDN.
+   - Step 2 (optional, Tailwind): `npx tailwindcss -i input.css -o dist/styles.css --content "readerwrangler.js,readerwrangler.html"`. Swap Tailwind CDN `<script>` for `<link>` to generated CSS.
+   - Prerequisite: Node.js (already installed for scripts/)
+   - Note: User loads the page once per session, so this is a one-time cost per use. Medium reward/work ratio.
+   - Problem: 14s initial load is noticeable, especially for first-time users
+   - Impact: Estimated load time reduction to ~5-8s (Step 1) or ~3-5s (both steps)
+
+**7. Dark Mode Support** - LOW/MEDIUM (10-17 hours)
+   - ~80% of users prefer having a dark mode option; ~65% actively use it
+   - Add `tailwind.config = { darkMode: 'class' }`, toggle `.dark` on `<html>`, persist to localStorage
+   - Scope: landing page (1-2h), app chrome/menu bar/sidebar (2-3h), 15 modals/dialogs (3-5h), context menus/dropdowns (1-2h), list/grid views (2-3h), architecture for inline styles (1-2h)
+   - Prerequisite: Convert static inline `style={{}}` color values to Tailwind classes first, otherwise must maintain two theming systems (`dark:` for className + CSS variables for inline styles)
+   - Default remains light mode; dark mode is opt-in
+   - Problem: Significant user base expects dark mode support
+   - Impact: Broader appeal, reduced eye strain for evening/night users
 
 ---
 
