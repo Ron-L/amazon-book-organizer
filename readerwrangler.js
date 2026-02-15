@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.22";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.23";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -533,6 +533,101 @@
                 explorerDropTargetRef.current = el;
             };
             const [explorerDragData, setExplorerDragData] = useState(null); // { sourceFolder, bookIds } for drag validity checks
+            // v5.5.4-alpha.23 - Drag virtualization refs (hide off-screen rows during drag)
+            const dragVirtScrollRef = useRef(null);    // Scroll container element
+            const dragVirtContainerRef = useRef(null);  // tbody (list) or grid div
+            const dragVirtStateRef = useRef(null);      // { windowStart, windowEnd, scrollHandler, allChildren } during active drag
+            // v5.5.4-alpha.23 - Drag virtualization: sliding window hides off-screen rows during drag
+            const startDragVirtualization = () => {
+                const container = dragVirtContainerRef.current;
+                const scrollEl = dragVirtScrollRef.current;
+                if (!container || !scrollEl || !effectiveShowAll || explorerDisplayItems.length <= RENDER_CAP) return;
+                const children = Array.from(container.children);
+                if (children.length <= RENDER_CAP) return;
+                // Calculate visible range using getBoundingClientRect (works for both table rows and grid items)
+                const scrollRect = scrollEl.getBoundingClientRect();
+                const viewTop = scrollRect.top;
+                const viewBottom = scrollRect.bottom;
+                // Find first and last visible child
+                let firstVisible = 0, lastVisible = children.length - 1;
+                for (let i = 0; i < children.length; i++) {
+                    const r = children[i].getBoundingClientRect();
+                    if (r.bottom >= viewTop) { firstVisible = i; break; }
+                }
+                for (let i = firstVisible; i < children.length; i++) {
+                    const r = children[i].getBoundingClientRect();
+                    if (r.top > viewBottom) { lastVisible = i - 1; break; }
+                }
+                const windowStart = Math.max(0, firstVisible - DRAG_BUFFER);
+                const windowEnd = Math.min(children.length - 1, lastVisible + DRAG_BUFFER);
+                // Hide rows outside window, track original display values
+                const origDisplay = [];
+                for (let i = 0; i < children.length; i++) {
+                    origDisplay.push(children[i].style.display);
+                    if (i < windowStart || i > windowEnd) {
+                        children[i].style.display = 'none';
+                    }
+                }
+                // Scroll listener for sliding window
+                let lastShiftTime = 0;
+                const onScroll = () => {
+                    const now = performance.now();
+                    if (now - lastShiftTime < DRAG_THROTTLE_MS) return;
+                    lastShiftTime = now;
+                    const state = dragVirtStateRef.current;
+                    if (!state) return;
+                    const sr = scrollEl.getBoundingClientRect();
+                    // Find current visible range among visible children
+                    let curFirst = state.windowStart, curLast = state.windowEnd;
+                    for (let i = state.windowStart; i <= state.windowEnd; i++) {
+                        if (children[i].style.display !== 'none') {
+                            const r = children[i].getBoundingClientRect();
+                            if (r.bottom >= sr.top) { curFirst = i; break; }
+                        }
+                    }
+                    for (let i = curFirst; i <= state.windowEnd; i++) {
+                        if (children[i].style.display !== 'none') {
+                            const r = children[i].getBoundingClientRect();
+                            if (r.top > sr.bottom) { curLast = i - 1; break; }
+                        }
+                    }
+                    // Check if near edges of buffer
+                    const nearTop = curFirst - state.windowStart < DRAG_EDGE_TRIGGER;
+                    const nearBottom = state.windowEnd - curLast < DRAG_EDGE_TRIGGER;
+                    if (nearTop && state.windowStart > 0) {
+                        // Shift window up: show DRAG_SHIFT_SIZE above, hide DRAG_SHIFT_SIZE from bottom
+                        const newStart = Math.max(0, state.windowStart - DRAG_SHIFT_SIZE);
+                        const newEnd = Math.max(state.windowEnd - DRAG_SHIFT_SIZE, curLast + DRAG_EDGE_TRIGGER);
+                        for (let i = newStart; i < state.windowStart; i++) children[i].style.display = '';
+                        for (let i = newEnd + 1; i <= state.windowEnd; i++) children[i].style.display = 'none';
+                        state.windowStart = newStart;
+                        state.windowEnd = newEnd;
+                    } else if (nearBottom && state.windowEnd < children.length - 1) {
+                        // Shift window down: show DRAG_SHIFT_SIZE below, hide DRAG_SHIFT_SIZE from top
+                        const newEnd = Math.min(children.length - 1, state.windowEnd + DRAG_SHIFT_SIZE);
+                        const newStart = Math.min(state.windowStart + DRAG_SHIFT_SIZE, curFirst - DRAG_EDGE_TRIGGER);
+                        for (let i = state.windowEnd + 1; i <= newEnd; i++) children[i].style.display = '';
+                        for (let i = state.windowStart; i < newStart; i++) children[i].style.display = 'none';
+                        state.windowStart = newStart;
+                        state.windowEnd = newEnd;
+                    }
+                };
+                scrollEl.addEventListener('scroll', onScroll);
+                dragVirtStateRef.current = { windowStart, windowEnd, scrollHandler: onScroll, origDisplay, children };
+                console.log(`🪟 Drag virtualization: showing rows ${windowStart}-${windowEnd} of ${children.length} (${windowEnd - windowStart + 1} visible)`);
+            };
+            const stopDragVirtualization = () => {
+                const state = dragVirtStateRef.current;
+                if (!state) return;
+                const scrollEl = dragVirtScrollRef.current;
+                if (scrollEl) scrollEl.removeEventListener('scroll', state.scrollHandler);
+                // Restore all rows
+                for (let i = 0; i < state.children.length; i++) {
+                    state.children[i].style.display = state.origDisplay[i];
+                }
+                dragVirtStateRef.current = null;
+                console.log('🪟 Drag virtualization: restored all rows');
+            };
             const [breadcrumbDropTargetId, setBreadcrumbDropTargetId] = useState(null); // v5.0.0-alpha.83 - Breadcrumb folder being dragged over
             const [sidebarFolderDragTarget, setSidebarFolderDragTarget] = useState(null); // v5.0.0-alpha.86 - { type: 'reorder'|'reparent', folderId, position? }
             const [leftPaneWidth, setLeftPaneWidth] = useState(256); // v5.0.0-alpha.91 - Resizable left pane width (px)
@@ -880,6 +975,11 @@
             // v5.5.4 - Render cap: show first 200 items instantly, "Show all" button for rest
             // Resets on navigation changes (sort/filter/folder), NOT on data mutations (reorder/tag edit)
             const RENDER_CAP = 200;
+            // v5.5.4-alpha.23 - Drag virtualization: hide off-screen rows during drag for 10K+ perf
+            const DRAG_BUFFER = 100;         // Rows above/below visible area to keep shown
+            const DRAG_EDGE_TRIGGER = 20;    // Rows from buffer edge before shifting window
+            const DRAG_SHIFT_SIZE = 50;      // Rows to show/hide per window shift
+            const DRAG_THROTTLE_MS = 100;    // Min ms between shift recalculations
             const [showAllItems, setShowAllItems] = useState(false);
             const navigationKey = `${selectedFolderId}|${JSON.stringify(explorerSort)}|${searchTerm}|${readStatusFilter}|${collectionFilter}|${JSON.stringify(selectedCollections)}|${minAmazonRating}|${minMyRating}|${ratingFilter}|${ownershipFilter}|${showHidden}|${seriesFilter}|${JSON.stringify(selectedSeries)}|${dateFrom}|${dateTo}|${dealsFilterActive}|${JSON.stringify(tagFilter)}|${explorerGroupOn}|${JSON.stringify([...collapsedGroups])}`;
             const prevNavigationKeyRef = useRef(navigationKey);
@@ -8235,6 +8335,7 @@
                                             })));
                                             setFolderDropHighlight(null);
                                             setExplorerSelectedBooks(new Set());
+                                            stopDragVirtualization(); // v5.5.4-alpha.23
                                             // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
                                             setExplorerDragBookId(null);
                                             setExplorerDragData(null);
@@ -8522,7 +8623,8 @@
                                                             setFolderDropHighlight(null);
                                                             setExplorerSelectedBooks(new Set());
                                                             explorerIsCopyDragRef.current = false;
-                                                            // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
+                                                            stopDragVirtualization(); // v5.5.4-alpha.23
+                                            // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
                                                             setExplorerDragBookId(null);
                                                             setExplorerDragData(null);
                                                         }}
@@ -8873,7 +8975,8 @@
                                                                         console.log(`📦 Moved ${bookIds.length} book(s) to "${folder.name}" via breadcrumb`);
                                                                     }
                                                                     setExplorerSelectedBooks(new Set());
-                                                                    // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
+                                                                    stopDragVirtualization(); // v5.5.4-alpha.23
+                                            // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
                                                                     setExplorerDragBookId(null);
                                                                     setExplorerDragData(null);
                                                                 } catch (err) {
@@ -9265,7 +9368,7 @@
                                         )}
                                     </div>
                                 </div>
-                                <div className="flex-1 overflow-auto px-4 pb-4">
+                                <div ref={dragVirtScrollRef} className="flex-1 overflow-auto px-4 pb-4">
                                     {/* v5.5.2 - Welcome state for empty library */}
                                     {books.length === 0 && syncStatus !== 'loading' ? (
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
@@ -9694,7 +9797,8 @@
                                                                         setFolderDropHighlight(null);
                                                                         setExplorerSelectedBooks(new Set());
                                                                         explorerIsCopyDragRef.current = false;
-                                                                        // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
+                                                                        stopDragVirtualization(); // v5.5.4-alpha.23
+                                            // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
                                                                         setExplorerDragBookId(null);
                                                                         setExplorerDragData(null);
                                                                     }
@@ -9846,7 +9950,7 @@
                                                     });
                                                 })()}
                                             </tbody>
-                                            <tbody>
+                                            <tbody ref={explorerView === 'list' ? dragVirtContainerRef : undefined}>
                                                 {/* Book rows */}
                                                 {(() => {
                                                     console.time('⏱ list view: JSX map');
@@ -9924,6 +10028,8 @@
                                                                     setExplorerSelectedBooks(new Set([book.id]));
                                                                 }
                                                                 setExplorerDragBookId(book.id);
+                                                                // v5.5.4-alpha.23 - Start drag virtualization after state is set
+                                                                requestAnimationFrame(() => startDragVirtualization());
                                                             }}
                                                             onDragOver={(e) => {
                                                                 e.preventDefault();
@@ -9960,6 +10066,7 @@
                                                                 setExplorerDragBookId(null);
                                                             }}
                                                             onDragEnd={() => {
+                                                                stopDragVirtualization(); // v5.5.4-alpha.23
                                                                 if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.borderTop = ''; explorerReorderTargetRef.current = null; }
                                                                 setExplorerDragBookId(null);
                                                                 setFolderDropHighlight(null);
@@ -10145,7 +10252,7 @@
                                             );
                                         })()
                                     ) : (
-                                        <div className="grid gap-4 pt-1" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(40px, 1fr))` }}>
+                                        <div ref={explorerView !== 'list' ? dragVirtContainerRef : undefined} className="grid gap-4 pt-1" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(40px, 1fr))` }}>
                                             {/* v5.0.0-alpha.54 - Folder tiles (before books) */}
                                             {(() => {
                                                 if (selectedFolderId === '__all__') return null;
@@ -10330,7 +10437,8 @@
                                                                 setFolderDropHighlight(null);
                                                                 setExplorerSelectedBooks(new Set());
                                                                 explorerIsCopyDragRef.current = false;
-                                                                // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
+                                                                stopDragVirtualization(); // v5.5.4-alpha.23
+                                            // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
                                                                 setExplorerDragBookId(null);
                                                                 setExplorerDragData(null);
                                                             }
@@ -10445,6 +10553,8 @@
                                                                 setExplorerSelectedBooks(new Set([book.id]));
                                                             }
                                                             setExplorerDragBookId(book.id);
+                                                            // v5.5.4-alpha.23 - Start drag virtualization after state is set
+                                                            requestAnimationFrame(() => startDragVirtualization());
                                                         }}
                                                         onDragOver={(e) => {
                                                             e.preventDefault();
@@ -10483,6 +10593,7 @@
                                                             setExplorerDragBookId(null);
                                                         }}
                                                         onDragEnd={() => {
+                                                            stopDragVirtualization(); // v5.5.4-alpha.23
                                                             if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.outline = ''; explorerReorderTargetRef.current.style.outlineOffset = ''; explorerReorderTargetRef.current = null; }
                                                             setExplorerDragBookId(null);
                                                             setFolderDropHighlight(null);
