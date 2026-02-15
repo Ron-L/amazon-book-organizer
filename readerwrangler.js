@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5128,18 +5128,18 @@
                     {/* v5.0.0-alpha.175.1 - Menu Bar (Phase 1 foundation) */}
                     <div style={{
                         height: '32px',
-                        background: 'linear-gradient(to bottom, #f8fafc, #f1f5f9)',
-                        borderBottom: '1px solid #e2e8f0',
+                        background: 'linear-gradient(to bottom, var(--gradient-chrome-from), var(--gradient-chrome-to))',
+                        borderBottom: '1px solid var(--border-default)',
                         display: 'flex',
                         alignItems: 'center',
                         padding: '0 8px',
                         gap: '2px'
                     }}>
                         {/* Logo + App Name - links to landing page */}
-                        <a href="index.html" style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '12px', marginRight: '4px', borderRight: '1px solid #cbd5e1', textDecoration: 'none' }}>
+                        <a href="index.html" style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '12px', marginRight: '4px', borderRight: '1px solid var(--border-strong)', textDecoration: 'none' }}>
                             <img src="icons/ReaderWranglerWordlessXparent32.png" alt="" style={{ width: '20px', height: '20px' }} />
-                            <span style={{ fontWeight: 700, fontSize: '13px', color: '#1e293b', letterSpacing: '-0.02em' }}>
-                                ReaderWrangler<span style={{ fontSize: '9px', verticalAlign: 'super', color: '#64748b' }}>™</span>
+                            <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                                ReaderWrangler<span style={{ fontSize: '9px', verticalAlign: 'super', color: 'var(--text-muted)' }}>™</span>
                             </span>
                         </a>
                         {/* v5.0.0-alpha.175.2 - File/View/Help menus */}
@@ -5153,8 +5153,8 @@
                                         padding: '4px 10px',
                                         fontSize: '13px',
                                         fontWeight: 500,
-                                        color: openMenuBar === menuName.toLowerCase() ? '#1e3a8a' : '#475569',
-                                        background: openMenuBar === menuName.toLowerCase() ? '#dbeafe' : 'transparent',
+                                        color: openMenuBar === menuName.toLowerCase() ? 'var(--text-accent-strong)' : 'var(--text-secondary)',
+                                        background: openMenuBar === menuName.toLowerCase() ? 'var(--bg-selected)' : 'transparent',
                                         border: 'none',
                                         borderRadius: '4px',
                                         cursor: 'pointer',
@@ -5174,8 +5174,8 @@
                                         left: 0,
                                         marginTop: '2px',
                                         minWidth: '200px',
-                                        background: 'white',
-                                        border: '1px solid #cbd5e1',
+                                        background: 'var(--bg-elevated)',
+                                        border: '1px solid var(--border-strong)',
                                         borderRadius: '6px',
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                                         zIndex: 1000,
@@ -5186,43 +5186,43 @@
                                                 {/* v5.0.0-alpha.175.30 - Data Status in File menu */}
                                                 <button onClick={() => { setStatusModalOpen(true); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
                                                     transition: 'background 0.1s', color: getUrgencyInfo().color.replace('text-', '')
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     {getStatusBall()} Data Status: {getUrgencyInfo().text}
                                                 </button>
-                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                                <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 <button onClick={() => { importLibrary(); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: '#1e293b'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     Import Library…
                                                 </button>
                                                 <button onClick={() => { exportLibrary(); setOpenMenuBar(null); }} disabled={books.length === 0} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: books.length === 0 ? 'not-allowed' : 'pointer',
-                                                    transition: 'background 0.1s', color: books.length === 0 ? '#94a3b8' : '#1e293b',
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: books.length === 0 ? 'not-allowed' : 'pointer',
+                                                    transition: 'background 0.1s', color: books.length === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
                                                     opacity: books.length === 0 ? 0.5 : 1
-                                                }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = '#f1f5f9')} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     Export Library…
                                                 </button>
-                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                                <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 {/* v5.1.0-alpha.2 - Auto-Organize wizard */}
                                                 <button onClick={() => { setWizardModalOpen(true); setOpenMenuBar(null); }} disabled={books.length === 0} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: books.length === 0 ? 'not-allowed' : 'pointer',
-                                                    transition: 'background 0.1s', color: books.length === 0 ? '#94a3b8' : '#1e293b',
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: books.length === 0 ? 'not-allowed' : 'pointer',
+                                                    transition: 'background 0.1s', color: books.length === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
                                                     opacity: books.length === 0 ? 0.5 : 1
-                                                }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = '#f1f5f9')} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     🪄 Auto-Organize…
                                                 </button>
-                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                                <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 <button onClick={() => { setResetConfirmOpen(true); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: '#dc2626'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-danger)'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-danger-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     Reset App
                                                 </button>
                                             </>
@@ -5231,38 +5231,38 @@
                                             <>
                                                 <button onClick={() => { setExplorerView('list'); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px 8px 32px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: '#1e293b', position: 'relative'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)', position: 'relative'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     {explorerView === 'list' && <span style={{ position: 'absolute', left: '12px' }}>✓</span>}
                                                     List View
                                                 </button>
                                                 <button onClick={() => { setExplorerView('covers'); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px 8px 32px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: '#1e293b', position: 'relative'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)', position: 'relative'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     {explorerView === 'covers' && <span style={{ position: 'absolute', left: '12px' }}>✓</span>}
                                                     Cover View
                                                 </button>
-                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                                <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 <button onClick={() => { setShowHidden(!showHidden); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px 8px 32px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: '#1e293b', position: 'relative'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)', position: 'relative'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     {showHidden && <span style={{ position: 'absolute', left: '12px' }}>✓</span>}
                                                     Show Hidden
                                                 </button>
                                                 <button onClick={() => { setDealsFilterActive(!dealsFilterActive); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px 8px 32px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: '#1e293b', position: 'relative'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)', position: 'relative'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     {dealsFilterActive && <span style={{ position: 'absolute', left: '12px' }}>✓</span>}
                                                     Deals Only
                                                 </button>
-                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />                                                <button onClick={() => { setTagManagementOpen(true); setOpenMenuBar(null); }} style={{                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',                                                    border: 'none', background: 'white', cursor: 'pointer',                                                    transition: 'background 0.1s', color: '#1e293b'                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>                                                    Manage Tags...                                                </button>
+                                                <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />                                                <button onClick={() => { setTagManagementOpen(true); setOpenMenuBar(null); }} style={{                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',                                                    transition: 'background 0.1s', color: 'var(--text-primary)'                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>                                                    Manage Tags...                                                </button>
                                             </>
                                         )}
                                         {menuName === 'Help' && (
@@ -5270,31 +5270,31 @@
                                                 {/* v5.5.2 - Getting Started link to landing page */}
                                                 <button onClick={() => { window.open('https://readerwrangler.com/', '_blank'); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: '#1e293b'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     Getting Started
                                                 </button>
                                                 <button onClick={() => { setHowToDialogOpen(true); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: '#1e293b'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     How To Use
                                                 </button>
                                                 <button onClick={() => { setShortcutsDialogOpen(true); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: '#1e293b'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     Keyboard Shortcuts
                                                 </button>
-                                                <div style={{ height: '1px', background: '#e2e8f0', margin: '4px 0' }} />
+                                                <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 <button onClick={() => { setAboutDialogOpen(true); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                    border: 'none', background: 'white', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: '#1e293b'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     About ReaderWrangler™
                                                 </button>
                                             </>
@@ -5308,8 +5308,8 @@
                     {/* v5.0.0-alpha.175.3 - Toolbar (Phase 3 foundation) */}
                     <div style={{
                         height: '36px',
-                        background: 'white',
-                        borderBottom: '1px solid #e2e8f0',
+                        background: 'var(--bg-surface)',
+                        borderBottom: '1px solid var(--border-default)',
                         display: 'flex',
                         alignItems: 'center',
                         padding: '0 12px',
@@ -9187,8 +9187,8 @@
                                                                         color: isCustomDisabled ? '#cbd5e1' : isSorted ? '#1e40af' : '#334155',
                                                                         background: 'white'
                                                                     }}
-                                                                    onMouseEnter={(e) => { if (!isCustomDisabled) e.currentTarget.style.background = '#f1f5f9'; }}
-                                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                                                    onMouseEnter={(e) => { if (!isCustomDisabled) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
                                                                     title={isCustomDisabled ? 'All Books is a read-only view - no manual ordering' : undefined}
                                                                 >
                                                                     <span style={{ width: '16px', textAlign: 'center', fontSize: '12px' }}>
