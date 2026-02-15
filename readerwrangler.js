@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.5";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.6-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2740,13 +2740,15 @@
                             // v4.0.0.b: Detect backup vs library file
                             let organizationFromFile = null;
                             if (parsedData.isBackup === true) {
-                                // Backup file - prompt user before restoring
-                                const confirmed = window.confirm(
-                                    'Restore backup?\n\nThis will replace your current organization with the organization from the backup file.'
-                                );
-                                if (!confirmed) {
-                                    console.log('📋 Backup restore cancelled by user');
-                                    return;
+                                // Backup file - skip warning if system is empty (e.g. after reset or first-time user)
+                                if (books.length > 0) {
+                                    const confirmed = window.confirm(
+                                        'Restore backup?\n\nThis will replace your current organization with the organization from the backup file.'
+                                    );
+                                    if (!confirmed) {
+                                        console.log('📋 Backup restore cancelled by user');
+                                        return;
+                                    }
                                 }
                                 // Extract organization from backup file
                                 if (parsedData.organization) {
