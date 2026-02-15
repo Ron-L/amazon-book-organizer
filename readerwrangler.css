@@ -1,29 +1,46 @@
-/* Style Guide CSS Variables (v4.6.0 - Blue palette) */
+/* Theme CSS Variables — Light theme (default)
+   Phase 0: Define semantic color tokens consumed by inline styles.
+   Phase 1 will add Dark, High Contrast Light, and High Contrast Dark palettes. */
 :root {
-    /* Primary colors - Blue palette */
+    /* Backgrounds */
+    --bg-page: #ffffff;
+    --bg-surface: #ffffff;
+    --bg-surface-alt: #f8fafc;
+    --bg-elevated: #ffffff;
+    --bg-input: #ffffff;
+    --bg-selected: #dbeafe;
+    --bg-hover: #f1f5f9;
+    --bg-accent: #3b82f6;
+    --bg-accent-hover: #2563eb;
+    --bg-danger-hover: #fef2f2;
+
+    /* Text */
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    --text-accent: #2563eb;
+    --text-accent-strong: #1e3a8a;
+    --text-on-accent: #ffffff;
+    --text-danger: #dc2626;
+
+    /* Borders */
+    --border-default: #e2e8f0;
+    --border-strong: #cbd5e1;
+    --border-accent: #93c5fd;
+    --border-focus: #3b82f6;
+
+    /* Gradients (menu bar chrome) */
+    --gradient-chrome-from: #f8fafc;
+    --gradient-chrome-to: #f1f5f9;
+
+    /* Legacy variables (still referenced by CSS classes below) */
     --color-primary: #2563eb;
     --color-primary-light: #3b82f6;
     --color-primary-lighter: #60a5fa;
     --color-primary-dark: #1d4ed8;
-
-    /* Accent */
     --color-accent: #c9a227;
-
-    /* Text */
-    --color-text: #1a1a2e;
-    --color-text-muted: #64748b;
-
-    /* Status */
     --color-success: #16a34a;
     --color-danger: #dc2626;
-
-    /* Background */
-    --color-background: #f8fafc;
-
-    /* Borders */
-    --color-border: #e2e8f0;
-
-    /* Gradients - Blue */
     --gradient-hero: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
 
     /* Shadows */
