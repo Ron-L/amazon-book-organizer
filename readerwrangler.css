@@ -225,9 +225,9 @@
     color: var(--text-primary);
 }
 
-/* About logo visibility on dark backgrounds */
+/* About logo visibility on dark backgrounds (invert lightness, hue-rotate preserves colors) */
 [data-theme="dark"] .about-logo {
-    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)) brightness(1.5);
+    filter: invert(1) hue-rotate(180deg);
 }
 
 body { margin: 0; padding: 0; overflow: hidden; }
