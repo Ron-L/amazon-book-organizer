@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.4-alpha.23";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.4-alpha.24";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8354,7 +8354,7 @@
                                 </div>
                                 </div>
                                 {/* Scrollable section: User folders */}
-                                <div className="flex-1 overflow-y-auto p-2">
+                                <div className="flex-1 overflow-y-auto p-2" style={{ contain: 'layout style paint' }}>
                                     {/* User folders with recursive subfolder rendering */}
                                     {(() => {
                                         // Recursive folder renderer
@@ -9368,7 +9368,7 @@
                                         )}
                                     </div>
                                 </div>
-                                <div ref={dragVirtScrollRef} className="flex-1 overflow-auto px-4 pb-4">
+                                <div ref={dragVirtScrollRef} className="flex-1 overflow-auto px-4 pb-4" style={{ contain: 'layout style paint' }}>
                                     {/* v5.5.2 - Welcome state for empty library */}
                                     {books.length === 0 && syncStatus !== 'loading' ? (
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
