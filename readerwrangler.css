@@ -1,6 +1,8 @@
-/* Theme CSS Variables — Light theme (default)
-   Phase 0: Define semantic color tokens consumed by inline styles.
-   Phase 1 will add Dark, High Contrast Light, and High Contrast Dark palettes. */
+/* Theme CSS Variables
+   Phase 0: Semantic color tokens consumed by inline styles.
+   Phase 1: Dark, High Contrast Light, and High Contrast Dark palettes. */
+
+/* ===== Light Theme (default) ===== */
 :root {
     /* Backgrounds */
     --bg-page: #ffffff;
@@ -54,6 +56,74 @@
     --font-body: 'Lato', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-mono: system-ui, monospace;
 }
+
+/* ===== Dark Theme ===== */
+[data-theme="dark"] {
+    --bg-page: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-surface-alt: #1e293b;
+    --bg-elevated: #334155;
+    --bg-input: #1e293b;
+    --bg-selected: #1e3a5f;
+    --bg-hover: #334155;
+    --bg-accent: #3b82f6;
+    --bg-accent-hover: #2563eb;
+    --bg-danger-hover: #3b1c1c;
+
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --text-accent: #60a5fa;
+    --text-accent-strong: #93c5fd;
+    --text-on-accent: #ffffff;
+    --text-danger: #f87171;
+
+    --border-default: #334155;
+    --border-strong: #475569;
+    --border-accent: #3b82f6;
+    --border-focus: #60a5fa;
+    --border-danger: #ef4444;
+
+    --gradient-chrome-from: #1e293b;
+    --gradient-chrome-to: #0f172a;
+
+    --color-primary: #3b82f6;
+    --color-primary-light: #60a5fa;
+    --color-primary-lighter: #93c5fd;
+    --color-primary-dark: #2563eb;
+    --color-accent: #d4a934;
+    --color-success: #22c55e;
+    --color-danger: #f87171;
+    --gradient-hero: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
+
+    --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.3);
+    --shadow-elevated: 0 10px 15px -3px rgba(0,0,0,0.4);
+    --shadow-modal: 0 25px 50px -12px rgba(0,0,0,0.5);
+}
+
+/* ===== Dark Theme — CSS class overrides ===== */
+[data-theme="dark"] body { background-color: #0f172a; }
+[data-theme="dark"] .app-title { color: #e2e8f0; }
+[data-theme="dark"] .tagline { color: #94a3b8; }
+[data-theme="dark"] .attribution { color: #64748b; }
+[data-theme="dark"] .book-note {
+    background: linear-gradient(135deg, #3a3520 0%, #2e2a1a 100%);
+    color: #d4c5a9;
+    box-shadow: 3px 3px 0px rgba(0,0,0,0.2), 6px 6px 0px rgba(0,0,0,0.15), 0 4px 8px rgba(0,0,0,0.3);
+}
+[data-theme="dark"] .book-note-edit-btn { color: #a1887f; }
+[data-theme="dark"] .book-note-edit-btn:hover { background-color: rgba(255,255,255,0.1); }
+[data-theme="dark"] .book-note-editor { background: #2e2a1a; border-color: #a68c29; color: #d4c5a9; }
+[data-theme="dark"] .book-note-editor:focus { border-color: #60a5fa; }
+[data-theme="dark"] .columns-scroll-container { scrollbar-color: #475569 #1e293b; }
+[data-theme="dark"] .book-clickable.selected {
+    outline-color: #60a5fa;
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+}
+[data-theme="dark"] .book-clickable.selected:hover { outline-color: #3b82f6; }
+[data-theme="dark"] .status-indicator:hover { background-color: rgba(255, 255, 255, 0.08); }
+[data-theme="dark"] .editable-title:hover { background-color: rgba(96, 165, 250, 0.15); }
+[data-theme="dark"] .drop-target { background-color: rgba(96, 165, 250, 0.15); }
 
 body { margin: 0; padding: 0; overflow: hidden; }
 

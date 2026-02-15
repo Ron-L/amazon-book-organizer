@@ -17,8 +17,21 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- v5.5.7 - Theme detection (runs before paint to prevent flash) -->
+    <script>
+        (function() {
+            var stored = localStorage.getItem('readerwrangler-theme');
+            var theme = stored;
+            if (!stored || stored === 'auto') {
+                theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (theme && theme !== 'light') {
+                document.documentElement.dataset.theme = theme;
+            }
+        })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="readerwrangler.css?v=5.5.7">
+    <link rel="stylesheet" href="readerwrangler.css?v=5.5.7-alpha.7">
 </head>
 <body>
     <div id="root"></div>
