@@ -14,9 +14,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <!-- v5.5.7 - Theme detection (runs before paint to prevent flash) -->
     <script>
         (function() {
@@ -30,11 +27,42 @@
             }
         })();
     </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="readerwrangler.css?v=5.5.9">
+    <link rel="stylesheet" href="readerwrangler.css?v=5.5.11-alpha.1">
+    <!-- v5.5.11 - Splash screen styles (no Tailwind dependency) -->
+    <style>
+        @keyframes splash-spin {
+            to { transform: rotate(360deg); }
+        }
+        .splash-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border-default, #e2e8f0);
+            border-top-color: var(--bg-accent, #3b82f6);
+            border-radius: 50%;
+            animation: splash-spin 0.8s linear infinite;
+        }
+        [data-theme="dark"] #splash img,
+        [data-theme="hc-dark"] #splash img {
+            filter: invert(1) hue-rotate(180deg);
+        }
+    </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <!-- v5.5.11 - Splash screen (replaced when React mounts) -->
+        <div id="splash" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:var(--bg-page, #ffffff);">
+            <img src="icons/ReaderWranglerWordlessXparent.png" alt="" style="width:80px; height:80px; margin-bottom:20px;">
+            <div style="font-family:'Libre Baskerville',Georgia,serif; font-size:1.8em; font-weight:700; color:var(--text-primary, #1e293b); margin-bottom:8px;">ReaderWrangler&#8482;</div>
+            <div style="color:var(--text-muted, #64748b); font-size:0.9em; margin-bottom:24px;">Loading...</div>
+            <div class="splash-spinner"></div>
+        </div>
+    </div>
+
+    <!-- Libraries (moved from head to allow splash to paint first) -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Shared modules (pure JS, no Babel needed) -->
     <script src="uiHelpers.js?v=5.5.1"></script>
@@ -44,7 +72,7 @@
     <script>
         // APP_VERSION - Single source of truth for cache busting
         // Update this on each release to force browsers to fetch new code
-        const APP_VERSION = "5.5.9";
+        const APP_VERSION = "5.5.10";
 
         // Dynamically load main app with version-based cache busting
         const script = document.createElement('script');
