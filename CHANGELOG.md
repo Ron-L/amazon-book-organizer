@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.8] - 2026-02-15
+
+### Fixed
+- **Cover grid zoom behavior** - Covers now scale correctly with browser zoom (Ctrl+Scroll). Previously covers shrank when zooming in because the grid used a fixed column count with `1fr` units. Now uses `auto-fill` with pixel-based minimum widths so covers scale with the page like all other elements. Slider now controls cover width in pixels (60-300px) instead of column count.
+
 ## [5.5.7] - 2026-02-15
 
 ### Added
