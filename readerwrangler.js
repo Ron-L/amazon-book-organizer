@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.18";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.19";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6265,7 +6265,7 @@
                                                 background: 'var(--bg-elevated)',
                                                 border: '1px solid var(--border-strong)',
                                                 borderRadius: '4px',
-                                                boxShadow: '0 2px 8px rgba(0,0,1,0.1)',
+                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                                                 padding: '8px',
                                                 zIndex: 1001
                                             }}>
@@ -7419,7 +7419,7 @@
                                     <div className="flex gap-6 mb-6">
                                         {blankImageBooks.has(modalBook.id) ? (
                                             <div className="w-48 h-72 rounded shadow-lg overflow-hidden flex flex-col flex-shrink-0"
-                                                 style={{ backgroundColor: '#d4c5a9' }}>
+                                                 style={{ backgroundColor: 'var(--bg-book-placeholder)' }}>
                                                 <div className="flex-1 flex items-center justify-center px-4">
                                                     <div className="text-center">
                                                         <div className="text-sm font-serif font-bold text-gray-800 leading-tight mb-3">
@@ -7673,7 +7673,7 @@
                                                 </div>
                                             ) : modalBook.series ? (
                                                 <div className="mb-3">
-                                                    <p className="text-lg" style={{ color: '#621e31' }}>
+                                                    <p className="text-lg" style={{ color: 'var(--text-series)' }}>
                                                         {(modalBook.seriesPosition && modalBook.seriesTotal)
                                                             ? `Book ${modalBook.seriesPosition} of ${modalBook.seriesTotal}: ${modalBook.series}`
                                                             : modalBook.seriesPosition
