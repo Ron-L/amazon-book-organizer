@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.20";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3654,7 +3654,8 @@
             };
 
             const checkIfBlankImage = (img, bookId) => {
-                if (img.naturalWidth === 1 && img.naturalHeight === 1) {
+                // Catch 1x1 pixels, thin lines, and other degenerate images
+                if (img.naturalWidth < 10 || img.naturalHeight < 10) {
                     setBlankImageBooks(prev => new Set([...prev, bookId]));
                 }
             };
@@ -7433,7 +7434,8 @@
                                             <img src={coverUrlMap[modalBook.coverUrl] || modalBook.coverUrl}
                                                  alt={modalBook.title}
                                                  className="w-48 h-72 object-cover rounded shadow-lg flex-shrink-0"
-                                                 onError={(e) => e.target.src = 'https://via.placeholder.com/192x288/4f46e5/fff?text=No+Cover'} />
+                                                 onError={() => setBlankImageBooks(prev => new Set([...prev, modalBook.id]))}
+                                                 onLoad={(e) => checkIfBlankImage(e.target, modalBook.id)} />
                                         )}
                                         <div className="flex-1">
                                             {isEditingBook ? (
@@ -10160,7 +10162,19 @@
                                                             </td>
                                                             <td className="p-2">
                                                                 <div className="relative" style={{ minWidth: '32px', maxWidth: '48px' }}>
-                                                                    <img src={book.coverUrl} alt="" className={`h-12 object-contain rounded ${book.onWishlist ? 'opacity-40' : ''}`} />
+                                                                    {blankImageBooks.has(book.id) ? (
+                                                                        <div className={`h-12 w-8 rounded flex items-center justify-center ${book.onWishlist ? 'opacity-40' : ''}`}
+                                                                             style={{ backgroundColor: 'var(--bg-book-placeholder)' }}>
+                                                                            <span style={{ fontSize: '6px', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.1, overflow: 'hidden' }}>
+                                                                                {book.title?.substring(0, 20)}
+                                                                            </span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <img src={book.coverUrl} alt=""
+                                                                             className={`h-12 object-contain rounded ${book.onWishlist ? 'opacity-40' : ''}`}
+                                                                             onError={() => setBlankImageBooks(prev => new Set([...prev, book.id]))}
+                                                                             onLoad={(e) => checkIfBlankImage(e.target, book.id)} />
+                                                                    )}
                                                                     {/* v5.0.6 - Hidden book overlay */}
                                                                     {(hiddenInstances.has(book._instanceId) || book.isHidden) && (
                                                                         <div className="absolute inset-0 flex items-center justify-center text-2xl pointer-events-none">🚫</div>
@@ -10660,7 +10674,23 @@
                                                         }}
                                                         onDoubleClick={() => openBookModal(book, null)}>
                                                         <div className="relative">
-                                                            <img src={book.coverUrl} alt={book.title} className={`w-full h-auto rounded shadow ${book.onWishlist ? 'opacity-40' : ''}`} />
+                                                            {blankImageBooks.has(book.id) ? (
+                                                                <div className={`w-full rounded shadow overflow-hidden flex flex-col ${book.onWishlist ? 'opacity-40' : ''}`}
+                                                                     style={{ backgroundColor: 'var(--bg-book-placeholder)', aspectRatio: '2/3' }}>
+                                                                    <div className="flex-1 flex items-center justify-center px-2">
+                                                                        <div className="text-center">
+                                                                            <div className="font-serif font-bold leading-tight" style={{ fontSize: '0.6em', color: 'var(--text-primary)' }}>
+                                                                                {book.title}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <img src={book.coverUrl} alt={book.title}
+                                                                     className={`w-full h-auto rounded shadow ${book.onWishlist ? 'opacity-40' : ''}`}
+                                                                     onError={() => setBlankImageBooks(prev => new Set([...prev, book.id]))}
+                                                                     onLoad={(e) => checkIfBlankImage(e.target, book.id)} />
+                                                            )}
                                                             {/* v5.0.6 - Hidden book overlay */}
                                                             {(hiddenInstances.has(book._instanceId) || book.isHidden) && (
                                                                 <div className="absolute inset-0 flex items-center justify-center text-8xl pointer-events-none">🚫</div>
