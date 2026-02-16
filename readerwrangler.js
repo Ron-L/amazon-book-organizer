@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.12";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.13-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2849,28 +2849,31 @@
                     .sort((a, b) => a.name.localeCompare(b.name));
             };
 
-            // SVG star rating component - renders full, half, or empty stars
-            // Uses inline SVG for consistent cross-browser rendering
+            // SVG star rating - shared defs rendered once, referenced by all half-stars
+            const STAR_PATH = 'M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z';
+            const StarDefs = () => (
+                <svg width="0" height="0" style={{ position: 'absolute' }}>
+                    <defs>
+                        <clipPath id="star-clip-left"><rect x="0" y="0" width="12" height="24" /></clipPath>
+                        <clipPath id="star-clip-right"><rect x="12" y="0" width="12" height="24" /></clipPath>
+                    </defs>
+                </svg>
+            );
+
             const StarSVG = ({ type = 'full', size = 24, color = 'var(--star-color, #eab308)' }) => {
-                const starPath = 'M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z';
                 const emptyColor = 'var(--border-strong, #cbd5e1)';
-                const id = React.useId();
                 if (type === 'half') {
                     return (
                         <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
-                            <defs>
-                                <clipPath id={`half-left-${id}`}><rect x="0" y="0" width="12" height="24" /></clipPath>
-                                <clipPath id={`half-right-${id}`}><rect x="12" y="0" width="12" height="24" /></clipPath>
-                            </defs>
-                            <path d={starPath} fill={color} clipPath={`url(#half-left-${id})`} />
-                            <path d={starPath} fill="none" stroke={emptyColor} strokeWidth="1.5" clipPath={`url(#half-right-${id})`} />
-                            <path d={starPath} fill="none" stroke={color} strokeWidth="0.5" clipPath={`url(#half-left-${id})`} />
+                            <path d={STAR_PATH} fill={color} clipPath="url(#star-clip-left)" />
+                            <path d={STAR_PATH} fill="none" stroke={emptyColor} strokeWidth="1.5" clipPath="url(#star-clip-right)" />
+                            <path d={STAR_PATH} fill="none" stroke={color} strokeWidth="0.5" clipPath="url(#star-clip-left)" />
                         </svg>
                     );
                 }
                 return (
                     <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
-                        <path d={starPath}
+                        <path d={STAR_PATH}
                             fill={type === 'full' ? color : 'none'}
                             stroke={type === 'full' ? color : emptyColor}
                             strokeWidth={type === 'full' ? '0.5' : '1.5'}
@@ -2879,13 +2882,13 @@
                 );
             };
 
-            const renderStars = (rating, { size = 24, color = 'var(--star-color, #eab308)' } = {}) => {
+            const renderStars = (rating, { size = 24, color = 'var(--star-color, #eab308)', interactive = false } = {}) => {
                 const fullStars = Math.floor(rating);
                 const hasHalfStar = rating % 1 >= 0.5;
                 const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
                 return (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px', pointerEvents: interactive ? 'auto' : 'none' }}>
                         {Array.from({ length: fullStars }, (_, i) => <StarSVG key={`f${i}`} type="full" size={size} color={color} />)}
                         {hasHalfStar && <StarSVG key="h" type="half" size={size} color={color} />}
                         {Array.from({ length: emptyStars }, (_, i) => <StarSVG key={`e${i}`} type="empty" size={size} color={color} />)}
@@ -5165,6 +5168,7 @@
                 <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-blue-100 text-gray-900"
                      onMouseMove={handleMouseMove}
                      onMouseUp={handleMouseUp}>
+                    <StarDefs />
                     {/* v4.16.0.l - CSS for toast animation */}
                     {/* v4.16.0.m - 1.0s ease-in animation for gravity-like falling */}
                     {/* v4.16.0.p - Gray bg with dark text (was light blue) */}
