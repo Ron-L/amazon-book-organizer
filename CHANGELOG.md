@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.9] - 2026-02-16
+
+### Added
+- **High Contrast themes** - Two new accessibility themes: High Contrast Light (pure white/black, stronger borders, deeper accents) and High Contrast Dark (pure black backgrounds, pure white text, maximum contrast). Toggle via Help menu > Theme.
+
 ## [5.5.8] - 2026-02-15
 
 ### Fixed

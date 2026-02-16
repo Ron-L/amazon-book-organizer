@@ -26,10 +26,11 @@ _(No active tasks)_
 
 ### 🔒 Priority 3: Pre-Launch Gate
 
-~~**0. Dark Mode Support**~~ ✅ v5.5.7
+~~**0. Dark Mode Support**~~ ✅ v5.5.7 + v5.5.9
    - Phase 0: 163 inline hex colors → CSS variables (v5.5.7-alpha.1–6)
    - Phase 1: Dark palette, Tailwind overrides, theme toggle, WCAG AA contrast (v5.5.7-alpha.7–20)
-   - Deferred: HC themes, landing page dark mode
+   - HC Light + HC Dark themes (v5.5.9)
+   - Deferred: Landing page dark mode
 
 **1. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
