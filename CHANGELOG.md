@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.14] - 2026-02-16
+
+### Added
+- **Shift+click folder selection** - Select a range of folders with Shift+click in both list and cover views. Previously only Ctrl/Cmd-click worked for folders.
+
+### Fixed
+- **Shift+click book selection** - Fixed ReferenceError (`sortedBooks is not defined`) that silently broke Shift+click range selection for books in both list and cover views.
+- **Dark mode folder border** - Folder tiles in cover view no longer show a reddish border in dark/HC dark themes. Changed to a warm brown that matches the folder background.
+
 ## [5.5.13] - 2026-02-16
 
 ### Fixed
