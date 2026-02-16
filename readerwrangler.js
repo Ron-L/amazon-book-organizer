@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.15";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.16";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5241,7 +5241,7 @@
                                                     transition: 'background 0.1s', color: books.length === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
                                                     opacity: books.length === 0 ? 0.5 : 1
                                                 }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                    🪄 Auto-Organize…
+                                                    ✨ Auto-Organize…
                                                 </button>
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 <button onClick={() => { setResetConfirmOpen(true); setOpenMenuBar(null); }} style={{
@@ -5569,7 +5569,7 @@
                                                             gap: '8px'
                                                         }}
                                                         onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
-                                                        onMouseLeave={(e) => e.target.style.background = 'white'}
+                                                        onMouseLeave={(e) => e.target.style.background = 'var(--bg-elevated)'}
                                                     >
                                                         <input
                                                             type="checkbox"
@@ -5598,7 +5598,7 @@
                                                         color: 'var(--text-accent)'
                                                     }}
                                                     onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
-                                                    onMouseLeave={(e) => e.target.style.background = 'white'}
+                                                    onMouseLeave={(e) => e.target.style.background = 'var(--bg-elevated)'}
                                                 >
                                                     Manage Tags...
                                                 </div>
@@ -6612,7 +6612,7 @@
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardModalOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">🪄 Auto-Organize by Author</h2>
+                                    <h2 className="text-xl font-bold text-gray-900">✨ Auto-Organize by Author</h2>
                                     <div className="flex items-center gap-2">
                                         {/* v5.1.0-alpha.10 - Help icon */}
                                         <button
@@ -6901,7 +6901,7 @@
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardPreviewMode(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">🪄 Preview - Folders to Create</h2>
+                                    <h2 className="text-xl font-bold text-gray-900">✨ Preview - Folders to Create</h2>
                                     <button onClick={() => setWizardPreviewMode(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
                                 </div>
 
@@ -6977,7 +6977,7 @@
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardResultsOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-green-100 rounded-t-lg border-b border-green-300">
-                                    <h2 className="text-xl font-bold text-gray-900">🪄 Organization Complete</h2>
+                                    <h2 className="text-xl font-bold text-gray-900">✨ Organization Complete</h2>
                                     <button onClick={() => setWizardResultsOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
                                 </div>
 
