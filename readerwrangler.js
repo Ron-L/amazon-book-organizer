@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.8-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -530,7 +530,7 @@
             const [explorerGroupOn, setExplorerGroupOn] = useState(false); // v5.4.5 - Group toggle (dividers between sort groups)
             const [collapsedGroups, setCollapsedGroups] = useState(new Set()); // v5.4.5 - Collapsed group names
             const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
-            const [explorerCoverCols, setExplorerCoverCols] = useState(56); // Slider value (4-60), actual cols = 64-value
+            const [explorerCoverCols, setExplorerCoverCols] = useState(150); // Cover width in px (60-300), used with auto-fill grid
             const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed (left panel)
             const [editingFolderName, setEditingFolderName] = useState(''); // Folder rename input (left panel)
             const [isPlaceholderMode, setIsPlaceholderMode] = useState(false); // v5.0.0-alpha.134 - Placeholder text mode for new folder rename (left panel)
@@ -1643,7 +1643,11 @@
                                 const sortArray = Array.isArray(explorerData.explorerSort) ? explorerData.explorerSort : [explorerData.explorerSort];
                                 setExplorerSort(sortArray);
                             }
-                            if (explorerData.explorerCoverCols) setExplorerCoverCols(explorerData.explorerCoverCols);
+                            if (explorerData.explorerCoverCols) {
+                                // v5.5.8 - Migrate old column-count values (4-60) to pixel widths (60-300)
+                                const val = explorerData.explorerCoverCols;
+                                setExplorerCoverCols(val <= 60 ? 150 : val);
+                            }
                             if (explorerData.leftPaneWidth) setLeftPaneWidth(explorerData.leftPaneWidth); // v5.0.0-alpha.91
                             if (explorerData.folderSortSettings) setFolderSortSettings(explorerData.folderSortSettings); // v5.0.0-alpha.100
                             if (explorerData.visibleColumns) setVisibleColumns(explorerData.visibleColumns); // v5.0.0-alpha.104
@@ -3614,7 +3618,10 @@
                         // v5.0.2 - viewMode removed (always Explorer mode)
                         if (settings.folderSortSettings) setFolderSortSettings(settings.folderSortSettings);
                         if (settings.explorerView) setExplorerView(settings.explorerView);
-                        if (settings.explorerCoverCols) setExplorerCoverCols(settings.explorerCoverCols);
+                        if (settings.explorerCoverCols) {
+                            const val = settings.explorerCoverCols;
+                            setExplorerCoverCols(val <= 60 ? 150 : val);
+                        }
                         if (settings.leftPaneWidth) setLeftPaneWidth(settings.leftPaneWidth);
                         if (settings.visibleColumns) setVisibleColumns(settings.visibleColumns); // v5.0.0-alpha.109
                         // v5.0.3-alpha.1 - Sanitize column widths (filter null values + merge with defaults)
@@ -9123,12 +9130,13 @@
                                                 <span className="text-xs text-gray-500">Size:</span>
                                                 <input
                                                     type="range"
-                                                    min="4"
-                                                    max="60"
+                                                    min="60"
+                                                    max="300"
+                                                    step="10"
                                                     value={explorerCoverCols}
                                                     onChange={(e) => setExplorerCoverCols(parseInt(e.target.value))}
                                                     className="w-24 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                                                    title={`Cover size: ${64 - explorerCoverCols} columns`}
+                                                    title={`Cover width: ${explorerCoverCols}px`}
                                                 />
                                             </div>
                                         )}
@@ -10289,7 +10297,7 @@
                                             );
                                         })()
                                     ) : (
-                                        <div ref={explorerView !== 'list' ? dragVirtContainerRef : undefined} className="grid gap-4 pt-1" style={{ gridTemplateColumns: `repeat(${64 - explorerCoverCols}, minmax(40px, 1fr))` }}>
+                                        <div ref={explorerView !== 'list' ? dragVirtContainerRef : undefined} className="grid gap-4 pt-1" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${explorerCoverCols}px, 1fr))` }}>
                                             {/* v5.0.0-alpha.54 - Folder tiles (before books) */}
                                             {(() => {
                                                 if (selectedFolderId === '__all__') return null;
