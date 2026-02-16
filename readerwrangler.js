@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.11";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.12-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -392,6 +392,7 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [searchHistory, setSearchHistory] = useState([]);
             const [modalBook, setModalBook] = useState(null);
+            const [hoverMyRating, setHoverMyRating] = useState(0); // hover state for interactive star picker
             const [dataSource, setDataSource] = useState('none');
             const [blankImageBooks, setBlankImageBooks] = useState(new Set());
             // v5.0.0-alpha.175.1 - Menu bar state
@@ -2848,16 +2849,46 @@
                     .sort((a, b) => a.name.localeCompare(b.name));
             };
 
-            const renderStars = (rating) => {
+            // SVG star rating component - renders full, half, or empty stars
+            // Uses inline SVG for consistent cross-browser rendering
+            const StarSVG = ({ type = 'full', size = 24, color = 'var(--star-color, #eab308)' }) => {
+                const starPath = 'M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 22 12 18.27 5.82 22 7 14.14 2 9.27l6.91-1.01L12 2z';
+                const emptyColor = 'var(--border-strong, #cbd5e1)';
+                const id = React.useId();
+                if (type === 'half') {
+                    return (
+                        <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                            <defs>
+                                <clipPath id={`half-left-${id}`}><rect x="0" y="0" width="12" height="24" /></clipPath>
+                                <clipPath id={`half-right-${id}`}><rect x="12" y="0" width="12" height="24" /></clipPath>
+                            </defs>
+                            <path d={starPath} fill={color} clipPath={`url(#half-left-${id})`} />
+                            <path d={starPath} fill="none" stroke={emptyColor} strokeWidth="1.5" clipPath={`url(#half-right-${id})`} />
+                            <path d={starPath} fill="none" stroke={color} strokeWidth="0.5" clipPath={`url(#half-left-${id})`} />
+                        </svg>
+                    );
+                }
+                return (
+                    <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                        <path d={starPath}
+                            fill={type === 'full' ? color : 'none'}
+                            stroke={type === 'full' ? color : emptyColor}
+                            strokeWidth={type === 'full' ? '0.5' : '1.5'}
+                        />
+                    </svg>
+                );
+            };
+
+            const renderStars = (rating, { size = 24, color = 'var(--star-color, #eab308)' } = {}) => {
                 const fullStars = Math.floor(rating);
                 const hasHalfStar = rating % 1 >= 0.5;
                 const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
                 return (
-                    <span className="text-yellow-500 text-2xl">
-                        {'★'.repeat(fullStars)}
-                        {hasHalfStar && '½'}
-                        {'☆'.repeat(emptyStars)}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '1px' }}>
+                        {Array.from({ length: fullStars }, (_, i) => <StarSVG key={`f${i}`} type="full" size={size} color={color} />)}
+                        {hasHalfStar && <StarSVG key="h" type="half" size={size} color={color} />}
+                        {Array.from({ length: emptyStars }, (_, i) => <StarSVG key={`e${i}`} type="empty" size={size} color={color} />)}
                     </span>
                 );
             };
@@ -7535,40 +7566,30 @@
                                             {/* v5.0.0-alpha.175.31 - My Rating (personal rating) */}
                                             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
                                                 <span className="text-sm font-semibold text-gray-700">My Rating:</span>
-                                                <div className="flex items-center gap-1">
-                                                    {[1, 2, 3, 4, 5].map(rating => (
-                                                        <button
-                                                            key={rating}
-                                                            onClick={() => {
-                                                                setBooks(prev => {
-                                                                    const updated = prev.map(b =>
-                                                                        b.id === modalBook.id ? { ...b, myRating: rating } : b
-                                                                    );
-                                                                    saveBooksToIndexedDB(updated);
-                                                                    return updated;
-                                                                });
-                                                                setModalBook(prev => ({ ...prev, myRating: rating }));
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                e.currentTarget.style.color = 'var(--border-focus)';
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                e.currentTarget.style.color = rating <= (modalBook.myRating || 0) ? 'var(--border-focus)' : 'var(--border-strong)';
-                                                            }}
-                                                            style={{
-                                                                fontSize: '24px',
-                                                                cursor: 'pointer',
-                                                                color: rating <= (modalBook.myRating || 0) ? 'var(--border-focus)' : 'var(--border-strong)',
-                                                                transition: 'color 0.1s',
-                                                                background: 'none',
-                                                                border: 'none',
-                                                                padding: '0'
-                                                            }}
-                                                            title={`Rate ${rating} star${rating > 1 ? 's' : ''}`}
-                                                        >
-                                                            {rating <= (modalBook.myRating || 0) ? '★' : '☆'}
-                                                        </button>
-                                                    ))}
+                                                <div className="flex items-center gap-1" onMouseLeave={() => setHoverMyRating(0)}>
+                                                    {[1, 2, 3, 4, 5].map(rating => {
+                                                        const active = hoverMyRating > 0 ? rating <= hoverMyRating : rating <= (modalBook.myRating || 0);
+                                                        return (
+                                                            <button
+                                                                key={rating}
+                                                                onClick={() => {
+                                                                    setBooks(prev => {
+                                                                        const updated = prev.map(b =>
+                                                                            b.id === modalBook.id ? { ...b, myRating: rating } : b
+                                                                        );
+                                                                        saveBooksToIndexedDB(updated);
+                                                                        return updated;
+                                                                    });
+                                                                    setModalBook(prev => ({ ...prev, myRating: rating }));
+                                                                }}
+                                                                onMouseEnter={() => setHoverMyRating(rating)}
+                                                                style={{ cursor: 'pointer', background: 'none', border: 'none', padding: '0' }}
+                                                                title={`Rate ${rating} star${rating > 1 ? 's' : ''}`}
+                                                            >
+                                                                <StarSVG type={active ? 'full' : 'empty'} size={24} color={active ? 'var(--border-focus)' : undefined} />
+                                                            </button>
+                                                        );
+                                                    })}
                                                     {modalBook.myRating > 0 && (
                                                         <button
                                                             onClick={() => {
@@ -10212,14 +10233,12 @@
                                                                         cellClass += ' text-gray-600 text-xs text-center';
                                                                         break;
                                                                     case 'rating':
-                                                                        content = book.rating ? `${'★'.repeat(Math.floor(book.rating))}${'☆'.repeat(5 - Math.floor(book.rating))}` : '-';
+                                                                        content = book.rating ? renderStars(book.rating, { size: 14 }) : '-';
                                                                         break;
                                                                     case 'myRating':
                                                                         // v5.0.0-alpha.175.31 - Personal rating (blue stars)
                                                                         if (book.myRating && book.myRating > 0) {
-                                                                            content = <span style={{ color: 'var(--border-focus)' }}>
-                                                                                {`${'★'.repeat(book.myRating)}${'☆'.repeat(5 - book.myRating)}`}
-                                                                            </span>;
+                                                                            content = renderStars(book.myRating, { size: 14, color: 'var(--border-focus)' });
                                                                         } else {
                                                                             content = <span style={{ color: 'var(--border-strong)' }}>—</span>;
                                                                         }

@@ -48,6 +48,9 @@
     --color-danger: #dc2626;
     --gradient-hero: linear-gradient(135deg, #3b82f6 0%, #2563eb 50%, #1d4ed8 100%);
 
+    /* Rating stars */
+    --star-color: #eab308;
+
     /* Shadows */
     --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.1);
     --shadow-elevated: 0 10px 15px -3px rgba(0,0,0,0.1);
@@ -99,6 +102,8 @@
     --color-success: #22c55e;
     --color-danger: #f87171;
     --gradient-hero: linear-gradient(135deg, #2563eb 0%, #1d4ed8 50%, #1e40af 100%);
+
+    --star-color: #facc15;
 
     --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.3);
     --shadow-elevated: 0 10px 15px -3px rgba(0,0,0,0.4);
@@ -275,6 +280,8 @@
     --color-danger: #cc0000;
     --gradient-hero: linear-gradient(135deg, #0044cc 0%, #003399 50%, #002266 100%);
 
+    --star-color: #b8860b;
+
     --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.15);
     --shadow-elevated: 0 10px 15px -3px rgba(0,0,0,0.15);
     --shadow-modal: 0 25px 50px -12px rgba(0,0,0,0.35);
@@ -337,6 +344,8 @@
     --color-success: #44dd66;
     --color-danger: #ff6666;
     --gradient-hero: linear-gradient(135deg, #3399ff 0%, #2277dd 50%, #1155bb 100%);
+
+    --star-color: #ffdd33;
 
     --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.5);
     --shadow-elevated: 0 10px 15px -3px rgba(0,0,0,0.6);
