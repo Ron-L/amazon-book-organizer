@@ -1,6 +1,6 @@
 # Dark Mode Design Document
 
-**Status**: Proposed
+**Status**: Complete (v5.5.7) — HC themes and landing page deferred
 **Priority**: P6 (Post-Launch Internal Improvement)
 **Estimated Effort**: Phase 0: 3.5-5.5 hours | Phase 1: 10.5-16.5 hours | Total: 14-22 hours
 **Prerequisite**: None (Phase 0 is independently valuable)

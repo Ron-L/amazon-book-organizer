@@ -15,12 +15,21 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
       3. CSS approach — render a ★ clipped to 50% width (many rating libraries do this), which looks like a true half-filled star regardless of font
       4. SVG stars — most robust visual approach
 
+**2. 🐛 Clipboard Toast Position Bug** - LOW/LOW (30 min)
+   - Toast appears from top-left corner instead of near the current book
+   - Problem: Cut/Copy toast position is wrong
+   - Impact: Minor visual polish issue
 
 _(No active tasks)_
 
 ---
 
 ### 🔒 Priority 3: Pre-Launch Gate
+
+~~**0. Dark Mode Support**~~ ✅ v5.5.7
+   - Phase 0: 163 inline hex colors → CSS variables (v5.5.7-alpha.1–6)
+   - Phase 1: Dark palette, Tailwind overrides, theme toggle, WCAG AA contrast (v5.5.7-alpha.7–20)
+   - Deferred: HC themes, landing page dark mode
 
 **1. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
@@ -130,20 +139,6 @@ _(No active tasks)_
    - Note: User loads the page once per session, so this is a one-time cost per use. Medium reward/work ratio.
    - Problem: 14s initial load is noticeable, especially for first-time users
    - Impact: Estimated load time reduction to ~5-8s (Step 1) or ~3-5s (both steps)
-
-**8. 🐛 Clipboard Toast Position Bug** - LOW/LOW (30 min)
-   - Toast appears from top-left corner instead of near the current book
-   - Problem: Cut/Copy toast position is wrong
-   - Impact: Minor visual polish issue
-
-**7. Dark Mode Support** - LOW/MEDIUM (10-17 hours)
-   - ~80% of users prefer having a dark mode option; ~65% actively use it
-   - Add `tailwind.config = { darkMode: 'class' }`, toggle `.dark` on `<html>`, persist to localStorage
-   - Scope: landing page (1-2h), app chrome/menu bar/sidebar (2-3h), 15 modals/dialogs (3-5h), context menus/dropdowns (1-2h), list/grid views (2-3h), architecture for inline styles (1-2h)
-   - Prerequisite: Convert static inline `style={{}}` color values to Tailwind classes first, otherwise must maintain two theming systems (`dark:` for className + CSS variables for inline styles)
-   - Default remains light mode; dark mode is opt-in
-   - Problem: Significant user base expects dark mode support
-   - Impact: Broader appeal, reduced eye strain for evening/night users
 
 ---
 

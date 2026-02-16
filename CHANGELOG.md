@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.7] - 2026-02-15
+
+### Added
+- **Dark mode** - Full dark theme with auto-detection from OS preference. Toggle via View menu > Theme (Auto/Light/Dark). 25 semantic CSS variables with light and dark palettes. All 15 modals, context menus, filter dropdowns, list/grid views, and sidebar themed.
+- **Broken cover image handling** - Degenerate cover images (< 10px, failed loads) now show a styled placeholder with book title instead of broken image icons. Applies to cover grid, list view, and book detail modal.
+
+### Improved
+- **Filter dropdown UX** - Opening any filter dropdown now closes all siblings. Fixed stale closure bug preventing click-outside-to-close for More panel sub-dropdowns. Added hover feedback to Collections and Series checkbox items.
+- **WCAG AA contrast** - Fixed 2 contrast ratio failures in dark mode (accent buttons, secondary text on elevated surfaces)
+- **Themed dialogs** - All native alert/confirm dialogs replaced with styled custom dialogs (eliminates "localhost says" prefix)
+
+### Fixed
+- **Tags dropdown hover** - Fixed white flash on mouse leave in Tags filter dropdown items and Manage Tags link
+- **Shadow typo** - Fixed `rgba(0,0,1,0.1)` → `rgba(0,0,0,0.1)` in date dropdown shadow
+
 ## [5.5.6] - 2026-02-15
 
 ### Improved
