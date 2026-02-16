@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.14-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.14-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -542,7 +542,8 @@
             const explorerDropTargetRef = useRef(null); // DOM element of folder being dragged over (ref-based to avoid re-renders)
             const [explorerSelectedBooks, setExplorerSelectedBooks] = useState(new Set()); // Multi-select in Explorer
             const [explorerSelectedFolders, setExplorerSelectedFolders] = useState(new Set()); // v5.0.0-alpha.54 - Folder selection in right pane
-            const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select
+            const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select (books)
+            const [explorerFolderAnchor, setExplorerFolderAnchor] = useState(null); // Anchor index for Shift+click range select (folders)
             const [explorerBookContextMenu, setExplorerBookContextMenu] = useState(null); // v5.0.0-alpha.165 - Book context menu in Explorer (separate from Columns App menu)
             const explorerReorderTargetRef = useRef(null); // DOM element for reorder drop indicator (ref-based to avoid re-renders)
             const [explorerFolderDragTarget, setExplorerFolderDragTarget] = useState(null); // v5.0.0-alpha.69 - { type: 'reorder'|'reparent', index?, position?, folderId? }
@@ -9879,15 +9880,23 @@
 
                                                                     // Clear book selection when selecting folder
                                                                     setExplorerSelectedBooks(new Set());
-                                                                    if (e.ctrlKey || e.metaKey) {
+                                                                    if (e.shiftKey && explorerFolderAnchor !== null) {
+                                                                        // Shift-click: select range from anchor to current
+                                                                        const start = Math.min(explorerFolderAnchor, folderIndex);
+                                                                        const end = Math.max(explorerFolderAnchor, folderIndex);
+                                                                        const rangeIds = visibleFolders.slice(start, end + 1).map(f => f.id);
+                                                                        setExplorerSelectedFolders(new Set(rangeIds));
+                                                                    } else if (e.ctrlKey || e.metaKey) {
                                                                         setExplorerSelectedFolders(prev => {
                                                                             const next = new Set(prev);
                                                                             if (next.has(folder.id)) next.delete(folder.id);
                                                                             else next.add(folder.id);
                                                                             return next;
                                                                         });
+                                                                        setExplorerFolderAnchor(folderIndex);
                                                                     } else {
                                                                         setExplorerSelectedFolders(new Set([folder.id]));
+                                                                        setExplorerFolderAnchor(folderIndex);
                                                                     }
                                                                 }}
                                                                 onDoubleClick={() => {
@@ -10523,15 +10532,22 @@
                                                         }}
                                                         onClick={(e) => {
                                                             setExplorerSelectedBooks(new Set());
-                                                            if (e.ctrlKey || e.metaKey) {
+                                                            if (e.shiftKey && explorerFolderAnchor !== null) {
+                                                                const start = Math.min(explorerFolderAnchor, folderIndex);
+                                                                const end = Math.max(explorerFolderAnchor, folderIndex);
+                                                                const rangeIds = visibleFolders.slice(start, end + 1).map(f => f.id);
+                                                                setExplorerSelectedFolders(new Set(rangeIds));
+                                                            } else if (e.ctrlKey || e.metaKey) {
                                                                 setExplorerSelectedFolders(prev => {
                                                                     const next = new Set(prev);
                                                                     if (next.has(folder.id)) next.delete(folder.id);
                                                                     else next.add(folder.id);
                                                                     return next;
                                                                 });
+                                                                setExplorerFolderAnchor(folderIndex);
                                                             } else {
                                                                 setExplorerSelectedFolders(new Set([folder.id]));
+                                                                setExplorerFolderAnchor(folderIndex);
                                                             }
                                                         }}
                                                         onDoubleClick={() => {
