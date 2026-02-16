@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.7-alpha.16";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.7-alpha.17";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2077,7 +2077,7 @@
                     document.removeEventListener('mousedown', handleClickOutside);
                     document.removeEventListener('keydown', handleEscKey);
                 };
-            }, [openMenuBar, statusDropdownOpen, tagsDropdownOpen, typesDropdownOpen, morePanelOpen, collectionsDropdownOpen, sortPickerOpen]);
+            }, [openMenuBar, statusDropdownOpen, tagsDropdownOpen, typesDropdownOpen, morePanelOpen, collectionsDropdownOpen, amazonRatingDropdownOpen, myRatingDropdownOpen, seriesDropdownOpen, dateDropdownOpen, sortPickerOpen]);
 
             // v5.0.0-alpha.100 - Restore per-folder sort when folder changes
             useEffect(() => {
@@ -5403,7 +5403,7 @@
                         {/* Status Filter */}
                         <div style={{ position: 'relative' }} data-status-dropdown="">
                             <button
-                                onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                                onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setTagsDropdownOpen(false); setTypesDropdownOpen(false); setMorePanelOpen(false); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                 title="Filter by read status"
                                 style={{
                                     height: '28px',
@@ -5495,7 +5495,7 @@
                         {/* Tags Filter */}
                         <div style={{ position: 'relative' }} data-tags-dropdown="">
                             <button
-                                onClick={() => setTagsDropdownOpen(!tagsDropdownOpen)}
+                                onClick={() => { setTagsDropdownOpen(!tagsDropdownOpen); setStatusDropdownOpen(false); setTypesDropdownOpen(false); setMorePanelOpen(false); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                 title="Filter by tags"
                                 style={{
                                     height: '28px',
@@ -5542,8 +5542,8 @@
                                                     background: tagFilter.length === 0 ? 'var(--bg-hover)' : 'var(--bg-surface)',
                                                     borderBottom: '1px solid var(--border-default)'
                                                 }}
-                                                onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
-                                                onMouseLeave={(e) => e.target.style.background = tagFilter.length === 0 ? 'var(--bg-hover)' : 'var(--bg-surface)'}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = tagFilter.length === 0 ? 'var(--bg-hover)' : 'var(--bg-surface)'}
                                             >
                                                 Clear All
                                             </div>
@@ -5568,8 +5568,8 @@
                                                             alignItems: 'center',
                                                             gap: '8px'
                                                         }}
-                                                        onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
-                                                        onMouseLeave={(e) => e.target.style.background = 'var(--bg-elevated)'}
+                                                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                        onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-elevated)'}
                                                     >
                                                         <input
                                                             type="checkbox"
@@ -5597,8 +5597,8 @@
                                                         background: 'var(--bg-elevated)',
                                                         color: 'var(--text-accent)'
                                                     }}
-                                                    onMouseEnter={(e) => e.target.style.background = 'var(--bg-hover)'}
-                                                    onMouseLeave={(e) => e.target.style.background = 'var(--bg-elevated)'}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-elevated)'}
                                                 >
                                                     Manage Tags...
                                                 </div>
@@ -5612,7 +5612,7 @@
                         {/* Types Filter */}
                         <div style={{ position: 'relative' }} data-types-dropdown="">
                             <button
-                                onClick={() => setTypesDropdownOpen(!typesDropdownOpen)}
+                                onClick={() => { setTypesDropdownOpen(!typesDropdownOpen); setStatusDropdownOpen(false); setTagsDropdownOpen(false); setMorePanelOpen(false); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                 title="Filter by ownership type"
                                 style={{
                                     height: '28px',
@@ -5702,7 +5702,7 @@
                         {/* v5.0.0-alpha.175.40 - Phase 5.1: More button */}
                         <button
                             data-morepanel="true"
-                            onClick={() => setMorePanelOpen(!morePanelOpen)}
+                            onClick={() => { setMorePanelOpen(!morePanelOpen); setStatusDropdownOpen(false); setTagsDropdownOpen(false); setTypesDropdownOpen(false); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                             title={morePanelOpen ? 'Hide additional filters' : 'Show additional filters'}
                             className={`px-3 py-1.5 rounded border ${morePanelOpen
                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -5924,7 +5924,7 @@
                                 {/* v5.0.0-alpha.175.41 - Phase 5.2: Collections Filter */}
                                 <div style={{ position: 'relative' }} data-collections-dropdown="">
                                     <button
-                                        onClick={() => setCollectionsDropdownOpen(!collectionsDropdownOpen)}
+                                        onClick={() => { setCollectionsDropdownOpen(!collectionsDropdownOpen); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             selectedCollections.length > 0
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -5961,8 +5961,12 @@
                                                 alignItems: 'center',
                                                 padding: '6px 8px',
                                                 cursor: 'pointer',
-                                                fontSize: '13px'
-                                            }}>
+                                                fontSize: '13px',
+                                                borderRadius: '4px',
+                                                transition: 'background 0.1s'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = ''}>
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedCollections.includes('UNCOLLECTED')}
@@ -5989,8 +5993,12 @@
                                                         alignItems: 'center',
                                                         padding: '6px 8px',
                                                         cursor: 'pointer',
-                                                        fontSize: '13px'
-                                                    }}>
+                                                        fontSize: '13px',
+                                                        borderRadius: '4px',
+                                                        transition: 'background 0.1s'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = ''}>
                                                     <input
                                                         type="checkbox"
                                                         checked={selectedCollections.includes(collection)}
@@ -6013,7 +6021,7 @@
                                 {/* v5.0.0-alpha.175.42 - Phase 5.3: Amazon Rating Filter */}
                                 <div style={{ position: 'relative' }} data-amazon-rating-dropdown="">
                                     <button
-                                        onClick={() => setAmazonRatingDropdownOpen(!amazonRatingDropdownOpen)}
+                                        onClick={() => { setAmazonRatingDropdownOpen(!amazonRatingDropdownOpen); setCollectionsDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                         title="Filter by Amazon rating"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             minAmazonRating
@@ -6061,7 +6069,7 @@
                                 {/* v5.0.0-alpha.175.43 - Phase 5.4: My Rating Filter */}
                                 <div style={{ position: 'relative' }} data-my-rating-dropdown="">
                                     <button
-                                        onClick={() => setMyRatingDropdownOpen(!myRatingDropdownOpen)}
+                                        onClick={() => { setMyRatingDropdownOpen(!myRatingDropdownOpen); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                         title="Filter by your rating"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             minMyRating
@@ -6127,7 +6135,7 @@
                                 {/* v5.0.0-alpha.175.44 - Phase 5.5: Series Filter (column 1, row 2) */}
                                 <div style={{ position: 'relative' }} data-series-dropdown="">
                                     <button
-                                        onClick={() => setSeriesDropdownOpen(!seriesDropdownOpen)}
+                                        onClick={() => { setSeriesDropdownOpen(!seriesDropdownOpen); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setDateDropdownOpen(false); }}
                                         title="Filter by series"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             selectedSeries.length > 0
@@ -6164,8 +6172,12 @@
                                                 alignItems: 'center',
                                                 padding: '6px 8px',
                                                 cursor: 'pointer',
-                                                fontSize: '13px'
-                                            }}>
+                                                fontSize: '13px',
+                                                borderRadius: '4px',
+                                                transition: 'background 0.1s'
+                                            }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = ''}>
                                                 <input
                                                     type="checkbox"
                                                     checked={selectedSeries.includes('NOT_IN_SERIES')}
@@ -6192,8 +6204,12 @@
                                                         alignItems: 'center',
                                                         padding: '6px 8px',
                                                         cursor: 'pointer',
-                                                        fontSize: '13px'
-                                                    }}>
+                                                        fontSize: '13px',
+                                                        borderRadius: '4px',
+                                                        transition: 'background 0.1s'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = ''}>
                                                     <input
                                                         type="checkbox"
                                                         checked={selectedSeries.includes(series)}
@@ -6216,7 +6232,7 @@
                                 {/* v5.0.0-alpha.175.45 - Phase 5.6: Date Filter (spans columns 2-3, row 2) */}
                                 <div style={{ position: 'relative', gridColumn: '2 / 4' }} data-date-dropdown="">
                                     <button
-                                        onClick={() => setDateDropdownOpen(!dateDropdownOpen)}
+                                        onClick={() => { setDateDropdownOpen(!dateDropdownOpen); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); }}
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             datePreset
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
