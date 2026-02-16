@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.9";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5348,8 +5348,8 @@
                                         )}
                                         {menuName === 'Help' && (
                                             <>
-                                                {/* v5.5.2 - Getting Started link to landing page */}
-                                                <button onClick={() => { window.open('https://readerwrangler.com/', '_blank'); setOpenMenuBar(null); }} style={{
+                                                {/* v5.5.2 - Getting Started link to install page */}
+                                                <button onClick={() => { window.open('install-bookmarklet.html', '_blank'); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                     border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
                                                     transition: 'background 0.1s', color: 'var(--text-primary)'
@@ -9417,7 +9417,7 @@
                                                 }}>
                                                     <p style={{ fontWeight: '600', color: 'var(--text-accent-strong)', marginBottom: '8px', fontSize: '14px' }}>New here?</p>
                                                     <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '12px' }}>Install the bookmarklet to import your library from Amazon.</p>
-                                                    <button onClick={() => window.open('https://readerwrangler.com/', '_blank')} style={{
+                                                    <button onClick={() => window.open('install-bookmarklet.html', '_blank')} style={{
                                                         background: 'linear-gradient(135deg, var(--bg-accent), var(--bg-accent-hover))', color: 'var(--text-on-accent)',
                                                         border: 'none', borderRadius: '6px', padding: '10px 20px',
                                                         fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%'
