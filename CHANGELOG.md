@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.11] - 2026-02-16
+
+### Improved
+- **Splash screen** - App now shows a branded loading screen (logo + spinner) immediately while React/Babel/Tailwind download. Previously the page was blank for ~13 seconds. Respects all 4 themes.
+
+### Fixed
+- **Getting Started links** - Empty state and Help menu "Getting Started" buttons now use relative URLs pointing to the install page instead of hardcoded production URL. Works correctly in dev/localhost environments.
+
 ## [5.5.9] - 2026-02-16
 
 ### Added
