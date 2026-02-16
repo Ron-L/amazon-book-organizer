@@ -2,7 +2,7 @@
 
 **Purpose:** Document all field mappings across transformation boundaries to prevent field-name-mismatch bugs.
 
-**Last Updated:** 2026-02-12 (v5.4.7)
+**Last Updated:** 2026-02-16 (v5.5.8)
 
 ---
 
@@ -102,16 +102,11 @@ These fields have **different names** in different contexts:
 ```javascript
 const state = {
   organization: {
-    columns: columns.map(col => ({
-      id: col.id,
-      name: col.name,
-      bookIds: col.books
-    })),
-    folders,
+    folders,          // v5.0.0 - Book Explorer folders
     dataSource,
     blankImageBooks: Array.from(blankImageBooks),
     hiddenInstances: Array.from(hiddenInstances),
-    tagRegistry  // v4.27.0 - Tag registry
+    tagRegistry       // v4.27.0 - Tag registry
   },
   lastSyncTime,
   savedAt: Date.now()
@@ -119,7 +114,7 @@ const state = {
 localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 ```
 
-**Note:** Books array is NOT stored in localStorage (too large). Only organization state.
+**Note:** Books array is NOT stored in localStorage (too large). Only organization state. The `columns` field was removed in v5.4.0 (Column App replaced by Book Explorer).
 
 ---
 
@@ -260,6 +255,29 @@ const getTagCount = (tagId) => {
   return books.filter(book => book.tags?.includes(tagId)).length;
 };
 ```
+
+---
+
+## localStorage Keys
+
+All persisted UI settings and organization state. Defined in `uiHelpers.js`.
+
+| Key | Value Type | Description |
+|-----|-----------|-------------|
+| `readerwrangler-state` | JSON object | Organization state: folders, blankImageBooks, hiddenInstances, tagRegistry, dataSource, lastSyncTime |
+| `readerwrangler-settings` | JSON object | App settings (legacy, minimal usage) |
+| `readerwrangler-explorer` | JSON object | Explorer view settings: selectedFolderId, explorerView, explorerSort, explorerCoverCols (px width), leftPaneWidth, folderSortSettings, visibleColumns, columnWidths, columnOrder, explorerGroupOn |
+| `readerwrangler-folders` | JSON object | Folder tree structure (v5.0.0) |
+| `readerwrangler-filters` | JSON object | Active filter state |
+| `readerwrangler-wizard` | JSON object | Wizard settings (v5.1.0) |
+| `readerwrangler-search-history` | JSON array | Recent search terms (v5.4.9) |
+| `readerwrangler-theme` | string | Theme preference: `auto` \| `light` \| `dark` \| `hc-light` \| `hc-dark` (v5.5.7). Read by flash-prevention script in HTML before app loads. |
+| `readerwrangler-enriched-cache` | JSON object | Enrichment cache |
+| `readerwrangler-status` | JSON object | Library status metadata |
+
+**Note:** Books are stored in **IndexedDB** (too large for localStorage). Organization state references book IDs.
+
+**Theme storage:** Only the theme name is persisted, not individual CSS variable values. The name maps to a CSS `[data-theme="..."]` block that defines all variables. This keeps the storage simple and avoids stale variable values if palettes are tuned in future versions.
 
 ---
 
@@ -444,6 +462,7 @@ organization: {
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 5.5.8 | 2026-02-16 | Added localStorage keys documentation; theme preference key; removed outdated columns references (v5.4.0); added explorerCoverCols migration note (px width) |
 | 5.4.7 | 2026-02-12 | Added userEdited field for per-field edit tracking; Amazon imports respect flags; backup export/import preserves flags |
 | 5.0.4 | 2026-02-05 | Added 'wishlist' to ownershipType enum; documented onWishlist field; Source filter checks both fields for backward compatibility |
 | 5.0.0-alpha.175.31 | 2026-02-04 | Added myRating field (Phase 4.5) |
