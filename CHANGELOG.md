@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.13] - 2026-02-16
+
+### Fixed
+- **SVG star performance** - Replaced per-star `React.useId()` with single shared clipPath definitions. Eliminates thousands of unnecessary ID generations at scale.
+- **List view double-click** - SVG stars no longer intercept row double-click to open book modal.
+
 ## [5.5.12] - 2026-02-16
 
 ### Improved
