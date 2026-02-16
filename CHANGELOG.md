@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.5.12] - 2026-02-16
+
+### Improved
+- **SVG star ratings** - Replaced Unicode star characters (★½☆) with inline SVG stars for consistent cross-browser rendering. Half-star ratings now display as a true half-filled star instead of the ½ fraction character. Table rating column now shows half-stars (previously rounded down). All 4 themes supported via `--star-color` CSS variable.
+
 ## [5.5.11] - 2026-02-16
 
 ### Improved

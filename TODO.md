@@ -8,12 +8,8 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🎯 Priority 1: Current Focus
 
-**1. 1/2 star ratings**
-   -discussed with claude code. Options:
-      1. Use ⯨ (U+2BE8) — cleaner if it renders, but risky without a webfont guarantee
-      2. Keep ½ — universally supported, current approach
-      3. CSS approach — render a ★ clipped to 50% width (many rating libraries do this), which looks like a true half-filled star regardless of font
-      4. SVG stars — most robust visual approach
+~~**1. 1/2 star ratings**~~ ✅ v5.5.12
+   - Replaced Unicode ★½☆ with inline SVG stars. Half-star renders as true half-filled star.
 
 **2. 🐛 Clipboard Toast Position Bug** - LOW/LOW (30 min)
    - Toast appears from top-left corner instead of near the current book
@@ -132,7 +128,14 @@ _(No active tasks)_
    - Problem: Potential public users may need accessibility features
    - Impact: Broader user base support with minimal effort
 
-**6. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
+**6. 🔗 Cross-Domain Data Transfer** - MEDIUM/MEDIUM (Phase 1: 1 hour, Phase 2: 8-12 hours)
+   - See [docs/design/CROSS-DOMAIN-TRANSFER.md](docs/design/CROSS-DOMAIN-TRANSFER.md) for full spec
+   - Phase 1: FSAA Enhancement — store file handle in app's IndexedDB to skip app-side file picker (~30 LOC)
+   - Phase 2: Cloudflare Worker Relay — opt-in zero-touch transfer via compressed/encrypted relay (if user demand warrants)
+   - Problem: 2+ file picker interactions per fetch cycle due to cross-domain isolation (amazon.com → readerwrangler.com)
+   - Impact: Phase 1 halves friction immediately; Phase 2 eliminates file picker entirely
+
+**7. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
    - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
    - Step 1 (Babel): `npm install --save-dev @babel/cli @babel/core @babel/preset-react`, add `build.bat` that runs `npx babel readerwrangler.js --presets=@babel/preset-react -o dist/readerwrangler.js`. Update HTML to load `dist/readerwrangler.js` as regular `<script>` instead of `type="text/babel"`. Remove Babel CDN.
    - Step 2 (optional, Tailwind): `npx tailwindcss -i input.css -o dist/styles.css --content "readerwrangler.js,readerwrangler.html"`. Swap Tailwind CDN `<script>` for `<link>` to generated CSS.
