@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.13";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.14-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -965,6 +965,11 @@
                 ratingFilter, ownershipFilter, showHidden, seriesFilter, selectedSeries,
                 dateFrom, dateTo, dealsFilterActive, tagFilter, explorerSort,
                 explorerGroupOn, collapsedGroups]);
+
+            // Sorted books array derived from display items (for shift-click range selection)
+            const explorerSortedBooks = useMemo(() =>
+                explorerDisplayItems.filter(item => item.type === 'book').map(item => item.book),
+                [explorerDisplayItems]);
 
             // v5.5.4 - Render cap: show first 200 items instantly, "Show all" button for rest
             // Resets on navigation changes (sort/filter/folder), NOT on data mutations (reorder/tag edit)
@@ -10138,7 +10143,7 @@
                                                                     // Shift-click: select range from anchor to current
                                                                     const start = Math.min(explorerSelectionAnchor, index);
                                                                     const end = Math.max(explorerSelectionAnchor, index);
-                                                                    const rangeIds = sortedBooks.slice(start, end + 1).map(b => b.id);
+                                                                    const rangeIds = explorerSortedBooks.slice(start, end + 1).map(b => b.id);
                                                                     setExplorerSelectedBooks(new Set(rangeIds));
                                                                 } else if (e.ctrlKey || e.metaKey) {
                                                                     // Ctrl/Cmd-click: toggle selection, update anchor
@@ -10673,7 +10678,7 @@
                                                             if (e.shiftKey && explorerSelectionAnchor !== null) {
                                                                 const start = Math.min(explorerSelectionAnchor, index);
                                                                 const end = Math.max(explorerSelectionAnchor, index);
-                                                                const rangeIds = sortedBooks.slice(start, end + 1).map(b => b.id);
+                                                                const rangeIds = explorerSortedBooks.slice(start, end + 1).map(b => b.id);
                                                                 setExplorerSelectedBooks(new Set(rangeIds));
                                                             } else if (e.ctrlKey || e.metaKey) {
                                                                 setExplorerSelectedBooks(prev => {
