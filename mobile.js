@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.3';
+const MOBILE_VERSION = '0.1.0-alpha.4';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback } = React;
@@ -187,13 +187,11 @@ function FolderDrawer({ folders, books, onSelectFolder, onClose }) {
                 borderRight: '1px solid var(--border-default, #e2e8f0)',
                 color: 'var(--text-primary, #1e293b)'
             }}>
-            {/* Drawer header */}
-            <div className="flex items-center justify-between px-3 flex-shrink-0"
-                style={{ height: '48px', borderBottom: '1px solid var(--border-default, #e2e8f0)' }}>
+            {/* Drawer header — entire row tappable to close */}
+            <div onClick={onClose} className="flex items-center justify-between px-3 flex-shrink-0"
+                style={{ height: '48px', borderBottom: '1px solid var(--border-default, #e2e8f0)', cursor: 'pointer', touchAction: 'manipulation' }}>
                 <span className="font-semibold text-sm">Folders</span>
-                <button onClick={onClose} className="p-2" style={{ touchAction: 'manipulation' }}>
-                    <IconClose />
-                </button>
+                <span className="p-2"><IconClose /></span>
             </div>
 
             {/* All Books virtual folder */}
@@ -240,13 +238,11 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
                 borderLeft: '1px solid var(--border-default, #e2e8f0)',
                 color: 'var(--text-primary, #1e293b)'
             }}>
-            {/* Menu header */}
-            <div className="flex items-center justify-between px-3 flex-shrink-0"
-                style={{ height: '48px', borderBottom: '1px solid var(--border-default, #e2e8f0)' }}>
+            {/* Menu header — entire row tappable to close */}
+            <div onClick={onClose} className="flex items-center justify-between px-3 flex-shrink-0"
+                style={{ height: '48px', borderBottom: '1px solid var(--border-default, #e2e8f0)', cursor: 'pointer', touchAction: 'manipulation' }}>
                 <span className="font-semibold text-sm">Menu</span>
-                <button onClick={onClose} className="p-2" style={{ touchAction: 'manipulation' }}>
-                    <IconClose />
-                </button>
+                <span className="p-2"><IconClose /></span>
             </div>
 
             <div className="py-1">

@@ -19,6 +19,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - App menu `[⋮]` with Import Backup, View toggle, Theme, Deals Only, Show Hidden, Desktop Mode, Help
    - Landing page (index.html): responsive CSS for mobile visitors, bookmarklet note pointing to desktop
    - Update FAQ and main page to document mobile support (absorbed from former P3-T1)
+   - Desktop Mode escape hatch: When mobile viewport has `desktopMode` flag set, show a "Return to Mobile" button in the desktop app (upper-left corner) so users aren't stuck. Requires small change in `readerwrangler.js` — implement after mobile v1 is complete.
    - Design doc: `docs/design/MOBILE-VIEWER.md`
    - Impact: Makes library browsable on phone; key use case is checking ownership while away from desktop
 
