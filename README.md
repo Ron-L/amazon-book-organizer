@@ -135,34 +135,27 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
-**v4.17.0 - Wishlist Price Goals** (January 2026)
-- Set price goals on wishlist books and see at a glance which ones are ready to buy
+**v5.5 - Dark Mode + High Contrast Themes** (February 2026)
+- Four themes: Light, Dark, High Contrast Light, High Contrast Dark
+- Auto-detects OS preference, 25 semantic CSS variables, every UI element themed
 
-**v4.16.0 - Cut/Copy/Paste & Book Copies** (January 2026)
-- **Clipboard operations** - Ctrl+X cuts, Ctrl+C copies, Ctrl+V pastes books between columns
-- **Book copies** - Same book can appear in multiple columns (Ctrl+C or Ctrl+Drag to copy)
-- **Delete key** - DEL removes selected books with last-copy protection
+**v5.1 - Auto-Organize Wizard** (February 2026)
+- One-click folder creation by author and series from your Inbox
+- Preview mode, configurable thresholds, and single Ctrl+Z to undo the whole operation
 
-**v4.14.0 - Cover Image Caching** (January 2026)
-- **Local browser cache** - Book covers cached locally for instant loading on subsequent visits
-- **~65% faster** - Subsequent loads from cache vs network
+**v5.0 - Book Explorer** (February 2026)
+- Complete redesign: two-pane Windows Explorer-style interface with folder tree + content view
+- Nested folders, list and cover grid views, drag-and-drop, context menus, Cut/Copy/Paste
+- Menu bar + compact toolbar — 32% more screen space for books
 
-**v4.9.0 - Ownership Badges & Filter** (January 2026)
-- **Ownership badges** - Visual badges on book covers showing non-purchased books (Sample, Borrowed, Prime/KU/KOLL/Comixology)
-- **Ownership filter** - Filter library by ownership type in the filter panel
-- **Filter panel reorganization** - Filters grouped by mental model (Discovery → Organization → Acquisition)
+**v4.17 - Wishlist Price Goals** (January 2026)
+- Set price triggers on wishlist books and filter to "Deals" when prices drop to your target
 
-**v4.8.0 - Undo/Redo** (January 2026)
-- **Undo/Redo** - Ctrl+Z to undo, Ctrl+Y to redo (book moves, column/divider changes, hide/unhide)
+**v4.21/v4.23 - Series & Author Bulk Import** (January 2026)
+- One-click import of entire book series or author bibliographies to your wishlist
 
-**v4.7.0 - Sort by Published** (January 2026)
-- **Sort by Published** - Sort columns by publication date (oldest or newest first)
-
-**v4.1.0 - Wishlist & Hide Features** (December 2025)
-- **Wishlist** - Add books from Amazon product/series pages to track what you want to buy
-- **Hide books** - Soft-delete books you don't want to see (right-click context menu)
-- **Context menu enhancements** - "Open in Amazon" and "Copy Title(s)" options
-- Progress bars showing exactly where you are in the import process
+**v4.8/v4.16 - Cut/Copy/Paste + Undo/Redo** (January 2026)
+- Full clipboard operations (Ctrl+X/C/V) and unlimited undo/redo (Ctrl+Z/Y) for all actions
 
 See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
@@ -170,15 +163,8 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ## Coming Soon!
 
-We're constantly improving ReaderWrangler based on user feedback. Here's what's on the horizon:
-
-- **Column Arranger** - Side panel to collapse/expand and bulk-reorganize columns
-- **Book notes** - Personal notes on individual books ("Why did I buy this?")
-- **Tags** - Tag books and dividers for cross-library thematic organization
-- **Column carousel** - Infinite horizontal carousel for navigating many columns
-- **Family sharing info** - See which books you've shared with family members
-- **Reading progress tracking** - See how far you've read in each book
-- **Multi-store support** - Organize books from Barnes & Noble, Kobo, and other ebook stores
+- **Mobile viewer** - Browse your organized library on your phone
+- **Public launch** - Share ReaderWrangler with the world
 
 Have a feature request? [Let us know on GitHub!](https://github.com/Ron-L/ReaderWrangler/issues)
 

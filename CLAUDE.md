@@ -50,7 +50,7 @@ Standard semver with pre-release suffix for test iterations:
 - Drop pre-release suffix from file versions
 - Update APP_VERSION
 - Update `softwareVersion` in index.html Schema.org structured data to match
-- Update CHANGELOG.md
+- Update CHANGELOG.md, README.md (and its mirror index.html) sections Recent Features and Coming Soon!
 - Update TODO.md (remove completed tasks)
 - After push: "Ready for post-mortem?"
 

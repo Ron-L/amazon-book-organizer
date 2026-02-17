@@ -6,29 +6,53 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 🎯 Priority 1: Current Focus
-
-~~**1. 1/2 star ratings**~~ ✅ v5.5.12
-   - Replaced Unicode ★½☆ with inline SVG stars. Half-star renders as true half-filled star.
-
-**2. 🐛 Clipboard Toast Position Bug** - LOW/LOW (30 min)
-   - Toast appears from top-left corner instead of near the current book
-   - Problem: Cut/Copy toast position is wrong
-   - Impact: Minor visual polish issue
-
-_(No active tasks)_
-
----
 
 ### 🔒 Priority 3: Pre-Launch Gate
 
-~~**0. Dark Mode Support**~~ ✅ v5.5.7 + v5.5.9 + Landing v2.1.0
-   - Phase 0: 163 inline hex colors → CSS variables (v5.5.7-alpha.1–6)
-   - Phase 1: Dark palette, Tailwind overrides, theme toggle, WCAG AA contrast (v5.5.7-alpha.7–20)
-   - HC Light + HC Dark themes (v5.5.9)
-   - Landing page dark mode + HC themes (v2.1.0)
+**0. 📱 Mobile Viewer** - MEDIUM/MEDIUM (12-16 hours)
+   - Purpose-built read-only mobile UI (separate `mobile.js`), not responsive CSS
+   - Dashboard home: configurable tag-based shelves (e.g., "Next Reads") + folder shelves + "Recently Added"
+   - Cover grid folder view (3-wide portrait, 5-wide landscape), folder drawer, book detail view
+   - Search ("do I own this?"), sort, filter — all read-only for v1
+   - Reuses `storage.js` / `uiHelpers.js`, same IndexedDB data, no changes to desktop code
+   - Design doc: `docs/design/MOBILE-VIEWER.md`
+   - Impact: Makes library browsable on phone; key use case is checking ownership while away from desktop
 
-**1. Quality Attribute Validation** - LOW/LOW (2-3 hours)
+**1. 📱 Mobile Support Clarity** - HIGH/LOW (1 hour)
+   - Document that desktop is the primary UI; mobile viewer planned as separate purpose-built UI (see P7-T1)
+   - Add to FAQ and main page
+   - Problem: Major omission for users who browse libraries on phones/tablets
+   - Impact: Sets correct expectations
+
+**2. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
+   - Link version display (e.g., "v3.6.0") to CHANGELOG.md
+   - Problem: Users see version numbers but no context
+   - Impact: Transparency about what changed
+
+**3. Browser Compatibility Documentation** - LOW/LOW (30 min)
+   - Document Chrome-only requirement in README and app footer
+   - Note: Firefox/Edge may work but untested
+   - Optional: 30-min Firefox smoke test before public release
+   - Problem: Users may try on unsupported browsers
+   - Impact: Clear expectations, reduced support burden
+**4. Button Consistency Audit** - LOW/LOW (2-4 hours)
+   - Audit all button hover states across the app
+   - Define 3 button styles: Primary/Secondary/Tertiary
+   - Apply consistently everywhere (price goals, Add Tag, View on Amazon, Add Note, Edit Series, etc.)
+   - Document button style patterns
+   - Problem: Different buttons have different hover behaviors, users can't predict interaction
+   - Impact: Consistent, predictable UI interactions
+
+**5. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
+   - Semantic HTML audit (use `<button>` not `<div onclick>`)
+   - ARIA labels for key interactions (context menus, drag operations)
+   - Keyboard-only navigation validation (tab order, focus indicators)
+   - Note: Full accessibility audit deferred (personal-use project)
+   - Problem: Potential public users may need accessibility features
+   - Impact: Broader user base support with minimal effort
+
+
+**6. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
    - ~~**Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second~~ ✅ v5.5.4
    - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
@@ -36,23 +60,6 @@ _(No active tasks)_
    - Problem: Need confidence app handles edge cases for public release
    - Impact: Robustness validation before launch
 
-**2. 📱 Mobile Support Clarity** - HIGH/LOW (1 hour)
-   - Document that desktop is the primary UI; mobile viewer planned as separate purpose-built UI (see P7-T1)
-   - Add to FAQ and main page
-   - Problem: Major omission for users who browse libraries on phones/tablets
-   - Impact: Sets correct expectations
-
-**3. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
-   - Link version display (e.g., "v3.6.0") to CHANGELOG.md
-   - Problem: Users see version numbers but no context
-   - Impact: Transparency about what changed
-
-**4. Browser Compatibility Documentation** - LOW/LOW (30 min)
-   - Document Chrome-only requirement in README and app footer
-   - Note: Firefox/Edge may work but untested
-   - Optional: 30-min Firefox smoke test before public release
-   - Problem: Users may try on unsupported browsers
-   - Impact: Clear expectations, reduced support burden
 
 ---
 
@@ -112,30 +119,14 @@ _(No active tasks)_
    - Problem: Orphaned books (samples replaced by purchase, returns, expired subscriptions) clutter library
    - Impact: Clean library management, safe deletion with restore capability
 
-**4. Button Consistency Audit** - LOW/LOW (2-4 hours)
-   - Audit all button hover states across the app
-   - Define 3 button styles: Primary/Secondary/Tertiary
-   - Apply consistently everywhere (price goals, Add Tag, View on Amazon, Add Note, Edit Series, etc.)
-   - Document button style patterns
-   - Problem: Different buttons have different hover behaviors, users can't predict interaction
-   - Impact: Consistent, predictable UI interactions
-
-**5. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
-   - Semantic HTML audit (use `<button>` not `<div onclick>`)
-   - ARIA labels for key interactions (context menus, drag operations)
-   - Keyboard-only navigation validation (tab order, focus indicators)
-   - Note: Full accessibility audit deferred (personal-use project)
-   - Problem: Potential public users may need accessibility features
-   - Impact: Broader user base support with minimal effort
-
-**6. 🔗 Cross-Domain Data Transfer** - MEDIUM/MEDIUM (Phase 1: 1 hour, Phase 2: 8-12 hours)
+**4. 🔗 Cross-Domain Data Transfer** - MEDIUM/MEDIUM (Phase 1: 1 hour, Phase 2: 8-12 hours)
    - See [docs/design/CROSS-DOMAIN-TRANSFER.md](docs/design/CROSS-DOMAIN-TRANSFER.md) for full spec
    - Phase 1: FSAA Enhancement — store file handle in app's IndexedDB to skip app-side file picker (~30 LOC)
    - Phase 2: Cloudflare Worker Relay — opt-in zero-touch transfer via compressed/encrypted relay (if user demand warrants)
    - Problem: 2+ file picker interactions per fetch cycle due to cross-domain isolation (amazon.com → readerwrangler.com)
    - Impact: Phase 1 halves friction immediately; Phase 2 eliminates file picker entirely
 
-**7. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
+**5. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
    - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
    - Step 1 (Babel): `npm install --save-dev @babel/cli @babel/core @babel/preset-react`, add `build.bat` that runs `npx babel readerwrangler.js --presets=@babel/preset-react -o dist/readerwrangler.js`. Update HTML to load `dist/readerwrangler.js` as regular `<script>` instead of `type="text/babel"`. Remove Babel CDN.
    - Step 2 (optional, Tailwind): `npx tailwindcss -i input.css -o dist/styles.css --content "readerwrangler.js,readerwrangler.html"`. Swap Tailwind CDN `<script>` for `<link>` to generated CSS.
@@ -147,15 +138,6 @@ _(No active tasks)_
 ---
 
 ### 🚀 Priority 7: Post-Launch Enhancements
-
-**1. 📱 Mobile Viewer** - MEDIUM/MEDIUM (12-16 hours)
-   - Purpose-built read-only mobile UI (separate `mobile.js`), not responsive CSS
-   - Dashboard home: configurable tag-based shelves (e.g., "Next Reads") + folder shelves + "Recently Added"
-   - Cover grid folder view (3-wide portrait, 5-wide landscape), folder drawer, book detail view
-   - Search ("do I own this?"), sort, filter — all read-only for v1
-   - Reuses `storage.js` / `uiHelpers.js`, same IndexedDB data, no changes to desktop code
-   - Design doc: `docs/design/MOBILE-VIEWER.md`
-   - Impact: Makes library browsable on phone; key use case is checking ownership while away from desktop
 
 **2. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
    - Show reading progress percentage/position for each book in dialog and a column in explorer
@@ -198,6 +180,9 @@ _(No active tasks)_
    - Covers: File naming, bookmarklet detection, data structure, migration path
    - Problem: Only works with Amazon
    - Impact: Support for other ebook platforms
+
+**7. Series Manager**
+   - see [docs/design/EDITABLE-SERIES.md](docs/design/EDITABLE-SERIES.md) for full spec
 
 ---
 
