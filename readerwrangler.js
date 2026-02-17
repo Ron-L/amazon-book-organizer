@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.14";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -516,6 +516,8 @@
             const [toastAnimating, setToastAnimating] = useState(false);
             // v4.16.0.m - Track position of last selected book for toast placement
             const [toastPosition, setToastPosition] = useState({ x: 0, y: 0 });
+            // v5.5.15 - Toast severity level (info | error)
+            const [toastLevel, setToastLevel] = useState('info');
             // v4.16.0.o - Footer clipboard text only visible after toast lands
             const [footerClipboardVisible, setFooterClipboardVisible] = useState(false);
             // v4.16.0.s - Per-instance hidden state (Set of instanceIds)
@@ -1033,11 +1035,16 @@
                 });
             };
 
-            // v5.0.0 - Toast notification helper (reusable for all feedback messages)
+            // v5.5.15 - Toast notification helper (reusable for all feedback messages)
             // Shows toast at position, animates to footer, persists 10s, then fades
-            const showToast = (message, x, y) => {
+            // x/y: screen coordinates (optional — defaults to center-screen if missing/non-numeric)
+            // level: 'info' (default) or 'error' (red text via --text-danger)
+            const showToast = (message, x, y, { level = 'info' } = {}) => {
+                const posX = typeof x === 'number' ? x : window.innerWidth / 2;
+                const posY = typeof y === 'number' ? y : window.innerHeight * 0.4;
                 setClipboardMessage(message);
-                setToastPosition({ x, y });
+                setToastPosition({ x: posX, y: posY });
+                setToastLevel(level);
                 setFooterClipboardVisible(false);
                 setToastVisible(true);
                 setToastAnimating(false);
@@ -1268,19 +1275,19 @@
                 // Validate: can't move folder into itself or its descendants
                 for (const folderId of folderIds) {
                     if (folderId === newParentId || isDescendant(folderId, newParentId)) {
-                        showToast("Can't move folder into itself or its subfolder", 'error');
+                        showToast("Can't move folder into itself or its subfolder", null, null, { level: 'error' });
                         return false;
                     }
                     // Can't reparent Inbox
                     if (folderId === '__inbox__') {
-                        showToast("Inbox cannot be moved", 'error');
+                        showToast("Inbox cannot be moved", null, null, { level: 'error' });
                         return false;
                     }
                 }
 
                 // Can't move into Inbox
                 if (newParentId === '__inbox__') {
-                    showToast("Can't move folders into Inbox", 'error');
+                    showToast("Can't move folders into Inbox", null, null, { level: 'error' });
                     return false;
                 }
 
@@ -1308,7 +1315,7 @@
                     description: `Move "${folderNames}" into "${targetName}"`
                 });
 
-                showToast(`Moved "${folderNames}" into "${targetName}"`, 'success');
+                showToast(`Moved "${folderNames}" into "${targetName}"`);
                 console.log(`📁 Moved ${folderIds.length} folder(s) into ${newParentId || 'root'}`);
                 return true;
             };
@@ -2303,19 +2310,7 @@
                             folderId: selectedFolderId
                         }));
                         setClipboard({ type: 'cut', bookIds, sourcePositions });
-                        const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} cut`;
-                        setClipboardMessage(message);
-                        setFooterClipboardVisible(false);
-                        setToastVisible(true);
-                        setToastAnimating(false);
-                        setTimeout(() => {
-                            setToastAnimating(true);
-                            setTimeout(() => {
-                                setToastVisible(false);
-                                setToastAnimating(false);
-                                setFooterClipboardVisible(true);
-                            }, 1000);
-                        }, 1500);
+                        showToast(`${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} cut`);
                         console.log(`✂️ Cut ${bookIds.length} book(s) to clipboard (Explorer)`);
                         return; // Don't fall through to Columns App handler
                     }
@@ -2329,19 +2324,7 @@
                             folderId: selectedFolderId
                         }));
                         setClipboard({ type: 'copy', bookIds, sourcePositions });
-                        const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} copied`;
-                        setClipboardMessage(message);
-                        setFooterClipboardVisible(false);
-                        setToastVisible(true);
-                        setToastAnimating(false);
-                        setTimeout(() => {
-                            setToastAnimating(true);
-                            setTimeout(() => {
-                                setToastVisible(false);
-                                setToastAnimating(false);
-                                setFooterClipboardVisible(true);
-                            }, 1000);
-                        }, 1500);
+                        showToast(`${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} copied`);
                         console.log(`📋 Copied ${bookIds.length} book(s) to clipboard (Explorer)`);
                         return; // Don't fall through to Columns App handler
                     }
@@ -4157,7 +4140,7 @@
                             }
                             return folder;
                         }));
-                        showToast(`Undo: ${action.description}`, 'info');
+                        showToast(`Undo: ${action.description}`);
                         break;
                     case 'MOVE_FOLDER':
                         // v5.0.0-alpha.135 - Undo single folder move: restore old parent
@@ -4259,7 +4242,7 @@
                                 return updated;
                             });
                         }
-                        showToast(`Undo: ${action.description}`, 'info');
+                        showToast(`Undo: ${action.description}`);
                         break;
                     case 'WIZARD_ORGANIZE':
                         // v5.1.0-alpha.13 - Phase 1.5/1.6: Undo wizard organize
@@ -4301,7 +4284,7 @@
 
                             return updated;
                         });
-                        showToast(`Undo: ${action.description}`, 'info');
+                        showToast(`Undo: ${action.description}`);
                         break;
                     default:
                         console.warn('Unknown action type for undo:', action.type);
@@ -4452,7 +4435,7 @@
                             }
                             return folder;
                         }));
-                        showToast(`Redo: ${action.description}`, 'info');
+                        showToast(`Redo: ${action.description}`);
                         break;
                     case 'MOVE_FOLDER':
                         // v5.0.0-alpha.135 - Redo single folder move: apply new parent
@@ -4477,7 +4460,7 @@
                         // Note: We need to store the copied folders in the action to redo properly
                         // For now, this is a limitation - we can't redo copy operations
                         // TODO: Store copied folder data in action for proper redo
-                        showToast('Cannot redo copy operation', 'warning');
+                        showToast('Cannot redo copy operation', null, null, { level: 'error' });
                         break;
                     case 'MOVE_BOOKS_TO_FOLDER':
                         // v5.0.0-alpha.166 - Redo book move: move books to target folder again
@@ -4563,7 +4546,7 @@
                                 return updated;
                             });
                         }
-                        showToast(`Redo: ${action.description}`, 'info');
+                        showToast(`Redo: ${action.description}`);
                         break;
                     case 'WIZARD_ORGANIZE':
                         // v5.1.0-alpha.13 - Phase 1.5/1.6: Redo wizard organize
@@ -4606,7 +4589,7 @@
 
                             return updated;
                         });
-                        showToast(`Redo: ${action.description}`, 'info');
+                        showToast(`Redo: ${action.description}`);
                         break;
                     default:
                         console.warn('Unknown action type for redo:', action.type);
@@ -5190,6 +5173,10 @@
                             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
                             z-index: 9999;
                             transition: all 1.0s ease-in;
+                        }
+
+                        .clipboard-toast.error {
+                            color: var(--text-danger);
                         }
 
                         .clipboard-toast.animating {
@@ -7138,18 +7125,7 @@
                                                 return updated;
                                             });
                                             // Toast feedback
-                                            setClipboardMessage(`Price goal set to $${price.toFixed(2)} for ${count} book${count !== 1 ? 's' : ''}`);
-                                            setFooterClipboardVisible(false);
-                                            setToastVisible(true);
-                                            setToastAnimating(false);
-                                            setTimeout(() => {
-                                                setToastAnimating(true);
-                                                setTimeout(() => {
-                                                    setToastVisible(false);
-                                                    setToastAnimating(false);
-                                                    setFooterClipboardVisible(true);
-                                                }, 1000);
-                                            }, 1500);
+                                            showToast(`Price goal set to $${price.toFixed(2)} for ${count} book${count !== 1 ? 's' : ''}`);
                                         }
                                         setShowBulkPriceModal(false);
                                         setBulkPriceInput('');
@@ -8376,18 +8352,7 @@
 
                                             // Check if dragging from All Books (view-only)
                                             if (sourceFolder === '__all__') {
-                                                setClipboardMessage('All Books is view-only. Organize from folders.');
-                                                setToastPosition({ x: e.clientX, y: e.clientY });
-                                                setFooterClipboardVisible(false);
-                                                setToastVisible(true);
-                                                setToastAnimating(false);
-                                                setTimeout(() => {
-                                                    setToastAnimating(true);
-                                                    setTimeout(() => {
-                                                        setToastVisible(false);
-                                                        setToastAnimating(false);
-                                                    }, 1000);
-                                                }, 1500);
+                                                showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
                                                 setFolderDropHighlight(null);
                                                 setExplorerSelectedBooks(new Set());
                                                 return;
@@ -8623,23 +8588,8 @@
                                                             const dragData = JSON.parse(bookDataStr);
                                                             const { sourceFolder, bookIds } = dragData;
 
-                                                            const showToastLocal = (msg) => {
-                                                                setClipboardMessage(msg);
-                                                                setToastPosition({ x: e.clientX, y: e.clientY });
-                                                                setFooterClipboardVisible(false);
-                                                                setToastVisible(true);
-                                                                setToastAnimating(false);
-                                                                setTimeout(() => {
-                                                                    setToastAnimating(true);
-                                                                    setTimeout(() => {
-                                                                        setToastVisible(false);
-                                                                        setToastAnimating(false);
-                                                                    }, 1000);
-                                                                }, 1500);
-                                                            };
-
                                                             if (sourceFolder === '__all__') {
-                                                                showToastLocal('All Books is view-only. Organize from folders.');
+                                                                showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
                                                                 setFolderDropHighlight(null);
                                                                 setExplorerSelectedBooks(new Set());
                                                                 return;
@@ -8648,7 +8598,7 @@
                                                             const existing = new Set(folder.bookIds || []);
                                                             const newBookIds = bookIds.filter(id => !existing.has(id));
                                                             if (newBookIds.length === 0) {
-                                                                showToastLocal(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder');
+                                                                showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder', e.clientX, e.clientY);
                                                             } else {
                                                                 // v5.0.0-alpha.46 - Capture fromIndices for undo before modifying
                                                                 const sourceFolderObj = folders.find(f => f.id === sourceFolder);
@@ -10933,7 +10883,7 @@
                     {/* v4.16.0.l - Toast notification that animates to footer */}
                     {/* v4.16.0.m - Position above last clicked book, ease-in animation */}
                     {toastVisible && (
-                        <div className={`clipboard-toast ${toastAnimating ? 'animating' : ''}`}
+                        <div className={`clipboard-toast ${toastAnimating ? 'animating' : ''} ${toastLevel === 'error' ? 'error' : ''}`}
                              style={toastAnimating ? {
                                  left: '16px',
                                  top: 'calc(100vh - 22px)',
@@ -11781,19 +11731,7 @@
                                                 folderId: selectedFolderId
                                             }));
                                             setClipboard({ type: 'cut', bookIds, sourcePositions });
-                                            const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} cut`;
-                                            setClipboardMessage(message);
-                                            setFooterClipboardVisible(false);
-                                            setToastVisible(true);
-                                            setToastAnimating(false);
-                                            setTimeout(() => {
-                                                setToastAnimating(true);
-                                                setTimeout(() => {
-                                                    setToastVisible(false);
-                                                    setToastAnimating(false);
-                                                    setFooterClipboardVisible(true);
-                                                }, 1000);
-                                            }, 1500);
+                                            showToast(`${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} cut`);
                                             setExplorerBookContextMenu(null);
                                             setContextSubmenu(null);
                                         }}>
@@ -11813,19 +11751,7 @@
                                             folderId: selectedFolderId
                                         }));
                                         setClipboard({ type: 'copy', bookIds, sourcePositions });
-                                        const message = `${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} copied`;
-                                        setClipboardMessage(message);
-                                        setFooterClipboardVisible(false);
-                                        setToastVisible(true);
-                                        setToastAnimating(false);
-                                        setTimeout(() => {
-                                            setToastAnimating(true);
-                                            setTimeout(() => {
-                                                setToastVisible(false);
-                                                setToastAnimating(false);
-                                                setFooterClipboardVisible(true);
-                                            }, 1000);
-                                        }, 1500);
+                                        showToast(`${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} copied`);
                                         setExplorerBookContextMenu(null);
                                         setContextSubmenu(null);
                                     }}>
@@ -12123,19 +12049,7 @@
                                                                                                  saveBooksToIndexedDB(updated);
                                                                                                 return updated;
                                                                                             });
-                                                                                            // Toast
-                                                                                            setClipboardMessage(`Removed "${tagRegistry[tagId]?.label || tagId}" from ${bookCount} book${bookCount !== 1 ? 's' : ''}`);
-                                                                                            setFooterClipboardVisible(false);
-                                                                                            setToastVisible(true);
-                                                                                            setToastAnimating(false);
-                                                                                            setTimeout(() => {
-                                                                                                setToastAnimating(true);
-                                                                                                setTimeout(() => {
-                                                                                                    setToastVisible(false);
-                                                                                                    setToastAnimating(false);
-                                                                                                    setFooterClipboardVisible(true);
-                                                                                                }, 1000);
-                                                                                            }, 1500);
+                                                                                            showToast(`Removed "${tagRegistry[tagId]?.label || tagId}" from ${bookCount} book${bookCount !== 1 ? 's' : ''}`);
                                                                                         }}>
                                                                                         ×
                                                                                     </button>
@@ -12293,18 +12207,7 @@
                                                                                      return updated;
                                                                                 });
                                                                                 if (addedCount > 0) {
-                                                                                    setClipboardMessage(`Added "${tagData.label}" to ${addedCount} book${addedCount !== 1 ? 's' : ''}`);
-                                                                                    setFooterClipboardVisible(false);
-                                                                                    setToastVisible(true);
-                                                                                    setToastAnimating(false);
-                                                                                    setTimeout(() => {
-                                                                                        setToastAnimating(true);
-                                                                                        setTimeout(() => {
-                                                                                            setToastVisible(false);
-                                                                                            setToastAnimating(false);
-                                                                                            setFooterClipboardVisible(true);
-                                                                                        }, 1000);
-                                                                                    }, 1500);
+                                                                                    showToast(`Added "${tagData.label}" to ${addedCount} book${addedCount !== 1 ? 's' : ''}`);
                                                                                 }
                                                                                 setTagInputValue('');
                                                                                 setExplorerBookContextMenu(null);
@@ -12386,19 +12289,7 @@
                                                                         saveBooksToIndexedDB(updated);
                                                                         return updated;
                                                                     });
-                                                                    // Toast feedback
-                                                                    setClipboardMessage(`Price goal set to $${price.toFixed(2)} for ${count} book${count !== 1 ? 's' : ''}`);
-                                                                    setFooterClipboardVisible(false);
-                                                                    setToastVisible(true);
-                                                                    setToastAnimating(false);
-                                                                    setTimeout(() => {
-                                                                        setToastAnimating(true);
-                                                                        setTimeout(() => {
-                                                                            setToastVisible(false);
-                                                                            setToastAnimating(false);
-                                                                            setFooterClipboardVisible(true);
-                                                                        }, 1000);
-                                                                    }, 1500);
+                                                                    showToast(`Price goal set to $${price.toFixed(2)} for ${count} book${count !== 1 ? 's' : ''}`);
                                                                     setExplorerBookContextMenu(null);
                                                                     setContextSubmenu(null);
                                                                 }}>
@@ -12430,18 +12321,7 @@
                                                                     return updated;
                                                                 });
                                                                 // Toast feedback
-                                                                setClipboardMessage(`Price goal cleared for ${count} book${count !== 1 ? 's' : ''}`);
-                                                                setFooterClipboardVisible(false);
-                                                                setToastVisible(true);
-                                                                setToastAnimating(false);
-                                                                setTimeout(() => {
-                                                                    setToastAnimating(true);
-                                                                    setTimeout(() => {
-                                                                        setToastVisible(false);
-                                                                        setToastAnimating(false);
-                                                                        setFooterClipboardVisible(true);
-                                                                    }, 1000);
-                                                                }, 1500);
+                                                                showToast(`Price goal cleared for ${count} book${count !== 1 ? 's' : ''}`);
                                                                 setExplorerBookContextMenu(null);
                                                                 setContextSubmenu(null);
                                                             }}>
