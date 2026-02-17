@@ -5,7 +5,7 @@
 A purpose-built mobile UI for ReaderWrangler, scoped as a **read-only viewer** — not a responsive redesign of the desktop app. The desktop app's interaction model (drag-drop, multi-select, context menus, resizable panes) is fundamentally mouse-driven. Mobile needs its own component tree with touch-native interactions.
 
 **Scope**: Browse, search, sort, and view a book library on phone-sized screens.
-**Non-scope**: Editing, folder management, import/export, bulk operations, column customization.
+**Non-scope**: Editing, folder management, export, bulk operations, column customization.
 
 ---
 
@@ -15,7 +15,7 @@ A purpose-built mobile UI for ReaderWrangler, scoped as a **read-only viewer** �
 2. **Separate file, shared data** — New `mobile.js` file with its own component tree. Reuses `storage.js`, `uiHelpers.js`, and the same IndexedDB data. No changes to `readerwrangler.js`.
 3. **Cover-first** — Books are identified visually by covers, not by text rows. Inspired by Kindle/Libby library screens, not file managers. The existing desktop cover view (line ~10405) already renders cover + truncated title — the same visual pattern, just with different interaction handlers.
 4. **Touch-native interactions** — Tap, long-press, swipe. No hover states, no drag-drop, no keyboard shortcuts.
-5. **Read-only for v1** — No data writes in the initial version. All curation happens on desktop.
+5. **Read-only for v1** — No book data editing in the initial version. All curation happens on desktop. Mobile does write user preferences (theme, view mode, sort, filters) to localStorage and Import Backup to IndexedDB.
 
 ---
 
@@ -81,7 +81,7 @@ Three rows of covers with titles fit comfortably. Room for a shelf label row abo
 
 ```
 +------------------------------------------+
-|  [=] ReaderWrangler        [Search] [?]  |
+|  [=] ReaderWrangler       [Search] [⋮]  |
 +------------------------------------------+
 |                                          |
 |  Next Reads                         (3)  |
@@ -119,13 +119,53 @@ Three rows of covers with titles fit comfortably. Room for a shelf label row abo
 - **Remaining shelves**: One per top-level folder, showing first 3-4 books with horizontal scroll for more. Tap shelf title to open full folder grid view.
 - Netflix/Spotify-style horizontal shelves give an at-a-glance library summary.
 
+### Empty State (First Run / No Data)
+
+Shown when IndexedDB has no books — either first visit on a new device, or after a reset.
+
+```
++------------------------------------------+
+|  [=] ReaderWrangler               [⋮]   |
++------------------------------------------+
+|                                          |
+|                                          |
+|              +----------+                |
+|              |          |                |
+|              |   books  |                |
+|              |   icon   |                |
+|              +----------+                |
+|                                          |
+|    Welcome to ReaderWrangler Mobile      |
+|                                          |
+|    This is the mobile companion to       |
+|    the desktop organizer.                |
+|                                          |
+|    To browse your library here:          |
+|    1. Export a backup from desktop        |
+|       (File > Export Backup)             |
+|    2. Transfer the file to your phone    |
+|       (email, cloud drive, AirDrop)      |
+|    3. Tap Import below                   |
+|                                          |
+|    +----------------------------------+  |
+|    |         Import Backup            |  |
+|    +----------------------------------+  |
+|                                          |
++------------------------------------------+
+```
+
+- Single centered call-to-action with clear 3-step instructions
+- Folder drawer is accessible but shows empty tree
+- After successful import, transitions immediately to dashboard
+- Import is also always available via the app menu `[⋮]` for subsequent re-syncs
+
 ### Folder View — Cover Grid
 
 Reached by tapping a shelf title on the dashboard, or navigating via the folder drawer.
 
 ```
 +------------------------------------------+
-|  [<] Sci-Fi > Hard SF      [Search] [?]  |
+|  [<] Sci-Fi > Hard SF     [Search] [⋮]  |
 +------------------------------------------+
 |                                          |
 |  +--------+  +--------+  +--------+     |
@@ -187,6 +227,41 @@ Reached by tapping a shelf title on the dashboard, or navigating via the folder 
 - Book counts shown in parentheses
 - Indentation shows hierarchy
 - Read-only: no drag-drop, rename, create, or delete
+- **Mutual exclusion**: Only one overlay open at a time. If the app menu is open and user taps `[=]`, the app menu closes and the folder drawer opens (and vice versa).
+
+### App Menu (three-dot menu)
+
+Accessed via `[⋮]` icon in the header. Contains actions and settings — distinct from the folder drawer which is purely navigation.
+
+```
++------------------------------------------+
+|                        +---------------+ |
+|                        |  [X]  Menu    | |
+|                        +---------------+ |
+|                        |               | |
+|                        | Import Backup | |
+|                        | ───────────── | |
+|                        | View: Cover   | |
+|                        | Theme: Dark   | |
+|                        | Deals Only    | |
+|                        | Show Hidden   | |
+|                        | Desktop Mode  | |
+|                        | ───────────── | |
+|                        | Help & About  | |
+|                        |               | |
+|                        +---------------+ |
++------------------------------------------+
+```
+
+- Slides in from right as overlay, with backdrop dimming
+- Tap item to act, menu auto-closes (except toggles which update in-place)
+- **Import Backup**: Opens file picker for backup JSON. On success, replaces all data and transitions to dashboard. Same format and behavior as desktop restore.
+- **View**: Toggles between Cover Grid and List view
+- **Theme**: Cycles through available themes (Light, Dark, High Contrast variants)
+- **Deals Only**: Toggle — shows only books with price at or below goal
+- **Show Hidden**: Toggle — reveals books hidden on desktop
+- **Desktop Mode**: Forces full desktop UI on this device (persists in localStorage)
+- **Help & About**: Version info, link to user guide
 
 ### Book Detail View (tap a book)
 
@@ -317,7 +392,9 @@ Rather than a hardcoded "Next Reads" feature, the user configures which tag(s) a
 | **Tap sort** (footer) | Open sort bottom sheet |
 | **Tap filter** (footer) | Open filter bottom sheet |
 | **Tap [<]** | Back to previous screen |
-| **Tap [=]** | Open folder drawer |
+| **Tap [=]** | Open folder drawer (closes app menu if open) |
+| **Tap [⋮]** | Open app menu (closes folder drawer if open) |
+| **Tap backdrop** | Close whichever overlay is open |
 
 ### Future (v2+)
 | Gesture | Action |
@@ -337,25 +414,30 @@ Rather than a hardcoded "Next Reads" feature, the user configures which tag(s) a
 3. **"What's new?"** — As a user, I want to see recently added books so I know what's new in my library.
 4. **"Browse a folder"** — As a user, I want to browse a specific folder (e.g., "Sci-Fi") to see what's in it, with covers large enough to recognize books visually.
 5. **"Book details"** — As a user, I want to tap a book and see its full details — cover, author, series, rating, notes, tags.
+6. **"Get my library on my phone"** — As a user, I want to import a backup from my desktop so I can browse my library on my phone. I export from desktop, transfer the file (email/cloud/AirDrop), and import on mobile.
+7. **"Re-sync after organizing"** — As a user, I want to re-import an updated backup after organizing on desktop so my mobile view stays current.
 
 ### Secondary (v1 if easy, else v2)
 
-6. **"Sort by rating"** — As a user, I want to sort a folder by rating to find my highest-rated unread books.
-7. **"Filter by tag"** — As a user, I want to filter by tag to see all my "hard-sf" books across folders.
-8. **"Wishlist check"** — As a user, I want to see which books are on my wishlist vs owned so I know what to buy.
+8. **"Sort by rating"** — As a user, I want to sort a folder by rating to find my highest-rated unread books.
+9. **"Filter by tag"** — As a user, I want to filter by tag to see all my "hard-sf" books across folders.
+10. **"Wishlist check"** — As a user, I want to see which books are on my wishlist vs owned so I know what to buy.
 
 ### Future (v2+)
 
-9. **"Mark read"** — As a user, I want to mark a book as read from my phone (not critical — won't read that many before I'm back at desktop).
-10. **"Configure shelves"** — As a user, I want to configure which tags appear as shelves on my mobile home screen.
-11. **"Quick notes"** — As a user, I want to add a quick note to a book after finishing it.
-12. **"Reading stats"** — As a user, I want to see my reading stats (books read this month/year).
+11. **"Mark read"** — As a user, I want to mark a book as read from my phone (not critical — won't read that many before I'm back at desktop).
+12. **"Configure shelves"** — As a user, I want to configure which tags appear as shelves on my mobile home screen.
+13. **"Quick notes"** — As a user, I want to add a quick note to a book after finishing it.
+14. **"Reading stats"** — As a user, I want to see my reading stats (books read this month/year).
 
 ---
 
 ## What's Included vs Excluded
 
 ### Included (v1)
+- Empty state with import instructions (first-run experience)
+- Import Backup (restore from desktop backup JSON)
+- App menu `[⋮]` with Import, View toggle, Theme, Deals Only, Show Hidden, Desktop Mode, Help
 - Dashboard home screen with configurable tag-based shelves + folder shelves
 - Cover grid folder view (3-wide portrait, 5-wide landscape)
 - Folder drawer navigation (hamburger menu)
@@ -364,15 +446,14 @@ Rather than a hardcoded "Next Reads" feature, the user configures which tag(s) a
 - Search with instant filter
 - Filter by tag, collection, read status
 - Breadcrumb navigation
-- "Desktop mode" toggle
 
 ### Excluded (stay desktop-only)
-- All data writes (editing, marking read, tagging)
+- All data editing (book metadata, marking read, tagging, notes)
 - Drag-drop reordering
 - Multi-select bulk operations
 - Folder create/rename/delete/reorder
 - Column customization (list view)
-- Import/export
+- Export (no new data to export — mobile is read-only)
 - Settings/preferences management (except mobile shelf config on desktop)
 - Bookmarklet/scraper operations
 
@@ -386,6 +467,88 @@ Rather than a hardcoded "Next Reads" feature, the user configures which tag(s) a
 
 ---
 
+## Data Transfer & Import
+
+### The Problem
+
+Mobile is typically a different device than desktop. The phone's browser has its own IndexedDB — empty by default. Users need a way to get their library data onto their phone.
+
+### Solution: Backup Import
+
+Reuse the existing backup/restore mechanism. Desktop already exports a complete backup JSON containing books, folders, folder assignments, tags, settings, and wishlist. Mobile imports this same file.
+
+**Workflow:**
+1. **Desktop**: File > Export Backup → saves `readerwrangler-backup-YYYY-MM-DD.json`
+2. **Transfer**: User sends file to phone (email attachment, Google Drive, iCloud, AirDrop, etc.)
+3. **Mobile**: Tap "Import Backup" (empty state button or app menu `[⋮]`) → file picker → select JSON
+4. **Result**: Data loads into IndexedDB, mobile transitions to dashboard
+
+**Re-sync workflow:**
+Same 3 steps. Import replaces all existing data (same as desktop restore). Desktop is always the source of truth.
+
+### Design Decisions
+
+- **Backup only, not library file** — The raw amazon-library.json is nearly the same size (~42 MB) but lacks organizational state (folders, tags, settings). No reason to support it.
+- **Full replace on import** — No merge logic. Desktop is source of truth. Simpler and avoids conflict resolution.
+- **No book data edits in v1** — Mobile writes user preferences (theme, view mode, sort, filters) to localStorage and Import Backup to IndexedDB, but never edits individual book data.
+
+---
+
+## Landing Page (index.html) on Mobile
+
+The landing page is a separate marketing/info page — not the app. It should be viewable on any device since users may discover ReaderWrangler on their phone.
+
+**Responsive adjustments:**
+- "See the Difference" before/after images: stack vertically instead of side-by-side
+- Video: scales to viewport width (`max-width: 100%`)
+- General layout: single-column stacking on narrow screens
+
+**Bookmarklet section:**
+Add a note for mobile visitors: "Bookmarklet installation requires a desktop browser. Set up ReaderWrangler on your desktop, then use the mobile viewer to browse your library on the go."
+
+**Note:** The viewport detection (`< 768px → mobile.js`) only applies to `readerwrangler.html` (the app). `index.html` is a standard responsive page — no JS routing needed.
+
+---
+
+## PWA: Add to Home Screen
+
+Adding a web app manifest lets Android (and iOS) users add ReaderWrangler to their home screen as an app-like shortcut — no browser chrome, own icon, standalone window.
+
+**Required files:**
+- `manifest.json` — App metadata (name, icons, theme color, display mode)
+- App icons — 192x192 and 512x512 PNG (minimum for Android)
+- `<link rel="manifest" href="manifest.json">` in `readerwrangler.html`
+
+**Example `manifest.json`:**
+```json
+{
+  "name": "ReaderWrangler Mobile",
+  "short_name": "ReaderWrangler",
+  "start_url": "/readerwrangler.html",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+```
+
+**What this gives us:**
+- Android: "Add to Home Screen" creates an app icon, launches in standalone mode (no URL bar, no tabs)
+- iOS: Similar via Safari "Add to Home Screen" (reads manifest or falls back to `<meta>` tags)
+- Desktop Chrome: Optional "Install app" prompt (nice-to-have, not a goal)
+
+**What we skip for v1:**
+- Service worker (offline caching) — not needed yet, data is in IndexedDB
+- Push notifications — not relevant
+- Install prompt interception — let the browser handle it natively
+
+**Effort:** ~30 minutes. Create manifest, export two icon sizes, add link tag.
+
+---
+
 ## Technical Notes
 
 - **Detection**: `window.matchMedia('(max-width: 767px)')` in `readerwrangler.html`. Secondary signal: `'ontouchstart' in window`. "Desktop mode" toggle persists in `localStorage`.
@@ -396,3 +559,85 @@ Rather than a hardcoded "Next Reads" feature, the user configures which tag(s) a
 - **Scroll preservation**: When returning from detail view to grid, restore `scrollTop` from state.
 - **Cover minimum size**: 60x90px absolute minimum. Target ~105x158px on a 375px-wide phone (3-wide grid).
 - **Sorting/filtering**: Duplicate logic from desktop initially. Extract to shared module later as a separate refactor.
+
+---
+
+## Implementation Checklist
+
+Ordered by dependency. Each phase builds on the previous. Check off items as completed.
+
+### Phase 1: Foundation (est. 2-3 hours)
+
+- [ ] **Viewport detection in readerwrangler.html** — Add `matchMedia('(max-width: 767px)')` check. If mobile, load `mobile.js` instead of `readerwrangler.js`. Check `localStorage.desktopMode` override first.
+- [ ] **Create `mobile.js` skeleton** — React 18 root, single `MobileApp` component, import `storage.js` and `uiHelpers.js`. Verify it renders a "Hello Mobile" placeholder on a phone-width viewport.
+- [ ] **Data loading** — Call `storage.js` to load books, folders, folder assignments, tags, wishlist, settings from IndexedDB. Store in React state. Handle the empty case (no data → show empty state).
+- [ ] **Theme support** — Read theme preference from localStorage. Apply CSS variables (same `[data-theme]` approach as desktop). Default to system preference if no saved theme.
+- [ ] **App version display** — Read APP_VERSION from query param (same as desktop).
+- [ ] **PWA manifest** — Create `manifest.json` (name, icons, standalone display, theme color). Create 192x192 and 512x512 app icons. Add `<link rel="manifest">` to `readerwrangler.html`. Enables "Add to Home Screen" on Android/iOS.
+
+### Phase 2: Empty State & Import (est. 1-2 hours)
+
+- [ ] **Empty state screen** — When no books in IndexedDB, show welcome message with 3-step instructions and Import Backup button (see mockup). No shelves, no footer bar.
+- [ ] **Import Backup handler** — File picker (`<input type="file" accept=".json">`), read JSON, validate it's a backup file, write to IndexedDB via `storage.js`. On success, reload state and transition to dashboard.
+- [ ] **Import error handling** — Invalid file format → toast/alert. Partial data → reject entirely (same as desktop restore behavior).
+
+### Phase 3: Header & Overlays (est. 2-3 hours)
+
+- [ ] **Header bar component** — Fixed top. Left: `[=]` hamburger. Center: title or breadcrumb. Right: `[Search]` icon, `[⋮]` three-dot icon. On folder view: `[<]` back replaces `[=]`.
+- [ ] **Overlay manager** — State: `activeOverlay: null | 'drawer' | 'menu'`. Only one open at a time. Tapping one while other is open → swap. Backdrop click → close.
+- [ ] **Folder drawer** — Slides in from left, 250px wide, backdrop dimming. Renders folder tree from state. Tap folder → set current folder, close drawer. Book counts in parentheses. Indentation for hierarchy.
+- [ ] **App menu** — Slides in from right, backdrop dimming. Items: Import Backup, separator, View toggle, Theme, Deals Only, Show Hidden, Desktop Mode, separator, Help & About. Toggles update in-place; other items close menu on tap.
+- [ ] **Menu toggle persistence** — Save view mode, theme, deals-only, show-hidden to localStorage. Read on load.
+
+### Phase 4: Dashboard Home (est. 2-3 hours)
+
+- [ ] **Recently Added shelf** — Horizontal scrollable row. Books sorted by `dateAdded` descending. Show first N books (enough to peek past screen edge). Cover + title + author.
+- [ ] **Folder shelves** — One row per top-level folder. Folder name as shelf title with count. Horizontal scroll. Tap title → navigate to folder grid view.
+- [ ] **Tag-based shelves** — Read `mobileShelfTags` from settings. For each tag, create a shelf showing all books with that tag. Hidden if no tags configured or no matching books.
+- [ ] **Cover card component** — Reusable. Cover image (105x158px target, 2:3 aspect), title truncated 1 line, author truncated 1 line. Tap → book detail view. Placeholder for missing covers.
+- [ ] **Shelf component** — Reusable. Label row (name + count), horizontal scroll container of cover cards. Tap label → navigate to full folder view.
+
+### Phase 5: Folder View — Cover Grid (est. 2 hours)
+
+- [ ] **Cover grid layout** — 3-wide portrait, 5-wide landscape. CSS grid with responsive columns. Subfolder tiles rendered before books (folder icon + name).
+- [ ] **Footer bar** — Sticky bottom. Sort button (opens sort picker), Filter button (opens filter sheet), book count display.
+- [ ] **Sort picker bottom sheet** — Slides up from bottom. Radio select for sort field + direction toggle. Fields: Name, Author, Rating, My Rating, Date Added, Series, Manual Order. Dismiss on selection or swipe down.
+- [ ] **Filter bottom sheet** — Tag filter, collection filter, read status filter. Apply immediately. Dismiss on tap outside or swipe down.
+- [ ] **Breadcrumb navigation** — Show folder path in header (e.g., "Sci-Fi > Hard SF"). Tap segment to navigate up. Back button `[<]` returns to parent or dashboard.
+- [ ] **Scroll position preservation** — Save `scrollTop` when navigating to detail view. Restore when returning.
+
+### Phase 6: Book Detail View (est. 1-2 hours)
+
+- [ ] **Detail view layout** — Full-screen view. Large cover (centered), title, author, rating (SVG stars), my rating, series, tags (as chips), collections, notes, status (Owned/Wishlist), price + goal.
+- [ ] **Back navigation** — `[<] Back` returns to previous view at saved scroll position.
+- [ ] **Conditional fields** — Only show fields that have data (no empty "Notes:" labels).
+
+### Phase 7: Search (est. 1-2 hours)
+
+- [ ] **Search screen** — Full-width search input replaces header content. `[<]` to exit search, `[Clear]` to reset.
+- [ ] **List layout results** — Small cover left + title/author/rating/folder right. Searches across title, author, series, tags, notes. Instant filter as you type.
+- [ ] **Tap result** — Opens book detail view. Back returns to search results (preserving query and scroll).
+
+### Phase 8: List View Alternative (est. 1 hour)
+
+- [ ] **List view toggle** — When View is set to "List" in app menu, folder views render as a list (small cover + text) instead of cover grid. Same sort/filter/footer bar.
+- [ ] **List row component** — Small cover (60x90), title, author, rating. Same tap → detail view behavior.
+
+### Phase 9: Landing Page Responsive (est. 1-2 hours)
+
+- [ ] **index.html responsive CSS** — Media query for `max-width: 767px`. Before/after images stack vertically. Video scales to viewport. Single-column layout on narrow screens.
+- [ ] **Bookmarklet mobile note** — Add note in bookmarklet section for mobile visitors: "Bookmarklet installation requires a desktop browser."
+- [ ] **General mobile readability** — Check font sizes, tap targets, padding on small screens.
+
+### Phase 10: Documentation & Polish (est. 1 hour)
+
+- [ ] **Update FAQ** — Add mobile support entry: what works, what's desktop-only, how to import.
+- [ ] **Update README.md / index.html** — Document mobile viewer in features section.
+- [ ] **Test on actual phone** — Load on real phone (iPhone/Android). Verify import, navigation, search, sort, theme switching. Check both portrait and landscape.
+- [ ] **Splash/loading screen** — Mobile may need its own loading indicator while IndexedDB data loads.
+
+### Post-Implementation
+
+- [ ] **Release version bump** — Update ORGANIZER_VERSION, APP_VERSION, CHANGELOG, CSS cache-buster per release checklist.
+- [ ] **Push to dev for testing** — Since mobile detection runs from the hosted URL, need to push to dev remote to test on actual phone.
+- [ ] **Post-mortem** — Review what worked, what didn't, update design doc with lessons learned.

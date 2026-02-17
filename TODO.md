@@ -15,27 +15,25 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Cover grid folder view (3-wide portrait, 5-wide landscape), folder drawer, book detail view
    - Search ("do I own this?"), sort, filter — all read-only for v1
    - Reuses `storage.js` / `uiHelpers.js`, same IndexedDB data, no changes to desktop code
+   - Empty state with import instructions for first-run on a new device
+   - App menu `[⋮]` with Import Backup, View toggle, Theme, Deals Only, Show Hidden, Desktop Mode, Help
+   - Landing page (index.html): responsive CSS for mobile visitors, bookmarklet note pointing to desktop
+   - Update FAQ and main page to document mobile support (absorbed from former P3-T1)
    - Design doc: `docs/design/MOBILE-VIEWER.md`
    - Impact: Makes library browsable on phone; key use case is checking ownership while away from desktop
 
-**1. 📱 Mobile Support Clarity** - HIGH/LOW (1 hour)
-   - Document that desktop is the primary UI; mobile viewer planned as separate purpose-built UI (see P7-T1)
-   - Add to FAQ and main page
-   - Problem: Major omission for users who browse libraries on phones/tablets
-   - Impact: Sets correct expectations
-
-**2. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
+**1. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
    - Link version display (e.g., "v3.6.0") to CHANGELOG.md
    - Problem: Users see version numbers but no context
    - Impact: Transparency about what changed
 
-**3. Browser Compatibility Documentation** - LOW/LOW (30 min)
+**2. Browser Compatibility Documentation** - LOW/LOW (30 min)
    - Document Chrome-only requirement in README and app footer
    - Note: Firefox/Edge may work but untested
    - Optional: 30-min Firefox smoke test before public release
    - Problem: Users may try on unsupported browsers
    - Impact: Clear expectations, reduced support burden
-**4. Button Consistency Audit** - LOW/LOW (2-4 hours)
+**3. Button Consistency Audit** - LOW/LOW (2-4 hours)
    - Audit all button hover states across the app
    - Define 3 button styles: Primary/Secondary/Tertiary
    - Apply consistently everywhere (price goals, Add Tag, View on Amazon, Add Note, Edit Series, etc.)
@@ -43,7 +41,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Different buttons have different hover behaviors, users can't predict interaction
    - Impact: Consistent, predictable UI interactions
 
-**5. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
+**4. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
    - Semantic HTML audit (use `<button>` not `<div onclick>`)
    - ARIA labels for key interactions (context menus, drag operations)
    - Keyboard-only navigation validation (tab order, focus indicators)
@@ -52,7 +50,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Impact: Broader user base support with minimal effort
 
 
-**6. Quality Attribute Validation** - LOW/LOW (2-3 hours)
+**5. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
    - ~~**Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second~~ ✅ v5.5.4
    - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
