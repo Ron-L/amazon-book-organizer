@@ -1,11 +1,20 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.4';
+const MOBILE_VERSION = '0.1.0-alpha.5';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
-const { useState, useEffect, useCallback } = React;
+const { useState, useEffect, useCallback, useMemo } = React;
 
 const MOBILE_PREFS_KEY = 'readerwrangler-mobile-prefs';
+const SHELF_LIMIT = 20;
+
+// Inject mobile-only styles (hidden scrollbar for shelf containers)
+if (!document.getElementById('mobile-styles')) {
+    const style = document.createElement('style');
+    style.id = 'mobile-styles';
+    style.textContent = '.shelf-scroll::-webkit-scrollbar { display: none }';
+    document.head.appendChild(style);
+}
 
 // --- Backup import helpers ---
 
@@ -110,6 +119,35 @@ const IconCheck = () => (
         <polyline points="20 6 9 17 4 12" />
     </svg>
 );
+
+// --- Helper functions ---
+
+function parseBookDate(dateStr) {
+    if (!dateStr) return new Date(0);
+    const ts = typeof dateStr === 'string' ? parseInt(dateStr) : dateStr;
+    if (!isNaN(ts) && ts > 1000000000) {
+        return new Date(ts > 9999999999 ? ts : ts * 1000);
+    }
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? new Date(0) : d;
+}
+
+function filterBooks(books, { showDealsOnly, showHidden }) {
+    return books.filter(book => {
+        if (!showHidden && book.isHidden) return false;
+        if (showDealsOnly) {
+            if (book.priceTrigger == null || book.currentPrice == null) return false;
+            if (book.currentPrice > book.priceTrigger) return false;
+        }
+        return true;
+    });
+}
+
+function checkIfBlankImage(img, bookId, setBlankImageBooks) {
+    if (img.naturalWidth < 10 || img.naturalHeight < 10) {
+        setBlankImageBooks(prev => new Set([...prev, bookId]));
+    }
+}
 
 // --- Header component ---
 
@@ -313,6 +351,186 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
     );
 }
 
+// --- CoverCard component ---
+
+function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks }) {
+    const isBlank = blankImageBooks.has(book.id);
+    const imgSrc = coverUrlMap[book.coverUrl] || book.coverUrl;
+
+    return (
+        <div style={{ width: '105px', flexShrink: 0, touchAction: 'manipulation' }}>
+            <div style={{
+                aspectRatio: '2/3',
+                borderRadius: '4px',
+                overflow: 'hidden',
+                boxShadow: 'var(--shadow-card, 0 4px 6px -1px rgba(0,0,0,0.1))'
+            }}>
+                {isBlank || !book.coverUrl ? (
+                    <div style={{
+                        width: '100%', height: '100%',
+                        backgroundColor: 'var(--bg-book-placeholder, #d4c5a9)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        padding: '8px'
+                    }}>
+                        <div style={{
+                            textAlign: 'center',
+                            fontFamily: 'var(--font-heading)',
+                            fontWeight: 700,
+                            fontSize: '0.6em',
+                            lineHeight: 1.2,
+                            color: 'var(--text-primary, #1e293b)',
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 4,
+                            WebkitBoxOrient: 'vertical'
+                        }}>
+                            {book.title}
+                        </div>
+                    </div>
+                ) : (
+                    <img
+                        src={imgSrc}
+                        alt=""
+                        loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={() => setBlankImageBooks(prev => new Set([...prev, book.id]))}
+                        onLoad={(e) => checkIfBlankImage(e.target, book.id, setBlankImageBooks)}
+                    />
+                )}
+            </div>
+            <div className="truncate" style={{
+                marginTop: '4px', fontSize: '12px', fontWeight: 600,
+                lineHeight: 1.3, color: 'var(--text-primary, #1e293b)'
+            }}>
+                {book.title}
+            </div>
+            <div className="truncate" style={{
+                fontSize: '11px', lineHeight: 1.3,
+                color: 'var(--text-secondary, #475569)'
+            }}>
+                {book.author}
+            </div>
+        </div>
+    );
+}
+
+// --- Shelf component ---
+
+function Shelf({ title, count, books, coverUrlMap, blankImageBooks, setBlankImageBooks }) {
+    if (books.length === 0) return null;
+
+    return (
+        <div style={{ marginBottom: '24px' }}>
+            <div className="flex items-center justify-between" style={{ padding: '0 16px', marginBottom: '8px' }}>
+                <span style={{
+                    fontFamily: 'var(--font-heading)',
+                    fontSize: '15px', fontWeight: 700,
+                    color: 'var(--text-primary, #1e293b)'
+                }}>
+                    {title}
+                </span>
+                <span style={{ fontSize: '13px', color: 'var(--text-muted, #94a3b8)' }}>
+                    ({count})
+                </span>
+            </div>
+            <div className="shelf-scroll" style={{
+                display: 'flex', gap: '12px',
+                overflowX: 'auto',
+                paddingLeft: '16px', paddingRight: '16px', paddingBottom: '4px',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+            }}>
+                {books.map(book => (
+                    <CoverCard
+                        key={book.id}
+                        book={book}
+                        coverUrlMap={coverUrlMap}
+                        blankImageBooks={blankImageBooks}
+                        setBlankImageBooks={setBlankImageBooks}
+                    />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// --- Dashboard component ---
+
+function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks }) {
+    const filteredBooks = useMemo(() => {
+        return filterBooks(books, { showDealsOnly, showHidden });
+    }, [books, showDealsOnly, showHidden]);
+
+    const bookMap = useMemo(() => {
+        const map = {};
+        for (const book of filteredBooks) map[book.id] = book;
+        return map;
+    }, [filteredBooks]);
+
+    const filteredBookIds = useMemo(() => {
+        return new Set(filteredBooks.map(b => b.id));
+    }, [filteredBooks]);
+
+    const shelves = useMemo(() => {
+        const result = [];
+
+        // Recently Added shelf
+        const recentBooks = [...filteredBooks]
+            .sort((a, b) => parseBookDate(b.acquired || b.dateAdded) - parseBookDate(a.acquired || a.dateAdded))
+            .slice(0, SHELF_LIMIT);
+
+        if (recentBooks.length > 0) {
+            result.push({ title: 'Recently Added', count: filteredBooks.length, books: recentBooks });
+        }
+
+        // Folder shelves (one per top-level folder, alphabetical)
+        const topLevelFolders = folders
+            .filter(f => !f.parentId)
+            .sort((a, b) => a.name.localeCompare(b.name));
+
+        for (const folder of topLevelFolders) {
+            const folderBooks = (folder.bookIds || [])
+                .filter(id => filteredBookIds.has(id))
+                .map(id => bookMap[id])
+                .filter(Boolean);
+
+            if (folderBooks.length > 0) {
+                result.push({ title: folder.name, count: folderBooks.length, books: folderBooks.slice(0, SHELF_LIMIT) });
+            }
+        }
+
+        return result;
+    }, [filteredBooks, filteredBookIds, bookMap, folders]);
+
+    if (shelves.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center px-6 text-center"
+                 style={{ minHeight: 'calc(100vh - 48px)' }}>
+                <p className="text-sm" style={{ color: 'var(--text-muted, #94a3b8)' }}>
+                    No books match the current filters.
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ paddingTop: '12px', paddingBottom: '24px' }}>
+            {shelves.map((shelf, i) => (
+                <Shelf
+                    key={shelf.title + '-' + i}
+                    title={shelf.title}
+                    count={shelf.count}
+                    books={shelf.books}
+                    coverUrlMap={coverUrlMap}
+                    blankImageBooks={blankImageBooks}
+                    setBlankImageBooks={setBlankImageBooks}
+                />
+            ))}
+        </div>
+    );
+}
+
 // --- Main app ---
 
 function MobileApp() {
@@ -321,6 +539,7 @@ function MobileApp() {
     const [tagRegistry, setTagRegistry] = useState({});
     const [hiddenInstances, setHiddenInstances] = useState(new Set());
     const [coverUrlMap, setCoverUrlMap] = useState({});
+    const [blankImageBooks, setBlankImageBooks] = useState(new Set());
     const [loading, setLoading] = useState(true);
     const [importing, setImporting] = useState(false);
     const [error, setError] = useState(null);
@@ -366,6 +585,7 @@ function MobileApp() {
         const org = orgState.organization || {};
         setTagRegistry(org.tagRegistry || {});
         setHiddenInstances(new Set(org.hiddenInstances || []));
+        setBlankImageBooks(new Set(org.blankImageBooks || []));
 
         if (loadedBooks.length > 0) {
             const urlMap = await buildCoverUrlMap(loadedBooks);
@@ -496,14 +716,15 @@ function MobileApp() {
             {/* Content area (below fixed header) */}
             <div style={{ paddingTop: '48px' }}>
                 {hasBooks ? (
-                    <div className="flex flex-col items-center justify-center px-6 text-center" style={{ minHeight: 'calc(100vh - 48px)' }}>
-                        <p className="text-base mb-1">
-                            {books.length.toLocaleString()} books · {folders.length} folders · {Object.keys(tagRegistry).length} tags
-                        </p>
-                        <p className="text-xs mt-3" style={{ color: 'var(--text-muted, #64748b)' }}>
-                            Dashboard shelves coming in Phase 4
-                        </p>
-                    </div>
+                    <Dashboard
+                        books={books}
+                        folders={folders}
+                        showDealsOnly={showDealsOnly}
+                        showHidden={showHidden}
+                        coverUrlMap={coverUrlMap}
+                        blankImageBooks={blankImageBooks}
+                        setBlankImageBooks={setBlankImageBooks}
+                    />
                 ) : (
                     <div className="flex flex-col items-center justify-center px-6 text-center" style={{ minHeight: 'calc(100vh - 48px)' }}>
                         <img src="icons/logo-transparent.png" alt="" className="w-20 h-20 mb-4" />
