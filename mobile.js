@@ -85,15 +85,10 @@ function MobileApp() {
 
                 {hasBooks ? (
                     <div>
-                        <p className="text-lg mb-2">
-                            {books.length} book{books.length !== 1 ? 's' : ''} loaded
+                        <p className="text-base mb-1">
+                            {books.length.toLocaleString()} books · {folders.length} folders · {Object.keys(tagRegistry).length} tags
                         </p>
-                        <p className="text-sm" style={{ color: 'var(--text-muted, #64748b)' }}>
-                            {folders.length} folder{folders.length !== 1 ? 's' : ''}
-                            {' · '}
-                            {Object.keys(tagRegistry).length} tag{Object.keys(tagRegistry).length !== 1 ? 's' : ''}
-                        </p>
-                        <p className="text-xs mt-4" style={{ color: 'var(--text-muted, #64748b)' }}>
+                        <p className="text-xs mt-3" style={{ color: 'var(--text-muted, #64748b)' }}>
                             Full mobile UI coming in Phase 2
                         </p>
                     </div>
