@@ -4,7 +4,7 @@
 
 | Filename | Size | Style | Used In |
 |----------|------|-------|---------|
-| `favicon.ico` | 32x32 | Wordless, blue bg | All HTML pages — browser tab |
+| `favicon.ico` | 16+32+48 (multi-size) | Wordless, blue bg | All HTML pages — browser tab |
 | `favicon-16.png` | 16x16 | Wordless, blue bg | All HTML pages — small favicon |
 | `favicon-32.png` | 32x32 | Wordless, blue bg | All HTML pages — large favicon |
 | `apple-touch-icon.png` | 180x180 | Wordless, blue bg | iOS "Add to Home Screen" |
@@ -39,7 +39,7 @@ Removed in the icon cleanup commit during mobile viewer work (v5.6.x). Use `git 
 
 ## Design Notes
 
-- **Blue background** (`#A8C8E0`-ish): Used for all home screen / tab / social icons. This is the brand color, distinct from the app's dark UI theme.
+- **Blue background** (`#dbeafe` / Tailwind blue-100): Used for all home screen / tab / social icons. Matches the app's selected-row / search-bar tint. Previously `#A8C8E0`; updated to align with the current Tailwind Blue color system.
 - **Transparent**: Used for in-app display where the icon sits on themed backgrounds (splash screen, hero section).
 - **Wordless**: All icons except `og-image.png` omit the tagline — text is unreadable below ~300px.
 - **Source art**: Created in Canva. Source designs may still be accessible via the Canva account.
