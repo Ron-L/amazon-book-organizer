@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.11';
+const MOBILE_VERSION = '0.1.0-alpha.12';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -226,6 +226,19 @@ function buildBreadcrumb(folderId, folders) {
     }
     if (parts.length > 2) return '… > ' + parts.slice(-2).join(' > ');
     return parts.join(' > ') || 'Library';
+}
+
+// Collect all bookIds from a folder and all its descendant subfolders
+function collectDescendantBookIds(folderId, folders) {
+    const ids = [];
+    const folder = folders.find(f => f.id === folderId);
+    if (!folder) return ids;
+    ids.push(...(folder.bookIds || []));
+    const children = folders.filter(f => f.parentId === folderId);
+    for (const child of children) {
+        ids.push(...collectDescendantBookIds(child.id, folders));
+    }
+    return ids;
 }
 
 // --- Sub-components ---
@@ -663,7 +676,8 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
             .filter(f => !f.parentId);
 
         for (const folder of topLevelFolders) {
-            const folderBooks = (folder.bookIds || [])
+            const allBookIds = collectDescendantBookIds(folder.id, folders);
+            const folderBooks = allBookIds
                 .filter(id => filteredBookIds.has(id))
                 .map(id => bookMap[id])
                 .filter(Boolean);

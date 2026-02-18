@@ -116,7 +116,8 @@ Three rows of covers with titles fit comfortably. Room for a shelf label row abo
 
 - **Top shelf**: "Next Reads" — populated from a user-configured tag (see Configurable Shelves below). Shows all books with that tag. If no tag configured or no books tagged, shelf is hidden.
 - **Second shelf**: "Recently Added" — sorted by dateAdded descending, top N books.
-- **Remaining shelves**: One per top-level folder, showing first 3-4 books with horizontal scroll for more. Tap shelf title to open full folder grid view.
+- **Remaining shelves**: One per top-level folder (in desktop manual order), showing books aggregated from the folder and all its subfolders (up to SHELF_LIMIT=20). Non-series books first, then each series in desktop manual order. Tap shelf title to open full folder grid view.
+- **Series label bars** (future enhancement): Within each folder shelf, a thin non-scrolling label bar appears under each series' books showing the series name. This gives "which series am I looking at?" context without per-book badges. Covers scroll horizontally above the label. "Show All" card at end navigates to folder view. See Phase 5 Bug Tracking for design discussion.
 - Netflix/Spotify-style horizontal shelves give an at-a-glance library summary.
 
 ### Empty State (First Run / No Data)
@@ -641,3 +642,51 @@ Ordered by dependency. Each phase builds on the previous. Check off items as com
 - [ ] **Release version bump** — Update ORGANIZER_VERSION, APP_VERSION, CHANGELOG, CSS cache-buster per release checklist.
 - [ ] **Push to dev for testing** — Since mobile detection runs from the hosted URL, need to push to dev remote to test on actual phone.
 - [ ] **Post-mortem** — Review what worked, what didn't, update design doc with lessons learned.
+
+---
+
+## Phase 5 Bug Tracking
+
+Issues found during Phase 5 user testing (commit `d307436`). Working through one at a time.
+
+### Issue #1: Scrolling & scroll position preservation
+- [x] **1A** Book detail view can't scroll down (root cause: `body { overflow: hidden }` in CSS) — fixed alpha.7
+- [x] **1B** Dashboard can't scroll vertically (same root cause as 1A) — fixed alpha.7
+- [x] **1C** Horizontal shelf scroll position not preserved on back — fixed alpha.7
+- [x] **1D** Vertical scroll position not preserved on back (root cause: reading `window.scrollY` inside React setState updater) — fixed alpha.9, cleaned alpha.10
+- [x] **1E** Dashboard shelves in alphabetical order — should match desktop custom folder order — fixed alpha.11 (Inbox still at bottom, known/separate)
+- [ ] **1F** Only 5 of 12 folders visible — folders with 0 top-level books are hidden (all books in subfolders)
+- [ ] **1G** Shelves only show books directly in folder, not books in subfolders (root cause of 1F)
+
+### Issue #2: Folder grid covers too large / dark mode spacing
+- [ ] **2A** Covers take up most of screen in folder view, should be more like dashboard size
+- [ ] **2B** In dark mode, hard to distinguish where one cover ends and another starts — needs more spacing
+
+### Issue #3: Folder tiles vs cover width mismatch
+- [ ] **3A** Folder tiles are 1/3 screen width but book covers are full width in folder view — jarring visual mismatch
+
+### Issue #5: Drawer structure
+- [ ] **5A** "All Books" should be at top of drawer, currently at end / unreachable
+- [ ] **5B** "My Library" pseudo-node missing — author folders should be indented under it
+- [ ] **5C** Inbox at bottom of list instead of at top under My Library
+
+### Issue #7: Scroll positions not preserved (general)
+- [x] **7A** Covered by fixes 1C and 1D — verified working in alpha.10
+
+### Issue #8: John Scalzi folder missing dots menu
+- [ ] **8A** Long breadcrumb text pushes header icons off screen (suspected: `flex` layout without `flexShrink: 0`)
+
+### ~~Issue #9: Drawer folder ordering~~
+- [x] **9A** Drawer folder ordering is correct — matches desktop manual order. Not a bug.
+- [x] **9B** Not a bug — see 9A.
+
+### Future Enhancement: Series label bars in dashboard shelves
+- Within each author's shelf row, show a thin non-scrolling label bar under each series' covers
+- Label bar shows series name, stays visible as covers scroll above it
+- "Show All" card at end of shelf navigates to full folder view
+- Non-series books appear first, then each series group in desktop manual order
+- Decided during 1F/1G discussion — deferred to after v1 bug fixes
+
+### Status
+- **Current alpha**: 0.1.0-alpha.11 (commit `61b4cc4`)
+- **Next up**: 1F/1G (dashboard subfolder book aggregation)
