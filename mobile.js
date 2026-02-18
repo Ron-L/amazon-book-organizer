@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.9';
+const MOBILE_VERSION = '0.1.0-alpha.10';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -1067,8 +1067,7 @@ function MobileApp() {
 
     const navigateTo = useCallback((view, params = {}) => {
         const shelfScrolls = Array.from(document.querySelectorAll('.shelf-scroll')).map(el => el.scrollLeft);
-        const scrollY = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
-        console.log('[NAV] capturing scrollY:', scrollY, 'window.scrollY:', window.scrollY, 'docEl:', document.documentElement.scrollTop, 'body:', document.body.scrollTop);
+        const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
         setNavStack(prev => {
             const updated = [...prev];
             updated[updated.length - 1] = { ...updated[updated.length - 1], scrollY, shelfScrolls };
@@ -1110,10 +1109,8 @@ function MobileApp() {
         const restore = scrollRestoreRef.current;
         if (!restore) return;
         scrollRestoreRef.current = null;
-        console.log('[NAV] restoring scrollY:', restore.scrollY, 'shelfScrolls:', restore.shelfScrolls);
         requestAnimationFrame(() => {
             window.scrollTo(0, restore.scrollY);
-            console.log('[NAV] after scrollTo, actual scrollY:', window.scrollY);
             const shelves = document.querySelectorAll('.shelf-scroll');
             restore.shelfScrolls.forEach((left, i) => {
                 if (shelves[i]) shelves[i].scrollLeft = left;
