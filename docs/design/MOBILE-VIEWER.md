@@ -655,8 +655,8 @@ Issues found during Phase 5 user testing (commit `d307436`). Working through one
 - [x] **1C** Horizontal shelf scroll position not preserved on back — fixed alpha.7
 - [x] **1D** Vertical scroll position not preserved on back (root cause: reading `window.scrollY` inside React setState updater) — fixed alpha.9, cleaned alpha.10
 - [x] **1E** Dashboard shelves in alphabetical order — should match desktop custom folder order — fixed alpha.11 (Inbox still at bottom, known/separate)
-- [ ] **1F** Only 5 of 12 folders visible — folders with 0 top-level books are hidden (all books in subfolders)
-- [ ] **1G** Shelves only show books directly in folder, not books in subfolders (root cause of 1F)
+- [x] **1F** Only 5 of 12 folders visible — folders with 0 top-level books are hidden (all books in subfolders) — fixed alpha.12
+- [x] **1G** Shelves only show books directly in folder, not books in subfolders (root cause of 1F) — fixed alpha.12
 
 ### Issue #2: Folder grid covers too large / dark mode spacing
 - [ ] **2A** Covers take up most of screen in folder view, should be more like dashboard size
@@ -688,5 +688,5 @@ Issues found during Phase 5 user testing (commit `d307436`). Working through one
 - Decided during 1F/1G discussion — deferred to after v1 bug fixes
 
 ### Status
-- **Current alpha**: 0.1.0-alpha.11 (commit `61b4cc4`)
-- **Next up**: 1F/1G (dashboard subfolder book aggregation)
+- **Current alpha**: 0.1.0-alpha.12 (commit `b980e2c`)
+- **Next up**: 2A/2B (folder grid covers too large, dark mode spacing)
