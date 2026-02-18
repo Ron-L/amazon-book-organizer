@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.10';
+const MOBILE_VERSION = '0.1.0-alpha.11';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -658,10 +658,9 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
             result.push({ title: 'Recently Added', count: filteredBooks.length, books: recentBooks, folderId: null });
         }
 
-        // Folder shelves (one per top-level folder, alphabetical)
+        // Folder shelves (one per top-level folder, preserving desktop manual order)
         const topLevelFolders = folders
-            .filter(f => !f.parentId)
-            .sort((a, b) => a.name.localeCompare(b.name));
+            .filter(f => !f.parentId);
 
         for (const folder of topLevelFolders) {
             const folderBooks = (folder.bookIds || [])
