@@ -1,9 +1,9 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.7';
+const MOBILE_VERSION = '0.1.0-alpha.8';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
-const { useState, useEffect, useCallback, useMemo } = React;
+const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
 const MOBILE_PREFS_KEY = 'readerwrangler-mobile-prefs';
 const SHELF_LIMIT = 20;
@@ -964,6 +964,7 @@ function MobileApp() {
     const [error, setError] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(null);
     const [navStack, setNavStack] = useState([{ view: 'dashboard', scrollY: 0 }]);
+    const scrollRestoreRef = useRef(null);
 
     // Persisted preferences
     const savedPrefs = JSON.parse(localStorage.getItem(MOBILE_PREFS_KEY) || '{}');
@@ -1079,17 +1080,10 @@ function MobileApp() {
             if (prev.length <= 1) return prev;
             const newStack = prev.slice(0, -1);
             const target = newStack[newStack.length - 1];
-            const restoreY = target.scrollY || 0;
-            const shelfScrolls = target.shelfScrolls || [];
-            requestAnimationFrame(() => {
-                window.scrollTo(0, restoreY);
-                requestAnimationFrame(() => {
-                    const shelves = document.querySelectorAll('.shelf-scroll');
-                    shelfScrolls.forEach((left, i) => {
-                        if (shelves[i]) shelves[i].scrollLeft = left;
-                    });
-                });
-            });
+            scrollRestoreRef.current = {
+                scrollY: target.scrollY || 0,
+                shelfScrolls: target.shelfScrolls || []
+            };
             return newStack;
         });
     }, []);
@@ -1108,6 +1102,20 @@ function MobileApp() {
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
     }, [navStack.length, goBack]);
+
+    // Restore scroll position after view re-renders on goBack
+    useEffect(() => {
+        const restore = scrollRestoreRef.current;
+        if (!restore) return;
+        scrollRestoreRef.current = null;
+        requestAnimationFrame(() => {
+            window.scrollTo(0, restore.scrollY);
+            const shelves = document.querySelectorAll('.shelf-scroll');
+            restore.shelfScrolls.forEach((left, i) => {
+                if (shelves[i]) shelves[i].scrollLeft = left;
+            });
+        });
+    });
 
     // Overlay handlers
     const toggleDrawer = () => setActiveOverlay(prev => prev === 'drawer' ? null : 'drawer');
