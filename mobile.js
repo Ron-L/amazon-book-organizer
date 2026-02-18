@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.6';
+const MOBILE_VERSION = '0.1.0-alpha.7';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo } = React;
@@ -12,7 +12,7 @@ const SHELF_LIMIT = 20;
 if (!document.getElementById('mobile-styles')) {
     const style = document.createElement('style');
     style.id = 'mobile-styles';
-    style.textContent = '.shelf-scroll::-webkit-scrollbar { display: none }';
+    style.textContent = '.shelf-scroll::-webkit-scrollbar { display: none } body { overflow: auto !important; }';
     document.head.appendChild(style);
 }
 
@@ -1065,9 +1065,10 @@ function MobileApp() {
     const currentNav = navStack[navStack.length - 1];
 
     const navigateTo = useCallback((view, params = {}) => {
+        const shelfScrolls = Array.from(document.querySelectorAll('.shelf-scroll')).map(el => el.scrollLeft);
         setNavStack(prev => {
             const updated = [...prev];
-            updated[updated.length - 1] = { ...updated[updated.length - 1], scrollY: window.scrollY };
+            updated[updated.length - 1] = { ...updated[updated.length - 1], scrollY: window.scrollY, shelfScrolls };
             return [...updated, { view, scrollY: 0, ...params }];
         });
         window.scrollTo(0, 0);
@@ -1077,8 +1078,18 @@ function MobileApp() {
         setNavStack(prev => {
             if (prev.length <= 1) return prev;
             const newStack = prev.slice(0, -1);
-            const restoreY = newStack[newStack.length - 1].scrollY || 0;
-            requestAnimationFrame(() => window.scrollTo(0, restoreY));
+            const target = newStack[newStack.length - 1];
+            const restoreY = target.scrollY || 0;
+            const shelfScrolls = target.shelfScrolls || [];
+            requestAnimationFrame(() => {
+                window.scrollTo(0, restoreY);
+                requestAnimationFrame(() => {
+                    const shelves = document.querySelectorAll('.shelf-scroll');
+                    shelfScrolls.forEach((left, i) => {
+                        if (shelves[i]) shelves[i].scrollLeft = left;
+                    });
+                });
+            });
             return newStack;
         });
     }, []);
