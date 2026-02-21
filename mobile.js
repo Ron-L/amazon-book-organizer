@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.12';
+const MOBILE_VERSION = '0.1.0-alpha.13';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -741,9 +741,9 @@ function FolderView({ folderId, books, folders, showDealsOnly, showHidden,
     }
 
     return (
-        <div style={{ padding: '12px 12px 24px' }}>
+        <div style={{ padding: '12px 16px 24px' }}>
             {subfolders.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 105px)', gap: '16px 12px', justifyContent: 'center', marginBottom: '16px' }}>
                     {subfolders.map(sub => (
                         <FolderTile key={sub.id} folder={sub} onTap={() => onTapSubfolder(sub.id)} />
                     ))}
@@ -751,13 +751,13 @@ function FolderView({ folderId, books, folders, showDealsOnly, showHidden,
             )}
 
             {folderBooks.length > 0 ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, 105px)', gap: '16px 12px', justifyContent: 'center' }}>
                     {folderBooks.map(book => (
                         <CoverCard
                             key={book.id} book={book}
                             coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
                             setBlankImageBooks={setBlankImageBooks}
-                            onTap={onTapBook} fillWidth
+                            onTap={onTapBook}
                         />
                     ))}
                 </div>
