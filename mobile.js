@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.14';
+const MOBILE_VERSION = '0.1.0-alpha.15';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -15,10 +15,10 @@ if (!document.getElementById('mobile-styles')) {
     style.textContent = [
         '.shelf-scroll::-webkit-scrollbar { display: none }',
         'body { overflow: auto !important; }',
-        ':root { --folder-tile-bg: #fffbeb; --folder-tile-border: #fde68a; }',
-        '[data-theme="dark"] { --folder-tile-bg: #422006; --folder-tile-border: #92400e; }',
-        '[data-theme="hc-light"] { --folder-tile-bg: #fffbeb; --folder-tile-border: #d97706; }',
-        '[data-theme="hc-dark"] { --folder-tile-bg: #451a03; --folder-tile-border: #b45309; }'
+        ':root { --folder-tile-bg: #fffbeb; --folder-tile-border: #fde68a; --cover-border: none; }',
+        '[data-theme="dark"] { --folder-tile-bg: #422006; --folder-tile-border: #a16207; --cover-border: 1px solid rgba(255,255,255,0.1); }',
+        '[data-theme="hc-light"] { --folder-tile-bg: #fffbeb; --folder-tile-border: #d97706; --cover-border: none; }',
+        '[data-theme="hc-dark"] { --folder-tile-bg: #451a03; --folder-tile-border: #b45309; --cover-border: 1px solid rgba(255,255,255,0.15); }'
     ].join('\n');
     document.head.appendChild(style);
 }
@@ -555,7 +555,8 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                 aspectRatio: '2/3',
                 borderRadius: '4px',
                 overflow: 'hidden',
-                boxShadow: 'var(--shadow-card, 0 4px 6px -1px rgba(0,0,0,0.1))'
+                boxShadow: 'var(--shadow-card, 0 4px 6px -1px rgba(0,0,0,0.1))',
+                border: 'var(--cover-border, none)'
             }}>
                 {isBlank || !book.coverUrl ? (
                     <div style={{
