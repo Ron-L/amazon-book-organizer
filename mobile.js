@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.13';
+const MOBILE_VERSION = '0.1.0-alpha.14';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -8,11 +8,18 @@ const { useState, useEffect, useCallback, useMemo, useRef } = React;
 const MOBILE_PREFS_KEY = 'readerwrangler-mobile-prefs';
 const SHELF_LIMIT = 20;
 
-// Inject mobile-only styles (hidden scrollbar for shelf containers)
+// Inject mobile-only styles (hidden scrollbar for shelf containers, folder tile theme colors)
 if (!document.getElementById('mobile-styles')) {
     const style = document.createElement('style');
     style.id = 'mobile-styles';
-    style.textContent = '.shelf-scroll::-webkit-scrollbar { display: none } body { overflow: auto !important; }';
+    style.textContent = [
+        '.shelf-scroll::-webkit-scrollbar { display: none }',
+        'body { overflow: auto !important; }',
+        ':root { --folder-tile-bg: #fffbeb; --folder-tile-border: #fde68a; }',
+        '[data-theme="dark"] { --folder-tile-bg: #422006; --folder-tile-border: #92400e; }',
+        '[data-theme="hc-light"] { --folder-tile-bg: #fffbeb; --folder-tile-border: #d97706; }',
+        '[data-theme="hc-dark"] { --folder-tile-bg: #451a03; --folder-tile-border: #b45309; }'
+    ].join('\n');
     document.head.appendChild(style);
 }
 
@@ -283,13 +290,15 @@ function FolderTile({ folder, onTap }) {
         <div onClick={onTap} style={{ width: '100%', touchAction: 'manipulation', cursor: 'pointer' }}>
             <div style={{
                 aspectRatio: '2/3', borderRadius: '4px', overflow: 'hidden',
-                backgroundColor: 'var(--bg-surface-alt, #f1f5f9)',
-                border: '1px solid var(--border-default, #e2e8f0)',
+                backgroundColor: 'var(--folder-tile-bg, #fffbeb)',
+                border: '2px solid var(--folder-tile-border, #fde68a)',
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
-                padding: '12px', gap: '8px'
+                padding: '8px', gap: '4px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
+                containerType: 'inline-size'
             }}>
-                <span style={{ color: 'var(--text-muted, #94a3b8)' }}><IconFolderLarge /></span>
+                <span style={{ fontSize: '50cqw', lineHeight: 1 }}>📁</span>
                 <span style={{
                     fontSize: '12px', fontWeight: 600, textAlign: 'center',
                     color: 'var(--text-primary, #1e293b)',
