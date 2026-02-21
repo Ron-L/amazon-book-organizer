@@ -565,128 +565,189 @@ Adding a web app manifest lets Android (and iOS) users add ReaderWrangler to the
 
 ## Implementation Checklist
 
-Ordered by dependency. Each phase builds on the previous. Check off items as completed.
+Ordered by dependency. Each phase builds on the previous.
 
-### Phase 1: Foundation (est. 2-3 hours)
+### Phase 1: Foundation — COMPLETE
 
-- [ ] **Viewport detection in readerwrangler.html** — Add `matchMedia('(max-width: 767px)')` check. If mobile, load `mobile.js` instead of `readerwrangler.js`. Check `localStorage.desktopMode` override first.
-- [ ] **Create `mobile.js` skeleton** — React 18 root, single `MobileApp` component, import `storage.js` and `uiHelpers.js`. Verify it renders a "Hello Mobile" placeholder on a phone-width viewport.
-- [ ] **Data loading** — Call `storage.js` to load books, folders, folder assignments, tags, wishlist, settings from IndexedDB. Store in React state. Handle the empty case (no data → show empty state).
-- [ ] **Theme support** — Read theme preference from localStorage. Apply CSS variables (same `[data-theme]` approach as desktop). Default to system preference if no saved theme.
-- [ ] **App version display** — Read APP_VERSION from query param (same as desktop).
-- [ ] **PWA manifest** — Create `manifest.json` (name, icons, standalone display, theme color). Create 192x192 and 512x512 app icons. Add `<link rel="manifest">` to `readerwrangler.html`. Enables "Add to Home Screen" on Android/iOS.
+#### Implementation
+- [x] Viewport detection in readerwrangler.html
+- [x] Create `mobile.js` skeleton (React 18, MobileApp component)
+- [x] Data loading from IndexedDB via `storage.js`
+- [x] Theme support (data-theme CSS variables)
+- [x] App version display
+- [x] PWA manifest (manifest.json, app icons)
 
-### Phase 2: Empty State & Import (est. 1-2 hours)
-
-- [ ] **Empty state screen** — When no books in IndexedDB, show welcome message with 3-step instructions and Import Backup button (see mockup). No shelves, no footer bar.
-- [ ] **Import Backup handler** — File picker (`<input type="file" accept=".json">`), read JSON, validate it's a backup file, write to IndexedDB via `storage.js`. On success, reload state and transition to dashboard.
-- [ ] **Import error handling** — Invalid file format → toast/alert. Partial data → reject entirely (same as desktop restore behavior).
-
-### Phase 3: Header & Overlays (est. 2-3 hours)
-
-- [ ] **Header bar component** — Fixed top. Left: `[=]` hamburger. Center: title or breadcrumb. Right: `[Search]` icon, `[⋮]` three-dot icon. On folder view: `[<]` back replaces `[=]`.
-- [ ] **Overlay manager** — State: `activeOverlay: null | 'drawer' | 'menu'`. Only one open at a time. Tapping one while other is open → swap. Backdrop click → close.
-- [ ] **Folder drawer** — Slides in from left, 250px wide, backdrop dimming. Renders folder tree from state. Tap folder → set current folder, close drawer. Book counts in parentheses. Indentation for hierarchy.
-- [ ] **App menu** — Slides in from right, backdrop dimming. Items: Import Backup, separator, View toggle, Theme, Deals Only, Show Hidden, Desktop Mode, separator, Help & About. Toggles update in-place; other items close menu on tap.
-- [ ] **Menu toggle persistence** — Save view mode, theme, deals-only, show-hidden to localStorage. Read on load.
-
-### Phase 4: Dashboard Home (est. 2-3 hours)
-
-- [ ] **Recently Added shelf** — Horizontal scrollable row. Books sorted by `dateAdded` descending. Show first N books (enough to peek past screen edge). Cover + title + author.
-- [ ] **Folder shelves** — One row per top-level folder. Folder name as shelf title with count. Horizontal scroll. Tap title → navigate to folder grid view.
-- [ ] **Tag-based shelves** — Read `mobileShelfTags` from settings. For each tag, create a shelf showing all books with that tag. Hidden if no tags configured or no matching books.
-- [ ] **Cover card component** — Reusable. Cover image (105x158px target, 2:3 aspect), title truncated 1 line, author truncated 1 line. Tap → book detail view. Placeholder for missing covers.
-- [ ] **Shelf component** — Reusable. Label row (name + count), horizontal scroll container of cover cards. Tap label → navigate to full folder view.
-
-### Phase 5: Folder View — Cover Grid (est. 2 hours)
-
-- [ ] **Cover grid layout** — 3-wide portrait, 5-wide landscape. CSS grid with responsive columns. Subfolder tiles rendered before books (folder icon + name).
-- [ ] **Footer bar** — Sticky bottom. Sort button (opens sort picker), Filter button (opens filter sheet), book count display.
-- [ ] **Sort picker bottom sheet** — Slides up from bottom. Radio select for sort field + direction toggle. Fields: Name, Author, Rating, My Rating, Date Added, Series, Manual Order. Dismiss on selection or swipe down.
-- [ ] **Filter bottom sheet** — Tag filter, collection filter, read status filter. Apply immediately. Dismiss on tap outside or swipe down.
-- [ ] **Breadcrumb navigation** — Show folder path in header (e.g., "Sci-Fi > Hard SF"). Tap segment to navigate up. Back button `[<]` returns to parent or dashboard.
-- [ ] **Scroll position preservation** — Save `scrollTop` when navigating to detail view. Restore when returning.
-
-### Phase 6: Book Detail View (est. 1-2 hours)
-
-- [ ] **Detail view layout** — Full-screen view. Large cover (centered), title, author, rating (SVG stars), my rating, series, tags (as chips), collections, notes, status (Owned/Wishlist), price + goal.
-- [ ] **Back navigation** — `[<] Back` returns to previous view at saved scroll position.
-- [ ] **Conditional fields** — Only show fields that have data (no empty "Notes:" labels).
-
-### Phase 7: Search (est. 1-2 hours)
-
-- [ ] **Search screen** — Full-width search input replaces header content. `[<]` to exit search, `[Clear]` to reset.
-- [ ] **List layout results** — Small cover left + title/author/rating/folder right. Searches across title, author, series, tags, notes. Instant filter as you type.
-- [ ] **Tap result** — Opens book detail view. Back returns to search results (preserving query and scroll).
-
-### Phase 8: List View Alternative (est. 1 hour)
-
-- [ ] **List view toggle** — When View is set to "List" in app menu, folder views render as a list (small cover + text) instead of cover grid. Same sort/filter/footer bar.
-- [ ] **List row component** — Small cover (60x90), title, author, rating. Same tap → detail view behavior.
-
-### Phase 9: Landing Page Responsive (est. 1-2 hours)
-
-- [ ] **index.html responsive CSS** — Media query for `max-width: 767px`. Before/after images stack vertically. Video scales to viewport. Single-column layout on narrow screens.
-- [ ] **Bookmarklet mobile note** — Add note in bookmarklet section for mobile visitors: "Bookmarklet installation requires a desktop browser."
-- [ ] **General mobile readability** — Check font sizes, tap targets, padding on small screens.
-
-### Phase 10: Documentation & Polish (est. 1 hour)
-
-- [ ] **Update FAQ** — Add mobile support entry: what works, what's desktop-only, how to import.
-- [ ] **Update README.md / index.html** — Document mobile viewer in features section.
-- [ ] **Test on actual phone** — Load on real phone (iPhone/Android). Verify import, navigation, search, sort, theme switching. Check both portrait and landscape.
-- [ ] **Splash/loading screen** — Mobile may need its own loading indicator while IndexedDB data loads.
-
-### Post-Implementation
-
-- [ ] **Release version bump** — Update ORGANIZER_VERSION, APP_VERSION, CHANGELOG, CSS cache-buster per release checklist.
-- [ ] **Push to dev for testing** — Since mobile detection runs from the hosted URL, need to push to dev remote to test on actual phone.
-- [ ] **Post-mortem** — Review what worked, what didn't, update design doc with lessons learned.
+#### Verification — All OK
 
 ---
 
-## Phase 5 Bug Tracking
+### Phase 2: Empty State & Import — COMPLETE
 
-Issues found during Phase 5 user testing (commit `d307436`). Working through one at a time.
+#### Implementation
+- [x] Empty state screen (welcome + 3-step instructions + Import button)
+- [x] Import Backup handler (file picker, JSON validation, IndexedDB write)
+- [x] Import error handling
 
-### Issue #1: Scrolling & scroll position preservation
-- [x] **1A** Book detail view can't scroll down (root cause: `body { overflow: hidden }` in CSS) — fixed alpha.7
-- [x] **1B** Dashboard can't scroll vertically (same root cause as 1A) — fixed alpha.7
-- [x] **1C** Horizontal shelf scroll position not preserved on back — fixed alpha.7
-- [x] **1D** Vertical scroll position not preserved on back (root cause: reading `window.scrollY` inside React setState updater) — fixed alpha.9, cleaned alpha.10
-- [x] **1E** Dashboard shelves in alphabetical order — should match desktop custom folder order — fixed alpha.11 (Inbox still at bottom, known/separate)
-- [x] **1F** Only 5 of 12 folders visible — folders with 0 top-level books are hidden (all books in subfolders) — fixed alpha.12
-- [x] **1G** Shelves only show books directly in folder, not books in subfolders (root cause of 1F) — fixed alpha.12
+#### Verification — All OK
 
-### Issue #2: Folder grid covers too large / dark mode spacing
-- [ ] **2A** Covers take up most of screen in folder view, should be more like dashboard size
-- [ ] **2B** In dark mode, hard to distinguish where one cover ends and another starts — needs more spacing
+---
 
-### Issue #3: Folder tiles vs cover width mismatch
-- [ ] **3A** Folder tiles are 1/3 screen width but book covers are full width in folder view — jarring visual mismatch
+### Phase 3: Header & Overlays — COMPLETE
 
-### Issue #5: Drawer structure
-- [ ] **5A** "All Books" should be at top of drawer, currently at end / unreachable
-- [ ] **5B** "My Library" pseudo-node missing — author folders should be indented under it
-- [ ] **5C** Inbox at bottom of list instead of at top under My Library
+#### Implementation
+- [x] Header bar component (hamburger, title/breadcrumb, search, dots menu)
+- [x] Overlay manager (mutual exclusion, backdrop)
+- [x] Folder drawer (slides from left, folder tree, tap to navigate)
+- [x] App menu (slides from right, toggles, import, desktop mode)
+- [x] Menu toggle persistence (localStorage)
 
-### Issue #7: Scroll positions not preserved (general)
-- [x] **7A** Covered by fixes 1C and 1D — verified working in alpha.10
+#### Verification — All OK
 
-### Issue #8: John Scalzi folder missing dots menu
-- [ ] **8A** Long breadcrumb text pushes header icons off screen (suspected: `flex` layout without `flexShrink: 0`)
+---
 
-### ~~Issue #9: Drawer folder ordering~~
-- [x] **9A** Drawer folder ordering is correct — matches desktop manual order. Not a bug.
-- [x] **9B** Not a bug — see 9A.
+### Phase 4: Dashboard Home — COMPLETE
 
-### Future Enhancement: Series label bars in dashboard shelves
+#### Implementation
+- [x] Recently Added shelf
+- [x] Folder shelves (one per top-level folder, desktop manual order, aggregating subfolder books)
+- [ ] Tag-based shelves (deferred — requires desktop settings UI first)
+- [x] Cover card component (105px, 2:3 aspect, placeholder for missing covers)
+- [x] Shelf component (label + count, horizontal scroll)
+
+#### Verification — All OK
+
+---
+
+### Phase 5: Navigation, Folder View & Book Detail — IN PROGRESS (bug fixes)
+
+*Note: Original design split this across Phases 5 and 6. Implemented together.*
+
+#### Implementation
+- [x] Navigation stack (navStack with view/folderId/bookId/scrollY)
+- [x] Cover grid layout (folder view, 105px fixed columns, subfolder tiles before books)
+- [x] Breadcrumb navigation (folder path in header, back button)
+- [x] Scroll position preservation (vertical + horizontal shelf scroll)
+- [x] Book detail view (cover, title, author, stars, series, tags, collections, notes, price, reviews)
+- [x] Back navigation (stack-based, browser back button support)
+- [x] Conditional fields (only show fields with data)
+- [ ] Footer bar (sort/filter/count) — deferred to Phase 6
+- [ ] Sort picker bottom sheet — deferred to Phase 6
+- [ ] Filter bottom sheet — deferred to Phase 6
+- [ ] Shelf title chevron needs to be more visible (especially dark mode)
+
+#### Verification
+
+**V1. Dashboard → book detail** — Tap book → detail view → back to dashboard
+- [x] OK (after fixes) — alpha.7 through alpha.10
+
+  Issues found:
+  - [x] **P5-V1-A** Book detail view can't scroll down — fixed alpha.7 (`body { overflow: auto !important }`)
+  - [x] **P5-V1-B** Dashboard can't scroll vertically — fixed alpha.7 (same root cause)
+  - [x] **P5-V1-C** Horizontal shelf scroll position not preserved on back — fixed alpha.7
+  - [x] **P5-V1-D** Vertical scroll position not preserved on back — fixed alpha.9/10 (read scrollY outside setState)
+  - [x] **P5-V1-E** Dashboard shelves in alphabetical order — fixed alpha.11 (removed .sort())
+  - [x] **P5-V1-F** Only 5 of 12 folders visible (0 top-level books = hidden) — fixed alpha.12
+  - [x] **P5-V1-G** Shelves only show direct books, not subfolder books — fixed alpha.12 (collectDescendantBookIds)
+
+**V2. Dashboard → folder** — Tap shelf title → folder grid → back to dashboard
+- [ ] Issues remain
+
+  Issues found:
+  - [x] **P5-V2-A** Covers too large in folder view — fixed alpha.13 (105px fixed columns)
+  - [ ] **P5-V2-B** Dark mode: hard to distinguish cover boundaries — alpha.13 increased gap, needs retest
+  - [ ] **P5-V2-C** Dashboard shelf books are flat/unstructured (no series context) — see Future Enhancement below
+
+**V3. Folder → subfolder** — Subfolder tiles above books, tap to navigate deeper
+- [ ] Issues remain
+
+  Issues found:
+  - [ ] **P5-V3-A** Folder tiles vs cover width mismatch was jarring — may be resolved by alpha.13 (both now 105px)
+
+**V4. Folder → book detail** — Tap book in folder grid → detail → back to folder
+- [x] OK
+
+**V5. Drawer → folder** — Hamburger → tap folder → drawer closes, folder opens
+- [ ] Issues remain
+
+  Issues found:
+  - [ ] **P5-V5-A** "All Books" at end of drawer, unreachable
+  - [ ] **P5-V5-B** "My Library" pseudo-node missing
+  - [ ] **P5-V5-C** Inbox at bottom instead of at top under My Library
+
+**V6. Browser back button** — Works same as back arrow
+- [x] OK
+
+**V7. Deep navigation** — Dashboard → folder → subfolder → detail → back × 3
+- [x] OK (after fixes) — covered by P5-V1-C and P5-V1-D
+
+**V8. Filters in folder view** — Toggle Deals Only / Show Hidden
+- [ ] Not fully tested (John Scalzi dots menu issue blocked testing)
+
+  Issues found:
+  - [ ] **P5-V8-A** Long breadcrumb pushes header dots menu off screen (flexShrink fix needed)
+
+**V9. Empty folder** — Folder with 0 books shows message
+- [x] OK
+
+**V10. Dark mode** — All new components render correctly
+- [x] OK (general) — specific cover spacing issue tracked under P5-V2-B
+
+**V11. Star ratings** — Half stars display correctly
+- [x] OK
+
+**V12. Tags** — Display as blue chips with correct labels
+- [x] OK
+
+---
+
+### Phase 6: Sort, Filter & Search (not started)
+
+- [ ] Footer bar (sort/filter/count) in folder view
+- [ ] Sort picker bottom sheet
+- [ ] Filter bottom sheet
+- [ ] Search screen
+- [ ] Search list layout results
+- [ ] Tap search result → detail → back preserving query
+
+### Phase 7: List View Alternative (not started)
+
+- [ ] List view toggle in app menu
+- [ ] List row component (small cover + text)
+
+### Phase 8: Landing Page Responsive (not started)
+
+- [ ] index.html responsive CSS
+- [ ] Bookmarklet mobile note
+- [ ] General mobile readability
+
+### Phase 9: Documentation & Polish (not started)
+
+- [ ] Update FAQ
+- [ ] Update README.md / index.html
+- [ ] Test on actual phone
+- [ ] Splash/loading screen
+
+### Post-Implementation
+
+- [ ] Release version bump
+- [ ] Push to dev for testing
+- [ ] Post-mortem
+
+---
+
+## Future Enhancement: Series label bars in dashboard shelves
+
 - Within each author's shelf row, show a thin non-scrolling label bar under each series' covers
 - Label bar shows series name, stays visible as covers scroll above it
 - "Show All" card at end of shelf navigates to full folder view
 - Non-series books appear first, then each series group in desktop manual order
-- Decided during 1F/1G discussion — deferred to after v1 bug fixes
+- Decided during P5-V1-F/G discussion — promoted from "nice to have" to necessary for usable dashboard
+- Deferred until current bug fixes complete
 
-### Status
-- **Current alpha**: 0.1.0-alpha.12 (commit `b980e2c`)
-- **Next up**: 2A/2B (folder grid covers too large, dark mode spacing)
+---
+
+## Status
+
+- **Current alpha**: 0.1.0-alpha.13 (commit `b7dcb4c`)
+- **Current work**: Phase 5 bug fixes
+- **Next up**: P5-V2-B retest (dark mode cover spacing), then P5-V3-A, P5-V5-A/B/C, P5-V8-A
