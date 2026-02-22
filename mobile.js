@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.45';
+const MOBILE_VERSION = '0.1.0-alpha.46';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -223,19 +223,6 @@ function formatDate(dateStr) {
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function buildBreadcrumb(folderId, folders) {
-    const parts = [];
-    let currentId = folderId;
-    while (currentId) {
-        const folder = folders.find(f => f.id === currentId);
-        if (!folder) break;
-        parts.unshift(folder.name);
-        currentId = folder.parentId;
-    }
-    if (parts.length > 2) return '… > ' + parts.slice(-2).join(' > ');
-    return parts.join(' > ') || 'Library';
-}
-
 // Collect all bookIds from a folder and all its descendant subfolders
 function collectDescendantBookIds(folderId, folders) {
     const ids = [];
@@ -318,11 +305,13 @@ function FolderTile({ folder, onTap }) {
 
 function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer, onToggleMenu, hasExpandedShelves, onCollapseAll }) {
     const isDashboard = currentNav.view === 'dashboard';
+    const showBack = !isDashboard;
 
-    // Determine center text
+    // Determine center text — just current context name, not full breadcrumb
     let centerText = 'ReaderWrangler';
     if (currentNav.view === 'folder') {
-        centerText = buildBreadcrumb(currentNav.folderId, folders);
+        const f = folders.find(fl => fl.id === currentNav.folderId);
+        centerText = f ? f.name : 'Library';
     } else if (currentNav.view === 'detail') {
         const prev = navStack.length >= 2 ? navStack[navStack.length - 2] : null;
         if (prev && prev.view === 'folder') {
@@ -341,15 +330,16 @@ function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer
                 borderBottom: '1px solid var(--border-default, #e2e8f0)',
                 color: 'var(--text-primary, #1e293b)'
             }}>
-            {isDashboard ? (
+            <div className="flex items-center">
                 <button onClick={onToggleDrawer} className="p-2 -ml-1" style={{ touchAction: 'manipulation' }}>
                     <IconHamburger />
                 </button>
-            ) : (
-                <button onClick={onGoBack} className="p-2 -ml-1" style={{ touchAction: 'manipulation' }}>
-                    <IconBack />
-                </button>
-            )}
+                {showBack && (
+                    <button onClick={onGoBack} className="p-2" style={{ touchAction: 'manipulation' }}>
+                        <IconBack />
+                    </button>
+                )}
+            </div>
             <span className="truncate" style={{
                 fontFamily: isDashboard ? "'Libre Baskerville', Georgia, serif" : 'var(--font-body)',
                 fontSize: isDashboard ? '16px' : '15px',
