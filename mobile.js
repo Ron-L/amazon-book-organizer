@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.25';
+const MOBILE_VERSION = '0.1.0-alpha.26';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -803,9 +803,7 @@ function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks,
 
 // --- Dashboard component ---
 
-function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries }) {
-    const [expandedShelves, setExpandedShelves] = useState(new Set());
-
+function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves }) {
     const filteredBooks = useMemo(() => {
         return filterBooks(books, { showDealsOnly, showHidden });
     }, [books, showDealsOnly, showHidden]);
@@ -1184,6 +1182,7 @@ function MobileApp() {
     const [activeOverlay, setActiveOverlay] = useState(null);
     const [navStack, setNavStack] = useState([{ view: 'dashboard', scrollY: 0 }]);
     const scrollRestoreRef = useRef(null);
+    const [expandedShelves, setExpandedShelves] = useState(new Set());
 
     // Persisted preferences
     const savedPrefs = JSON.parse(localStorage.getItem(MOBILE_PREFS_KEY) || '{}');
@@ -1482,6 +1481,8 @@ function MobileApp() {
                         onTapBook={(bookId) => navigateTo('detail', { bookId })}
                         onTapFolderTitle={(folderId) => navigateTo('folder', { folderId })}
                         onTapSeries={(folderId) => navigateTo('folder', { folderId })}
+                        expandedShelves={expandedShelves}
+                        setExpandedShelves={setExpandedShelves}
                     />
                 )}
             </div>
