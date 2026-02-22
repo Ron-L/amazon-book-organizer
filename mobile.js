@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.44';
+const MOBILE_VERSION = '0.1.0-alpha.45';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -884,13 +884,21 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                 </div>
                 {/* Custom scrollbar for expanded shelves */}
                 {scrollMetrics.visible && (
-                    <div ref={trackRef} style={{
+                    <div ref={trackRef} onClick={(e) => {
+                        const container = scrollRef.current;
+                        const track = trackRef.current;
+                        if (!container || !track) return;
+                        const trackRect = track.getBoundingClientRect();
+                        const ratio = (e.clientX - trackRect.left) / trackRect.width;
+                        container.scrollLeft = ratio * (container.scrollWidth - container.clientWidth);
+                    }} style={{
                         position: 'relative',
                         height: '12px',
                         margin: '2px 16px 0',
                         borderRadius: '6px',
                         background: 'var(--border-default, #e2e8f0)',
-                        touchAction: 'none'
+                        touchAction: 'none',
+                        cursor: 'pointer'
                     }}>
                         <div
                             onTouchStart={handleThumbDrag}
