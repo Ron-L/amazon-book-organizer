@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.33';
+const MOBILE_VERSION = '0.1.0-alpha.34';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -721,7 +721,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                     color: 'var(--text-primary, #1e293b)'
                 }}>
                     {title}
-                    {onTapTitle && <span style={{ marginLeft: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>›</span>}
+                    {onTapTitle && <span style={{ marginLeft: '6px', fontSize: '16px', fontWeight: 700, color: 'var(--text-secondary)' }}>›</span>}
                 </span>
                 <span style={{ fontSize: '13px', color: 'var(--text-muted, #94a3b8)' }}>
                     ({count})
