@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.30';
+const MOBILE_VERSION = '0.1.0-alpha.31';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -1381,11 +1381,18 @@ function MobileApp() {
         });
     }, [persistNavStack]);
 
-    // Browser back button support
+    // Browser back button support — sync history entries with navStack depth
+    const prevNavLengthRef = useRef(1);
     useEffect(() => {
-        if (navStack.length > 1) {
-            window.history.pushState({ depth: navStack.length }, '');
+        const prev = prevNavLengthRef.current;
+        const curr = navStack.length;
+        if (curr > prev) {
+            // Push one entry for each new depth level (handles both navigation and restore-from-localStorage)
+            for (let i = prev; i < curr; i++) {
+                window.history.pushState({ depth: i + 1 }, '');
+            }
         }
+        prevNavLengthRef.current = curr;
     }, [navStack.length]);
 
     useEffect(() => {
