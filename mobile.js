@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.42';
+const MOBILE_VERSION = '0.1.0-alpha.43';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -15,10 +15,6 @@ if (!document.getElementById('mobile-styles')) {
     style.id = 'mobile-styles';
     style.textContent = [
         '.shelf-scroll::-webkit-scrollbar { display: none }',
-        '.shelf-scroll-expanded::-webkit-scrollbar { display: block; height: 6px; }',
-        '.shelf-scroll-expanded::-webkit-scrollbar-track { background: transparent; }',
-        '.shelf-scroll-expanded::-webkit-scrollbar-thumb { background: var(--text-muted, #94a3b8); border-radius: 3px; }',
-        '.shelf-scroll-expanded::-webkit-scrollbar-thumb:hover { background: var(--text-secondary, #64748b); }',
         'body { overflow: auto !important; }',
         ':root { --folder-tile-bg: #fffbeb; --folder-tile-border: #fde68a; --cover-border: none; --label-bar-bg: #fffbeb; --label-bar-border: #fde68a; }',
         '[data-theme="dark"] { --folder-tile-bg: #422006; --folder-tile-border: #5c4a2a; --cover-border: 1px solid rgba(255,255,255,0.1); --label-bar-bg: #422006; --label-bar-border: #92400e; }',
@@ -640,6 +636,8 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
 function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapTitle, onTapBook, onTapSeries, onTapShowAll, onShowLess }) {
     const scrollRef = useRef(null);
     const [labelBars, setLabelBars] = useState([]);
+    const [scrollMetrics, setScrollMetrics] = useState({ thumbWidth: 0, thumbLeft: 0, trackWidth: 0, visible: false });
+    const trackRef = useRef(null);
     const hasSeries = sections.some(s => s.type === 'series');
 
     // Track scroll to update floating series label bar positions
@@ -702,6 +700,68 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
         };
     }, [hasSeries, sections]);
 
+    // Custom scrollbar metrics for expanded shelves
+    useEffect(() => {
+        if (!isExpanded) { setScrollMetrics(prev => ({ ...prev, visible: false })); return; }
+        const container = scrollRef.current;
+        if (!container) return;
+
+        const update = () => {
+            const { scrollLeft, scrollWidth, clientWidth } = container;
+            if (scrollWidth <= clientWidth) {
+                setScrollMetrics(prev => ({ ...prev, visible: false }));
+                return;
+            }
+            const trackWidth = clientWidth - 32; // 16px padding each side
+            const ratio = clientWidth / scrollWidth;
+            const thumbWidth = Math.max(30, trackWidth * ratio);
+            const scrollRange = scrollWidth - clientWidth;
+            const thumbRange = trackWidth - thumbWidth;
+            const thumbLeft = scrollRange > 0 ? (scrollLeft / scrollRange) * thumbRange : 0;
+            setScrollMetrics({ thumbWidth, thumbLeft: thumbLeft + 16, trackWidth, visible: true });
+        };
+
+        update();
+        container.addEventListener('scroll', update);
+        window.addEventListener('resize', update);
+        const raf = requestAnimationFrame(update);
+        return () => {
+            container.removeEventListener('scroll', update);
+            window.removeEventListener('resize', update);
+            cancelAnimationFrame(raf);
+        };
+    }, [isExpanded, sections]);
+
+    // Custom scrollbar touch drag handler
+    const handleThumbDrag = useCallback((startEvent) => {
+        startEvent.preventDefault();
+        const container = scrollRef.current;
+        const track = trackRef.current;
+        if (!container || !track) return;
+
+        const trackRect = track.getBoundingClientRect();
+        const { scrollWidth, clientWidth } = container;
+        const scrollRange = scrollWidth - clientWidth;
+        const trackWidth = trackRect.width;
+        const thumbWidth = Math.max(30, trackWidth * (clientWidth / scrollWidth));
+        const thumbRange = trackWidth - thumbWidth;
+
+        const startX = startEvent.touches[0].clientX;
+        const startScrollLeft = container.scrollLeft;
+
+        const onMove = (e) => {
+            const dx = e.touches[0].clientX - startX;
+            const scrollDelta = thumbRange > 0 ? (dx / thumbRange) * scrollRange : 0;
+            container.scrollLeft = Math.max(0, Math.min(scrollRange, startScrollLeft + scrollDelta));
+        };
+        const onEnd = () => {
+            document.removeEventListener('touchmove', onMove);
+            document.removeEventListener('touchend', onEnd);
+        };
+        document.addEventListener('touchmove', onMove, { passive: false });
+        document.addEventListener('touchend', onEnd);
+    }, []);
+
     const totalBooks = sections.reduce((sum, s) => sum + s.books.length, 0);
     if (totalBooks === 0) return null;
 
@@ -752,14 +812,14 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                 </span>
             </div>
             <div style={{ position: 'relative' }}>
-                <div ref={scrollRef} className={`shelf-scroll${isExpanded ? ' shelf-scroll-expanded' : ''}`} style={{
+                <div ref={scrollRef} className="shelf-scroll" style={{
                     display: 'flex', gap: '12px',
                     overflowX: 'auto',
                     paddingLeft: '16px', paddingRight: '16px',
                     paddingBottom: hasSeries ? '32px' : '12px',
                     WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: isExpanded ? 'thin' : 'none',
-                    msOverflowStyle: isExpanded ? 'auto' : 'none'
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none'
                 }}>
                     {items.map((item, idx) => {
                         if (item.type === 'series-marker') {
@@ -822,6 +882,32 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                         return null;
                     })}
                 </div>
+                {/* Custom scrollbar for expanded shelves */}
+                {scrollMetrics.visible && (
+                    <div ref={trackRef} style={{
+                        position: 'relative',
+                        height: '12px',
+                        margin: '2px 16px 0',
+                        borderRadius: '6px',
+                        background: 'var(--bg-surface-raised, #f1f5f9)',
+                        touchAction: 'none'
+                    }}>
+                        <div
+                            onTouchStart={handleThumbDrag}
+                            style={{
+                                position: 'absolute',
+                                top: '2px',
+                                left: `${scrollMetrics.thumbLeft - 16}px`,
+                                width: `${scrollMetrics.thumbWidth}px`,
+                                height: '8px',
+                                borderRadius: '4px',
+                                background: 'var(--text-muted, #94a3b8)',
+                                cursor: 'grab',
+                                touchAction: 'none'
+                            }}
+                        />
+                    </div>
+                )}
                 {/* Floating series label bars — warm amber (Option B) */}
                 {labelBars.map(bar => (
                     <div key={`label-${bar.id}`}
