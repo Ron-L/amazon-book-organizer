@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.26';
+const MOBILE_VERSION = '0.1.0-alpha.27';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -609,7 +609,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
 
 // --- Shelf component ---
 
-function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapTitle, onTapBook, onTapSeries, onTapShowAll }) {
+function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapTitle, onTapBook, onTapSeries, onTapShowAll, onShowLess }) {
     const scrollRef = useRef(null);
     const [labelBars, setLabelBars] = useState([]);
     const hasSeries = sections.some(s => s.type === 'series');
@@ -692,9 +692,11 @@ function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks,
         });
     });
 
-    // Show All card if capped
+    // Show All / Show Less card
     if (isCapped) {
         items.push({ type: 'show-all' });
+    } else if (isExpanded) {
+        items.push({ type: 'show-less' });
     }
 
     return (
@@ -766,6 +768,20 @@ function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks,
                                     padding: '12px'
                                 }}>
                                 Show All
+                            </div>;
+                        }
+                        if (item.type === 'show-less') {
+                            return <div key="show-less" onClick={onShowLess}
+                                style={{
+                                    width: '105px', flexShrink: 0, aspectRatio: '2/3',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    borderRadius: '4px', cursor: 'pointer', touchAction: 'manipulation',
+                                    border: '2px dashed var(--border-default, #e2e8f0)',
+                                    color: 'var(--text-muted, #94a3b8)',
+                                    fontSize: '13px', fontWeight: 600, textAlign: 'center',
+                                    padding: '12px'
+                                }}>
+                                Show Less
                             </div>;
                         }
                         return null;
@@ -904,6 +920,17 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
 
     return (
         <div style={{ paddingTop: '12px', paddingBottom: '24px' }}>
+            {expandedShelves.size > 0 && (
+                <div style={{ padding: '0 16px 4px', textAlign: 'right' }}>
+                    <span onClick={() => setExpandedShelves(new Set())}
+                        style={{
+                            fontSize: '12px', color: 'var(--text-muted, #94a3b8)',
+                            cursor: 'pointer', touchAction: 'manipulation'
+                        }}>
+                        Collapse All
+                    </span>
+                </div>
+            )}
             {shelves.map((shelf, i) => (
                 <Shelf
                     key={shelf.title + '-' + i}
@@ -911,6 +938,7 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
                     count={shelf.count}
                     sections={shelf.sections}
                     isCapped={shelf.isCapped}
+                    isExpanded={shelf.folderId ? expandedShelves.has(shelf.folderId) : false}
                     coverUrlMap={coverUrlMap}
                     blankImageBooks={blankImageBooks}
                     setBlankImageBooks={setBlankImageBooks}
@@ -918,6 +946,7 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
                     onTapBook={onTapBook}
                     onTapSeries={onTapSeries}
                     onTapShowAll={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.add(shelf.folderId); return next; }) : null}
+                    onShowLess={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.delete(shelf.folderId); return next; }) : null}
                 />
             ))}
         </div>
@@ -1182,10 +1211,17 @@ function MobileApp() {
     const [activeOverlay, setActiveOverlay] = useState(null);
     const [navStack, setNavStack] = useState([{ view: 'dashboard', scrollY: 0 }]);
     const scrollRestoreRef = useRef(null);
-    const [expandedShelves, setExpandedShelves] = useState(new Set());
-
     // Persisted preferences
     const savedPrefs = JSON.parse(localStorage.getItem(MOBILE_PREFS_KEY) || '{}');
+    const [expandedShelves, setExpandedShelvesRaw] = useState(() => new Set(savedPrefs.expandedShelves || []));
+    const setExpandedShelves = useCallback((updater) => {
+        setExpandedShelvesRaw(prev => {
+            const next = typeof updater === 'function' ? updater(prev) : updater;
+            const current = JSON.parse(localStorage.getItem(MOBILE_PREFS_KEY) || '{}');
+            localStorage.setItem(MOBILE_PREFS_KEY, JSON.stringify({ ...current, expandedShelves: [...next] }));
+            return next;
+        });
+    }, []);
     const [themePreference, setThemePreference] = useState(
         () => localStorage.getItem(THEME_KEY) || 'auto'
     );
