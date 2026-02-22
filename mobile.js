@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.16';
+const MOBILE_VERSION = '0.1.0-alpha.17';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -555,7 +555,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                 aspectRatio: '2/3',
                 borderRadius: '4px',
                 overflow: 'hidden',
-                boxShadow: '0 0 20px 8px red',  /* TEMP: extreme shadow test — remove after */
+                boxShadow: '3px 3px 6px rgba(0,0,0,0.4)',
                 border: 'var(--cover-border, none)'
             }}>
                 {isBlank || !book.coverUrl ? (
