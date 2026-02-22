@@ -671,7 +671,7 @@ Ordered by dependency. Each phase builds on the previous.
 - [ ] Issues remain
 
   Issues found:
-  - [x] **P5-V5-A/B/C** Drawer restructured alpha.40-45. Removed All Books and My Library (not needed on mobile). Drawer: Recently Added (🕐) → Inbox (📥) → user folders. Dashboard order matches: Recently Added → Inbox → user folders. View/List toggle disabled. Custom draggable scrollbar on expanded shelves with tap-to-jump.
+  - [x] **P5-V5-A/B/C** Drawer restructured alpha.40-48. Drawer: Dashboard (clickable header) → All Books (📚, grid view) → Inbox (📥, grid view) → user folders. Dashboard shelf order matches. "Recently Added" renamed to "All Books" (all books sorted by date). FolderView handles __recent__ as virtual folder. Hamburger visible in all views (folder, detail) alongside back arrow. Breadcrumb replaced with current folder name only (fixes P5-V8-A overflow). View/List toggle disabled. Custom draggable scrollbar with tap-to-jump on expanded shelves.
 
 **V6. Browser back button** — Works same as back arrow
 - [x] OK
@@ -683,7 +683,7 @@ Ordered by dependency. Each phase builds on the previous.
 - [ ] Not fully tested (John Scalzi dots menu issue blocked testing)
 
   Issues found:
-  - [ ] **P5-V8-A** Long breadcrumb pushes header dots menu off screen (flexShrink fix needed)
+  - [x] **P5-V8-A** Long breadcrumb pushes header dots menu off screen — fixed alpha.46-48. Breadcrumb replaced with current folder name only. Hamburger always visible in all views; no more full-path breadcrumb to overflow.
 
 **V9. Empty folder** — Folder with 0 books shows message
 - [x] OK
