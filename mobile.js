@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.41';
+const MOBILE_VERSION = '0.1.0-alpha.42';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -15,6 +15,10 @@ if (!document.getElementById('mobile-styles')) {
     style.id = 'mobile-styles';
     style.textContent = [
         '.shelf-scroll::-webkit-scrollbar { display: none }',
+        '.shelf-scroll-expanded::-webkit-scrollbar { display: block; height: 6px; }',
+        '.shelf-scroll-expanded::-webkit-scrollbar-track { background: transparent; }',
+        '.shelf-scroll-expanded::-webkit-scrollbar-thumb { background: var(--text-muted, #94a3b8); border-radius: 3px; }',
+        '.shelf-scroll-expanded::-webkit-scrollbar-thumb:hover { background: var(--text-secondary, #64748b); }',
         'body { overflow: auto !important; }',
         ':root { --folder-tile-bg: #fffbeb; --folder-tile-border: #fde68a; --cover-border: none; --label-bar-bg: #fffbeb; --label-bar-border: #fde68a; }',
         '[data-theme="dark"] { --folder-tile-bg: #422006; --folder-tile-border: #5c4a2a; --cover-border: 1px solid rgba(255,255,255,0.1); --label-bar-bg: #422006; --label-bar-border: #92400e; }',
@@ -748,14 +752,14 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                 </span>
             </div>
             <div style={{ position: 'relative' }}>
-                <div ref={scrollRef} className="shelf-scroll" style={{
+                <div ref={scrollRef} className={`shelf-scroll${isExpanded ? ' shelf-scroll-expanded' : ''}`} style={{
                     display: 'flex', gap: '12px',
                     overflowX: 'auto',
                     paddingLeft: '16px', paddingRight: '16px',
                     paddingBottom: hasSeries ? '32px' : '12px',
                     WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: 'none',
-                    msOverflowStyle: 'none'
+                    scrollbarWidth: isExpanded ? 'thin' : 'none',
+                    msOverflowStyle: isExpanded ? 'auto' : 'none'
                 }}>
                     {items.map((item, idx) => {
                         if (item.type === 'series-marker') {
