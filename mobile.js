@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.27';
+const MOBILE_VERSION = '0.1.0-alpha.28';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -315,7 +315,7 @@ function FolderTile({ folder, onTap }) {
 
 // --- Header component ---
 
-function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer, onToggleMenu }) {
+function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer, onToggleMenu, hasExpandedShelves, onCollapseAll }) {
     const isDashboard = currentNav.view === 'dashboard';
 
     // Determine center text
@@ -358,6 +358,14 @@ function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer
                 {centerText}
             </span>
             <div className="flex items-center gap-1">
+                {isDashboard && hasExpandedShelves && (
+                    <button onClick={onCollapseAll} className="p-2" style={{ touchAction: 'manipulation' }}
+                        title="Collapse All">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="18 15 12 9 6 15" />
+                        </svg>
+                    </button>
+                )}
                 <button className="p-2 opacity-40" disabled style={{ touchAction: 'manipulation' }}>
                     <IconSearch />
                 </button>
@@ -920,17 +928,6 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
 
     return (
         <div style={{ paddingTop: '12px', paddingBottom: '24px' }}>
-            {expandedShelves.size > 0 && (
-                <div style={{ padding: '0 16px 4px', textAlign: 'right' }}>
-                    <span onClick={() => setExpandedShelves(new Set())}
-                        style={{
-                            fontSize: '12px', color: 'var(--text-muted, #94a3b8)',
-                            cursor: 'pointer', touchAction: 'manipulation'
-                        }}>
-                        Collapse All
-                    </span>
-                </div>
-            )}
             {shelves.map((shelf, i) => (
                 <Shelf
                     key={shelf.title + '-' + i}
@@ -1418,6 +1415,8 @@ function MobileApp() {
             <Header
                 currentNav={currentNav} navStack={navStack} folders={folders} books={books}
                 onGoBack={goBack} onToggleDrawer={toggleDrawer} onToggleMenu={toggleMenu}
+                hasExpandedShelves={expandedShelves.size > 0}
+                onCollapseAll={() => setExpandedShelves(new Set())}
             />
 
             {/* Backdrop */}
