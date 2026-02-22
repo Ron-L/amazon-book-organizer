@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.36';
+const MOBILE_VERSION = '0.1.0-alpha.37';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -131,11 +131,6 @@ const IconCheck = () => (
 const IconBack = () => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="15 18 9 12 15 6" />
-    </svg>
-);
-const IconChevronRight = () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
-        <polyline points="9 6 15 12 9 18" />
     </svg>
 );
 const IconFolderLarge = () => (
@@ -726,38 +721,14 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                     color: 'var(--text-primary, #1e293b)'
                 }}>
                     {title}
-                    {onTapTitle && <>
-                        {/* A: Chevron-right */}
-                        <span style={{ marginLeft: '4px', color: 'var(--text-secondary)', display: 'inline-flex', verticalAlign: 'middle' }}><IconChevronRight /></span>
-                        <span style={{ marginLeft: '8px', color: 'var(--text-muted)', fontSize: '10px', verticalAlign: 'middle' }}>A</span>
-                        {/* B: Grid icon (3x3) */}
-                        <span style={{ marginLeft: '12px', color: 'var(--text-secondary)', display: 'inline-flex', verticalAlign: 'middle' }}>
+                    {onTapTitle && <span style={{ marginLeft: '6px', color: 'var(--text-secondary)', display: 'inline-flex', verticalAlign: 'middle' }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                                 <rect x="3" y="3" width="6" height="6" rx="1" />
                                 <rect x="12" y="3" width="6" height="6" rx="1" />
                                 <rect x="3" y="12" width="6" height="6" rx="1" />
                                 <rect x="12" y="12" width="6" height="6" rx="1" />
                             </svg>
-                        </span>
-                        <span style={{ marginLeft: '4px', color: 'var(--text-muted)', fontSize: '10px', verticalAlign: 'middle' }}>B</span>
-                        {/* C: Expand/open icon (box with arrow) */}
-                        <span style={{ marginLeft: '12px', color: 'var(--text-secondary)', display: 'inline-flex', verticalAlign: 'middle' }}>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M15 3h6v6" />
-                                <path d="M10 14L21 3" />
-                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                            </svg>
-                        </span>
-                        <span style={{ marginLeft: '4px', color: 'var(--text-muted)', fontSize: '10px', verticalAlign: 'middle' }}>C</span>
-                        {/* D: Arrow-right (full shaft) */}
-                        <span style={{ marginLeft: '12px', color: 'var(--text-secondary)', display: 'inline-flex', verticalAlign: 'middle' }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="5" y1="12" x2="19" y2="12" />
-                                <polyline points="12 5 19 12 12 19" />
-                            </svg>
-                        </span>
-                        <span style={{ marginLeft: '4px', color: 'var(--text-muted)', fontSize: '10px', verticalAlign: 'middle' }}>D</span>
-                    </>}
+                        </span>}
                 </span>
                 <span style={{ fontSize: '13px', color: 'var(--text-muted, #94a3b8)' }}>
                     ({count})

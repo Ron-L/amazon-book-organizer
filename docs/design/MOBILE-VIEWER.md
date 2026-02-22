@@ -633,7 +633,7 @@ Ordered by dependency. Each phase builds on the previous.
 - [ ] Footer bar (sort/filter/count) — deferred to Phase 6
 - [ ] Sort picker bottom sheet — deferred to Phase 6
 - [ ] Filter bottom sheet — deferred to Phase 6
-- [x] **P5-V2-E** Shelf title chevron needs to be more visible (especially dark mode) — fixed alpha.34 (16px bold, --text-secondary)
+- [x] **P5-V2-E** Shelf title chevron needs to be more visible (especially dark mode) — fixed alpha.34-37 (replaced › with 2x2 grid SVG icon, 14px filled, --text-secondary)
 
 #### Verification
 
