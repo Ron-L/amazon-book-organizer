@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.34';
+const MOBILE_VERSION = '0.1.0-alpha.35';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -131,6 +131,11 @@ const IconCheck = () => (
 const IconBack = () => (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="15 18 9 12 15 6" />
+    </svg>
+);
+const IconChevronRight = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}>
+        <polyline points="9 6 15 12 9 18" />
     </svg>
 );
 const IconFolderLarge = () => (
@@ -721,7 +726,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                     color: 'var(--text-primary, #1e293b)'
                 }}>
                     {title}
-                    {onTapTitle && <span style={{ marginLeft: '6px', fontSize: '16px', fontWeight: 700, color: 'var(--text-secondary)' }}>›</span>}
+                    {onTapTitle && <span style={{ marginLeft: '4px', color: 'var(--text-secondary)', display: 'inline-flex', verticalAlign: 'middle' }}><IconChevronRight /></span>}
                 </span>
                 <span style={{ fontSize: '13px', color: 'var(--text-muted, #94a3b8)' }}>
                     ({count})
