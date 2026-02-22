@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.21';
+const MOBILE_VERSION = '0.1.0-alpha.22';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -609,8 +609,93 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
 
 // --- Shelf component ---
 
-function Shelf({ title, count, books, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapTitle, onTapBook }) {
-    if (books.length === 0) return null;
+function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapTitle, onTapBook, onTapSeries, onTapShowAll }) {
+    const scrollRef = useRef(null);
+    const [labelBars, setLabelBars] = useState([]);
+    const hasSeries = sections.some(s => s.type === 'series');
+
+    // Track scroll to update floating series label bar positions
+    useEffect(() => {
+        if (!hasSeries) return;
+        const container = scrollRef.current;
+        if (!container) return;
+
+        const updateLabels = () => {
+            const containerRect = container.getBoundingClientRect();
+            const bars = [];
+
+            // Find all series sections by data attribute
+            const seriesEls = container.querySelectorAll('[data-series-id]');
+            seriesEls.forEach(el => {
+                const seriesId = el.dataset.seriesId;
+                const seriesName = el.dataset.seriesName;
+                const seriesCount = el.dataset.seriesCount;
+                const seriesFolderId = el.dataset.seriesFolderId;
+
+                // Get all items (folder tile + books) in this series
+                const items = container.querySelectorAll(`[data-section="${seriesId}"]`);
+                if (items.length === 0) return;
+
+                // Find leftmost and rightmost visible items
+                let leftMost = Infinity, rightMost = -Infinity;
+                let anyVisible = false;
+
+                items.forEach(item => {
+                    const r = item.getBoundingClientRect();
+                    const itemLeft = r.left - containerRect.left;
+                    const itemRight = r.right - containerRect.left;
+
+                    // Check if item is at least partially visible in the container
+                    if (r.right > containerRect.left && r.left < containerRect.right) {
+                        anyVisible = true;
+                        leftMost = Math.min(leftMost, Math.max(0, itemLeft));
+                        rightMost = Math.max(rightMost, Math.min(containerRect.width, itemRight));
+                    }
+                });
+
+                if (anyVisible && rightMost > leftMost) {
+                    bars.push({ id: seriesId, folderId: seriesFolderId, name: seriesName, count: seriesCount, left: leftMost, width: rightMost - leftMost });
+                }
+            });
+
+            setLabelBars(bars);
+        };
+
+        updateLabels();
+        container.addEventListener('scroll', updateLabels);
+        window.addEventListener('resize', updateLabels);
+        // Also update after images load (may shift layout)
+        const rafId = requestAnimationFrame(updateLabels);
+
+        return () => {
+            container.removeEventListener('scroll', updateLabels);
+            window.removeEventListener('resize', updateLabels);
+            cancelAnimationFrame(rafId);
+        };
+    }, [hasSeries, sections]);
+
+    const totalBooks = sections.reduce((sum, s) => sum + s.books.length, 0);
+    if (totalBooks === 0) return null;
+
+    // Build flat list of items for the scroll row
+    const items = [];
+    sections.forEach((section, si) => {
+        if (section.type === 'series') {
+            // Marker element for this series (used by label bar tracking)
+            items.push({ type: 'series-marker', section, sectionIndex: si });
+            // Folder tile
+            items.push({ type: 'folder-tile', section, sectionIndex: si });
+        }
+        // Books
+        section.books.forEach(book => {
+            items.push({ type: 'book', book, section, sectionIndex: si });
+        });
+    });
+
+    // Show All card if capped
+    if (isCapped) {
+        items.push({ type: 'show-all' });
+    }
 
     return (
         <div style={{ marginBottom: '24px' }}>
@@ -629,23 +714,86 @@ function Shelf({ title, count, books, coverUrlMap, blankImageBooks, setBlankImag
                     ({count})
                 </span>
             </div>
-            <div className="shelf-scroll" style={{
-                display: 'flex', gap: '12px',
-                overflowX: 'auto',
-                paddingLeft: '16px', paddingRight: '16px', paddingBottom: '12px',
-                WebkitOverflowScrolling: 'touch',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
-            }}>
-                {books.map(book => (
-                    <CoverCard
-                        key={book.id}
-                        book={book}
-                        coverUrlMap={coverUrlMap}
-                        blankImageBooks={blankImageBooks}
-                        setBlankImageBooks={setBlankImageBooks}
-                        onTap={onTapBook}
-                    />
+            <div style={{ position: 'relative' }}>
+                <div ref={scrollRef} className="shelf-scroll" style={{
+                    display: 'flex', gap: '12px',
+                    overflowX: 'auto',
+                    paddingLeft: '16px', paddingRight: '16px',
+                    paddingBottom: hasSeries ? '32px' : '12px',
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none'
+                }}>
+                    {items.map((item, idx) => {
+                        if (item.type === 'series-marker') {
+                            // Hidden zero-width marker for label bar tracking
+                            return <div key={`marker-${item.section.folder.id}`}
+                                data-series-id={item.section.folder.id}
+                                data-series-name={item.section.folder.name}
+                                data-series-count={item.section.totalBooks}
+                                data-series-folder-id={item.section.folder.id}
+                                style={{ width: 0, flexShrink: 0 }} />;
+                        }
+                        if (item.type === 'folder-tile') {
+                            return <div key={`ft-${item.section.folder.id}`}
+                                data-section={item.section.folder.id}
+                                style={{ flexShrink: 0, width: '105px' }}>
+                                <FolderTile folder={item.section.folder}
+                                    onTap={() => onTapSeries && onTapSeries(item.section.folder.id)} />
+                            </div>;
+                        }
+                        if (item.type === 'book') {
+                            return <div key={item.book.id}
+                                data-section={item.section.type === 'series' ? item.section.folder.id : undefined}>
+                                <CoverCard
+                                    book={item.book}
+                                    coverUrlMap={coverUrlMap}
+                                    blankImageBooks={blankImageBooks}
+                                    setBlankImageBooks={setBlankImageBooks}
+                                    onTap={onTapBook}
+                                />
+                            </div>;
+                        }
+                        if (item.type === 'show-all') {
+                            return <div key="show-all" onClick={onTapShowAll}
+                                style={{
+                                    width: '105px', flexShrink: 0, aspectRatio: '2/3',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    borderRadius: '4px', cursor: 'pointer', touchAction: 'manipulation',
+                                    border: '2px dashed var(--border-default, #e2e8f0)',
+                                    color: 'var(--text-accent, #3b82f6)',
+                                    fontSize: '13px', fontWeight: 600, textAlign: 'center',
+                                    padding: '12px'
+                                }}>
+                                Show All
+                            </div>;
+                        }
+                        return null;
+                    })}
+                </div>
+                {/* Floating series label bars */}
+                {labelBars.map(bar => (
+                    <div key={`label-${bar.id}`}
+                        onClick={() => onTapSeries && onTapSeries(bar.folderId)}
+                        style={{
+                            position: 'absolute',
+                            bottom: '0px',
+                            left: `${bar.left}px`,
+                            width: `${bar.width}px`,
+                            height: '22px',
+                            backgroundColor: 'var(--bg-surface-alt, #f1f5f9)',
+                            borderTop: '1px solid var(--border-default, #e2e8f0)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '0 8px',
+                            fontSize: '11px',
+                            color: 'var(--text-secondary, #475569)',
+                            cursor: 'pointer', touchAction: 'manipulation',
+                            overflow: 'hidden', whiteSpace: 'nowrap',
+                            pointerEvents: 'auto'
+                        }}>
+                        <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{bar.name}</span>
+                        <span style={{ flexShrink: 0, marginLeft: '6px', color: 'var(--text-muted, #94a3b8)' }}>({bar.count})</span>
+                    </div>
                 ))}
             </div>
         </div>
@@ -654,7 +802,7 @@ function Shelf({ title, count, books, coverUrlMap, blankImageBooks, setBlankImag
 
 // --- Dashboard component ---
 
-function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle }) {
+function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries }) {
     const filteredBooks = useMemo(() => {
         return filterBooks(books, { showDealsOnly, showHidden });
     }, [books, showDealsOnly, showHidden]);
@@ -672,28 +820,68 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
     const shelves = useMemo(() => {
         const result = [];
 
-        // Recently Added shelf
+        // Recently Added shelf (flat, no sections)
         const recentBooks = [...filteredBooks]
             .sort((a, b) => parseBookDate(b.acquired || b.dateAdded) - parseBookDate(a.acquired || a.dateAdded))
             .slice(0, SHELF_LIMIT);
 
         if (recentBooks.length > 0) {
-            result.push({ title: 'Recently Added', count: filteredBooks.length, books: recentBooks, folderId: null });
+            result.push({ title: 'Recently Added', count: filteredBooks.length, sections: [{ type: 'standalone', books: recentBooks }], folderId: null });
         }
 
-        // Folder shelves (one per top-level folder, preserving desktop manual order)
+        // Folder shelves with sections (standalone books + series subfolders)
         const topLevelFolders = folders
             .filter(f => !f.parentId);
 
         for (const folder of topLevelFolders) {
-            const allBookIds = collectDescendantBookIds(folder.id, folders);
-            const folderBooks = allBookIds
+            const sections = [];
+            let totalCount = 0;
+            let remaining = SHELF_LIMIT;
+
+            // Standalone books (direct children, not in any subfolder)
+            const standaloneBooks = (folder.bookIds || [])
                 .filter(id => filteredBookIds.has(id))
                 .map(id => bookMap[id])
                 .filter(Boolean);
 
-            if (folderBooks.length > 0) {
-                result.push({ title: folder.name, count: folderBooks.length, books: folderBooks.slice(0, SHELF_LIMIT), folderId: folder.id });
+            if (standaloneBooks.length > 0) {
+                const capped = standaloneBooks.slice(0, remaining);
+                sections.push({ type: 'standalone', books: capped });
+                remaining -= capped.length;
+                totalCount += standaloneBooks.length;
+            }
+
+            // Series subfolders in desktop manual order (childFolderIds) or folder array order
+            const childFolders = folder.childFolderIds
+                ? folder.childFolderIds.map(id => folders.find(f => f.id === id)).filter(Boolean)
+                : folders.filter(f => f.parentId === folder.id);
+
+            for (const child of childFolders) {
+                if (remaining <= 0) break;
+                const allChildBookIds = collectDescendantBookIds(child.id, folders);
+                const seriesBooks = allChildBookIds
+                    .filter(id => filteredBookIds.has(id))
+                    .map(id => bookMap[id])
+                    .filter(Boolean);
+
+                if (seriesBooks.length > 0) {
+                    const capped = seriesBooks.slice(0, remaining);
+                    sections.push({ type: 'series', folder: child, books: capped, totalBooks: seriesBooks.length });
+                    remaining -= capped.length;
+                    totalCount += seriesBooks.length;
+                }
+            }
+
+            if (sections.length > 0) {
+                const allBookIds = collectDescendantBookIds(folder.id, folders);
+                const totalFiltered = allBookIds.filter(id => filteredBookIds.has(id)).length;
+                result.push({
+                    title: folder.name,
+                    count: totalFiltered,
+                    sections,
+                    folderId: folder.id,
+                    isCapped: totalFiltered > SHELF_LIMIT
+                });
             }
         }
 
@@ -718,12 +906,15 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
                     key={shelf.title + '-' + i}
                     title={shelf.title}
                     count={shelf.count}
-                    books={shelf.books}
+                    sections={shelf.sections}
+                    isCapped={shelf.isCapped}
                     coverUrlMap={coverUrlMap}
                     blankImageBooks={blankImageBooks}
                     setBlankImageBooks={setBlankImageBooks}
                     onTapTitle={shelf.folderId ? () => onTapFolderTitle(shelf.folderId) : null}
                     onTapBook={onTapBook}
+                    onTapSeries={onTapSeries}
+                    onTapShowAll={shelf.folderId ? () => onTapFolderTitle(shelf.folderId) : null}
                 />
             ))}
         </div>
@@ -1285,6 +1476,7 @@ function MobileApp() {
                         setBlankImageBooks={setBlankImageBooks}
                         onTapBook={(bookId) => navigateTo('detail', { bookId })}
                         onTapFolderTitle={(folderId) => navigateTo('folder', { folderId })}
+                        onTapSeries={(folderId) => navigateTo('folder', { folderId })}
                     />
                 )}
             </div>
