@@ -1,11 +1,12 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.29';
+const MOBILE_VERSION = '0.1.0-alpha.30';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
 
 const MOBILE_PREFS_KEY = 'readerwrangler-mobile-prefs';
+const NAV_STACK_KEY = 'readerwrangler-mobile-nav';
 const SHELF_LIMIT = 20;
 
 // Inject mobile-only styles (hidden scrollbar for shelf containers, folder tile theme colors)
@@ -1208,7 +1209,15 @@ function MobileApp() {
     const [importing, setImporting] = useState(false);
     const [error, setError] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(null);
-    const [navStack, setNavStack] = useState([{ view: 'dashboard', scrollY: 0 }]);
+    const [navStack, setNavStack] = useState(() => {
+        try {
+            const saved = JSON.parse(localStorage.getItem(NAV_STACK_KEY));
+            if (Array.isArray(saved) && saved.length > 0 && saved[0]?.view === 'dashboard') {
+                return saved.map(entry => ({ ...entry, scrollY: 0, shelfScrolls: undefined }));
+            }
+        } catch {}
+        return [{ view: 'dashboard', scrollY: 0 }];
+    });
     const scrollRestoreRef = useRef(null);
     // Persisted preferences
     const savedPrefs = JSON.parse(localStorage.getItem(MOBILE_PREFS_KEY) || '{}');
@@ -1272,6 +1281,28 @@ function MobileApp() {
 
     useEffect(() => {
         loadAllData()
+            .then(loadedBooks => {
+                // Validate persisted navStack against loaded data
+                setNavStack(prev => {
+                    if (prev.length <= 1) return prev;
+                    const bookIds = new Set(loadedBooks.map(b => b.id));
+                    const folderIds = new Set(JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]').map(f => f.id));
+                    for (let i = 1; i < prev.length; i++) {
+                        const entry = prev[i];
+                        if (entry.view === 'folder' && !folderIds.has(entry.folderId)) {
+                            const reset = [{ view: 'dashboard', scrollY: 0 }];
+                            persistNavStack(reset);
+                            return reset;
+                        }
+                        if (entry.view === 'detail' && !bookIds.has(entry.bookId)) {
+                            const reset = [{ view: 'dashboard', scrollY: 0 }];
+                            persistNavStack(reset);
+                            return reset;
+                        }
+                    }
+                    return prev;
+                });
+            })
             .catch(err => console.error('❌ Mobile data load failed:', err))
             .finally(() => setLoading(false));
     }, []);
@@ -1318,16 +1349,23 @@ function MobileApp() {
     // Navigation
     const currentNav = navStack[navStack.length - 1];
 
+    const persistNavStack = useCallback((stack) => {
+        const stripped = stack.map(({ scrollY, shelfScrolls, ...rest }) => rest);
+        localStorage.setItem(NAV_STACK_KEY, JSON.stringify(stripped));
+    }, []);
+
     const navigateTo = useCallback((view, params = {}) => {
         const shelfScrolls = Array.from(document.querySelectorAll('.shelf-scroll')).map(el => el.scrollLeft);
         const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
         setNavStack(prev => {
             const updated = [...prev];
             updated[updated.length - 1] = { ...updated[updated.length - 1], scrollY, shelfScrolls };
-            return [...updated, { view, scrollY: 0, ...params }];
+            const newStack = [...updated, { view, scrollY: 0, ...params }];
+            persistNavStack(newStack);
+            return newStack;
         });
         window.scrollTo(0, 0);
-    }, []);
+    }, [persistNavStack]);
 
     const goBack = useCallback(() => {
         setNavStack(prev => {
@@ -1338,9 +1376,10 @@ function MobileApp() {
                 scrollY: target.scrollY || 0,
                 shelfScrolls: target.shelfScrolls || []
             };
+            persistNavStack(newStack);
             return newStack;
         });
-    }, []);
+    }, [persistNavStack]);
 
     // Browser back button support
     useEffect(() => {
@@ -1398,7 +1437,9 @@ function MobileApp() {
     };
     const handleSelectFolder = (folderId) => {
         if (folderId === '__all__') {
-            setNavStack([{ view: 'dashboard', scrollY: 0 }]);
+            const resetStack = [{ view: 'dashboard', scrollY: 0 }];
+            setNavStack(resetStack);
+            persistNavStack(resetStack);
         } else {
             navigateTo('folder', { folderId });
         }
