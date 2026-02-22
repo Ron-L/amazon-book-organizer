@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.39';
+const MOBILE_VERSION = '0.1.0-alpha.40';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -392,8 +392,10 @@ function Backdrop({ onClick }) {
 // --- Folder Drawer ---
 
 function FolderDrawer({ folders, books, onSelectFolder, onClose }) {
-    // Build tree: top-level folders (parentId === null) with children
-    const topLevel = folders.filter(f => !f.parentId);
+    const inbox = folders.find(f => f.id === '__inbox__');
+    const inboxCount = inbox ? (inbox.bookIds || []).length : 0;
+    // User folders: top-level (parentId === null), excluding Inbox
+    const topLevel = folders.filter(f => !f.parentId && f.id !== '__inbox__');
     const childrenOf = (parentId) => folders.filter(f => f.parentId === parentId);
 
     const renderFolder = (folder, depth = 0) => {
@@ -434,9 +436,20 @@ function FolderDrawer({ folders, books, onSelectFolder, onClose }) {
                 <span className="p-2"><IconClose /></span>
             </div>
 
-            {/* All Books virtual folder */}
+            {/* Recently Added — navigates to dashboard */}
             <button
                 onClick={() => onSelectFolder('__all__')}
+                className="w-full text-left py-2 px-3 flex items-center gap-2 text-sm"
+                style={{ paddingLeft: '12px', color: 'var(--text-primary, #1e293b)', touchAction: 'manipulation' }}
+            >
+                <span style={{ fontSize: '16px' }}>🕐</span>
+                <span className="flex-1">Recently Added</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({books.length})</span>
+            </button>
+
+            {/* Inbox — unorganized books */}
+            <button
+                onClick={() => onSelectFolder('__inbox__')}
                 className="w-full text-left py-2 px-3 flex items-center gap-2 text-sm"
                 style={{
                     paddingLeft: '12px',
@@ -445,12 +458,12 @@ function FolderDrawer({ folders, books, onSelectFolder, onClose }) {
                     touchAction: 'manipulation'
                 }}
             >
-                <IconFolder />
-                <span className="flex-1">All Books</span>
-                <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({books.length})</span>
+                <span style={{ fontSize: '16px' }}>📥</span>
+                <span className="flex-1">Inbox</span>
+                <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({inboxCount})</span>
             </button>
 
-            {/* Folder tree */}
+            {/* User folder tree */}
             <div className="py-1">
                 {topLevel.length > 0 ? (
                     topLevel.map(f => renderFolder(f))
