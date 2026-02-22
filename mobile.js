@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.46';
+const MOBILE_VERSION = '0.1.0-alpha.47';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -419,11 +419,11 @@ function FolderDrawer({ folders, books, onSelectFolder, onClose }) {
                 borderRight: '1px solid var(--border-default, #e2e8f0)',
                 color: 'var(--text-primary, #1e293b)'
             }}>
-            {/* Drawer header — entire row tappable to close */}
-            <div onClick={onClose} className="flex items-center justify-between px-3 flex-shrink-0"
+            {/* Drawer header — Dashboard navigates home */}
+            <div onClick={() => onSelectFolder('__all__')} className="flex items-center justify-between px-3 flex-shrink-0"
                 style={{ height: '48px', borderBottom: '1px solid var(--border-default, #e2e8f0)', cursor: 'pointer', touchAction: 'manipulation' }}>
-                <span className="font-semibold text-sm">Folders</span>
-                <span className="p-2"><IconClose /></span>
+                <span className="font-semibold text-sm">Dashboard</span>
+                <span className="p-2" onClick={(e) => { e.stopPropagation(); onClose(); }}><IconClose /></span>
             </div>
 
             {/* Recently Added — navigates to dashboard */}
@@ -956,13 +956,22 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
     const shelves = useMemo(() => {
         const result = [];
 
-        // Recently Added shelf (flat, no sections)
-        const recentBooks = [...filteredBooks]
-            .sort((a, b) => parseBookDate(b.acquired || b.dateAdded) - parseBookDate(a.acquired || a.dateAdded))
-            .slice(0, SHELF_LIMIT);
+        // Recently Added shelf (all books sorted by acquisition date, expandable)
+        const allByDate = [...filteredBooks]
+            .sort((a, b) => parseBookDate(b.acquired || b.dateAdded) - parseBookDate(a.acquired || a.dateAdded));
 
-        if (recentBooks.length > 0) {
-            result.push({ title: 'Recently Added', count: filteredBooks.length, sections: [{ type: 'standalone', books: recentBooks }], folderId: null });
+        if (allByDate.length > 0) {
+            const isExpanded = expandedShelves.has('__recent__');
+            const effectiveLimit = isExpanded ? Infinity
+                : (allByDate.length <= SHELF_LIMIT + 1 ? allByDate.length : SHELF_LIMIT);
+            const capped = effectiveLimit === Infinity ? allByDate : allByDate.slice(0, effectiveLimit);
+            result.push({
+                title: 'Recently Added',
+                count: allByDate.length,
+                sections: [{ type: 'standalone', books: capped }],
+                folderId: '__recent__',
+                isCapped: !isExpanded && capped.length < allByDate.length
+            });
         }
 
         // Inbox shelf (second row, after Recently Added)
@@ -1070,7 +1079,11 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
                     coverUrlMap={coverUrlMap}
                     blankImageBooks={blankImageBooks}
                     setBlankImageBooks={setBlankImageBooks}
-                    onTapTitle={shelf.folderId ? () => onTapFolderTitle(shelf.folderId) : null}
+                    onTapTitle={shelf.folderId
+                        ? (shelf.folderId === '__recent__' || shelf.folderId === '__inbox__')
+                            ? () => setExpandedShelves(prev => { const next = new Set(prev); if (prev.has(shelf.folderId)) next.delete(shelf.folderId); else next.add(shelf.folderId); return next; })
+                            : () => onTapFolderTitle(shelf.folderId)
+                        : null}
                     onTapBook={onTapBook}
                     onTapSeries={onTapSeries}
                     onTapShowAll={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.add(shelf.folderId); return next; }) : null}
