@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.20';
+const MOBILE_VERSION = '0.1.0-alpha.21';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -291,11 +291,11 @@ function FolderTile({ folder, onTap }) {
             <div style={{
                 aspectRatio: '2/3', borderRadius: '4px', overflow: 'hidden',
                 backgroundColor: 'var(--folder-tile-bg, #fffbeb)',
-                border: '2px solid var(--folder-tile-border, #fde68a)',
+                border: '1px solid var(--folder-tile-border, #fde68a)',
                 display: 'flex', flexDirection: 'column',
                 alignItems: 'center', justifyContent: 'center',
                 padding: '8px', gap: '4px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.08)',
+                boxShadow: '4px 4px 8px 2px rgba(128,128,128,0.5)',
                 containerType: 'inline-size'
             }}>
                 <span style={{ fontSize: '50cqw', lineHeight: 1 }}>📁</span>
@@ -555,7 +555,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                 aspectRatio: '2/3',
                 borderRadius: '4px',
                 overflow: 'hidden',
-                boxShadow: '4px 4px 8px 2px rgba(128,128,128,0.8)',
+                boxShadow: '4px 4px 8px 2px rgba(128,128,128,0.5)',
                 border: 'var(--cover-border, none)'
             }}>
                 {isBlank || !book.coverUrl ? (
