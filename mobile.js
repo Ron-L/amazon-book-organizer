@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.32';
+const MOBILE_VERSION = '0.1.0-alpha.33';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -1381,31 +1381,30 @@ function MobileApp() {
         });
     }, [persistNavStack]);
 
-    // Browser back button support — sync history entries with navStack depth
-    const prevNavLengthRef = useRef(1);
+    // Browser back button support — use hash-based navigation
     useEffect(() => {
-        const prev = prevNavLengthRef.current;
-        const curr = navStack.length;
-        console.log(`🔧 pushState effect: prev=${prev}, curr=${curr}, history.length=${window.history.length}`);
-        if (curr > prev) {
-            for (let i = prev; i < curr; i++) {
-                window.history.pushState({ depth: i + 1 }, '');
-                console.log(`🔧 pushed history entry depth=${i + 1}`);
+        const depth = navStack.length;
+        const expectedHash = depth > 1 ? `#nav-${depth}` : '';
+        if (window.location.hash !== expectedHash) {
+            if (depth > 1) {
+                window.location.hash = expectedHash;
+            } else if (window.location.hash) {
+                history.replaceState(null, '', window.location.pathname + window.location.search);
             }
         }
-        prevNavLengthRef.current = curr;
-        console.log(`🔧 after pushState: history.length=${window.history.length}`);
     }, [navStack.length]);
 
     useEffect(() => {
-        console.log(`🔧 popstate listener registered, navStack.length=${navStack.length}`);
-        const handlePopState = (e) => {
-            console.log(`🔧 popstate fired! navStack.length=${navStack.length}, state=`, e.state);
-            if (navStack.length > 1) goBack();
-            else console.log(`🔧 popstate ignored — already at dashboard`);
+        const handleHashChange = () => {
+            const hash = window.location.hash;
+            const match = hash.match(/^#nav-(\d+)$/);
+            const hashDepth = match ? parseInt(match[1], 10) : 1;
+            if (hashDepth < navStack.length) {
+                goBack();
+            }
         };
-        window.addEventListener('popstate', handlePopState);
-        return () => window.removeEventListener('popstate', handlePopState);
+        window.addEventListener('hashchange', handleHashChange);
+        return () => window.removeEventListener('hashchange', handleHashChange);
     }, [navStack.length, goBack]);
 
     // Restore scroll position after view re-renders on goBack
