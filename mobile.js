@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.43';
+const MOBILE_VERSION = '0.1.0-alpha.44';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -889,7 +889,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                         height: '12px',
                         margin: '2px 16px 0',
                         borderRadius: '6px',
-                        background: 'var(--bg-surface-raised, #f1f5f9)',
+                        background: 'var(--border-default, #e2e8f0)',
                         touchAction: 'none'
                     }}>
                         <div
@@ -901,7 +901,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                                 width: `${scrollMetrics.thumbWidth}px`,
                                 height: '8px',
                                 borderRadius: '4px',
-                                background: 'var(--text-muted, #94a3b8)',
+                                background: 'var(--text-secondary, #64748b)',
                                 cursor: 'grab',
                                 touchAction: 'none'
                             }}
