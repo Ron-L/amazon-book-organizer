@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.47';
+const MOBILE_VERSION = '0.1.0-alpha.48';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -308,15 +308,18 @@ function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer
     const showBack = !isDashboard;
 
     // Determine center text — just current context name, not full breadcrumb
+    const folderName = (id) => {
+        if (id === '__recent__') return 'All Books';
+        const f = folders.find(fl => fl.id === id);
+        return f ? f.name : 'Library';
+    };
     let centerText = 'ReaderWrangler';
     if (currentNav.view === 'folder') {
-        const f = folders.find(fl => fl.id === currentNav.folderId);
-        centerText = f ? f.name : 'Library';
+        centerText = folderName(currentNav.folderId);
     } else if (currentNav.view === 'detail') {
         const prev = navStack.length >= 2 ? navStack[navStack.length - 2] : null;
         if (prev && prev.view === 'folder') {
-            const f = folders.find(fl => fl.id === prev.folderId);
-            centerText = f ? f.name : 'Library';
+            centerText = folderName(prev.folderId);
         } else {
             centerText = 'Library';
         }
@@ -426,14 +429,14 @@ function FolderDrawer({ folders, books, onSelectFolder, onClose }) {
                 <span className="p-2" onClick={(e) => { e.stopPropagation(); onClose(); }}><IconClose /></span>
             </div>
 
-            {/* Recently Added — navigates to dashboard */}
+            {/* All Books — navigates to all-books grid view */}
             <button
-                onClick={() => onSelectFolder('__all__')}
+                onClick={() => onSelectFolder('__recent__')}
                 className="w-full text-left py-2 px-3 flex items-center gap-2 text-sm"
                 style={{ paddingLeft: '12px', color: 'var(--text-primary, #1e293b)', touchAction: 'manipulation' }}
             >
-                <span style={{ fontSize: '16px' }}>🕐</span>
-                <span className="flex-1">Recently Added</span>
+                <span style={{ fontSize: '16px' }}>📚</span>
+                <span className="flex-1">All Books</span>
                 <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({books.length})</span>
             </button>
 
@@ -956,7 +959,7 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
     const shelves = useMemo(() => {
         const result = [];
 
-        // Recently Added shelf (all books sorted by acquisition date, expandable)
+        // All Books shelf (all books sorted by acquisition date, expandable)
         const allByDate = [...filteredBooks]
             .sort((a, b) => parseBookDate(b.acquired || b.dateAdded) - parseBookDate(a.acquired || a.dateAdded));
 
@@ -966,7 +969,7 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
                 : (allByDate.length <= SHELF_LIMIT + 1 ? allByDate.length : SHELF_LIMIT);
             const capped = effectiveLimit === Infinity ? allByDate : allByDate.slice(0, effectiveLimit);
             result.push({
-                title: 'Recently Added',
+                title: 'All Books',
                 count: allByDate.length,
                 sections: [{ type: 'standalone', books: capped }],
                 folderId: '__recent__',
@@ -1079,11 +1082,7 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
                     coverUrlMap={coverUrlMap}
                     blankImageBooks={blankImageBooks}
                     setBlankImageBooks={setBlankImageBooks}
-                    onTapTitle={shelf.folderId
-                        ? (shelf.folderId === '__recent__' || shelf.folderId === '__inbox__')
-                            ? () => setExpandedShelves(prev => { const next = new Set(prev); if (prev.has(shelf.folderId)) next.delete(shelf.folderId); else next.add(shelf.folderId); return next; })
-                            : () => onTapFolderTitle(shelf.folderId)
-                        : null}
+                    onTapTitle={shelf.folderId ? () => onTapFolderTitle(shelf.folderId) : null}
                     onTapBook={onTapBook}
                     onTapSeries={onTapSeries}
                     onTapShowAll={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.add(shelf.folderId); return next; }) : null}
@@ -1098,19 +1097,25 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
 
 function FolderView({ folderId, books, folders, showDealsOnly, showHidden,
                       coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapSubfolder }) {
-    const folder = folders.find(f => f.id === folderId);
+    const isAllBooks = folderId === '__recent__';
+    const folder = isAllBooks ? null : folders.find(f => f.id === folderId);
 
     const subfolders = useMemo(() => {
+        if (isAllBooks) return [];
         return folders.filter(f => f.parentId === folderId).sort((a, b) => a.name.localeCompare(b.name));
-    }, [folders, folderId]);
+    }, [folders, folderId, isAllBooks]);
 
     const folderBooks = useMemo(() => {
+        const filtered = filterBooks(books, { showDealsOnly, showHidden });
+        if (isAllBooks) {
+            return [...filtered].sort((a, b) => parseBookDate(b.acquired || b.dateAdded) - parseBookDate(a.acquired || a.dateAdded));
+        }
         if (!folder) return [];
         const bookIds = new Set(folder.bookIds || []);
-        return filterBooks(books, { showDealsOnly, showHidden }).filter(b => bookIds.has(b.id));
-    }, [folder, books, showDealsOnly, showHidden]);
+        return filtered.filter(b => bookIds.has(b.id));
+    }, [folder, books, showDealsOnly, showHidden, isAllBooks]);
 
-    if (!folder) {
+    if (!isAllBooks && !folder) {
         return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Folder not found</div>;
     }
 
@@ -1430,7 +1435,7 @@ function MobileApp() {
                     const folderIds = new Set(JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]').map(f => f.id));
                     for (let i = 1; i < prev.length; i++) {
                         const entry = prev[i];
-                        if (entry.view === 'folder' && !folderIds.has(entry.folderId)) {
+                        if (entry.view === 'folder' && entry.folderId !== '__recent__' && !folderIds.has(entry.folderId)) {
                             const reset = [{ view: 'dashboard', scrollY: 0 }];
                             persistNavStack(reset);
                             return reset;
