@@ -656,7 +656,7 @@ Ordered by dependency. Each phase builds on the previous.
   - [x] **P5-V2-A** Covers too large in folder view — fixed alpha.13 (105px fixed columns)
   - [x] **P5-V2-B** Dark mode: hard to distinguish cover boundaries — fixed alpha.21 (directional shadow 4px 4px 8px 2px rgba(128,128,128,0.5) on covers + folder tiles, subtle border in dark mode)
   - [x] **P5-V2-C** Dashboard shelf books are flat/unstructured (no series context) — fixed alpha.22-29. Series label bars (warm amber, floating, scroll-tracking), sections (standalone + series), Show All/Less expand-in-place, Collapse All chevron in header, expanded state persisted to localStorage. See design section below.
-  - [ ] **P5-V2-D** Navigation stack lost on page refresh — navStack should persist to localStorage so user returns where they left off (like desktop). Gracefully fall back to dashboard if stored folder/book IDs are stale.
+  - [x] **P5-V2-D** Navigation stack lost on page refresh — fixed alpha.30-33. navStack persisted to `readerwrangler-mobile-nav` localStorage key (scroll positions stripped). Validated against loaded data on mount; stale IDs fall back to dashboard. Hash-based browser back (`#nav-2`, `#nav-3`) replaces pushState/popstate for reliability across environments.
 
 **V3. Folder → subfolder** — Subfolder tiles above books, tap to navigate deeper
 - [ ] Issues remain
