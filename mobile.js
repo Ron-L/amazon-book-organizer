@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.40';
+const MOBILE_VERSION = '0.1.0-alpha.41';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -509,10 +509,10 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
                 {/* Separator */}
                 <div style={{ borderTop: '1px solid var(--border-default, #e2e8f0)', margin: '4px 12px' }} />
 
-                {/* View toggle */}
-                <button onClick={onToggleViewMode}
+                {/* View toggle — disabled until list view is implemented */}
+                <button disabled
                     className="w-full text-left py-3 px-4 text-sm flex items-center justify-between"
-                    style={{ touchAction: 'manipulation' }}>
+                    style={{ touchAction: 'manipulation', opacity: 0.4 }}>
                     <span>View</span>
                     <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>
                         {viewMode === 'covers' ? 'Covers' : 'List'}
@@ -877,9 +877,29 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
             result.push({ title: 'Recently Added', count: filteredBooks.length, sections: [{ type: 'standalone', books: recentBooks }], folderId: null });
         }
 
+        // Inbox shelf (second row, after Recently Added)
+        const inboxFolder = folders.find(f => f.id === '__inbox__');
+        if (inboxFolder) {
+            const inboxBookIds = (inboxFolder.bookIds || []).filter(id => filteredBookIds.has(id));
+            const inboxBooks = inboxBookIds.map(id => bookMap[id]).filter(Boolean);
+            if (inboxBooks.length > 0) {
+                const isExpanded = expandedShelves.has('__inbox__');
+                const effectiveLimit = isExpanded ? Infinity
+                    : (inboxBooks.length <= SHELF_LIMIT + 1 ? inboxBooks.length : SHELF_LIMIT);
+                const capped = effectiveLimit === Infinity ? inboxBooks : inboxBooks.slice(0, effectiveLimit);
+                result.push({
+                    title: 'Inbox',
+                    count: inboxBooks.length,
+                    sections: [{ type: 'standalone', books: capped }],
+                    folderId: '__inbox__',
+                    isCapped: !isExpanded && capped.length < inboxBooks.length
+                });
+            }
+        }
+
         // Folder shelves with sections (standalone books + series subfolders)
         const topLevelFolders = folders
-            .filter(f => !f.parentId);
+            .filter(f => !f.parentId && f.id !== '__inbox__');
 
         for (const folder of topLevelFolders) {
             const sections = [];
