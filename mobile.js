@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.22';
+const MOBILE_VERSION = '0.1.0-alpha.23';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -15,8 +15,8 @@ if (!document.getElementById('mobile-styles')) {
     style.textContent = [
         '.shelf-scroll::-webkit-scrollbar { display: none }',
         'body { overflow: auto !important; }',
-        ':root { --folder-tile-bg: #fffbeb; --folder-tile-border: #fde68a; --cover-border: none; }',
-        '[data-theme="dark"] { --folder-tile-bg: #422006; --folder-tile-border: #5c4a2a; --cover-border: 1px solid rgba(255,255,255,0.1); }',
+        ':root { --folder-tile-bg: #fffbeb; --folder-tile-border: #fde68a; --cover-border: none; --label-bar-a-bg: #eff6ff; --label-bar-a-border: #bfdbfe; --label-bar-b-bg: #fffbeb; --label-bar-b-border: #fde68a; --label-bar-c-bg: #e2e8f0; --label-bar-c-border: #cbd5e1; --label-bar-d-bg: #ffffff; }',
+        '[data-theme="dark"] { --folder-tile-bg: #422006; --folder-tile-border: #5c4a2a; --cover-border: 1px solid rgba(255,255,255,0.1); --label-bar-a-bg: #1e3a5f; --label-bar-a-border: #2563eb; --label-bar-b-bg: #422006; --label-bar-b-border: #92400e; --label-bar-c-bg: #334155; --label-bar-c-border: #475569; --label-bar-d-bg: #1e293b; }',
         '[data-theme="hc-light"] { --folder-tile-bg: #fffbeb; --folder-tile-border: #d97706; --cover-border: none; }',
         '[data-theme="hc-dark"] { --folder-tile-bg: #451a03; --folder-tile-border: #b45309; --cover-border: 1px solid rgba(255,255,255,0.15); }'
     ].join('\n');
@@ -626,11 +626,13 @@ function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks,
 
             // Find all series sections by data attribute
             const seriesEls = container.querySelectorAll('[data-series-id]');
+            let seriesIdx = 0;
             seriesEls.forEach(el => {
                 const seriesId = el.dataset.seriesId;
                 const seriesName = el.dataset.seriesName;
                 const seriesCount = el.dataset.seriesCount;
                 const seriesFolderId = el.dataset.seriesFolderId;
+                const colorIndex = seriesIdx++;
 
                 // Get all items (folder tile + books) in this series
                 const items = container.querySelectorAll(`[data-section="${seriesId}"]`);
@@ -654,7 +656,7 @@ function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks,
                 });
 
                 if (anyVisible && rightMost > leftMost) {
-                    bars.push({ id: seriesId, folderId: seriesFolderId, name: seriesName, count: seriesCount, left: leftMost, width: rightMost - leftMost });
+                    bars.push({ id: seriesId, folderId: seriesFolderId, name: seriesName, count: seriesCount, left: leftMost, width: rightMost - leftMost, colorIndex });
                 }
             });
 
@@ -771,8 +773,17 @@ function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks,
                         return null;
                     })}
                 </div>
-                {/* Floating series label bars */}
-                {labelBars.map(bar => (
+                {/* Floating series label bars — TEMP: alternating color schemes for comparison */}
+                {labelBars.map(bar => {
+                    // Color experiment: A=accent blue, B=warm amber, C=darker surface, D=white+blue left border
+                    const colorSchemes = [
+                        { bg: 'var(--label-bar-a-bg, #eff6ff)', border: '1px solid var(--label-bar-a-border, #bfdbfe)', borderLeft: 'none', label: 'A: Blue tint' },
+                        { bg: 'var(--label-bar-b-bg, #fffbeb)', border: '1px solid var(--label-bar-b-border, #fde68a)', borderLeft: 'none', label: 'B: Warm amber' },
+                        { bg: 'var(--label-bar-c-bg, #e2e8f0)', border: '1px solid var(--label-bar-c-border, #cbd5e1)', borderLeft: 'none', label: 'C: Darker surface' },
+                        { bg: 'var(--label-bar-d-bg, #ffffff)', border: 'none', borderLeft: '3px solid var(--bg-accent, #3b82f6)', label: 'D: Blue left border' },
+                    ];
+                    const scheme = colorSchemes[bar.colorIndex % 4];
+                    return (
                     <div key={`label-${bar.id}`}
                         onClick={() => onTapSeries && onTapSeries(bar.folderId)}
                         style={{
@@ -781,8 +792,10 @@ function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks,
                             left: `${bar.left}px`,
                             width: `${bar.width}px`,
                             height: '22px',
-                            backgroundColor: 'var(--bg-surface-alt, #f1f5f9)',
-                            borderTop: '1px solid var(--border-default, #e2e8f0)',
+                            backgroundColor: scheme.bg,
+                            borderTop: scheme.border,
+                            borderLeft: scheme.borderLeft,
+                            borderRadius: '2px',
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             padding: '0 8px',
                             fontSize: '11px',
@@ -794,7 +807,8 @@ function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks,
                         <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{bar.name}</span>
                         <span style={{ flexShrink: 0, marginLeft: '6px', color: 'var(--text-muted, #94a3b8)' }}>({bar.count})</span>
                     </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
@@ -803,6 +817,8 @@ function Shelf({ title, count, sections, isCapped, coverUrlMap, blankImageBooks,
 // --- Dashboard component ---
 
 function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries }) {
+    const [expandedShelves, setExpandedShelves] = useState(new Set());
+
     const filteredBooks = useMemo(() => {
         return filterBooks(books, { showDealsOnly, showHidden });
     }, [books, showDealsOnly, showHidden]);
@@ -835,8 +851,8 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
 
         for (const folder of topLevelFolders) {
             const sections = [];
-            let totalCount = 0;
-            let remaining = SHELF_LIMIT;
+            const isExpanded = expandedShelves.has(folder.id);
+            let remaining = isExpanded ? Infinity : SHELF_LIMIT;
 
             // Standalone books (direct children, not in any subfolder)
             const standaloneBooks = (folder.bookIds || [])
@@ -845,10 +861,9 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
                 .filter(Boolean);
 
             if (standaloneBooks.length > 0) {
-                const capped = standaloneBooks.slice(0, remaining);
+                const capped = remaining === Infinity ? standaloneBooks : standaloneBooks.slice(0, remaining);
                 sections.push({ type: 'standalone', books: capped });
                 remaining -= capped.length;
-                totalCount += standaloneBooks.length;
             }
 
             // Series subfolders in desktop manual order (childFolderIds) or folder array order
@@ -865,28 +880,28 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
                     .filter(Boolean);
 
                 if (seriesBooks.length > 0) {
-                    const capped = seriesBooks.slice(0, remaining);
+                    const capped = remaining === Infinity ? seriesBooks : seriesBooks.slice(0, remaining);
                     sections.push({ type: 'series', folder: child, books: capped, totalBooks: seriesBooks.length });
                     remaining -= capped.length;
-                    totalCount += seriesBooks.length;
                 }
             }
 
             if (sections.length > 0) {
                 const allBookIds = collectDescendantBookIds(folder.id, folders);
                 const totalFiltered = allBookIds.filter(id => filteredBookIds.has(id)).length;
+                const displayedBooks = sections.reduce((sum, s) => sum + s.books.length, 0);
                 result.push({
                     title: folder.name,
                     count: totalFiltered,
                     sections,
                     folderId: folder.id,
-                    isCapped: totalFiltered > SHELF_LIMIT
+                    isCapped: !isExpanded && displayedBooks < totalFiltered
                 });
             }
         }
 
         return result;
-    }, [filteredBooks, filteredBookIds, bookMap, folders]);
+    }, [filteredBooks, filteredBookIds, bookMap, folders, expandedShelves]);
 
     if (shelves.length === 0) {
         return (
@@ -914,7 +929,7 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
                     onTapTitle={shelf.folderId ? () => onTapFolderTitle(shelf.folderId) : null}
                     onTapBook={onTapBook}
                     onTapSeries={onTapSeries}
-                    onTapShowAll={shelf.folderId ? () => onTapFolderTitle(shelf.folderId) : null}
+                    onTapShowAll={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.add(shelf.folderId); return next; }) : null}
                 />
             ))}
         </div>
