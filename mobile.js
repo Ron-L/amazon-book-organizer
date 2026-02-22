@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.38';
+const MOBILE_VERSION = '0.1.0-alpha.39';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -1466,7 +1466,7 @@ function MobileApp() {
 
     if (loading) {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-page, #ffffff)' }}>
+            <div id="splash" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-page, #ffffff)' }}>
                 <img src="icons/logo-transparent.png" alt="" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
                 <div style={{ fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: '1.8em', fontWeight: 700, color: 'var(--text-primary, #1e293b)', marginBottom: '8px' }}>ReaderWrangler™</div>
                 <div style={{ color: 'var(--text-muted, #64748b)', fontSize: '0.9em', marginBottom: '24px' }}>Loading...</div>
