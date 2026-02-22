@@ -655,7 +655,8 @@ Ordered by dependency. Each phase builds on the previous.
   Issues found:
   - [x] **P5-V2-A** Covers too large in folder view — fixed alpha.13 (105px fixed columns)
   - [x] **P5-V2-B** Dark mode: hard to distinguish cover boundaries — fixed alpha.21 (directional shadow 4px 4px 8px 2px rgba(128,128,128,0.5) on covers + folder tiles, subtle border in dark mode)
-  - [ ] **P5-V2-C** Dashboard shelf books are flat/unstructured (no series context) — see Future Enhancement below
+  - [ ] **P5-V2-C** Dashboard shelf books are flat/unstructured (no series context) — see design section below. Series label bars implemented alpha.22-26. Remaining: persist expanded state, Show Less, Collapse All.
+  - [ ] **P5-V2-D** Navigation stack lost on page refresh — navStack should persist to localStorage so user returns where they left off (like desktop). Gracefully fall back to dashboard if stored folder/book IDs are stale.
 
 **V3. Folder → subfolder** — Subfolder tiles above books, tap to navigate deeper
 - [ ] Issues remain
