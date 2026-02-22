@@ -671,9 +671,7 @@ Ordered by dependency. Each phase builds on the previous.
 - [ ] Issues remain
 
   Issues found:
-  - [ ] **P5-V5-A** "All Books" at end of drawer, unreachable
-  - [ ] **P5-V5-B** "My Library" pseudo-node missing
-  - [ ] **P5-V5-C** Inbox at bottom instead of at top under My Library
+  - [x] **P5-V5-A/B/C** Drawer restructured alpha.40-45. Removed All Books and My Library (not needed on mobile). Drawer: Recently Added (🕐) → Inbox (📥) → user folders. Dashboard order matches: Recently Added → Inbox → user folders. View/List toggle disabled. Custom draggable scrollbar on expanded shelves with tap-to-jump.
 
 **V6. Browser back button** — Works same as back arrow
 - [x] OK
