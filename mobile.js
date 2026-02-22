@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.24';
+const MOBILE_VERSION = '0.1.0-alpha.25';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -839,7 +839,12 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
         for (const folder of topLevelFolders) {
             const sections = [];
             const isExpanded = expandedShelves.has(folder.id);
-            let remaining = isExpanded ? Infinity : SHELF_LIMIT;
+            // Count total books first so we can avoid "Show All" for just 1 extra book
+            const allBookIds = collectDescendantBookIds(folder.id, folders);
+            const totalFiltered = allBookIds.filter(id => filteredBookIds.has(id)).length;
+            const effectiveLimit = isExpanded ? Infinity
+                : (totalFiltered <= SHELF_LIMIT + 1 ? totalFiltered : SHELF_LIMIT);
+            let remaining = effectiveLimit;
 
             // Standalone books (direct children, not in any subfolder)
             const standaloneBooks = (folder.bookIds || [])
@@ -874,8 +879,6 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
             }
 
             if (sections.length > 0) {
-                const allBookIds = collectDescendantBookIds(folder.id, folders);
-                const totalFiltered = allBookIds.filter(id => filteredBookIds.has(id)).length;
                 const displayedBooks = sections.reduce((sum, s) => sum + s.books.length, 0);
                 result.push({
                     title: folder.name,
