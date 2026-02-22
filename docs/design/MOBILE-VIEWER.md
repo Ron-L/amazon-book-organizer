@@ -736,14 +736,122 @@ Ordered by dependency. Each phase builds on the previous.
 
 ---
 
-## Future Enhancement: Series label bars in dashboard shelves
+## P5-V2-C Design: Series Label Bars in Dashboard Shelves
 
-- Within each author's shelf row, show a thin non-scrolling label bar under each series' covers
-- Label bar shows series name, stays visible as covers scroll above it
-- "Show All" card at end of shelf navigates to full folder view
-- Non-series books appear first, then each series group in desktop manual order
-- Decided during P5-V1-F/G discussion — promoted from "nice to have" to necessary for usable dashboard
-- Deferred until current bug fixes complete
+### Problem
+
+Dashboard shelves currently flatten all books from an author (top-level folder) into one undifferentiated horizontal row using `collectDescendantBookIds()`. An author with 3 standalone books and 2 series of 5 books each shows 13 covers with no indication of which series they belong to. This was introduced by the P5-V1-F/G fix (subfolder aggregation) and makes the dashboard unusable for authors with multiple series.
+
+### Decision History
+
+- Identified during P5-V1-F/G discussion as a UX problem created by the aggregation fix
+- Promoted from "nice to have" to necessary for usable dashboard
+- Multiple approaches evaluated (per-book badges, multi-row per author, floating labels)
+- **Final decision: floating series label bars** — unanimously agreed as best UX
+- Subfolder grid view: keep current 3-column wrapping grid (different purpose — full inventory vs. glanceable preview)
+
+### UX Rationale
+
+| Rank | Approach | Verdict |
+|------|----------|---------|
+| 1 | **Floating label bars** (chosen) | Best density, best context, best mental model match |
+| 2 | Multiple rows per author with static labels | Fragments the author, too much vertical space |
+| 3 | Per-book series badges | Clutters covers, redundant info on every book |
+| 4 | Flat row no context (current) | Unusable with 3+ series per author |
+
+### Visual Design
+
+Each author shelf is **one horizontal scroll row**. Within that row:
+
+1. **Standalone books** first (books directly in the author folder, not in any subfolder) — no label bar
+2. For each series (subfolder), in desktop manual order (`childFolderIds`):
+   - **Series folder tile** (📁 with series name) as a visual separator
+   - **Series books** in folder order
+3. **"Show All" card** at end if SHELF_LIMIT reached
+
+**The floating series label bar:**
+- A thin strip (~22px) positioned **below** the series' covers/titles
+- Shows series name (left) and book count (right)
+- **Does NOT scroll** with the content — it is viewport-width and floats
+- Spans from the leftmost visible series book to the rightmost visible series book
+- As user scrolls horizontally, the label bar slides and stretches/shrinks dynamically
+- Two label bars can be visible simultaneously when two series are partially on screen
+- Tapping a label bar navigates to that subfolder
+
+**Scroll behavior example (3 books visible at a time):**
+
+```
+View 1:  Book1   [SeriesA]  BookA1
+                  ___shelf-A___
+
+View 2:  [SeriesA]  BookA1   BookA2
+         _________shelf-A_________
+
+View 3:  BookA1   BookA2   BookA3
+         ______shelf-A____________
+
+View 4:  BookA3   BookA4   BookA5
+         ______shelf-A____________
+
+View 5:  BookA4   BookA5   [SeriesB]
+         _shelf-A_         _shelf-B_
+
+View 6:  BookA5   [SeriesB]  BookB1
+                  ________shelf-B___
+```
+
+Where `[SeriesA]` = folder tile, `BookA1` = cover card, `_shelf-A_` = floating label bar.
+
+### Data Structure
+
+Current shelf structure:
+```js
+{ title: 'John Scalzi', count: 25, books: [...flat array...], folderId: 'abc' }
+```
+
+New shelf structure:
+```js
+{
+  title: 'John Scalzi',
+  count: 25,
+  folderId: 'abc',
+  sections: [
+    { type: 'standalone', books: [book1, book2] },
+    { type: 'series', folder: { id, name, bookIds }, books: [bookA1, bookA2, ...] },
+    { type: 'series', folder: { id, name, bookIds }, books: [bookB1, bookB2, ...] },
+  ]
+}
+```
+
+- `SHELF_LIMIT` applies to total books per author (standalone + all series combined)
+- Standalone books fill first, then series in `childFolderIds` order until limit
+- Series with 0 remaining books after cap don't render
+- Authors with no subfolders (all books direct): single standalone section, no label bars — looks identical to current behavior
+- `Recently Added` shelf: unchanged (no series grouping)
+
+### Implementation Approach
+
+**Files modified:** `mobile.js` only
+
+**Components affected:**
+
+1. **`Dashboard.shelves` useMemo** (~lines 672-701) — restructure from flat book array to sections array. Walk each top-level folder's direct books + child folders instead of using `collectDescendantBookIds`.
+
+2. **`Shelf` component** (~lines 610-653) — render sections sequentially in one scroll container. Each series section: folder tile + books. Assign `data-section-index` attributes to elements for position tracking.
+
+3. **New: `SeriesLabelBar` component** — absolutely positioned overlay below covers. Receives scroll container ref + section element refs. Computes visible range on scroll.
+
+4. **Scroll tracking** — `onScroll` handler on shelf-scroll container with `requestAnimationFrame` throttle. For each series section, use `getBoundingClientRect()` on first/last visible book to compute label bar left/width.
+
+**Estimated size:** ~100-150 new/modified lines in mobile.js.
+
+### What Does NOT Change
+
+- Subfolder grid view (3-column wrapping grid) — different purpose, already works well
+- Book detail view
+- Navigation stack
+- Recently Added shelf
+- Folder drawer
 
 ---
 
