@@ -654,14 +654,14 @@ Ordered by dependency. Each phase builds on the previous.
 
   Issues found:
   - [x] **P5-V2-A** Covers too large in folder view — fixed alpha.13 (105px fixed columns)
-  - [ ] **P5-V2-B** Dark mode: hard to distinguish cover boundaries — alpha.13 increased gap, needs retest
+  - [x] **P5-V2-B** Dark mode: hard to distinguish cover boundaries — fixed alpha.21 (directional shadow 4px 4px 8px 2px rgba(128,128,128,0.5) on covers + folder tiles, subtle border in dark mode)
   - [ ] **P5-V2-C** Dashboard shelf books are flat/unstructured (no series context) — see Future Enhancement below
 
 **V3. Folder → subfolder** — Subfolder tiles above books, tap to navigate deeper
 - [ ] Issues remain
 
   Issues found:
-  - [ ] **P5-V3-A** Folder tiles vs cover width mismatch was jarring — may be resolved by alpha.13 (both now 105px)
+  - [x] **P5-V3-A** Folder tiles vs cover width mismatch — fixed alpha.14-21 (amber/canary bg, 📁 emoji at 50cqw, 1px amber border, matching directional shadow)
 
 **V4. Folder → book detail** — Tap book in folder grid → detail → back to folder
 - [x] OK
@@ -732,6 +732,7 @@ Ordered by dependency. Each phase builds on the previous.
 - [ ] Release version bump
 - [ ] Push to dev for testing
 - [ ] Post-mortem
+- [ ] Consider matching directional shadow style on desktop cover view (readerwrangler.js) for cross-platform consistency
 
 ---
 
@@ -748,6 +749,6 @@ Ordered by dependency. Each phase builds on the previous.
 
 ## Status
 
-- **Current alpha**: 0.1.0-alpha.13 (commit `b7dcb4c`)
+- **Current alpha**: 0.1.0-alpha.21 (commit `83b707e`)
 - **Current work**: Phase 5 bug fixes
-- **Next up**: P5-V2-B retest (dark mode cover spacing), then P5-V3-A, P5-V5-A/B/C, P5-V8-A
+- **Next up**: P5-V2-C (series label bars), then P5-V5-A/B/C, P5-V8-A
