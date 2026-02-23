@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10697,8 +10697,8 @@
                                                             {(hiddenInstances.has(book._instanceId) || book.isHidden) && (
                                                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                                                     <svg viewBox="0 0 100 100" style={{width:'85%',height:'auto'}}>
-                                                                        <circle cx="50" cy="50" r="45" fill="none" stroke="#dc2626" strokeWidth="12" />
-                                                                        <line x1="18" y1="18" x2="82" y2="82" stroke="#dc2626" strokeWidth="12" strokeLinecap="round" />
+                                                                        <circle cx="50" cy="50" r="39" fill="none" stroke="#dc2626" strokeWidth="12" />
+                                                                        <line x1="22" y1="22" x2="78" y2="78" stroke="#dc2626" strokeWidth="12" strokeLinecap="round" />
                                                                     </svg>
                                                                 </div>
                                                             )}

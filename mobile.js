@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.54';
+const MOBILE_VERSION = '0.1.0-alpha.55';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -617,8 +617,8 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                         pointerEvents: 'none'
                     }}>
                         <svg viewBox="0 0 100 100" style={{ width: '85%', height: 'auto' }}>
-                            <circle cx="50" cy="50" r="45" fill="none" stroke="#dc2626" strokeWidth="12" />
-                            <line x1="18" y1="18" x2="82" y2="82" stroke="#dc2626" strokeWidth="12" strokeLinecap="round" />
+                            <circle cx="50" cy="50" r="39" fill="none" stroke="#dc2626" strokeWidth="12" />
+                            <line x1="22" y1="22" x2="78" y2="78" stroke="#dc2626" strokeWidth="12" strokeLinecap="round" />
                         </svg>
                     </div>
                 )}
