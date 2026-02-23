@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.55';
+const MOBILE_VERSION = '0.1.0-alpha.56';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -303,8 +303,9 @@ function FolderTile({ folder, onTap }) {
 
 // --- Header component ---
 
-function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer, onToggleMenu, hasExpandedShelves, onCollapseAll }) {
+function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer, onToggleMenu, hasExpandedShelves, onCollapseAll, onOpenSearch, searchQuery, onSearchQueryChange }) {
     const isDashboard = currentNav.view === 'dashboard';
+    const isSearch = currentNav.view === 'search';
     const showBack = !isDashboard;
 
     // Determine center text — just current context name, not full breadcrumb
@@ -320,9 +321,59 @@ function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer
         const prev = navStack.length >= 2 ? navStack[navStack.length - 2] : null;
         if (prev && prev.view === 'folder') {
             centerText = folderName(prev.folderId);
+        } else if (prev && prev.view === 'search') {
+            centerText = 'Search';
         } else {
             centerText = 'Library';
         }
+    }
+
+    // Search mode header
+    if (isSearch) {
+        return (
+            <div className="fixed top-0 left-0 right-0 flex items-center gap-2 px-3 z-40"
+                style={{
+                    height: '48px',
+                    background: 'var(--bg-surface, #ffffff)',
+                    borderBottom: '1px solid var(--border-default, #e2e8f0)',
+                    color: 'var(--text-primary, #1e293b)'
+                }}>
+                <button onClick={onGoBack} className="p-2 -ml-1 flex-shrink-0" style={{ touchAction: 'manipulation' }}>
+                    <IconBack />
+                </button>
+                <div style={{
+                    flex: 1, position: 'relative', display: 'flex', alignItems: 'center'
+                }}>
+                    <input
+                        ref={(el) => { if (el && !el._focused) { el.focus(); el._focused = true; } }}
+                        type="text"
+                        value={searchQuery || ''}
+                        onChange={(e) => onSearchQueryChange(e.target.value)}
+                        placeholder="Search books..."
+                        style={{
+                            width: '100%', padding: '6px 32px 6px 12px',
+                            fontSize: '15px', border: '1px solid var(--border-default, #e2e8f0)',
+                            borderRadius: '8px', outline: 'none',
+                            background: 'var(--bg-page, #f8fafc)',
+                            color: 'var(--text-primary, #1e293b)'
+                        }}
+                    />
+                    {searchQuery && (
+                        <button onClick={() => onSearchQueryChange('')}
+                            className="flex-shrink-0"
+                            style={{
+                                position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
+                                padding: '2px', touchAction: 'manipulation',
+                                color: 'var(--text-muted, #64748b)', background: 'none', border: 'none'
+                            }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    )}
+                </div>
+            </div>
+        );
     }
 
     return (
@@ -362,7 +413,7 @@ function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer
                         </svg>
                     </button>
                 )}
-                <button className="p-2 opacity-40" disabled style={{ touchAction: 'manipulation' }}>
+                <button onClick={onOpenSearch} className="p-2" style={{ touchAction: 'manipulation' }}>
                     <IconSearch />
                 </button>
                 <button onClick={onToggleMenu} className="p-2 -mr-1" style={{ touchAction: 'manipulation' }}>
@@ -1357,6 +1408,126 @@ function BookDetailView({ bookId, books, coverUrlMap, blankImageBooks, setBlankI
     );
 }
 
+// --- SearchView component ---
+
+function SearchView({ books, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, tagRegistry, onTapBook, initialQuery, onQueryChange }) {
+    const [query, setQuery] = useState(initialQuery || '');
+    const inputRef = React.useRef(null);
+
+    React.useEffect(() => {
+        if (inputRef.current) inputRef.current.focus();
+    }, []);
+
+    const handleQueryChange = (val) => {
+        setQuery(val);
+        if (onQueryChange) onQueryChange(val);
+    };
+
+    const results = React.useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return [];
+        const filtered = filterBooks(books, { showDealsOnly, showHidden });
+        return filtered.filter(book => {
+            if (book.title.toLowerCase().includes(q)) return true;
+            if (book.author.toLowerCase().includes(q)) return true;
+            if (book.series && book.series.toLowerCase().includes(q)) return true;
+            if (book.userNote && book.userNote.toLowerCase().includes(q)) return true;
+            if (book.tags && book.tags.some(tagId => {
+                const label = tagRegistry[tagId]?.label || tagId;
+                return label.toLowerCase().includes(q);
+            })) return true;
+            return false;
+        });
+    }, [query, books, showDealsOnly, showHidden, tagRegistry]);
+
+    return (
+        <div style={{ paddingTop: '8px' }}>
+            {query.trim() === '' ? (
+                <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted, #64748b)' }}>
+                    Search by title, author, series, tags, or notes
+                </div>
+            ) : results.length === 0 ? (
+                <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted, #64748b)' }}>
+                    No results for "{query.trim()}"
+                </div>
+            ) : (
+                <div>
+                    <div style={{ padding: '4px 16px 8px', fontSize: '12px', color: 'var(--text-muted, #64748b)' }}>
+                        {results.length} result{results.length !== 1 ? 's' : ''}
+                    </div>
+                    {results.map(book => {
+                        const imgSrc = coverUrlMap[book.coverUrl] || book.coverUrl;
+                        const isBlank = blankImageBooks.has(book.id);
+                        return (
+                            <div key={book.id}
+                                onClick={() => onTapBook(book.id)}
+                                style={{
+                                    display: 'flex', gap: '12px', padding: '8px 16px',
+                                    borderBottom: '1px solid var(--border-default, #e2e8f0)',
+                                    cursor: 'pointer', touchAction: 'manipulation'
+                                }}>
+                                <div style={{
+                                    width: '48px', flexShrink: 0,
+                                    aspectRatio: '2/3', borderRadius: '3px', overflow: 'hidden',
+                                    boxShadow: '2px 2px 4px 1px rgba(128,128,128,0.4)',
+                                    opacity: book.onWishlist ? 0.4 : 1
+                                }}>
+                                    {isBlank || !book.coverUrl ? (
+                                        <div style={{
+                                            width: '100%', height: '100%',
+                                            backgroundColor: 'var(--bg-book-placeholder, #d4c5a9)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            padding: '4px'
+                                        }}>
+                                            <div style={{
+                                                textAlign: 'center', fontFamily: 'var(--font-heading)',
+                                                fontWeight: 700, fontSize: '0.4em', lineHeight: 1.2,
+                                                color: 'var(--text-primary, #1e293b)',
+                                                overflow: 'hidden', display: '-webkit-box',
+                                                WebkitLineClamp: 3, WebkitBoxOrient: 'vertical'
+                                            }}>{book.title}</div>
+                                        </div>
+                                    ) : (
+                                        <img src={imgSrc} alt="" loading="lazy"
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            onError={() => setBlankImageBooks(prev => new Set([...prev, book.id]))}
+                                            onLoad={(e) => checkIfBlankImage(e.target, book.id, setBlankImageBooks)}
+                                        />
+                                    )}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px' }}>
+                                    <div className="truncate" style={{
+                                        fontSize: '14px', fontWeight: 600,
+                                        color: 'var(--text-primary, #1e293b)'
+                                    }}>{book.title}</div>
+                                    <div className="truncate" style={{
+                                        fontSize: '12px',
+                                        color: 'var(--text-secondary, #475569)'
+                                    }}>{book.author}</div>
+                                    {book.rating > 0 && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            {renderStars(book.rating, { size: 12 })}
+                                            <span style={{ fontSize: '11px', color: 'var(--text-muted, #64748b)' }}>
+                                                {book.rating.toFixed(1)}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {book.series && (
+                                        <div className="truncate" style={{
+                                            fontSize: '11px', fontStyle: 'italic',
+                                            color: 'var(--text-muted, #64748b)'
+                                        }}>{book.series}{book.seriesPosition ? ` #${book.seriesPosition}` : ''}</div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+}
+
 // --- Main app ---
 
 function MobileApp() {
@@ -1366,6 +1537,7 @@ function MobileApp() {
     const [hiddenInstances, setHiddenInstances] = useState(new Set());
     const [coverUrlMap, setCoverUrlMap] = useState({});
     const [blankImageBooks, setBlankImageBooks] = useState(new Set());
+    const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [importStatus, setImportStatus] = useState(null);
     const [error, setError] = useState(null);
@@ -1450,6 +1622,11 @@ function MobileApp() {
                     const folderIds = new Set(JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]').map(f => f.id));
                     for (let i = 1; i < prev.length; i++) {
                         const entry = prev[i];
+                        if (entry.view === 'search') {
+                            const reset = prev.slice(0, i);
+                            persistNavStack(reset);
+                            return reset;
+                        }
                         if (entry.view === 'folder' && entry.folderId !== '__recent__' && !folderIds.has(entry.folderId)) {
                             const reset = [{ view: 'dashboard', scrollY: 0 }];
                             persistNavStack(reset);
@@ -1648,6 +1825,9 @@ function MobileApp() {
                 onGoBack={goBack} onToggleDrawer={toggleDrawer} onToggleMenu={toggleMenu}
                 hasExpandedShelves={expandedShelves.size > 0}
                 onCollapseAll={() => setExpandedShelves(new Set())}
+                onOpenSearch={() => { setSearchQuery(''); navigateTo('search'); }}
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
             />
 
             {/* Backdrop */}
@@ -1737,6 +1917,17 @@ function MobileApp() {
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
                         setBlankImageBooks={setBlankImageBooks}
                         tagRegistry={tagRegistry}
+                    />
+                ) : currentNav.view === 'search' ? (
+                    <SearchView
+                        books={books}
+                        showDealsOnly={showDealsOnly} showHidden={showHidden}
+                        coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
+                        setBlankImageBooks={setBlankImageBooks}
+                        tagRegistry={tagRegistry}
+                        onTapBook={(bookId) => navigateTo('detail', { bookId })}
+                        initialQuery={searchQuery}
+                        onQueryChange={setSearchQuery}
                     />
                 ) : (
                     <Dashboard
