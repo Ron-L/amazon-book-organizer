@@ -682,9 +682,10 @@ Ordered by dependency. Each phase builds on the previous.
 **V12. Tags** — Display as blue chips with correct labels
 - [x] OK
 
-**V13. Wishlist/Hidden visual indicators** — Known bug
-- [ ] Wishlist book covers not grayed out (desktop grays them)
-- [ ] Hidden books not showing red circle/slash indicator (desktop shows this)
+**V13. Wishlist/Hidden visual indicators** — Fixed (alpha.55)
+- [x] Wishlist book covers grayed out (opacity 0.4)
+- [x] Hidden books show SVG circle-slash indicator (scalable, 85% cover width)
+- [x] Both platforms use identical SVG; scales with cover size at all zoom/window/slider levels
 
 ---
 
