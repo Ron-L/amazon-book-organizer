@@ -29,9 +29,9 @@ When desktop app detects mobile viewport + `desktopMode` localStorage flag, show
 
 ---
 
-## 3. Unknown Item
+## ~~3. Unknown Item~~ RESOLVED
 
-User has been carrying something in their head — a desktop change needed to support a mobile change. Placeholder until recalled.
+Was the Desktop Mode escape hatch — same as item #2 above. No additional desktop change needed.
 
 ---
 
