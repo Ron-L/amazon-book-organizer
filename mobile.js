@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.57';
+const MOBILE_VERSION = '0.1.0-alpha.58';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -349,7 +349,7 @@ function Header({ currentNav, navStack, folders, books, onGoBack, onToggleDrawer
                         type="text"
                         value={searchQuery || ''}
                         onChange={(e) => onSearchQueryChange(e.target.value)}
-                        placeholder="Search books..."
+                        placeholder={currentNav.folderId ? `Search in ${folderName(currentNav.folderId)}...` : 'Search all books...'}
                         style={{
                             width: '100%', padding: '6px 32px 6px 12px',
                             fontSize: '15px', border: '1px solid var(--border-default, #e2e8f0)',
@@ -1410,12 +1410,28 @@ function BookDetailView({ bookId, books, coverUrlMap, blankImageBooks, setBlankI
 
 // --- SearchView component ---
 
-function SearchView({ books, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, tagRegistry, onTapBook, query }) {
+function SearchView({ books, folders, folderId, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, tagRegistry, onTapBook, query }) {
+
+    // Collect all bookIds in folder + subfolders recursively
+    const scopeBookIds = React.useMemo(() => {
+        if (!folderId) return null; // global search
+        const ids = new Set();
+        const collectIds = (fid) => {
+            const folder = folders.find(f => f.id === fid);
+            if (folder) {
+                (folder.bookIds || []).forEach(id => ids.add(id));
+                folders.filter(f => f.parentId === fid).forEach(sub => collectIds(sub.id));
+            }
+        };
+        collectIds(folderId);
+        return ids;
+    }, [folderId, folders]);
 
     const results = React.useMemo(() => {
         const q = (query || '').trim().toLowerCase();
         if (!q) return [];
-        const filtered = filterBooks(books, { showDealsOnly, showHidden });
+        let filtered = filterBooks(books, { showDealsOnly, showHidden });
+        if (scopeBookIds) filtered = filtered.filter(b => scopeBookIds.has(b.id));
         return filtered.filter(book => {
             if (book.title.toLowerCase().includes(q)) return true;
             if (book.author.toLowerCase().includes(q)) return true;
@@ -1814,7 +1830,11 @@ function MobileApp() {
                 onGoBack={goBack} onToggleDrawer={toggleDrawer} onToggleMenu={toggleMenu}
                 hasExpandedShelves={expandedShelves.size > 0}
                 onCollapseAll={() => setExpandedShelves(new Set())}
-                onOpenSearch={() => { setSearchQuery(''); navigateTo('search'); }}
+                onOpenSearch={() => {
+                    setSearchQuery('');
+                    const folderId = currentNav.view === 'folder' ? currentNav.folderId : null;
+                    navigateTo('search', folderId ? { folderId } : {});
+                }}
                 searchQuery={searchQuery}
                 onSearchQueryChange={setSearchQuery}
             />
@@ -1909,7 +1929,8 @@ function MobileApp() {
                     />
                 ) : currentNav.view === 'search' ? (
                     <SearchView
-                        books={books}
+                        books={books} folders={folders}
+                        folderId={currentNav.folderId || null}
                         showDealsOnly={showDealsOnly} showHidden={showHidden}
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
                         setBlankImageBooks={setBlankImageBooks}
