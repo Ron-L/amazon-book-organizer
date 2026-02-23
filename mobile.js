@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.49';
+const MOBILE_VERSION = '0.1.0-alpha.50';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -569,11 +569,13 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
         <div onClick={() => onTap && onTap(book.id)}
             style={{ width: fillWidth ? '100%' : '105px', flexShrink: 0, touchAction: 'manipulation', cursor: onTap ? 'pointer' : 'default' }}>
             <div style={{
+                position: 'relative',
                 aspectRatio: '2/3',
                 borderRadius: '4px',
                 overflow: 'hidden',
                 boxShadow: '4px 4px 8px 2px rgba(128,128,128,0.5)',
-                border: 'var(--cover-border, none)'
+                border: 'var(--cover-border, none)',
+                opacity: book.onWishlist ? 0.4 : 1
             }}>
                 {isBlank || !book.coverUrl ? (
                     <div style={{
@@ -606,6 +608,13 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                         onError={() => setBlankImageBooks(prev => new Set([...prev, book.id]))}
                         onLoad={(e) => checkIfBlankImage(e.target, book.id, setBlankImageBooks)}
                     />
+                )}
+                {book.isHidden && (
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '3em', pointerEvents: 'none'
+                    }}>🚫</div>
                 )}
             </div>
             <div className="truncate" style={{
