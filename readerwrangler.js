@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10695,7 +10695,7 @@
                                                             )}
                                                             {/* v5.0.6 - Hidden book overlay */}
                                                             {(hiddenInstances.has(book._instanceId) || book.isHidden) && (
-                                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{fontSize:'80px'}}>🚫</div>
+                                                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{fontSize:'115px'}}>🚫</div>
                                                             )}
                                                         </div>
                                                         <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>

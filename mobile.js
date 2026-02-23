@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.51';
+const MOBILE_VERSION = '0.1.0-alpha.52';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -574,15 +574,15 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                 borderRadius: '4px',
                 overflow: 'hidden',
                 boxShadow: '4px 4px 8px 2px rgba(128,128,128,0.5)',
-                border: 'var(--cover-border, none)',
-                opacity: book.onWishlist ? 0.4 : 1
+                border: 'var(--cover-border, none)'
             }}>
                 {isBlank || !book.coverUrl ? (
                     <div style={{
                         width: '100%', height: '100%',
                         backgroundColor: 'var(--bg-book-placeholder, #d4c5a9)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        padding: '8px'
+                        padding: '8px',
+                        opacity: (book.onWishlist || book.isHidden) ? 0.4 : 1
                     }}>
                         <div style={{
                             textAlign: 'center',
@@ -604,7 +604,8 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                         src={imgSrc}
                         alt=""
                         loading="lazy"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover',
+                            opacity: (book.onWishlist || book.isHidden) ? 0.4 : 1 }}
                         onError={() => setBlankImageBooks(prev => new Set([...prev, book.id]))}
                         onLoad={(e) => checkIfBlankImage(e.target, book.id, setBlankImageBooks)}
                     />
