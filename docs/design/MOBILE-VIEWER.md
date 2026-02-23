@@ -689,7 +689,7 @@ Ordered by dependency. Each phase builds on the previous.
 
 ---
 
-### Phase 6: Search & Sort (6A complete, 6B not started)
+### Phase 6: Search & Sort (6A, 6B complete; 6C not started)
 
 **Design principle**: Mobile is for *referencing* what you already discovered and organized on desktop, not for rich discovery. Features are trimmed to what serves the reference use case.
 
@@ -707,13 +707,14 @@ The #1 mobile reference tool. "Do I already own this?" and "What was that book?"
 
 **Not included**: Advanced search fields (genre, date range, tag filter). Desktop handles discovery; mobile just needs to find a known book quickly.
 
-#### 6B. Sort (4 options only)
+#### 6B. Sort — COMPLETE (alpha.59)
 
-Simple sort for folder/grid views. No bottom sheet — use a lightweight inline picker or dropdown.
+Simple sort for folder/grid views. Cycle button in toolbar row (not a bottom sheet — 4 options don't warrant one).
 
-- [ ] Sort control in folder view (replaces planned "footer bar")
-- [ ] Sort options: Date Added (default), Title A-Z, Author A-Z, Rating (high→low)
-- [ ] Sort persists per session (localStorage)
+- [x] Sort cycle button in folder view toolbar row (↕ icon + label)
+- [x] Sort options: Date Added (default), Title A-Z, Author A-Z, Rating (high→low)
+- [x] Sort persists per session (localStorage)
+- [x] Sort also applies to search results
 
 **Dropped from original plan**: Sort picker bottom sheet (over-engineered for 4 options), Series sort, Manual Order sort, My Rating sort, Price sort — these are organizing/discovery tools that belong on desktop.
 
