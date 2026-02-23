@@ -406,7 +406,7 @@ Rather than a hardcoded "Next Reads" feature, the user configures which tag(s) a
 ### Secondary (v1)
 
 8. **"Sort by rating"** — As a user, I want to sort a folder by rating to find my highest-rated unread books. *(Phase 6B — 4 sort options including Rating)*
-9. ~~**"Filter by tag"** — As a user, I want to filter by tag to see all my "hard-sf" books across folders.~~ *Deferred — discovery use case. Search covers the "find a known book" case. Tag browsing stays on desktop.*
+9. **"Browse by tag"** — As a user, I want to see all books with a given tag (e.g., "Next Reads") in one view across folders. *(Phase 6C — Tag Views, configured on desktop, displayed on mobile)*
 10. **"Wishlist check"** — As a user, I want to see which books are on my wishlist vs owned so I know what to buy. *(Supported via Deals Only toggle + book detail view showing wishlist status)*
 
 ### Future (v2+)
@@ -682,6 +682,10 @@ Ordered by dependency. Each phase builds on the previous.
 **V12. Tags** — Display as blue chips with correct labels
 - [x] OK
 
+**V13. Wishlist/Hidden visual indicators** — Known bug
+- [ ] Wishlist book covers not grayed out (desktop grays them)
+- [ ] Hidden books not showing red circle/slash indicator (desktop shows this)
+
 ---
 
 ### Phase 6: Search & Sort (not started)
@@ -711,11 +715,18 @@ Simple sort for folder/grid views. No bottom sheet — use a lightweight inline 
 
 **Dropped from original plan**: Sort picker bottom sheet (over-engineered for 4 options), Series sort, Manual Order sort, My Rating sort, Price sort — these are organizing/discovery tools that belong on desktop.
 
-#### 6C. Filter — DEFERRED
+#### 6C. Tag Views (replaces deferred filter)
 
-Existing Deals Only and Show Hidden toggles (in app menu) are sufficient for mobile reference. A dedicated filter bottom sheet with tag/collection/status filters is discovery territory.
+Tag views (virtual folders based on tags) provide persistent, cross-folder browsing by tag. Configured on desktop, displayed read-only on mobile. See `docs/design/TAG-VIRTUAL-FOLDERS.md` for full design.
 
-**Dropped**: Filter bottom sheet, tag filter, collection filter, read status filter. Users who need to find books by tag can search or browse the folder they organized on desktop.
+- [ ] Read `pinnedTagFolders` from imported backup settings
+- [ ] Render tag views in drawer (tag icon, positioned per desktop ordering)
+- [ ] Render tag views as dashboard shelves (tag icon, subtle background tint)
+- [ ] FolderView handles tag view IDs (filter books by tag, like `__recent__`)
+- [ ] Tag icon SVG component
+- [ ] No configuration, no reordering, no remove — read-only display
+
+**Not included on mobile**: Tag configuration, drag interactions, un-tagging. Desktop handles all curation.
 
 ### Phase 7: List View Alternative (not started)
 

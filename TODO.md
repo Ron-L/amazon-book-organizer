@@ -92,6 +92,12 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🚀 Priority 6: Post-Launch Internal Improvements
 
+**0. 🏷️ Desktop Backlog (Tag Virtual Folders + misc)** - See [docs/design/DESKTOP-BACKLOG.md](docs/design/DESKTOP-BACKLOG.md)
+   - Tag Virtual Folders: Promote tags to navigable views in left pane — see [TAG-VIRTUAL-FOLDERS.md](docs/design/TAG-VIRTUAL-FOLDERS.md)
+   - Desktop Mode escape hatch: "Return to Mobile" button when mobile viewport has `desktopMode` flag
+   - Directional shadow consistency with mobile cover view
+   - Desktop is control plane; mobile displays tag views read-only via backup
+
 **1. 🔄 Extend Gap-Fill to Include Reviews** - LOW/LOW (1 hour)
    - File: `amazon-library-fetcher.js`
    - Current gap-fill only targets books missing descriptions
