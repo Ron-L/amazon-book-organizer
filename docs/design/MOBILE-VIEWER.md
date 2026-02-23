@@ -4,8 +4,8 @@
 
 A purpose-built mobile UI for ReaderWrangler, scoped as a **read-only viewer** — not a responsive redesign of the desktop app. The desktop app's interaction model (drag-drop, multi-select, context menus, resizable panes) is fundamentally mouse-driven. Mobile needs its own component tree with touch-native interactions.
 
-**Scope**: Browse, search, sort, and view a book library on phone-sized screens.
-**Non-scope**: Editing, folder management, export, bulk operations, column customization.
+**Scope**: Browse, search, sort, and view a book library on phone-sized screens. Mobile is for *referencing* what you already discovered and organized on desktop — not for rich discovery or curation.
+**Non-scope**: Editing, folder management, export, bulk operations, column customization, advanced filtering (tag/collection/status filters).
 
 ---
 
@@ -50,7 +50,7 @@ Sorting/filtering logic currently inline in `readerwrangler.js` (~lines 10204-10
 | Element | Height |
 |---------|--------|
 | Header bar | 48px |
-| Footer bar (sort/filter/count) | 44px |
+| Sort/count bar | 44px |
 | **Available for content** | **575-750px** |
 | 3 rows of covers (90px cover + 36px text) | 378px |
 | Remaining breathing room | 197-372px |
@@ -194,13 +194,13 @@ Reached by tapping a shelf title on the dashboard, or navigating via the folder 
 |  Author      Author      Author         |
 |                                          |
 +------------------------------------------+
-|  Sort: Name ^  |  Filter  |  42 books    |
+|  Sort: Name ^               |  42 books    |
 +------------------------------------------+
 ```
 
 - **Header**: Back button [<] returns to dashboard. Breadcrumb shows folder path. Search and help icons.
 - **Grid**: 3-wide cover grid (~9 books visible per screen). Cover aspect ratio 2:3. Title truncated 1 line, author truncated 1 line.
-- **Footer bar**: Sort picker, filter toggle, book count. Sticky at bottom.
+- **Footer bar**: Sort picker + book count. Sticky at bottom. (Filter bottom sheet dropped — Deals Only / Show Hidden in app menu are sufficient.)
 - **Subfolders**: Shown as folder tiles before books (same pattern as desktop cover view, line ~10191), tap to navigate deeper.
 - **Scroll position**: Preserved when returning from book detail view.
 
@@ -336,29 +336,15 @@ Accessed via `[⋮]` icon in the header. Contains actions and settings — disti
 - Instant filter as you type (same as desktop behavior).
 - **Key use case**: "I'm on vacation (no desktop) and want to check if this Kindle sale book is one I already own." Faster and more reliable than checking the Kindle app, which has known gaps in Amazon's database.
 
-### Sort Picker (bottom sheet)
+### Sort Picker (simplified from original bottom sheet design)
 
-```
-+------------------------------------------+
-|                                          |
-|          --- drag handle ---             |
-|                                          |
-|  Sort by:                                |
-|                                          |
-|  ( ) Name           [A-Z] [Z-A]         |
-|  (*) Author         [A-Z] [Z-A]         |
-|  ( ) Rating         [Hi]  [Lo]          |
-|  ( ) My Rating      [Hi]  [Lo]          |
-|  ( ) Date Added     [New] [Old]          |
-|  ( ) Series         [A-Z] [Z-A]         |
-|  ( ) Manual Order                        |
-|                                          |
-+------------------------------------------+
-```
+Four sort options via lightweight inline picker (not a bottom sheet — over-engineered for 4 options):
+- Date Added (default, newest first)
+- Title A-Z
+- Author A-Z
+- Rating (highest first)
 
-- Bottom sheet slides up (standard mobile pattern)
-- Radio select for sort field, toggle for direction
-- Dismisses on selection or swipe down
+Original 7-option bottom sheet with drag handle was trimmed per mobile-as-reference principle. Discovery-oriented sorts (Series, Manual Order, My Rating, Price) stay on desktop.
 
 ---
 
@@ -390,8 +376,7 @@ Rather than a hardcoded "Next Reads" feature, the user configures which tag(s) a
 | **Tap shelf title** (dashboard) | Open folder in full grid view |
 | **Tap folder** (drawer) | Navigate to folder, close drawer |
 | **Horizontal swipe** (shelf) | Scroll shelf to see more books |
-| **Tap sort** (footer) | Open sort bottom sheet |
-| **Tap filter** (footer) | Open filter bottom sheet |
+| **Tap sort** (folder view) | Open sort picker |
 | **Tap [<]** | Back to previous screen |
 | **Tap [=]** | Open folder drawer (closes app menu if open) |
 | **Tap [⋮]** | Open app menu (closes folder drawer if open) |
@@ -418,11 +403,11 @@ Rather than a hardcoded "Next Reads" feature, the user configures which tag(s) a
 6. **"Get my library on my phone"** — As a user, I want to import a backup from my desktop so I can browse my library on my phone. I export from desktop, transfer the file (email/cloud/AirDrop), and import on mobile.
 7. **"Re-sync after organizing"** — As a user, I want to re-import an updated backup after organizing on desktop so my mobile view stays current.
 
-### Secondary (v1 if easy, else v2)
+### Secondary (v1)
 
-8. **"Sort by rating"** — As a user, I want to sort a folder by rating to find my highest-rated unread books.
-9. **"Filter by tag"** — As a user, I want to filter by tag to see all my "hard-sf" books across folders.
-10. **"Wishlist check"** — As a user, I want to see which books are on my wishlist vs owned so I know what to buy.
+8. **"Sort by rating"** — As a user, I want to sort a folder by rating to find my highest-rated unread books. *(Phase 6B — 4 sort options including Rating)*
+9. ~~**"Filter by tag"** — As a user, I want to filter by tag to see all my "hard-sf" books across folders.~~ *Deferred — discovery use case. Search covers the "find a known book" case. Tag browsing stays on desktop.*
+10. **"Wishlist check"** — As a user, I want to see which books are on my wishlist vs owned so I know what to buy. *(Supported via Deals Only toggle + book detail view showing wishlist status)*
 
 ### Future (v2+)
 
@@ -439,14 +424,14 @@ Rather than a hardcoded "Next Reads" feature, the user configures which tag(s) a
 - Empty state with import instructions (first-run experience)
 - Import Backup (restore from desktop backup JSON)
 - App menu `[⋮]` with Import, View toggle, Theme, Deals Only, Show Hidden, Desktop Mode, Help
-- Dashboard home screen with configurable tag-based shelves + folder shelves
+- Dashboard home screen with folder shelves (tag-based shelves deferred — requires desktop settings UI)
 - Cover grid folder view (3-wide portrait, 5-wide landscape)
-- Folder drawer navigation (hamburger menu)
+- Folder drawer navigation (hamburger menu, accessible from all views)
 - Book detail view (read-only, all metadata)
-- Sort picker (all existing sort fields)
-- Search with instant filter
-- Filter by tag, collection, read status
-- Breadcrumb navigation
+- Sort (4 options: Date Added, Title, Author, Rating — lightweight picker, not bottom sheet)
+- Search (title + author instant filter, list layout results)
+- Deals Only / Show Hidden filters (in app menu — no dedicated filter sheet)
+- Stack-based navigation with hash-based browser back support
 
 ### Excluded (stay desktop-only)
 - All data editing (book metadata, marking read, tagging, notes)
@@ -618,7 +603,7 @@ Ordered by dependency. Each phase builds on the previous.
 
 ---
 
-### Phase 5: Navigation, Folder View & Book Detail — IN PROGRESS (bug fixes)
+### Phase 5: Navigation, Folder View & Book Detail — COMPLETE
 
 *Note: Original design split this across Phases 5 and 6. Implemented together.*
 
@@ -699,19 +684,48 @@ Ordered by dependency. Each phase builds on the previous.
 
 ---
 
-### Phase 6: Sort, Filter & Search (not started)
+### Phase 6: Search & Sort (not started)
 
-- [ ] Footer bar (sort/filter/count) in folder view
-- [ ] Sort picker bottom sheet
-- [ ] Filter bottom sheet
-- [ ] Search screen
-- [ ] Search list layout results
-- [ ] Tap search result → detail → back preserving query
+**Design principle**: Mobile is for *referencing* what you already discovered and organized on desktop, not for rich discovery. Features are trimmed to what serves the reference use case.
+
+#### 6A. Search (highest priority)
+
+The #1 mobile reference tool. "Do I already own this?" and "What was that book?" are the core mobile use cases.
+
+- [ ] Search screen (tap search icon in header → full-screen search)
+- [ ] Single text input, instant-filter as you type
+- [ ] Searches title + author (+ series, tags, notes)
+- [ ] Results in list layout (small cover left + title/author/rating right)
+- [ ] Tap result → book detail → back preserves query + results
+- [ ] Empty state: "No results for '...'"
+
+**Not included**: Advanced search fields (genre, date range, tag filter). Desktop handles discovery; mobile just needs to find a known book quickly.
+
+#### 6B. Sort (4 options only)
+
+Simple sort for folder/grid views. No bottom sheet — use a lightweight inline picker or dropdown.
+
+- [ ] Sort control in folder view (replaces planned "footer bar")
+- [ ] Sort options: Date Added (default), Title A-Z, Author A-Z, Rating (high→low)
+- [ ] Sort persists per session (localStorage)
+
+**Dropped from original plan**: Sort picker bottom sheet (over-engineered for 4 options), Series sort, Manual Order sort, My Rating sort, Price sort — these are organizing/discovery tools that belong on desktop.
+
+#### 6C. Filter — DEFERRED
+
+Existing Deals Only and Show Hidden toggles (in app menu) are sufficient for mobile reference. A dedicated filter bottom sheet with tag/collection/status filters is discovery territory.
+
+**Dropped**: Filter bottom sheet, tag filter, collection filter, read status filter. Users who need to find books by tag can search or browse the folder they organized on desktop.
 
 ### Phase 7: List View Alternative (not started)
 
-- [ ] List view toggle in app menu
-- [ ] List row component (small cover + text)
+Useful for scanning large collections (e.g., "I'm at the library, let me scroll my wishlist by title"). Keep it lean.
+
+- [ ] List view toggle in app menu (already wired, currently disabled)
+- [ ] List row component: small cover thumbnail (40×60) + title + author
+- [ ] No multi-line metadata in list row — tap for detail view
+
+**Not included**: Configurable list columns, inline metadata display. Desktop's column-based list view is a different paradigm.
 
 ### Phase 8: Landing Page Responsive (not started)
 
@@ -723,8 +737,8 @@ Ordered by dependency. Each phase builds on the previous.
 
 - [ ] Update FAQ
 - [ ] Update README.md / index.html
-- [ ] Test on actual phone
-- [ ] Splash/loading screen
+- [x] Test on actual phone (ongoing since alpha.40)
+- [x] Splash/loading screen (completed alpha.38-39)
 
 ### Post-Implementation
 
@@ -856,6 +870,6 @@ New shelf structure:
 
 ## Status
 
-- **Current alpha**: 0.1.0-alpha.29 (commit `b16213b`)
-- **Current work**: Phase 5 bug fixes
-- **Next up**: P5-V2-D (persist navStack), P5-V5-A/B/C (drawer structure), P5-V8-A (breadcrumb overflow)
+- **Current alpha**: 0.1.0-alpha.48 (commit `5177cdd`)
+- **Phase 5**: Complete (all verification items resolved)
+- **Next up**: Phase 6A (Search), then 6B (Sort), then Phase 7 (List View)
