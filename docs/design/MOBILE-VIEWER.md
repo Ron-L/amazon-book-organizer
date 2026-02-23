@@ -689,20 +689,21 @@ Ordered by dependency. Each phase builds on the previous.
 
 ---
 
-### Phase 6: Search & Sort (not started)
+### Phase 6: Search & Sort (6A complete, 6B not started)
 
 **Design principle**: Mobile is for *referencing* what you already discovered and organized on desktop, not for rich discovery. Features are trimmed to what serves the reference use case.
 
-#### 6A. Search (highest priority)
+#### 6A. Search — COMPLETE (alpha.58)
 
 The #1 mobile reference tool. "Do I already own this?" and "What was that book?" are the core mobile use cases.
 
-- [ ] Search screen (tap search icon in header → full-screen search)
-- [ ] Single text input, instant-filter as you type
-- [ ] Searches title + author (+ series, tags, notes)
-- [ ] Results in list layout (small cover left + title/author/rating right)
-- [ ] Tap result → book detail → back preserves query + results
-- [ ] Empty state: "No results for '...'"
+- [x] Search screen (tap search icon in header → full-screen search)
+- [x] Single text input, instant-filter as you type
+- [x] Searches title + author (+ series, tags, notes)
+- [x] Results in list layout (small cover left + title/author/rating right)
+- [x] Tap result → book detail → back preserves query + results
+- [x] Empty state: "No results for '...'"
+- [x] Scoped search: from folder view searches that folder + subfolders; from dashboard searches globally
 
 **Not included**: Advanced search fields (genre, date range, tag filter). Desktop handles discovery; mobile just needs to find a known book quickly.
 
