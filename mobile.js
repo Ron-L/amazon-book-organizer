@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.56';
+const MOBILE_VERSION = '0.1.0-alpha.57';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -1410,21 +1410,10 @@ function BookDetailView({ bookId, books, coverUrlMap, blankImageBooks, setBlankI
 
 // --- SearchView component ---
 
-function SearchView({ books, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, tagRegistry, onTapBook, initialQuery, onQueryChange }) {
-    const [query, setQuery] = useState(initialQuery || '');
-    const inputRef = React.useRef(null);
-
-    React.useEffect(() => {
-        if (inputRef.current) inputRef.current.focus();
-    }, []);
-
-    const handleQueryChange = (val) => {
-        setQuery(val);
-        if (onQueryChange) onQueryChange(val);
-    };
+function SearchView({ books, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, tagRegistry, onTapBook, query }) {
 
     const results = React.useMemo(() => {
-        const q = query.trim().toLowerCase();
+        const q = (query || '').trim().toLowerCase();
         if (!q) return [];
         const filtered = filterBooks(books, { showDealsOnly, showHidden });
         return filtered.filter(book => {
@@ -1442,7 +1431,7 @@ function SearchView({ books, showDealsOnly, showHidden, coverUrlMap, blankImageB
 
     return (
         <div style={{ paddingTop: '8px' }}>
-            {query.trim() === '' ? (
+            {!query || query.trim() === '' ? (
                 <div style={{ padding: '48px 24px', textAlign: 'center', color: 'var(--text-muted, #64748b)' }}>
                     Search by title, author, series, tags, or notes
                 </div>
@@ -1926,8 +1915,7 @@ function MobileApp() {
                         setBlankImageBooks={setBlankImageBooks}
                         tagRegistry={tagRegistry}
                         onTapBook={(bookId) => navigateTo('detail', { bookId })}
-                        initialQuery={searchQuery}
-                        onQueryChange={setSearchQuery}
+                        query={searchQuery}
                     />
                 ) : (
                     <Dashboard
