@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.58';
+const MOBILE_VERSION = '0.1.0-alpha.59';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -207,6 +207,25 @@ function filterBooks(books, { showDealsOnly, showHidden }) {
             if (book.currentPrice > book.priceTrigger) return false;
         }
         return true;
+    });
+}
+
+const SORT_OPTIONS = [
+    { key: 'dateAdded', label: 'Date Added' },
+    { key: 'titleAZ', label: 'Title A-Z' },
+    { key: 'authorAZ', label: 'Author A-Z' },
+    { key: 'rating', label: 'Rating' }
+];
+
+function sortBooks(books, sortKey) {
+    return [...books].sort((a, b) => {
+        switch (sortKey) {
+            case 'titleAZ': return a.title.localeCompare(b.title);
+            case 'authorAZ': return a.author.localeCompare(b.author);
+            case 'rating': return (b.rating || 0) - (a.rating || 0);
+            case 'dateAdded':
+            default: return parseBookDate(b.acquired || b.dateAdded) - parseBookDate(a.acquired || a.dateAdded);
+        }
     });
 }
 
@@ -1161,7 +1180,7 @@ function Dashboard({ books, folders, showDealsOnly, showHidden, coverUrlMap, bla
 
 // --- FolderView component ---
 
-function FolderView({ folderId, books, folders, showDealsOnly, showHidden,
+function FolderView({ folderId, books, folders, showDealsOnly, showHidden, sortOption, onCycleSort,
                       coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapSubfolder }) {
     const isAllBooks = folderId === '__recent__';
     const folder = isAllBooks ? null : folders.find(f => f.id === folderId);
@@ -1173,13 +1192,19 @@ function FolderView({ folderId, books, folders, showDealsOnly, showHidden,
 
     const folderBooks = useMemo(() => {
         const filtered = filterBooks(books, { showDealsOnly, showHidden });
+        let result;
         if (isAllBooks) {
-            return [...filtered].sort((a, b) => parseBookDate(b.acquired || b.dateAdded) - parseBookDate(a.acquired || a.dateAdded));
+            result = filtered;
+        } else if (!folder) {
+            return [];
+        } else {
+            const bookIds = new Set(folder.bookIds || []);
+            result = filtered.filter(b => bookIds.has(b.id));
         }
-        if (!folder) return [];
-        const bookIds = new Set(folder.bookIds || []);
-        return filtered.filter(b => bookIds.has(b.id));
-    }, [folder, books, showDealsOnly, showHidden, isAllBooks]);
+        return sortBooks(result, sortOption);
+    }, [folder, books, showDealsOnly, showHidden, isAllBooks, sortOption]);
+
+    const sortLabel = SORT_OPTIONS.find(o => o.key === sortOption)?.label || 'Date Added';
 
     if (!isAllBooks && !folder) {
         return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Folder not found</div>;
@@ -1192,6 +1217,26 @@ function FolderView({ folderId, books, folders, showDealsOnly, showHidden,
                     {subfolders.map(sub => (
                         <FolderTile key={sub.id} folder={sub} onTap={() => onTapSubfolder(sub.id)} />
                     ))}
+                </div>
+            )}
+
+            {folderBooks.length > 0 && (
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    marginBottom: '10px', fontSize: '13px', color: 'var(--text-secondary, #475569)'
+                }}>
+                    <span>{folderBooks.length} book{folderBooks.length !== 1 ? 's' : ''}</span>
+                    <button onClick={onCycleSort} style={{
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-default, #e2e8f0)',
+                        background: 'var(--bg-surface, #ffffff)', color: 'var(--text-secondary, #475569)',
+                        fontSize: '12px', fontWeight: 500, touchAction: 'manipulation', cursor: 'pointer'
+                    }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M7 15l5 5 5-5M7 9l5-5 5 5" />
+                        </svg>
+                        {sortLabel}
+                    </button>
                 </div>
             )}
 
@@ -1212,14 +1257,15 @@ function FolderView({ folderId, books, folders, showDealsOnly, showHidden,
                 </div>
             )}
 
-            <div style={{
-                padding: '10px 16px', fontSize: '13px', textAlign: 'center', marginTop: '16px',
-                color: 'var(--text-secondary, #475569)',
-                borderTop: '1px solid var(--border-default, #e2e8f0)'
-            }}>
-                {folderBooks.length} book{folderBooks.length !== 1 ? 's' : ''}
-                {subfolders.length > 0 && ` · ${subfolders.length} subfolder${subfolders.length !== 1 ? 's' : ''}`}
-            </div>
+            {subfolders.length > 0 && (
+                <div style={{
+                    padding: '10px 16px', fontSize: '13px', textAlign: 'center', marginTop: '16px',
+                    color: 'var(--text-secondary, #475569)',
+                    borderTop: '1px solid var(--border-default, #e2e8f0)'
+                }}>
+                    {subfolders.length} subfolder{subfolders.length !== 1 ? 's' : ''}
+                </div>
+            )}
         </div>
     );
 }
@@ -1410,7 +1456,7 @@ function BookDetailView({ bookId, books, coverUrlMap, blankImageBooks, setBlankI
 
 // --- SearchView component ---
 
-function SearchView({ books, folders, folderId, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, tagRegistry, onTapBook, query }) {
+function SearchView({ books, folders, folderId, showDealsOnly, showHidden, sortOption, coverUrlMap, blankImageBooks, setBlankImageBooks, tagRegistry, onTapBook, query }) {
 
     // Collect all bookIds in folder + subfolders recursively
     const scopeBookIds = React.useMemo(() => {
@@ -1432,7 +1478,7 @@ function SearchView({ books, folders, folderId, showDealsOnly, showHidden, cover
         if (!q) return [];
         let filtered = filterBooks(books, { showDealsOnly, showHidden });
         if (scopeBookIds) filtered = filtered.filter(b => scopeBookIds.has(b.id));
-        return filtered.filter(book => {
+        const matched = filtered.filter(book => {
             if (book.title.toLowerCase().includes(q)) return true;
             if (book.author.toLowerCase().includes(q)) return true;
             if (book.series && book.series.toLowerCase().includes(q)) return true;
@@ -1443,7 +1489,8 @@ function SearchView({ books, folders, folderId, showDealsOnly, showHidden, cover
             })) return true;
             return false;
         });
-    }, [query, books, showDealsOnly, showHidden, tagRegistry]);
+        return sortBooks(matched, sortOption);
+    }, [query, books, showDealsOnly, showHidden, tagRegistry, sortOption]);
 
     return (
         <div style={{ paddingTop: '8px' }}>
@@ -1559,6 +1606,16 @@ function MobileApp() {
     const scrollRestoreRef = useRef(null);
     // Persisted preferences
     const savedPrefs = JSON.parse(localStorage.getItem(MOBILE_PREFS_KEY) || '{}');
+    const [sortOption, setSortOptionRaw] = useState(() => savedPrefs.sortOption || 'dateAdded');
+    const cycleSortOption = useCallback(() => {
+        setSortOptionRaw(prev => {
+            const idx = SORT_OPTIONS.findIndex(o => o.key === prev);
+            const next = SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length].key;
+            const current = JSON.parse(localStorage.getItem(MOBILE_PREFS_KEY) || '{}');
+            localStorage.setItem(MOBILE_PREFS_KEY, JSON.stringify({ ...current, sortOption: next }));
+            return next;
+        });
+    }, []);
     const [expandedShelves, setExpandedShelvesRaw] = useState(() => new Set(savedPrefs.expandedShelves || []));
     const setExpandedShelves = useCallback((updater) => {
         setExpandedShelvesRaw(prev => {
@@ -1914,6 +1971,7 @@ function MobileApp() {
                         folderId={currentNav.folderId}
                         books={books} folders={folders}
                         showDealsOnly={showDealsOnly} showHidden={showHidden}
+                        sortOption={sortOption} onCycleSort={cycleSortOption}
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
                         setBlankImageBooks={setBlankImageBooks}
                         onTapBook={(bookId) => navigateTo('detail', { bookId })}
@@ -1932,6 +1990,7 @@ function MobileApp() {
                         books={books} folders={folders}
                         folderId={currentNav.folderId || null}
                         showDealsOnly={showDealsOnly} showHidden={showHidden}
+                        sortOption={sortOption}
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
                         setBlankImageBooks={setBlankImageBooks}
                         tagRegistry={tagRegistry}
