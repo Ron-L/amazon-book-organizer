@@ -739,6 +739,9 @@ Useful for scanning large collections (e.g., "I'm at the library, let me scroll 
 - [ ] Update README.md / index.html
 - [x] Test on actual phone (ongoing since alpha.40)
 - [x] Splash/loading screen (completed alpha.38-39)
+- [ ] Apple PWA meta tags (`apple-mobile-web-app-capable`, `apple-touch-icon` 180×180) in readerwrangler.html
+- [ ] iOS Safari "Add to Home Screen" hint banner (detect iOS Safari, show once, dismiss + remember in localStorage)
+- [ ] Android maskable icon (512×512 + 192×192, blue background edge-to-edge, logo in center 80% safe zone, `"purpose": "maskable"` in manifest.json)
 
 ### Post-Implementation
 

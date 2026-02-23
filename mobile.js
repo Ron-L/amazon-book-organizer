@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.48';
+const MOBILE_VERSION = '0.1.0-alpha.49';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -1352,7 +1352,7 @@ function MobileApp() {
     const [coverUrlMap, setCoverUrlMap] = useState({});
     const [blankImageBooks, setBlankImageBooks] = useState(new Set());
     const [loading, setLoading] = useState(true);
-    const [importing, setImporting] = useState(false);
+    const [importStatus, setImportStatus] = useState(null);
     const [error, setError] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(null);
     const [navStack, setNavStack] = useState(() => {
@@ -1462,7 +1462,7 @@ function MobileApp() {
             if (!file) return;
 
             setError(null);
-            setImporting(true);
+            setImportStatus('Reading backup...');
 
             try {
                 const text = await file.text();
@@ -1477,16 +1477,25 @@ function MobileApp() {
                     throw new Error('Not a valid ReaderWrangler backup file.');
                 }
 
+                const bookCount = data.books.items.length;
+                setImportStatus(`Importing ${bookCount.toLocaleString()} books...`);
+                // Yield to let React render the status update
+                await new Promise(r => setTimeout(r, 50));
+
                 const mappedBooks = data.books.items.map(mapBackupBook);
                 await saveBooksToIndexedDB(mappedBooks, false);
                 restoreOrganization(data.organization, mappedBooks.map(b => b.id));
+
+                setImportStatus('Loading library...');
+                await new Promise(r => setTimeout(r, 50));
+
                 await loadAllData();
                 console.log(`✅ Import complete: ${mappedBooks.length} books`);
             } catch (err) {
                 console.error('❌ Import failed:', err);
                 setError(err.message || 'Import failed.');
             } finally {
-                setImporting(false);
+                setImportStatus(null);
             }
         };
         input.click();
@@ -1680,14 +1689,14 @@ function MobileApp() {
 
                         <button
                             onClick={handleImport}
-                            disabled={importing}
+                            disabled={!!importStatus}
                             className="w-full max-w-sm py-3 px-4 rounded-lg text-white font-semibold text-base"
                             style={{
-                                background: importing ? 'var(--text-muted, #94a3b8)' : 'var(--bg-accent, #3b82f6)',
-                                opacity: importing ? 0.7 : 1
+                                background: importStatus ? 'var(--text-muted, #94a3b8)' : 'var(--bg-accent, #3b82f6)',
+                                opacity: importStatus ? 0.7 : 1
                             }}
                         >
-                            {importing ? 'Importing...' : 'Import Backup'}
+                            {importStatus || 'Import Backup'}
                         </button>
 
                         {error && (
@@ -1728,6 +1737,24 @@ function MobileApp() {
                     />
                 )}
             </div>
+
+            {/* Import progress overlay */}
+            {importStatus && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 9999,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    background: 'var(--bg-page, #ffffff)'
+                }}>
+                    <img src="icons/logo-transparent.png" alt="" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
+                    <div style={{ fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: '1.8em', fontWeight: 700, color: 'var(--text-primary, #1e293b)', marginBottom: '8px' }}>
+                        ReaderWrangler™
+                    </div>
+                    <div style={{ color: 'var(--text-muted, #64748b)', fontSize: '0.9em', marginBottom: '24px' }}>
+                        {importStatus}
+                    </div>
+                    <div className="splash-spinner" />
+                </div>
+            )}
         </div>
     );
 }
