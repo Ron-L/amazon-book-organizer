@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.52';
+const MOBILE_VERSION = '0.1.0-alpha.53';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -582,7 +582,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                         backgroundColor: 'var(--bg-book-placeholder, #d4c5a9)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         padding: '8px',
-                        opacity: (book.onWishlist || book.isHidden) ? 0.4 : 1
+                        opacity: book.onWishlist ? 0.4 : 1
                     }}>
                         <div style={{
                             textAlign: 'center',
@@ -605,7 +605,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                         alt=""
                         loading="lazy"
                         style={{ width: '100%', height: '100%', objectFit: 'cover',
-                            opacity: (book.onWishlist || book.isHidden) ? 0.4 : 1 }}
+                            opacity: book.onWishlist ? 0.4 : 1 }}
                         onError={() => setBlankImageBooks(prev => new Set([...prev, book.id]))}
                         onLoad={(e) => checkIfBlankImage(e.target, book.id, setBlankImageBooks)}
                     />
@@ -614,8 +614,13 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                     <div style={{
                         position: 'absolute', inset: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '5em', pointerEvents: 'none'
-                    }}>🚫</div>
+                        pointerEvents: 'none'
+                    }}>
+                        <svg viewBox="0 0 100 100" style={{ width: '70%', height: 'auto' }}>
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#dc2626" strokeWidth="8" />
+                            <line x1="18" y1="18" x2="82" y2="82" stroke="#dc2626" strokeWidth="8" strokeLinecap="round" />
+                        </svg>
+                    </div>
                 )}
             </div>
             <div className="truncate" style={{
