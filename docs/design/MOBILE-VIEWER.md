@@ -718,13 +718,14 @@ Simple sort for folder/grid views. Cycle button in toolbar row (not a bottom she
 
 **Dropped from original plan**: Sort picker bottom sheet (over-engineered for 4 options), Series sort, Manual Order sort, My Rating sort, Price sort — these are organizing/discovery tools that belong on desktop.
 
-### Phase 7: List View Alternative (not started)
+### Phase 7: List View Alternative — COMPLETE (alpha.60)
 
 Useful for scanning large collections (e.g., "I'm at the library, let me scroll my wishlist by title"). Keep it lean.
 
-- [ ] List view toggle in app menu (already wired, currently disabled)
-- [ ] List row component: small cover thumbnail (40×60) + title + author
-- [ ] No multi-line metadata in list row — tap for detail view
+- [x] List view toggle in app menu (Covers ↔ List)
+- [x] List row component: small cover thumbnail (40×60) + title + author
+- [x] No multi-line metadata in list row — tap for detail view
+- [x] Sort applies in list mode, viewMode persists in localStorage
 
 **Not included**: Configurable list columns, inline metadata display. Desktop's column-based list view is a different paradigm.
 
@@ -893,4 +894,4 @@ New shelf structure:
 
 - **Current alpha**: 0.1.0-alpha.48 (commit `5177cdd`)
 - **Phase 5**: Complete (all verification items resolved)
-- **Next up**: Phase 7 (List View), then 8A (Landing Page), then 8B (Tag Views — desktop first), then Phase 9 (Docs & Polish)
+- **Next up**: Phase 8A (Landing Page), then 8B (Tag Views — desktop first), then Phase 9 (Docs & Polish)
