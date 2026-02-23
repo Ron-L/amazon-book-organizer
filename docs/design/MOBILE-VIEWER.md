@@ -689,7 +689,7 @@ Ordered by dependency. Each phase builds on the previous.
 
 ---
 
-### Phase 6: Search & Sort (6A, 6B complete; 6C not started)
+### Phase 6: Search & Sort — COMPLETE
 
 **Design principle**: Mobile is for *referencing* what you already discovered and organized on desktop, not for rich discovery. Features are trimmed to what serves the reference use case.
 
@@ -718,19 +718,6 @@ Simple sort for folder/grid views. Cycle button in toolbar row (not a bottom she
 
 **Dropped from original plan**: Sort picker bottom sheet (over-engineered for 4 options), Series sort, Manual Order sort, My Rating sort, Price sort — these are organizing/discovery tools that belong on desktop.
 
-#### 6C. Tag Views (replaces deferred filter)
-
-Tag views (virtual folders based on tags) provide persistent, cross-folder browsing by tag. Configured on desktop, displayed read-only on mobile. See `docs/design/TAG-VIRTUAL-FOLDERS.md` for full design.
-
-- [ ] Read `pinnedTagFolders` from imported backup settings
-- [ ] Render tag views in drawer (tag icon, positioned per desktop ordering)
-- [ ] Render tag views as dashboard shelves (tag icon, subtle background tint)
-- [ ] FolderView handles tag view IDs (filter books by tag, like `__recent__`)
-- [ ] Tag icon SVG component
-- [ ] No configuration, no reordering, no remove — read-only display
-
-**Not included on mobile**: Tag configuration, drag interactions, un-tagging. Desktop handles all curation.
-
 ### Phase 7: List View Alternative (not started)
 
 Useful for scanning large collections (e.g., "I'm at the library, let me scroll my wishlist by title"). Keep it lean.
@@ -741,11 +728,28 @@ Useful for scanning large collections (e.g., "I'm at the library, let me scroll 
 
 **Not included**: Configurable list columns, inline metadata display. Desktop's column-based list view is a different paradigm.
 
-### Phase 8: Landing Page Responsive (not started)
+### Phase 8A: Landing Page Responsive (not started)
 
 - [ ] index.html responsive CSS
 - [ ] Bookmarklet mobile note
 - [ ] General mobile readability
+
+### Phase 8B: Tag Virtual Folders (not started — requires desktop work first)
+
+Tag views (virtual folders based on tags) provide persistent, cross-folder browsing by tag. Configured on desktop, displayed read-only on mobile. **Desktop implementation must come first** — see `docs/design/DESKTOP-BACKLOG.md` item #1 and `docs/design/TAG-VIRTUAL-FOLDERS.md` for full design.
+
+**Desktop (prerequisite):**
+- [ ] Tag management UI, left pane rendering, drag rules, remove-from-view, export `pinnedTagFolders`
+
+**Mobile (this phase):**
+- [ ] Read `pinnedTagFolders` from imported backup settings
+- [ ] Render tag views in drawer (tag icon, positioned per desktop ordering)
+- [ ] Render tag views as dashboard shelves (tag icon, subtle background tint)
+- [ ] FolderView handles tag view IDs (filter books by tag, like `__recent__`)
+- [ ] Tag icon SVG component
+- [ ] No configuration, no reordering, no remove — read-only display
+
+**Not included on mobile**: Tag configuration, drag interactions, un-tagging. Desktop handles all curation.
 
 ### Phase 9: Documentation & Polish (not started)
 
@@ -889,4 +893,4 @@ New shelf structure:
 
 - **Current alpha**: 0.1.0-alpha.48 (commit `5177cdd`)
 - **Phase 5**: Complete (all verification items resolved)
-- **Next up**: Phase 6A (Search), then 6B (Sort), then Phase 7 (List View)
+- **Next up**: Phase 7 (List View), then 8A (Landing Page), then 8B (Tag Views — desktop first), then Phase 9 (Docs & Polish)
