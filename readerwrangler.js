@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10814,9 +10814,10 @@
                                                                                 setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
                                                                             }
                                                                         }}
-                                                                        className={`px-2 py-1 text-xs rounded mr-1 ${pinnedTagFolders.some(p => p.tagId === tagId) ? 'text-amber-600 hover:bg-amber-50' : 'text-gray-400 hover:bg-gray-100'}`}
+                                                                        className="px-2 py-1 text-xs rounded mr-1"
+                                                                        style={{ opacity: pinnedTagFolders.some(p => p.tagId === tagId) ? 1 : 0.3, backgroundColor: pinnedTagFolders.some(p => p.tagId === tagId) ? '#fef3c7' : 'transparent' }}
                                                                         title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
-                                                                        {pinnedTagFolders.some(p => p.tagId === tagId) ? '📌' : '📌'}
+                                                                        📌
                                                                     </button>
                                                                     <button
                                                                         onClick={() => setEditingTagId(tagId)}
@@ -10878,9 +10879,10 @@
                                                                                             setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
                                                                                         }
                                                                                     }}
-                                                                                    className={`px-2 py-1 text-xs rounded mr-1 ${pinnedTagFolders.some(p => p.tagId === tagId) ? 'text-amber-600 hover:bg-amber-50' : 'text-gray-400 hover:bg-gray-100'}`}
+                                                                                    className="px-2 py-1 text-xs rounded mr-1"
+                                                                                    style={{ opacity: pinnedTagFolders.some(p => p.tagId === tagId) ? 1 : 0.3, backgroundColor: pinnedTagFolders.some(p => p.tagId === tagId) ? '#fef3c7' : 'transparent' }}
                                                                                     title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
-                                                                                    {pinnedTagFolders.some(p => p.tagId === tagId) ? '📌' : '📌'}
+                                                                                    📌
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => {
