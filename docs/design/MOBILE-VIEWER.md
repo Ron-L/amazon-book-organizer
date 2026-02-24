@@ -729,11 +729,11 @@ Useful for scanning large collections (e.g., "I'm at the library, let me scroll 
 
 **Not included**: Configurable list columns, inline metadata display. Desktop's column-based list view is a different paradigm.
 
-### Phase 8A: Landing Page Responsive (not started)
+### Phase 8A: Landing Page Responsive (COMPLETE)
 
-- [ ] index.html responsive CSS
-- [ ] Bookmarklet mobile note
-- [ ] General mobile readability
+- [x] index.html responsive CSS (h2 font-size fix, v2.1.1)
+- [x] Bookmarklet mobile note (already existed; added PWA home screen tip, v2.1.2)
+- [x] General mobile readability (container/hero/how-it-works/workflow-step padding, ul indent, FreeDNS removal, v2.1.3–v2.1.6)
 
 ### Phase 8B: Tag Virtual Folders (not started — requires desktop work first)
 
