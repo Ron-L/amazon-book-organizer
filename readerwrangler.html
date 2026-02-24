@@ -85,6 +85,31 @@
         script.src = (isMobile ? 'mobile.js' : 'readerwrangler.js') + '?v=' + APP_VERSION;
         document.body.appendChild(script);
     </script>
+    <!-- Emergency reset fallback: if app fails to mount within 15s, offer reset -->
+    <script>
+        window._appMountTimer = setTimeout(function() {
+            var splash = document.getElementById('splash');
+            if (!splash) return; // React mounted and replaced splash — all good
+            splash.innerHTML =
+                '<div style="text-align:center; padding:40px 20px; max-width:400px;">' +
+                    '<div style="font-size:2em; margin-bottom:16px;">&#9888;&#65039;</div>' +
+                    '<div style="font-family:\'Libre Baskerville\',Georgia,serif; font-size:1.4em; font-weight:700; color:var(--text-primary,#1e293b); margin-bottom:12px;">Something went wrong</div>' +
+                    '<div style="color:var(--text-muted,#64748b); font-size:0.95em; line-height:1.6; margin-bottom:24px;">' +
+                        'ReaderWrangler failed to load. This may be caused by corrupted data. ' +
+                        'You can reset the app to fix this. Your files on disk are safe.' +
+                    '</div>' +
+                    '<button id="emergencyResetBtn" style="padding:12px 24px; background:#dc2626; color:white; border:none; border-radius:8px; font-size:1em; font-weight:600; cursor:pointer; margin-bottom:12px;">Reset App</button>' +
+                    '<div style="color:var(--text-muted,#64748b); font-size:0.8em; margin-top:8px;">Import your backup file after reset to restore everything.</div>' +
+                '</div>';
+            document.getElementById('emergencyResetBtn').addEventListener('click', function() {
+                if (!confirm('This will clear all ReaderWrangler data from your browser.\n\nYour files on disk are safe. Import your backup file after reset to restore everything.\n\nContinue?')) return;
+                var keys = ['readerwrangler-state','readerwrangler-enriched-cache','readerwrangler-settings','readerwrangler-status','readerwrangler-filters','readerwrangler-explorer','readerwrangler-folders','readerwrangler-mobile-prefs','readerwrangler-theme','readerwrangler-desktopMode'];
+                keys.forEach(function(k) { localStorage.removeItem(k); });
+                var req = indexedDB.deleteDatabase('ReaderWranglerDB');
+                req.onsuccess = req.onerror = req.onblocked = function() { location.reload(); };
+            });
+        }, 15000);
+    </script>
     <script data-goatcounter="https://readerwrangler.goatcounter.com/count"
             async src="//gc.zgo.at/count.js"></script>
 </body>
