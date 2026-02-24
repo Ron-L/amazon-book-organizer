@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10805,6 +10805,20 @@
                                                                 <td className="py-2 text-center text-gray-500">{getTagCount(tagId)}</td>
                                                                 <td className="py-2 text-right">
                                                                     <button
+                                                                        onClick={() => {
+                                                                            const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
+                                                                            if (isPinned) {
+                                                                                setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
+                                                                            } else {
+                                                                                const maxPos = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
+                                                                                setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
+                                                                            }
+                                                                        }}
+                                                                        className={`px-2 py-1 text-xs rounded mr-1 ${pinnedTagFolders.some(p => p.tagId === tagId) ? 'text-amber-600 hover:bg-amber-50' : 'text-gray-400 hover:bg-gray-100'}`}
+                                                                        title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
+                                                                        {pinnedTagFolders.some(p => p.tagId === tagId) ? '📌' : '📌'}
+                                                                    </button>
+                                                                    <button
                                                                         onClick={() => setEditingTagId(tagId)}
                                                                         className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded mr-1">
                                                                         Rename
@@ -10831,6 +10845,8 @@
                                                                                 });
                                                                                 // Remove from active filter if present
                                                                                 setTagFilter(prev => prev.filter(t => t !== tagId));
+                                                                                // v5.5.15-alpha.9 - Remove from pinned tag folders if present
+                                                                                setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
                                                                             }
                                                                         }}
                                                                         className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded">
@@ -10854,11 +10870,27 @@
                                                                             <td className="py-2 text-right w-32">
                                                                                 <button
                                                                                     onClick={() => {
+                                                                                        const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
+                                                                                        if (isPinned) {
+                                                                                            setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
+                                                                                        } else {
+                                                                                            const maxPos = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
+                                                                                            setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
+                                                                                        }
+                                                                                    }}
+                                                                                    className={`px-2 py-1 text-xs rounded mr-1 ${pinnedTagFolders.some(p => p.tagId === tagId) ? 'text-amber-600 hover:bg-amber-50' : 'text-gray-400 hover:bg-gray-100'}`}
+                                                                                    title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
+                                                                                    {pinnedTagFolders.some(p => p.tagId === tagId) ? '📌' : '📌'}
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => {
                                                                                         setTagRegistry(prev => {
                                                                                             const updated = { ...prev };
                                                                                             delete updated[tagId];
                                                                                             return updated;
                                                                                         });
+                                                                                        // v5.5.15-alpha.9 - Remove from pinned tag folders if present
+                                                                                        setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
                                                                                     }}
                                                                                     className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded">
                                                                                     Delete
@@ -10871,11 +10903,14 @@
                                                         </div>
                                                         <button
                                                             onClick={() => {
+                                                                const orphanedIds = new Set(orphanedTags.map(([tagId]) => tagId));
                                                                 setTagRegistry(prev => {
                                                                     const updated = { ...prev };
                                                                     orphanedTags.forEach(([tagId]) => delete updated[tagId]);
                                                                     return updated;
                                                                 });
+                                                                // v5.5.15-alpha.9 - Remove any pinned orphaned tags
+                                                                setPinnedTagFolders(prev => prev.filter(p => !orphanedIds.has(p.tagId)));
                                                             }}
                                                             className="mt-2 px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded border border-red-200">
                                                             Delete all orphaned tags
