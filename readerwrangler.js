@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -499,6 +499,7 @@
             const [datePreset, setDatePreset] = useState(''); // Date filter preset: '' | 'last30' | 'last90' | 'lastYear' | '2025' | '2024' | '2023' | 'custom' (NEW v4.15.6)
             const [tagFilter, setTagFilter] = useState([]); // v4.27.0 - Filter by tags (array of tag names, OR logic)
             const [tagRegistry, setTagRegistry] = useState({}); // v4.27.0 - Central tag registry {tagName: {label, count}}
+            const [pinnedTagFolders, setPinnedTagFolders] = useState([]); // v5.5.15-alpha.8 - Tag virtual folders [{tagId, position}]
             const [selectedCollections, setSelectedCollections] = useState([]); // v5.0.0-alpha.175.41 - Phase 5.2: Collections filter (array, OR logic)
             const [minAmazonRating, setMinAmazonRating] = useState(''); // v5.0.0-alpha.175.42 - Phase 5.3: Amazon Rating filter (single-select, minimum rating)
             const [minMyRating, setMinMyRating] = useState(''); // v5.0.0-alpha.175.43 - Phase 5.4: My Rating filter (single-select, '' = all, 'unrated' = 0, '1'-'5' = minimum rating)
@@ -1748,6 +1749,7 @@
                                     setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
                                     setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
                                     setTagRegistry(state.organization.tagRegistry || {}); // v4.27.0
+                                    setPinnedTagFolders(state.organization.pinnedTagFolders || []); // v5.5.15-alpha.8
                                     setFolders(state.organization.folders || []); // v5.0.0
                                     setDataSource(state.organization.dataSource || 'enriched');
                                     effectiveLastSync = state.lastSyncTime || Date.now();
@@ -1804,7 +1806,8 @@
                                 dataSource,
                                 blankImageBooks: Array.from(blankImageBooks),
                                 hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
-                                tagRegistry  // v4.27.0 - Tag registry
+                                tagRegistry,  // v4.27.0 - Tag registry
+                                pinnedTagFolders  // v5.5.15-alpha.8 - Tag virtual folders
                             },
                             lastSyncTime: lastSyncTime || Date.now(),
                             savedAt: Date.now()
@@ -1814,7 +1817,7 @@
                         console.warn('Could not auto-save organization:', e);
                     }
                 }
-            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry]);
+            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, pinnedTagFolders]);
 
             // v5.1.0-alpha.7 - Helper: Get all books in folder (including subfolders recursively)
             const getAllBooksInFolder = (folderId, folders) => {
@@ -2981,6 +2984,7 @@
                             },
                             exportDate: new Date().toISOString(),
                             tagRegistry, // v5.0.0-alpha.175 - Tag registry
+                            pinnedTagFolders, // v5.5.15-alpha.8 - Tag virtual folders
                             hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
                             appVersion: ORGANIZER_VERSION
                         }
@@ -3584,6 +3588,7 @@
                 if (orgToRestore) {
                     setBlankImageBooks(new Set(orgToRestore.blankImageBooks || []));
                     setTagRegistry(orgToRestore.tagRegistry || {}); // v5.0.0-alpha.175.17
+                    setPinnedTagFolders(orgToRestore.pinnedTagFolders || []); // v5.5.15-alpha.8
 
                     // v5.0.0-alpha.99 - Restore folders from backup (if present)
                     if (orgToRestore.folders && Array.isArray(orgToRestore.folders)) {
