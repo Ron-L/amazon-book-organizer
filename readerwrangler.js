@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.27";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.28";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8367,43 +8367,46 @@
                                 <div className="p-2">
                                     {/* All Books (virtual, view-only) - v5.0.0-alpha.52 added "+" for new root folder */}
                                     <div
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group relative ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__all__')}>
                                         <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
                                         <span className="flex-1 pointer-events-none">{FOLDER_ALL_BOOKS.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">({books.length})</span>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const newFolder = {
-                                                    id: `folder-${Date.now()}`,
-                                                    name: 'New Folder',
-                                                    parentId: null,
-                                                    bookIds: [],
-                                                    childFolderIds: [],
-                                                    collapsed: false
-                                                };
-                                                recordAction({
-                                                    type: 'CREATE_FOLDER',
-                                                    folderId: newFolder.id,
-                                                    parentId: null,
-                                                    folder: { ...newFolder }
-                                                });
-                                                setFolders(prev => [...prev, newFolder]);
-                                                navigateToFolder(newFolder.id);
-                                                setEditingFolderId(newFolder.id);
-                                                setEditingFolderName('New Folder');
-                                            }}
-                                            className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 px-1"
-                                            title="New folder">
-                                            +
-                                        </button>
+                                        {/* v5.5.15-alpha.28 - Absolute position to avoid pushing count left */}
+                                        <div className="absolute right-1 top-0 bottom-0 flex items-center opacity-0 group-hover:opacity-100">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const newFolder = {
+                                                        id: `folder-${Date.now()}`,
+                                                        name: 'New Folder',
+                                                        parentId: null,
+                                                        bookIds: [],
+                                                        childFolderIds: [],
+                                                        collapsed: false
+                                                    };
+                                                    recordAction({
+                                                        type: 'CREATE_FOLDER',
+                                                        folderId: newFolder.id,
+                                                        parentId: null,
+                                                        folder: { ...newFolder }
+                                                    });
+                                                    setFolders(prev => [...prev, newFolder]);
+                                                    navigateToFolder(newFolder.id);
+                                                    setEditingFolderId(newFolder.id);
+                                                    setEditingFolderName('New Folder');
+                                                }}
+                                                className="text-blue-500 hover:text-blue-700 px-1"
+                                                title="New folder">
+                                                +
+                                            </button>
+                                        </div>
                                     </div>
                                     {/* Divider line to separate All Books from folders */}
                                     <div className="border-b border-gray-200 my-1 mx-2"></div>
                                     {/* v5.4.4 - My Library: selectable + folder drop target */}
                                     <div
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer relative ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__library__')}
                                         onDragOver={(e) => {
                                             // Accept folder drags only — books go to Inbox, not root
@@ -8432,8 +8435,8 @@
                                         <span className="text-xs text-gray-500 pointer-events-none">
                                             ({getChildFolders(null).length} folders)
                                         </span>
-                                        {/* v5.1.0-alpha.14 - Collapse/Expand all controls (moved from top, only applies to My Library folders) */}
-                                        <div className="flex gap-0.5 ml-1" onClick={(e) => e.stopPropagation()}>
+                                        {/* v5.1.0-alpha.14 - Collapse/Expand all controls — v5.5.15-alpha.28 absolute for count alignment */}
+                                        <div className="absolute right-1 top-0 bottom-0 flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
                                             <button
                                                 onClick={() => {
                                                     // Collapse all folders
@@ -8537,7 +8540,7 @@
                                                 <React.Fragment key={folder.id}>
                                                     <div
                                                         data-folder-id={folder.id}
-                                                        className={`w-full flex items-center gap-1 pr-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${(sidebarFolderDragTarget?.type === 'reparent' && sidebarFolderDragTarget?.folderId === folder.id) ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
+                                                        className={`w-full flex items-center gap-1 pr-2 py-1.5 rounded cursor-pointer group relative ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${(sidebarFolderDragTarget?.type === 'reparent' && sidebarFolderDragTarget?.folderId === folder.id) ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                                         style={{
                                                             paddingLeft: `${16 + depth * 16}px`,
                                                             // v5.0.0-alpha.86 - Visual feedback for folder reorder
@@ -8942,7 +8945,8 @@
                                                                         </span>
                                                                     );
                                                                 })()}
-                                                                {/* v5.0.0-alpha.52 - New subfolder button */}
+                                                                {/* v5.0.0-alpha.52 - New subfolder button — v5.5.15-alpha.28 absolute for count alignment */}
+                                                                <div className="absolute right-1 top-0 bottom-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
@@ -8970,7 +8974,7 @@
                                                                         setEditingFolderName('New Subfolder');
                                                                         setIsPlaceholderMode(true); // v5.0.0-alpha.134 - Show as placeholder
                                                                     }}
-                                                                    className="opacity-0 group-hover:opacity-100 text-blue-500 hover:text-blue-700 px-1"
+                                                                    className="text-blue-500 hover:text-blue-700 px-1"
                                                                     title="New subfolder">
                                                                     +
                                                                 </button>
@@ -9038,10 +9042,11 @@
                                                                             console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}${uniqueOrphanedBookIds.length > 0 ? `, moved ${uniqueOrphanedBookIds.length} books to ${destinationName}` : ''}`);
                                                                         }
                                                                     }}
-                                                                    className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 px-1"
+                                                                    className="text-red-500 hover:text-red-700 px-1"
                                                                     title="Delete folder">
                                                                     ×
                                                                 </button>
+                                                                </div>
                                                             </>
                                                         )}
                                                     </div>
