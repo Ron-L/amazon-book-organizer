@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.26";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.27";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9181,12 +9181,46 @@
                                                             }
                                                         }
                                                     }}
-                                                    onClick={() => navigateToFolder(tagFolderId)}
+                                                    onClick={() => { if (editingFolderId !== tagFolderId) navigateToFolder(tagFolderId); }}
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault();
+                                                        setFolderContextMenu({ folderId: tagFolderId, x: e.clientX, y: e.clientY, source: 'left' });
+                                                    }}
                                                     title={`Tag view: ${tagLabel} (${bookCount} books)`}>
                                                     <span className="pointer-events-none">
                                                         <TagIconSVG size={16} color={selectedFolderId === tagFolderId ? '#1e40af' : '#d97706'} />
                                                     </span>
-                                                    <span className="flex-1 pointer-events-none">{tagLabel}</span>
+                                                    {editingFolderId === tagFolderId ? (
+                                                        <input
+                                                            type="text"
+                                                            className="flex-1 px-1 py-0 border border-blue-400 rounded text-sm focus:outline-none"
+                                                            value={editingFolderName}
+                                                            onChange={(e) => setEditingFolderName(e.target.value)}
+                                                            onBlur={() => {
+                                                                if (editingFolderName.trim()) {
+                                                                    setTagRegistry(prev => ({
+                                                                        ...prev,
+                                                                        [item.tagId]: { ...prev[item.tagId], label: editingFolderName.trim() }
+                                                                    }));
+                                                                }
+                                                                setEditingFolderId(null);
+                                                                setEditingFolderName('');
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                e.stopPropagation();
+                                                                if (e.key === 'Enter') {
+                                                                    e.target.blur();
+                                                                } else if (e.key === 'Escape') {
+                                                                    setEditingFolderId(null);
+                                                                    setEditingFolderName('');
+                                                                }
+                                                            }}
+                                                            autoFocus
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                    ) : (
+                                                        <span className="flex-1 pointer-events-none">{tagLabel}</span>
+                                                    )}
                                                     <span className="text-xs text-gray-500 pointer-events-none">({bookCount})</span>
                                                 </div>
                                             );
@@ -11924,6 +11958,125 @@
                         );
                     })()}
 
+                    {/* v5.5.15-alpha.27 - Tag View Context Menu */}
+                    {folderContextMenu && folderContextMenu.folderId?.startsWith('__tag_') && folderContextMenu.folderId?.endsWith('__') && (() => {
+                        const tagId = folderContextMenu.folderId.slice(6, -2);
+                        const tag = tagRegistry[tagId];
+                        if (!tag) return null;
+                        const tagLabel = tag.label || tagId;
+                        const bookCount = getTagCount(tagId);
+
+                        // Viewport-aware positioning
+                        const menuWidth = 200;
+                        const menuHeight = 260;
+                        let menuX = Math.max(10, Math.min(folderContextMenu.x, window.innerWidth - menuWidth - 10));
+                        let menuY = Math.max(10, Math.min(folderContextMenu.y, window.innerHeight - menuHeight - 10));
+
+                        return (
+                            <div
+                                className="fixed bg-white border border-gray-300 shadow-lg rounded z-50 py-1 min-w-[200px]"
+                                style={{ left: `${menuX}px`, top: `${menuY}px` }}
+                                onClick={(e) => e.stopPropagation()}>
+
+                                {/* Open */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    onClick={() => {
+                                        navigateToFolder(folderContextMenu.folderId);
+                                        setFolderContextMenu(null);
+                                    }}>
+                                    <span>📂</span>
+                                    <span>Open</span>
+                                </div>
+
+                                {/* Rename */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    onClick={() => {
+                                        setEditingFolderId(folderContextMenu.folderId);
+                                        setEditingFolderName(tagLabel);
+                                        setFolderContextMenu(null);
+                                    }}>
+                                    <span>✏️</span>
+                                    <span>Rename</span>
+                                    <span className="ml-auto text-gray-400 text-xs">F2</span>
+                                </div>
+
+                                <div className="border-t border-gray-200 my-1"></div>
+
+                                {/* Unpin */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    onClick={() => {
+                                        setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
+                                        if (selectedFolderId === folderContextMenu.folderId) {
+                                            navigateToFolder('__all__');
+                                        }
+                                        setFolderContextMenu(null);
+                                    }}>
+                                    <span>📌</span>
+                                    <span>Unpin from Sidebar</span>
+                                </div>
+
+                                {/* Delete Tag */}
+                                <div
+                                    className="px-4 py-2 hover:bg-red-50 cursor-pointer flex items-center gap-3 text-red-600"
+                                    onClick={async () => {
+                                        setFolderContextMenu(null);
+                                        const msg = bookCount > 0
+                                            ? `Delete tag "${tagLabel}"? This will remove it from ${bookCount} book${bookCount !== 1 ? 's' : ''}.`
+                                            : `Delete tag "${tagLabel}"?`;
+                                        if (await showConfirmDialog('Delete Tag', msg)) {
+                                            setBooks(prev => {
+                                                const updated = prev.map(b => {
+                                                    if (b.tags?.includes(tagId)) {
+                                                        return { ...b, tags: b.tags.filter(t => t !== tagId) };
+                                                    }
+                                                    return b;
+                                                });
+                                                saveBooksToIndexedDB(updated);
+                                                return updated;
+                                            });
+                                            setTagRegistry(prev => {
+                                                const updated = { ...prev };
+                                                delete updated[tagId];
+                                                return updated;
+                                            });
+                                            setTagFilter(prev => prev.filter(t => t !== tagId));
+                                            setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
+                                            if (selectedFolderId === `__tag_${tagId}__`) {
+                                                navigateToFolder('__all__');
+                                            }
+                                        }
+                                    }}>
+                                    <span>🗑️</span>
+                                    <span>Delete Tag</span>
+                                </div>
+
+                                <div className="border-t border-gray-200 my-1"></div>
+
+                                {/* Properties */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    onClick={() => {
+                                        setFolderPropertiesEditedName(tagLabel);
+                                        setFolderPropertiesDialog({ folderId: folderContextMenu.folderId });
+                                        setDialogDrag({
+                                            isDragging: false,
+                                            offsetX: 0,
+                                            offsetY: 0,
+                                            dialogX: window.innerWidth / 2 - 224,
+                                            dialogY: window.innerHeight / 2 - 200
+                                        });
+                                        setFolderContextMenu(null);
+                                    }}>
+                                    <span>ℹ️</span>
+                                    <span>Tag Properties</span>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* v5.0.0-alpha.165 - Explorer Book Context Menu */}
                     {explorerBookContextMenu && (() => {
                         // v5.0.0-alpha.166 - Phase 2: Full implementation with Move to / Copy to submenus
@@ -12899,6 +13052,120 @@
 
                     {/* Folder Properties Dialog - v5.0.0-alpha.142 */}
                     {folderPropertiesDialog && (() => {
+                        // v5.5.15-alpha.27 - Tag View Properties
+                        const isTagViewProp = folderPropertiesDialog.folderId?.startsWith('__tag_') && folderPropertiesDialog.folderId?.endsWith('__');
+                        if (isTagViewProp) {
+                            const tagId = folderPropertiesDialog.folderId.slice(6, -2);
+                            const tag = tagRegistry[tagId];
+                            if (!tag) return null;
+                            const tagLabel = tag.label || tagId;
+                            const bookCount = getTagCount(tagId);
+                            const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
+                            const tagBooks = books.filter(b => b.tags?.includes(tagId));
+                            const ownedBooks = tagBooks.filter(b => !b.onWishlist).length;
+                            const wishlistBooks = tagBooks.filter(b => b.onWishlist).length;
+
+                            const handleSave = () => {
+                                if (!folderPropertiesEditedName.trim()) {
+                                    showInfoDialog('Invalid Name', 'Tag name cannot be empty.');
+                                    return;
+                                }
+                                setTagRegistry(prev => ({
+                                    ...prev,
+                                    [tagId]: { ...prev[tagId], label: folderPropertiesEditedName.trim() }
+                                }));
+                                setFolderPropertiesDialog(null);
+                                console.log(`💾 Updated tag "${tagLabel}" → "${folderPropertiesEditedName.trim()}"`);
+                            };
+
+                            return (
+                                <>
+                                    <div
+                                        className="fixed inset-0 bg-black bg-opacity-50 z-50"
+                                        onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }}
+                                        onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setFolderPropertiesDialog(null); backdropMouseDownRef.current = null; }}
+                                    />
+                                    <div
+                                        className="bg-white rounded-lg shadow-xl w-full max-w-md pointer-events-auto fixed z-50"
+                                        style={{
+                                            left: `${dialogDrag?.dialogX || 0}px`,
+                                            top: `${dialogDrag?.dialogY || 0}px`,
+                                            cursor: dialogDrag?.isDragging ? 'grabbing' : 'default'
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}>
+                                        <h2
+                                            className="text-xl font-semibold mb-4 p-6 pb-0 cursor-grab active:cursor-grabbing select-none"
+                                            onMouseDown={(e) => {
+                                                const rect = e.currentTarget.parentElement.getBoundingClientRect();
+                                                setDialogDrag({
+                                                    isDragging: true,
+                                                    offsetX: e.clientX - rect.left,
+                                                    offsetY: e.clientY - rect.top,
+                                                    dialogX: rect.left,
+                                                    dialogY: rect.top
+                                                });
+                                            }}>
+                                            Tag Properties
+                                        </h2>
+                                        <div className="px-6 pb-6">
+                                            {/* Name */}
+                                            <div className="mb-4">
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                                                <input
+                                                    type="text"
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    value={folderPropertiesEditedName}
+                                                    onChange={(e) => setFolderPropertiesEditedName(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key !== 'Escape') e.stopPropagation();
+                                                        if (e.key === 'Enter') handleSave();
+                                                    }}
+                                                    autoFocus
+                                                />
+                                            </div>
+
+                                            {/* Statistics */}
+                                            <div className="border-t border-gray-200 pt-4 mb-4 space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Books:</span>
+                                                    <span className="text-gray-900">
+                                                        {bookCount} total ({ownedBooks} owned, {wishlistBooks} wishlist)
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">Status:</span>
+                                                    <span className="text-gray-900">{isPinned ? 'Pinned to sidebar' : 'Not pinned'}</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Buttons */}
+                                            <div className="flex gap-2 justify-end">
+                                                <button
+                                                    className="px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                                                    onClick={() => {
+                                                        setFolderPropertiesDialog(null);
+                                                        setTagManagementOpen(true);
+                                                    }}>
+                                                    Open Tag Manager
+                                                </button>
+                                                <div className="flex-1"></div>
+                                                <button
+                                                    className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                                                    onClick={() => setFolderPropertiesDialog(null)}>
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                    onClick={handleSave}>
+                                                    Save
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        }
+
                         const folder = folders.find(f => f.id === folderPropertiesDialog.folderId);
                         if (!folder) return null;
 
