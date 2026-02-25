@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2873,6 +2873,23 @@
                     </svg>
                 );
             };
+
+            // v5.5.15-alpha.11 - Tag icon SVG (eyelet tag / label shape)
+            const TagIconSVG = ({ size = 16, color = 'currentColor', opacity = 1 }) => (
+                <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'inline-block', verticalAlign: 'middle', opacity }}>
+                    <path d="M21.41 11.58l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7a2 2 0 0 0 .59 1.42l9 9A2 2 0 0 0 13 22a2 2 0 0 0 1.41-.59l7-7A2 2 0 0 0 22 13a2 2 0 0 0-.59-1.42z"
+                        fill={color} stroke={color} strokeWidth="0.5" />
+                    <circle cx="7.5" cy="7.5" r="1.5" fill="white" />
+                </svg>
+            );
+
+            // v5.5.15-alpha.11 - Folder icon SVG for pin toggle (unpinned state)
+            const FolderIconSVG = ({ size = 16, color = 'currentColor', opacity = 1 }) => (
+                <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'inline-block', verticalAlign: 'middle', opacity }}>
+                    <path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"
+                        fill={color} stroke={color} strokeWidth="0.5" />
+                </svg>
+            );
 
             const renderStars = (rating, { size = 24, color = 'var(--star-color, #eab308)', interactive = false } = {}) => {
                 const fullStars = Math.floor(rating);
@@ -10814,10 +10831,12 @@
                                                                                 setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
                                                                             }
                                                                         }}
-                                                                        className="px-2 py-1 text-xs rounded mr-1"
-                                                                        style={{ opacity: pinnedTagFolders.some(p => p.tagId === tagId) ? 1 : 0.3, backgroundColor: pinnedTagFolders.some(p => p.tagId === tagId) ? '#fef3c7' : 'transparent' }}
+                                                                        className="px-1 py-1 rounded mr-1 hover:bg-gray-100"
                                                                         title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
-                                                                        📌
+                                                                        {pinnedTagFolders.some(p => p.tagId === tagId)
+                                                                            ? <TagIconSVG size={16} color="#d97706" />
+                                                                            : <FolderIconSVG size={16} color="#9ca3af" opacity={0.4} />
+                                                                        }
                                                                     </button>
                                                                     <button
                                                                         onClick={() => setEditingTagId(tagId)}
@@ -10879,10 +10898,12 @@
                                                                                             setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
                                                                                         }
                                                                                     }}
-                                                                                    className="px-2 py-1 text-xs rounded mr-1"
-                                                                                    style={{ opacity: pinnedTagFolders.some(p => p.tagId === tagId) ? 1 : 0.3, backgroundColor: pinnedTagFolders.some(p => p.tagId === tagId) ? '#fef3c7' : 'transparent' }}
+                                                                                    className="px-1 py-1 rounded mr-1 hover:bg-gray-100"
                                                                                     title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
-                                                                                    📌
+                                                                                    {pinnedTagFolders.some(p => p.tagId === tagId)
+                                                                                        ? <TagIconSVG size={16} color="#d97706" />
+                                                                                        : <FolderIconSVG size={16} color="#9ca3af" opacity={0.4} />
+                                                                                    }
                                                                                 </button>
                                                                                 <button
                                                                                     onClick={() => {

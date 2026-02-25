@@ -13,7 +13,7 @@ Desktop is the control plane for tag views. All configuration, drag interactions
 ### Implementation Checklist
 
 - [x] **1A. Data model** — Add `pinnedTagFolders: [{tagId, position}]` to settings state, persist to localStorage, include in backup export/import *(v5.5.15-alpha.8, ef8c6d7)*
-- [x] **1B. Tag icon** — Use `🏷️` emoji, consistent with existing left-pane icon pattern (📁, 📚, 📥)
+- [x] **1B. Tag icon** — Inline SVG components: `TagIconSVG` (eyelet tag shape) + `FolderIconSVG` (folder shape for unpinned state)
 - [ ] **1C. "Pin as view" UI** — Add toggle in Tag Manager modal to promote/demote a tag to a virtual folder
 - [ ] **1D. Left pane rendering** — Render pinned tag views among real folders using position, with tag icon and distinct styling
 - [ ] **1E. Left pane drag reorder** — Allow repositioning tag views among real folders (updates position in `pinnedTagFolders`)
