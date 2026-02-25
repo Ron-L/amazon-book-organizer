@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.24";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.25";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10876,12 +10876,16 @@
                                     ) : (() => {
                                         // v5.5.15-alpha.24 - Unified Tag Manager: single sorted table, no orphan section
                                         const allTags = Object.entries(tagRegistry).map(([tagId, data]) => ({
-                                            tagId, label: data.label, count: getTagCount(tagId)
+                                            tagId, label: data.label, count: getTagCount(tagId),
+                                            isPinned: pinnedTagFolders.some(p => p.tagId === tagId)
                                         }));
                                         const sorted = [...allTags].sort((a, b) => {
                                             let cmp;
                                             if (tagSortColumn === 'count') {
                                                 cmp = a.count - b.count;
+                                                if (cmp === 0) cmp = a.label.localeCompare(b.label);
+                                            } else if (tagSortColumn === 'pinned') {
+                                                cmp = (a.isPinned === b.isPinned) ? 0 : a.isPinned ? -1 : 1;
                                                 if (cmp === 0) cmp = a.label.localeCompare(b.label);
                                             } else {
                                                 cmp = a.label.localeCompare(b.label);
@@ -10973,6 +10977,27 @@
                                             }
                                         };
 
+                                        // Batch pin toggle: if any selected are unpinned, pin all. If all pinned, unpin all.
+                                        const handleBulkPinToggle = () => {
+                                            if (selectedTags.size === 0) return;
+                                            const selectedIds = [...selectedTags];
+                                            const allPinned = selectedIds.every(id => pinnedTagFolders.some(p => p.tagId === id));
+                                            if (allPinned) {
+                                                // Unpin all selected
+                                                setPinnedTagFolders(prev => prev.filter(p => !selectedTags.has(p.tagId)));
+                                            } else {
+                                                // Pin all unpinned selected
+                                                const maxPos = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
+                                                let nextPos = maxPos + 1;
+                                                setPinnedTagFolders(prev => {
+                                                    const alreadyPinned = new Set(prev.map(p => p.tagId));
+                                                    const toAdd = selectedIds.filter(id => !alreadyPinned.has(id))
+                                                        .map(id => ({ tagId: id, position: nextPos++ }));
+                                                    return [...prev, ...toAdd];
+                                                });
+                                            }
+                                        };
+
                                         return (
                                             <>
                                                 {/* Header row */}
@@ -10988,7 +11013,24 @@
                                                             }}
                                                             className="rounded" />
                                                     </span>
-                                                    <span className="w-7 flex-shrink-0"></span>
+                                                    <span className="w-7 flex-shrink-0 text-center">
+                                                        {selectedTags.size > 0 ? (
+                                                            <button onClick={handleBulkPinToggle}
+                                                                    className="p-0.5 rounded hover:bg-gray-200"
+                                                                    title={[...selectedTags].every(id => pinnedTagFolders.some(p => p.tagId === id)) ? 'Unpin all selected' : 'Pin all selected as views'}>
+                                                                {[...selectedTags].every(id => pinnedTagFolders.some(p => p.tagId === id))
+                                                                    ? <TagIconSVG size={14} color="#d97706" />
+                                                                    : <FolderIconSVG size={14} color="#eab308" opacity={0.6} />
+                                                                }
+                                                            </button>
+                                                        ) : (
+                                                            <span className="cursor-pointer select-none hover:text-blue-600 text-xs"
+                                                                  onClick={() => toggleSort('pinned')}
+                                                                  title="Sort by pinned state">
+                                                                {sortArrow('pinned') || '⇅'}
+                                                            </span>
+                                                        )}
+                                                    </span>
                                                     <span className="flex-1 cursor-pointer select-none hover:text-blue-600"
                                                           onClick={() => toggleSort('name')}>
                                                         Tag{sortArrow('name')}
@@ -11042,7 +11084,7 @@
                                                                         }
                                                                     </button>
                                                                 </td>
-                                                                <td className="py-1.5" onClick={(e) => e.stopPropagation()}>
+                                                                <td className="py-1.5" onClick={editingTagId === tagId ? (e) => e.stopPropagation() : undefined}>
                                                                     {editingTagId === tagId ? (
                                                                         <input
                                                                             type="text"
