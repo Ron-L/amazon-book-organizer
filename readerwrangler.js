@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.18";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.19";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10776,9 +10776,9 @@
                                     <button onClick={() => { setTagManagementOpen(false); setEditingTagId(null); }}
                                             className="text-gray-400 hover:text-gray-600 text-2xl" title="Close">×</button>
                                 </div>
-                                <div className="flex-1 overflow-y-auto p-4">
+                                <div className="flex-1 overflow-y-auto">
                                     {Object.keys(tagRegistry).length === 0 ? (
-                                        <p className="text-gray-500 text-center py-8">No tags created yet.</p>
+                                        <p className="text-gray-500 text-center py-8 px-4">No tags created yet.</p>
                                     ) : (() => {
                                         const sortedTags = Object.entries(tagRegistry).sort((a, b) => a[1].label.localeCompare(b[1].label));
                                         const activeTags = sortedTags.filter(([tagId, data]) => getTagCount(tagId) > 0);
@@ -10786,17 +10786,16 @@
 
                                         return (
                                             <>
-                                                {/* v5.5.15-alpha.13 - Redesigned Tag Manager modal */}
+                                                {/* v5.5.15-alpha.19 - Redesigned Tag Manager modal */}
+                                                <div className="flex items-center bg-gray-100 border-b-2 border-gray-300 px-4 py-1.5 text-sm font-semibold">
+                                                    <span className="w-6"></span>
+                                                    <span className="flex-1">Tag</span>
+                                                    <span className="w-14 text-center">Books</span>
+                                                    <span className="w-8"></span>
+                                                    <span className="w-8"></span>
+                                                </div>
+                                                <div className="px-4">
                                                 <table className="w-full text-sm">
-                                                    <thead>
-                                                        <tr className="text-left border-b-2 border-gray-300 bg-gray-100">
-                                                            <th className="py-1.5 font-semibold w-6"></th>
-                                                            <th className="py-1.5 font-semibold">Tag</th>
-                                                            <th className="py-1.5 font-semibold text-center w-14">Books</th>
-                                                            <th className="py-1.5 w-8"></th>
-                                                            <th className="py-1.5 w-8"></th>
-                                                        </tr>
-                                                    </thead>
                                                     <tbody>
                                                         {activeTags.map(([tagId, tagData]) => (
                                                             <tr key={tagId} className="border-b border-gray-100 hover:bg-gray-50">
@@ -10897,13 +10896,14 @@
                                                         ))}
                                                     </tbody>
                                                 </table>
+                                                </div>
                                                 {orphanedTags.length > 0 && (() => {
                                                     const allSelected = orphanedTags.length > 0 && selectedOrphans.size === orphanedTags.length;
                                                     return (
                                                         <div>
-                                                            <div className="flex items-center justify-between mb-2 bg-gray-100 -mx-4 px-4 py-2">
-                                                                <h3 className="text-sm font-semibold text-gray-500">Orphaned tags (0 books)</h3>
-                                                                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+                                                            <div className="flex items-center justify-between bg-gray-100 px-4 py-1.5 text-sm font-semibold">
+                                                                <span className="text-gray-500">Orphaned tags (0 books)</span>
+                                                                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer font-normal">
                                                                     <input type="checkbox" checked={allSelected}
                                                                         onChange={() => {
                                                                             if (allSelected) {
@@ -10916,6 +10916,7 @@
                                                                     Select all
                                                                 </label>
                                                             </div>
+                                                            <div className="px-4">
                                                             <table className="w-full text-sm">
                                                                 <tbody>
                                                                     {orphanedTags.map(([tagId, tagData]) => (
@@ -10970,9 +10971,10 @@
                                                                     setSelectedOrphans(new Set());
                                                                 }}
                                                                 disabled={selectedOrphans.size === 0}
-                                                                className={`mt-2 px-3 py-1 text-xs rounded border ${selectedOrphans.size > 0 ? 'text-red-600 border-red-200 hover:bg-red-50 cursor-pointer' : 'text-gray-400 border-gray-200 cursor-not-allowed'}`}>
+                                                                className={`mt-2 mb-2 px-3 py-1 text-xs rounded border ${selectedOrphans.size > 0 ? 'text-red-600 border-red-200 hover:bg-red-50 cursor-pointer' : 'text-gray-400 border-gray-200 cursor-not-allowed'}`}>
                                                                 Delete selected ({selectedOrphans.size})
                                                             </button>
+                                                            </div>
                                                         </div>
                                                     );
                                                 })()}
