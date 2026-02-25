@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.25";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.26";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1811,8 +1811,21 @@
                                     setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
                                     setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
                                     setTagRegistry(state.organization.tagRegistry || {}); // v4.27.0
-                                    setPinnedTagFolders(state.organization.pinnedTagFolders || []); // v5.5.15-alpha.8
-                                    setFolders(state.organization.folders || []); // v5.0.0
+                                    // v5.5.15-alpha.26 - Migrate tag positions for interleaved display
+                                    const loadedPinnedTags = state.organization.pinnedTagFolders || [];
+                                    const loadedFolders = state.organization.folders || [];
+                                    if (loadedPinnedTags.length > 0 && loadedFolders.length > 0) {
+                                        const rootCount = loadedFolders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
+                                        const maxFolderDisplayPos = rootCount > 0 ? (rootCount - 1) * 2 : -1;
+                                        const maxTagPos = Math.max(...loadedPinnedTags.map(p => p.position));
+                                        if (maxTagPos <= maxFolderDisplayPos) {
+                                            const offset = maxFolderDisplayPos + 1;
+                                            loadedPinnedTags.forEach(p => { p.position += offset; });
+                                            console.log(`🏷️ Migrated tag positions for interleaved display (offset +${offset})`);
+                                        }
+                                    }
+                                    setPinnedTagFolders(loadedPinnedTags);
+                                    setFolders(loadedFolders); // v5.0.0
                                     setDataSource(state.organization.dataSource || 'enriched');
                                     effectiveLastSync = state.lastSyncTime || Date.now();
                                     setLastSyncTime(effectiveLastSync);
@@ -3682,7 +3695,19 @@
                 if (orgToRestore) {
                     setBlankImageBooks(new Set(orgToRestore.blankImageBooks || []));
                     setTagRegistry(orgToRestore.tagRegistry || {}); // v5.0.0-alpha.175.17
-                    setPinnedTagFolders(orgToRestore.pinnedTagFolders || []); // v5.5.15-alpha.8
+                    // v5.5.15-alpha.26 - Migrate tag positions for interleaved display
+                    const restoredPinnedTags = (orgToRestore.pinnedTagFolders || []).map(p => ({...p}));
+                    const restoredFolderList = orgToRestore.folders || [];
+                    if (restoredPinnedTags.length > 0 && restoredFolderList.length > 0) {
+                        const rootCount = restoredFolderList.filter(f => f.parentId === null && f.id !== '__inbox__').length;
+                        const maxFolderDisplayPos = rootCount > 0 ? (rootCount - 1) * 2 : -1;
+                        const maxTagPos = Math.max(...restoredPinnedTags.map(p => p.position));
+                        if (maxTagPos <= maxFolderDisplayPos) {
+                            const offset = maxFolderDisplayPos + 1;
+                            restoredPinnedTags.forEach(p => { p.position += offset; });
+                        }
+                    }
+                    setPinnedTagFolders(restoredPinnedTags);
 
                     // v5.0.0-alpha.99 - Restore folders from backup (if present)
                     if (orgToRestore.folders && Array.isArray(orgToRestore.folders)) {
@@ -8549,6 +8574,7 @@
                                                             const types = Array.from(e.dataTransfer.types);
                                                             const isFolderDrag = types.includes('application/x-folder-reorder');
                                                             const isBookDrag = types.includes('application/x-readerwrangler');
+                                                            const isTagDrag = types.includes('application/x-tagview-reorder');
 
                                                             if (isBookDrag) {
                                                                 // Book drag - existing behavior
@@ -8573,6 +8599,19 @@
                                                                     newTarget = { type: 'reparent', folderId: folder.id };
                                                                 }
                                                                 // Only update if changed
+                                                                const current = sidebarFolderDragTarget;
+                                                                if (!current || current.type !== newTarget.type ||
+                                                                    current.folderId !== newTarget.folderId ||
+                                                                    current.position !== newTarget.position) {
+                                                                    setSidebarFolderDragTarget(newTarget);
+                                                                }
+                                                            } else if (isTagDrag && folder.parentId === null) {
+                                                                // v5.5.15-alpha.26 - Tag view drag: before/after only (no reparent)
+                                                                e.dataTransfer.dropEffect = 'move';
+                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                const y = e.clientY - rect.top;
+                                                                const position = y < rect.height / 2 ? 'before' : 'after';
+                                                                const newTarget = { type: 'reorder', folderId: folder.id, position };
                                                                 const current = sidebarFolderDragTarget;
                                                                 if (!current || current.type !== newTarget.type ||
                                                                     current.folderId !== newTarget.folderId ||
@@ -8611,6 +8650,32 @@
                                                             if (dragHoverExpandTimeoutRef.current) {
                                                                 clearTimeout(dragHoverExpandTimeoutRef.current);
                                                                 dragHoverExpandTimeoutRef.current = null;
+                                                            }
+
+                                                            // v5.5.15-alpha.26 - Handle tag view drops (reposition tag among folders)
+                                                            const tagData = e.dataTransfer.getData('application/x-tagview-reorder');
+                                                            if (tagData && folder.parentId === null) {
+                                                                try {
+                                                                    const { tagId: draggedTagId } = JSON.parse(tagData);
+                                                                    const target = sidebarFolderDragTarget;
+                                                                    setSidebarFolderDragTarget(null);
+                                                                    const myIndex = mergedItems.findIndex(m => m.id === folder.id);
+                                                                    const folderDisplayPos = myIndex !== -1 ? mergedItems[myIndex].displayPos : 0;
+                                                                    let newPos;
+                                                                    if (target?.position === 'before') {
+                                                                        const prev = myIndex > 0 ? mergedItems[myIndex - 1] : null;
+                                                                        newPos = prev ? (prev.displayPos + folderDisplayPos) / 2 : folderDisplayPos - 1;
+                                                                    } else {
+                                                                        const next = myIndex < mergedItems.length - 1 ? mergedItems[myIndex + 1] : null;
+                                                                        newPos = next ? (folderDisplayPos + next.displayPos) / 2 : folderDisplayPos + 1;
+                                                                    }
+                                                                    setPinnedTagFolders(prev => prev.map(p =>
+                                                                        p.tagId === draggedTagId ? { ...p, position: newPos } : p
+                                                                    ));
+                                                                } catch (err) {
+                                                                    console.error('Tag view on folder drop error:', err);
+                                                                }
+                                                                return;
                                                             }
 
                                                             // v5.0.0-alpha.86 - Handle folder drops first
@@ -8986,38 +9051,146 @@
                                             );
                                         };
 
-                                        // Render root folders (parentId: null, excluding Inbox)
+                                        // v5.5.15-alpha.26 - Render folders + tag views in unified interleaved list
                                         const rootFolders = getChildFolders(null).filter(f => f.id !== '__inbox__');
-                                        const elements = rootFolders.map(folder => renderFolder(folder, 0));
 
-                                        // v5.5.15-alpha.21 - Tag virtual folders (pinned tag views)
-                                        const sortedTagViews = [...pinnedTagFolders].sort((a, b) => a.position - b.position);
-                                        if (sortedTagViews.length > 0) {
-                                            elements.push(
-                                                <div key="tag-views-divider" className="border-b border-gray-200 my-1 mx-2"></div>
+                                        // Build merged display list: folders (displayPos = index * 2) + tag views (displayPos = position)
+                                        const mergedItems = [];
+                                        rootFolders.forEach((f, i) => mergedItems.push({ type: 'folder', id: f.id, folder: f, displayPos: i * 2 }));
+                                        pinnedTagFolders.forEach(tv => mergedItems.push({ type: 'tag', id: `__tag_${tv.tagId}__`, tagId: tv.tagId, displayPos: tv.position }));
+                                        mergedItems.sort((a, b) => a.displayPos - b.displayPos);
+
+                                        const elements = mergedItems.map(item => {
+                                            if (item.type === 'folder') {
+                                                return renderFolder(item.folder, 0);
+                                            }
+                                            // Tag view rendering with drag support
+                                            const tagLabel = tagRegistry[item.tagId]?.label || item.tagId;
+                                            const tagFolderId = item.id;
+                                            const bookCount = getTagCount(item.tagId);
+                                            return (
+                                                <div
+                                                    key={tagFolderId}
+                                                    data-folder-id={tagFolderId}
+                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${
+                                                        selectedFolderId === tagFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
+                                                    }`}
+                                                    style={{
+                                                        ...(sidebarFolderDragTarget?.type === 'reorder' && sidebarFolderDragTarget?.folderId === tagFolderId
+                                                            ? sidebarFolderDragTarget.position === 'before'
+                                                                ? { borderTop: '3px solid var(--border-focus)' }
+                                                                : { borderBottom: '3px solid var(--border-focus)' }
+                                                            : {})
+                                                    }}
+                                                    draggable={true}
+                                                    onDragStart={(e) => {
+                                                        e.dataTransfer.effectAllowed = 'move';
+                                                        e.dataTransfer.setData('application/x-tagview-reorder', JSON.stringify({
+                                                            tagViewId: tagFolderId, tagId: item.tagId
+                                                        }));
+                                                    }}
+                                                    onDragEnd={() => {
+                                                        setSidebarFolderDragTarget(null);
+                                                    }}
+                                                    onDragOver={(e) => {
+                                                        e.preventDefault();
+                                                        const types = Array.from(e.dataTransfer.types);
+                                                        const isTagDrag = types.includes('application/x-tagview-reorder');
+                                                        const isFolderDrag = types.includes('application/x-folder-reorder');
+
+                                                        if (isTagDrag || isFolderDrag) {
+                                                            e.dataTransfer.dropEffect = 'move';
+                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                            const y = e.clientY - rect.top;
+                                                            const position = y < rect.height / 2 ? 'before' : 'after';
+
+                                                            const newTarget = { type: 'reorder', folderId: tagFolderId, position };
+                                                            const current = sidebarFolderDragTarget;
+                                                            if (!current || current.folderId !== tagFolderId || current.position !== position) {
+                                                                setSidebarFolderDragTarget(newTarget);
+                                                            }
+                                                        }
+                                                    }}
+                                                    onDragLeave={(e) => {
+                                                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                            setSidebarFolderDragTarget(null);
+                                                        }
+                                                    }}
+                                                    onDrop={(e) => {
+                                                        e.preventDefault();
+                                                        const target = sidebarFolderDragTarget;
+                                                        setSidebarFolderDragTarget(null);
+
+                                                        // Handle tag view reorder (tag dropped on tag)
+                                                        const tagDropData = e.dataTransfer.getData('application/x-tagview-reorder');
+                                                        if (tagDropData) {
+                                                            const { tagId: draggedTagId } = JSON.parse(tagDropData);
+                                                            if (draggedTagId === item.tagId) return; // Dropped on self
+                                                            const myIndex = mergedItems.findIndex(m => m.id === tagFolderId);
+                                                            let newPos;
+                                                            if (target?.position === 'before') {
+                                                                const prev = myIndex > 0 ? mergedItems[myIndex - 1] : null;
+                                                                newPos = prev ? (prev.displayPos + item.displayPos) / 2 : item.displayPos - 1;
+                                                            } else {
+                                                                const next = myIndex < mergedItems.length - 1 ? mergedItems[myIndex + 1] : null;
+                                                                newPos = next ? (item.displayPos + next.displayPos) / 2 : item.displayPos + 1;
+                                                            }
+                                                            setPinnedTagFolders(prev => prev.map(p =>
+                                                                p.tagId === draggedTagId ? { ...p, position: newPos } : p
+                                                            ));
+                                                            return;
+                                                        }
+
+                                                        // Handle folder drop on tag view (reorder folder)
+                                                        const folderDropData = e.dataTransfer.getData('application/x-folder-reorder');
+                                                        if (folderDropData) {
+                                                            try {
+                                                                const { folderIds } = JSON.parse(folderDropData);
+                                                                const draggedFolder = folders.find(f => f.id === folderIds[0]);
+                                                                if (!draggedFolder || draggedFolder.parentId !== null) return;
+
+                                                                // Find nearest folder above this tag in merged list
+                                                                const myIndex = mergedItems.findIndex(m => m.id === tagFolderId);
+                                                                let insertAfterFolderId = null;
+                                                                for (let i = myIndex - 1; i >= 0; i--) {
+                                                                    if (mergedItems[i].type === 'folder') {
+                                                                        insertAfterFolderId = mergedItems[i].id;
+                                                                        break;
+                                                                    }
+                                                                }
+
+                                                                const siblings = rootFolders;
+                                                                const fromIndex = siblings.findIndex(f => f.id === folderIds[0]);
+                                                                let toIndex = insertAfterFolderId
+                                                                    ? siblings.findIndex(f => f.id === insertAfterFolderId) + 1
+                                                                    : 0;
+                                                                if (fromIndex < toIndex) toIndex--;
+
+                                                                if (fromIndex !== -1 && fromIndex !== toIndex) {
+                                                                    const newOrder = siblings.filter(f => f.id !== folderIds[0]);
+                                                                    newOrder.splice(toIndex, 0, draggedFolder);
+                                                                    setFolders(prev => prev.map(f => {
+                                                                        const idx = newOrder.findIndex(s => s.id === f.id);
+                                                                        if (idx !== -1) return { ...f, sortIndex: idx };
+                                                                        return f;
+                                                                    }));
+                                                                    recordAction({ type: 'REORDER_FOLDER', folderId: folderIds[0], fromIndex, toIndex, parentId: null });
+                                                                }
+                                                            } catch (err) {
+                                                                console.error('Folder on tag view drop error:', err);
+                                                            }
+                                                        }
+                                                    }}
+                                                    onClick={() => navigateToFolder(tagFolderId)}
+                                                    title={`Tag view: ${tagLabel} (${bookCount} books)`}>
+                                                    <span className="pointer-events-none">
+                                                        <TagIconSVG size={16} color={selectedFolderId === tagFolderId ? '#1e40af' : '#d97706'} />
+                                                    </span>
+                                                    <span className="flex-1 pointer-events-none">{tagLabel}</span>
+                                                    <span className="text-xs text-gray-500 pointer-events-none">({bookCount})</span>
+                                                </div>
                                             );
-                                            sortedTagViews.forEach(({ tagId }) => {
-                                                const tagLabel = tagRegistry[tagId]?.label || tagId;
-                                                const tagFolderId = `__tag_${tagId}__`;
-                                                const bookCount = getTagCount(tagId);
-                                                elements.push(
-                                                    <div
-                                                        key={tagFolderId}
-                                                        data-folder-id={tagFolderId}
-                                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${
-                                                            selectedFolderId === tagFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
-                                                        }`}
-                                                        onClick={() => navigateToFolder(tagFolderId)}
-                                                        title={`Tag view: ${tagLabel} (${bookCount} books)`}>
-                                                        <span className="pointer-events-none">
-                                                            <TagIconSVG size={16} color={selectedFolderId === tagFolderId ? '#1e40af' : '#d97706'} />
-                                                        </span>
-                                                        <span className="flex-1 pointer-events-none">{tagLabel}</span>
-                                                        <span className="text-xs text-gray-500 pointer-events-none">({bookCount})</span>
-                                                    </div>
-                                                );
-                                            });
-                                        }
+                                        });
 
                                         return elements;
                                     })()}
@@ -10986,8 +11159,11 @@
                                                 // Unpin all selected
                                                 setPinnedTagFolders(prev => prev.filter(p => !selectedTags.has(p.tagId)));
                                             } else {
-                                                // Pin all unpinned selected
-                                                const maxPos = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
+                                                // Pin all unpinned selected — position after all folders and existing tags
+                                                const rootFolderCount = folders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
+                                                const maxFolderDisplayPos = rootFolderCount > 0 ? (rootFolderCount - 1) * 2 : -1;
+                                                const maxTagPos = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
+                                                const maxPos = Math.max(maxFolderDisplayPos, maxTagPos);
                                                 let nextPos = maxPos + 1;
                                                 setPinnedTagFolders(prev => {
                                                     const alreadyPinned = new Set(prev.map(p => p.tagId));
@@ -11072,7 +11248,10 @@
                                                                             if (isPinned) {
                                                                                 setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
                                                                             } else {
-                                                                                const maxPos = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
+                                                                                const rfCount = folders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
+                                                                                const maxFDP = rfCount > 0 ? (rfCount - 1) * 2 : -1;
+                                                                                const maxTP = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
+                                                                                const maxPos = Math.max(maxFDP, maxTP);
                                                                                 setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
                                                                             }
                                                                         }}
