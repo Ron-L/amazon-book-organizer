@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.20";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.21";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -761,6 +761,11 @@
             const getFolderBookIds = (folderId) => {
                 if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first
                 if (folderId === '__library__') return []; // v5.0.0-alpha.63 - My Library shows folders, not books
+                // v5.5.15-alpha.21 - Tag virtual folder: return books with this tag
+                if (folderId?.startsWith('__tag_') && folderId?.endsWith('__')) {
+                    const tagId = folderId.slice(6, -2);
+                    return books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
+                }
                 const folder = folders.find(f => f.id === folderId);
                 return folder?.bookIds || [];
             };
@@ -1012,6 +1017,12 @@
             const getFolderPath = (folderId) => {
                 if (folderId === '__all__') return [FOLDER_ALL_BOOKS];
                 if (folderId === '__library__') return [FOLDER_LIBRARY];
+                // v5.5.15-alpha.21 - Tag virtual folder breadcrumb
+                if (folderId?.startsWith('__tag_') && folderId?.endsWith('__')) {
+                    const tagId = folderId.slice(6, -2);
+                    const tagLabel = tagRegistry[tagId]?.label || tagId;
+                    return [{ id: folderId, name: tagLabel, virtual: true }];
+                }
 
                 const path = [];
                 let current = getFolderById(folderId);
@@ -8925,7 +8936,38 @@
                                         };
 
                                         // Render root folders (parentId: null, excluding Inbox)
-                                        return getChildFolders(null).filter(f => f.id !== '__inbox__').map(folder => renderFolder(folder, 0));
+                                        const rootFolders = getChildFolders(null).filter(f => f.id !== '__inbox__');
+                                        const elements = rootFolders.map(folder => renderFolder(folder, 0));
+
+                                        // v5.5.15-alpha.21 - Tag virtual folders (pinned tag views)
+                                        const sortedTagViews = [...pinnedTagFolders].sort((a, b) => a.position - b.position);
+                                        if (sortedTagViews.length > 0) {
+                                            elements.push(
+                                                <div key="tag-views-divider" className="border-b border-gray-200 my-1 mx-2"></div>
+                                            );
+                                            sortedTagViews.forEach(({ tagId }) => {
+                                                const tagLabel = tagRegistry[tagId]?.label || tagId;
+                                                const tagFolderId = `__tag_${tagId}__`;
+                                                const bookCount = getTagCount(tagId);
+                                                elements.push(
+                                                    <div
+                                                        key={tagFolderId}
+                                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${
+                                                            selectedFolderId === tagFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
+                                                        }`}
+                                                        onClick={() => navigateToFolder(tagFolderId)}
+                                                        title={`Tag view: ${tagLabel} (${bookCount} books)`}>
+                                                        <span className="pointer-events-none">
+                                                            <TagIconSVG size={16} color={selectedFolderId === tagFolderId ? '#1e40af' : '#d97706'} />
+                                                        </span>
+                                                        <span className="flex-1 pointer-events-none">{tagLabel}</span>
+                                                        <span className="text-xs text-gray-500 pointer-events-none">({bookCount})</span>
+                                                    </div>
+                                                );
+                                            });
+                                        }
+
+                                        return elements;
                                     })()}
                                     {/* v5.0.0-alpha.52 - Removed bottom "New Folder" button; use "+" on All Books or folder rows instead */}
                                 </div>
