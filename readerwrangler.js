@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.14";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -500,6 +500,7 @@
             const [tagFilter, setTagFilter] = useState([]); // v4.27.0 - Filter by tags (array of tag names, OR logic)
             const [tagRegistry, setTagRegistry] = useState({}); // v4.27.0 - Central tag registry {tagName: {label, count}}
             const [pinnedTagFolders, setPinnedTagFolders] = useState([]); // v5.5.15-alpha.8 - Tag virtual folders [{tagId, position}]
+            const [selectedOrphans, setSelectedOrphans] = useState(new Set()); // v5.5.15-alpha.14 - Orphaned tag selection for bulk delete
             const [selectedCollections, setSelectedCollections] = useState([]); // v5.0.0-alpha.175.41 - Phase 5.2: Collections filter (array, OR logic)
             const [minAmazonRating, setMinAmazonRating] = useState(''); // v5.0.0-alpha.175.42 - Phase 5.3: Amazon Rating filter (single-select, minimum rating)
             const [minMyRating, setMinMyRating] = useState(''); // v5.0.0-alpha.175.43 - Phase 5.4: My Rating filter (single-select, '' = all, 'unrated' = 0, '1'-'5' = minimum rating)
@@ -10877,7 +10878,6 @@
                                                     </tbody>
                                                 </table>
                                                 {orphanedTags.length > 0 && (() => {
-                                                    const [selectedOrphans, setSelectedOrphans] = React.useState(new Set());
                                                     const allSelected = orphanedTags.length > 0 && selectedOrphans.size === orphanedTags.length;
                                                     return (
                                                         <div className="mt-4 pt-4 border-t border-gray-200">
