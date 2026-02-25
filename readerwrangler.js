@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10835,7 +10835,7 @@
                                                                         title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
                                                                         {pinnedTagFolders.some(p => p.tagId === tagId)
                                                                             ? <TagIconSVG size={16} color="#d97706" />
-                                                                            : <FolderIconSVG size={16} color="#9ca3af" opacity={0.4} />
+                                                                            : <FolderIconSVG size={16} color="#eab308" opacity={0.4} />
                                                                         }
                                                                     </button>
                                                                     <button
@@ -10902,7 +10902,7 @@
                                                                                     title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
                                                                                     {pinnedTagFolders.some(p => p.tagId === tagId)
                                                                                         ? <TagIconSVG size={16} color="#d97706" />
-                                                                                        : <FolderIconSVG size={16} color="#9ca3af" opacity={0.4} />
+                                                                                        : <FolderIconSVG size={16} color="#eab308" opacity={0.4} />
                                                                                     }
                                                                                 </button>
                                                                                 <button
