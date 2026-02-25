@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.15";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10774,7 +10774,7 @@
                                                 {/* v5.5.15-alpha.13 - Redesigned Tag Manager modal */}
                                                 <table className="w-full text-sm">
                                                     <thead>
-                                                        <tr className="text-left border-b border-gray-200">
+                                                        <tr className="text-left border-b border-gray-200 bg-gray-50">
                                                             <th className="py-2 font-semibold w-6"></th>
                                                             <th className="py-2 font-semibold">Tag</th>
                                                             <th className="py-2 font-semibold text-center w-16">Books</th>
@@ -10881,7 +10881,7 @@
                                                     const allSelected = orphanedTags.length > 0 && selectedOrphans.size === orphanedTags.length;
                                                     return (
                                                         <div className="mt-4 pt-4 border-t border-gray-200">
-                                                            <div className="flex items-center justify-between mb-2">
+                                                            <div className="flex items-center justify-between mb-2 bg-gray-50 px-2 py-1.5 rounded">
                                                                 <h3 className="text-sm font-semibold text-gray-500">Orphaned tags (0 books)</h3>
                                                                 <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
                                                                     <input type="checkbox" checked={allSelected}
