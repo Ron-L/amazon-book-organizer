@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.17";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.18";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2889,6 +2889,21 @@
                 <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'inline-block', verticalAlign: 'middle', opacity }}>
                     <path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z"
                         fill={color} stroke={color} strokeWidth="0.5" />
+                </svg>
+            );
+
+            // v5.5.15-alpha.18 - Pencil icon SVG for rename action
+            const PencilIconSVG = ({ size = 16, color = 'currentColor' }) => (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                    <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                </svg>
+            );
+
+            // v5.5.15-alpha.18 - Trash icon SVG for delete action
+            const TrashIconSVG = ({ size = 16, color = 'currentColor' }) => (
+                <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                 </svg>
             );
 
@@ -10775,16 +10790,17 @@
                                                 <table className="w-full text-sm">
                                                     <thead>
                                                         <tr className="text-left border-b-2 border-gray-300 bg-gray-100">
-                                                            <th className="py-2 font-semibold w-6"></th>
-                                                            <th className="py-2 font-semibold">Tag</th>
-                                                            <th className="py-2 font-semibold text-center w-16">Books</th>
-                                                            <th className="py-2 font-semibold text-right w-28">Actions</th>
+                                                            <th className="py-1.5 font-semibold w-6"></th>
+                                                            <th className="py-1.5 font-semibold">Tag</th>
+                                                            <th className="py-1.5 font-semibold text-center w-14">Books</th>
+                                                            <th className="py-1.5 w-8"></th>
+                                                            <th className="py-1.5 w-8"></th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         {activeTags.map(([tagId, tagData]) => (
                                                             <tr key={tagId} className="border-b border-gray-100 hover:bg-gray-50">
-                                                                <td className="py-2">
+                                                                <td className="py-1.5">
                                                                     <button
                                                                         onClick={() => {
                                                                             const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
@@ -10795,7 +10811,7 @@
                                                                                 setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
                                                                             }
                                                                         }}
-                                                                        className="p-0.5 rounded hover:bg-gray-100"
+                                                                        className="p-0.5 rounded hover:bg-gray-200"
                                                                         title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
                                                                         {pinnedTagFolders.some(p => p.tagId === tagId)
                                                                             ? <TagIconSVG size={16} color="#d97706" />
@@ -10803,13 +10819,13 @@
                                                                         }
                                                                     </button>
                                                                 </td>
-                                                                <td className="py-2">
+                                                                <td className="py-1.5">
                                                                     {editingTagId === tagId ? (
                                                                         <input
                                                                             type="text"
                                                                             defaultValue={tagData.label}
                                                                             autoFocus
-                                                                            className="px-2 py-1 border border-blue-500 rounded text-sm w-full"
+                                                                            className="px-2 py-0.5 border border-blue-500 rounded text-sm w-full"
                                                                             onKeyDown={(e) => {
                                                                                 e.stopPropagation();
                                                                                 if (e.key === 'Escape') {
@@ -10840,13 +10856,16 @@
                                                                         <span onDoubleClick={() => setEditingTagId(tagId)} style={{ cursor: 'default' }}>{tagData.label}</span>
                                                                     )}
                                                                 </td>
-                                                                <td className="py-2 text-center text-gray-500">{getTagCount(tagId)}</td>
-                                                                <td className="py-2 text-right">
+                                                                <td className="py-1.5 text-center text-gray-500">{getTagCount(tagId)}</td>
+                                                                <td className="py-1.5 text-center">
                                                                     <button
                                                                         onClick={() => setEditingTagId(tagId)}
-                                                                        className="px-2 py-1 text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded mr-1">
-                                                                        Rename
+                                                                        className="p-1 rounded hover:bg-blue-50"
+                                                                        title="Rename">
+                                                                        <PencilIconSVG size={14} color="#9ca3af" />
                                                                     </button>
+                                                                </td>
+                                                                <td className="py-1.5 text-center">
                                                                     <button
                                                                         onClick={async () => {
                                                                             if (await showConfirmDialog('Delete Tag', `Delete tag "${tagData.label}"? This will remove it from ${getTagCount(tagId)} book${getTagCount(tagId) !== 1 ? 's' : ''}.`)) {
@@ -10869,8 +10888,9 @@
                                                                                 setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
                                                                             }
                                                                         }}
-                                                                        className="px-2 py-1 text-xs text-gray-600 hover:text-red-600 hover:bg-red-50 rounded">
-                                                                        Delete
+                                                                        className="p-1 rounded hover:bg-red-50"
+                                                                        title="Delete">
+                                                                        <TrashIconSVG size={14} color="#9ca3af" />
                                                                     </button>
                                                                 </td>
                                                             </tr>
@@ -10900,7 +10920,7 @@
                                                                 <tbody>
                                                                     {orphanedTags.map(([tagId, tagData]) => (
                                                                         <tr key={tagId} className="border-b border-gray-100 hover:bg-gray-50">
-                                                                            <td className="py-2 w-6">
+                                                                            <td className="py-1.5 w-6">
                                                                                 <input type="checkbox" checked={selectedOrphans.has(tagId)}
                                                                                     onChange={() => {
                                                                                         setSelectedOrphans(prev => {
@@ -10911,7 +10931,7 @@
                                                                                     }}
                                                                                     className="rounded" />
                                                                             </td>
-                                                                            <td className="py-2 w-6">
+                                                                            <td className="py-1.5">
                                                                                 <button
                                                                                     onClick={() => {
                                                                                         const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
@@ -10922,7 +10942,7 @@
                                                                                             setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
                                                                                         }
                                                                                     }}
-                                                                                    className="p-0.5 rounded hover:bg-gray-100"
+                                                                                    className="p-0.5 rounded hover:bg-gray-200"
                                                                                     title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
                                                                                     {pinnedTagFolders.some(p => p.tagId === tagId)
                                                                                         ? <TagIconSVG size={16} color="#d97706" />
@@ -10930,9 +10950,10 @@
                                                                                     }
                                                                                 </button>
                                                                             </td>
-                                                                            <td className="py-2 text-gray-400">{tagData.label}</td>
-                                                                            <td className="py-2 text-center text-gray-400 w-16">0</td>
-                                                                            <td className="py-2 text-right w-28"></td>
+                                                                            <td className="py-1.5 text-gray-400">{tagData.label}</td>
+                                                                            <td className="py-1.5 text-center text-gray-400 w-14">0</td>
+                                                                            <td className="py-1.5 w-8"></td>
+                                                                            <td className="py-1.5 w-8"></td>
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
