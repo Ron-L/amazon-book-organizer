@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.22";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.23";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1426,6 +1426,12 @@
                 window.addEventListener('popstate', handlePopState);
                 return () => window.removeEventListener('popstate', handlePopState);
             }, []);
+
+            // v5.5.15-alpha.23 - Auto-scroll left pane to keep selected folder visible
+            useEffect(() => {
+                const el = document.querySelector(`[data-folder-id="${selectedFolderId}"]`);
+                if (el) el.scrollIntoView({ block: 'nearest' });
+            }, [selectedFolderId]);
 
             // v4.15.6: Track initial mount to prevent save effect from overwriting loaded values
             const filtersLoadedRef = useRef(false);
@@ -8500,6 +8506,7 @@
                                             return (
                                                 <React.Fragment key={folder.id}>
                                                     <div
+                                                        data-folder-id={folder.id}
                                                         className={`w-full flex items-center gap-1 pr-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === folder.id ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'} ${(sidebarFolderDragTarget?.type === 'reparent' && sidebarFolderDragTarget?.folderId === folder.id) ? 'ring-2 ring-blue-400 bg-blue-50' : ''}`}
                                                         style={{
                                                             paddingLeft: `${16 + depth * 16}px`,
@@ -8991,6 +8998,7 @@
                                                 elements.push(
                                                     <div
                                                         key={tagFolderId}
+                                                        data-folder-id={tagFolderId}
                                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${
                                                             selectedFolderId === tagFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
                                                         }`}
