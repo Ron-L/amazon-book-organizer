@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.13";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10770,17 +10770,38 @@
 
                                         return (
                                             <>
+                                                {/* v5.5.15-alpha.13 - Redesigned Tag Manager modal */}
                                                 <table className="w-full text-sm">
                                                     <thead>
                                                         <tr className="text-left border-b border-gray-200">
+                                                            <th className="py-2 font-semibold w-6"></th>
                                                             <th className="py-2 font-semibold">Tag</th>
-                                                            <th className="py-2 font-semibold text-center w-20">Books</th>
-                                                            <th className="py-2 font-semibold text-right w-32">Actions</th>
+                                                            <th className="py-2 font-semibold text-center w-16">Books</th>
+                                                            <th className="py-2 font-semibold text-right w-28">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         {activeTags.map(([tagId, tagData]) => (
                                                             <tr key={tagId} className="border-b border-gray-100 hover:bg-gray-50">
+                                                                <td className="py-2">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
+                                                                            if (isPinned) {
+                                                                                setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
+                                                                            } else {
+                                                                                const maxPos = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
+                                                                                setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
+                                                                            }
+                                                                        }}
+                                                                        className="p-0.5 rounded hover:bg-gray-100"
+                                                                        title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
+                                                                        {pinnedTagFolders.some(p => p.tagId === tagId)
+                                                                            ? <TagIconSVG size={16} color="#d97706" />
+                                                                            : <FolderIconSVG size={16} color="#eab308" opacity={0.4} />
+                                                                        }
+                                                                    </button>
+                                                                </td>
                                                                 <td className="py-2">
                                                                     {editingTagId === tagId ? (
                                                                         <input
@@ -10795,7 +10816,6 @@
                                                                                 } else if (e.key === 'Enter') {
                                                                                     const newLabel = e.target.value.trim();
                                                                                     if (newLabel && newLabel !== tagData.label) {
-                                                                                        // Rename tag - update registry label only (ID stays the same)
                                                                                         setTagRegistry(prev => ({
                                                                                             ...prev,
                                                                                             [tagId]: { ...prev[tagId], label: newLabel }
@@ -10822,31 +10842,13 @@
                                                                 <td className="py-2 text-center text-gray-500">{getTagCount(tagId)}</td>
                                                                 <td className="py-2 text-right">
                                                                     <button
-                                                                        onClick={() => {
-                                                                            const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
-                                                                            if (isPinned) {
-                                                                                setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
-                                                                            } else {
-                                                                                const maxPos = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
-                                                                                setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
-                                                                            }
-                                                                        }}
-                                                                        className="px-1 py-1 rounded mr-1 hover:bg-gray-100"
-                                                                        title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
-                                                                        {pinnedTagFolders.some(p => p.tagId === tagId)
-                                                                            ? <TagIconSVG size={16} color="#d97706" />
-                                                                            : <FolderIconSVG size={16} color="#eab308" opacity={0.4} />
-                                                                        }
-                                                                    </button>
-                                                                    <button
                                                                         onClick={() => setEditingTagId(tagId)}
-                                                                        className="px-2 py-1 text-xs text-blue-600 hover:bg-blue-50 rounded mr-1">
+                                                                        className="px-2 py-1 text-xs text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded mr-1">
                                                                         Rename
                                                                     </button>
                                                                     <button
                                                                         onClick={async () => {
                                                                             if (await showConfirmDialog('Delete Tag', `Delete tag "${tagData.label}"? This will remove it from ${getTagCount(tagId)} book${getTagCount(tagId) !== 1 ? 's' : ''}.`)) {
-                                                                                // Remove tag from all books
                                                                                 setBooks(prev => {
                                                                                     const updated = prev.map(b => {
                                                                                         if (b.tags && b.tags.includes(tagId)) {
@@ -10857,19 +10859,16 @@
                                                                                     saveBooksToIndexedDB(updated);
                                                                                     return updated;
                                                                                 });
-                                                                                // Remove from registry
                                                                                 setTagRegistry(prev => {
                                                                                     const updated = { ...prev };
                                                                                     delete updated[tagId];
                                                                                     return updated;
                                                                                 });
-                                                                                // Remove from active filter if present
                                                                                 setTagFilter(prev => prev.filter(t => t !== tagId));
-                                                                                // v5.5.15-alpha.9 - Remove from pinned tag folders if present
                                                                                 setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
                                                                             }
                                                                         }}
-                                                                        className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded">
+                                                                        className="px-2 py-1 text-xs text-gray-600 hover:text-red-600 hover:bg-red-50 rounded">
                                                                         Delete
                                                                     </button>
                                                                 </td>
@@ -10877,17 +10876,42 @@
                                                         ))}
                                                     </tbody>
                                                 </table>
-                                                {orphanedTags.length > 0 && (
-                                                    <>
+                                                {orphanedTags.length > 0 && (() => {
+                                                    const [selectedOrphans, setSelectedOrphans] = React.useState(new Set());
+                                                    const allSelected = orphanedTags.length > 0 && selectedOrphans.size === orphanedTags.length;
+                                                    return (
                                                         <div className="mt-4 pt-4 border-t border-gray-200">
-                                                            <h3 className="text-sm font-semibold text-gray-500 mb-2">Orphaned tags (0 books)</h3>
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <h3 className="text-sm font-semibold text-gray-500">Orphaned tags (0 books)</h3>
+                                                                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+                                                                    <input type="checkbox" checked={allSelected}
+                                                                        onChange={() => {
+                                                                            if (allSelected) {
+                                                                                setSelectedOrphans(new Set());
+                                                                            } else {
+                                                                                setSelectedOrphans(new Set(orphanedTags.map(([tagId]) => tagId)));
+                                                                            }
+                                                                        }}
+                                                                        className="rounded" />
+                                                                    Select all
+                                                                </label>
+                                                            </div>
                                                             <table className="w-full text-sm">
                                                                 <tbody>
                                                                     {orphanedTags.map(([tagId, tagData]) => (
                                                                         <tr key={tagId} className="border-b border-gray-100 hover:bg-gray-50">
-                                                                            <td className="py-2 text-gray-400">{tagData.label}</td>
-                                                                            <td className="py-2 text-center text-gray-400 w-20">0</td>
-                                                                            <td className="py-2 text-right w-32">
+                                                                            <td className="py-2 w-6">
+                                                                                <input type="checkbox" checked={selectedOrphans.has(tagId)}
+                                                                                    onChange={() => {
+                                                                                        setSelectedOrphans(prev => {
+                                                                                            const next = new Set(prev);
+                                                                                            if (next.has(tagId)) { next.delete(tagId); } else { next.add(tagId); }
+                                                                                            return next;
+                                                                                        });
+                                                                                    }}
+                                                                                    className="rounded" />
+                                                                            </td>
+                                                                            <td className="py-2 w-6">
                                                                                 <button
                                                                                     onClick={() => {
                                                                                         const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
@@ -10898,48 +10922,39 @@
                                                                                             setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
                                                                                         }
                                                                                     }}
-                                                                                    className="px-1 py-1 rounded mr-1 hover:bg-gray-100"
+                                                                                    className="p-0.5 rounded hover:bg-gray-100"
                                                                                     title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
                                                                                     {pinnedTagFolders.some(p => p.tagId === tagId)
                                                                                         ? <TagIconSVG size={16} color="#d97706" />
                                                                                         : <FolderIconSVG size={16} color="#eab308" opacity={0.4} />
                                                                                     }
                                                                                 </button>
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        setTagRegistry(prev => {
-                                                                                            const updated = { ...prev };
-                                                                                            delete updated[tagId];
-                                                                                            return updated;
-                                                                                        });
-                                                                                        // v5.5.15-alpha.9 - Remove from pinned tag folders if present
-                                                                                        setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
-                                                                                    }}
-                                                                                    className="px-2 py-1 text-xs text-red-600 hover:bg-red-50 rounded">
-                                                                                    Delete
-                                                                                </button>
                                                                             </td>
+                                                                            <td className="py-2 text-gray-400">{tagData.label}</td>
+                                                                            <td className="py-2 text-center text-gray-400 w-16">0</td>
+                                                                            <td className="py-2 text-right w-28"></td>
                                                                         </tr>
                                                                     ))}
                                                                 </tbody>
                                                             </table>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const toDelete = selectedOrphans;
+                                                                    setTagRegistry(prev => {
+                                                                        const updated = { ...prev };
+                                                                        toDelete.forEach(tagId => delete updated[tagId]);
+                                                                        return updated;
+                                                                    });
+                                                                    setPinnedTagFolders(prev => prev.filter(p => !toDelete.has(p.tagId)));
+                                                                    setSelectedOrphans(new Set());
+                                                                }}
+                                                                disabled={selectedOrphans.size === 0}
+                                                                className={`mt-2 px-3 py-1 text-xs rounded border ${selectedOrphans.size > 0 ? 'text-red-600 border-red-200 hover:bg-red-50 cursor-pointer' : 'text-gray-400 border-gray-200 cursor-not-allowed'}`}>
+                                                                Delete selected ({selectedOrphans.size})
+                                                            </button>
                                                         </div>
-                                                        <button
-                                                            onClick={() => {
-                                                                const orphanedIds = new Set(orphanedTags.map(([tagId]) => tagId));
-                                                                setTagRegistry(prev => {
-                                                                    const updated = { ...prev };
-                                                                    orphanedTags.forEach(([tagId]) => delete updated[tagId]);
-                                                                    return updated;
-                                                                });
-                                                                // v5.5.15-alpha.9 - Remove any pinned orphaned tags
-                                                                setPinnedTagFolders(prev => prev.filter(p => !orphanedIds.has(p.tagId)));
-                                                            }}
-                                                            className="mt-2 px-3 py-1 text-xs text-red-600 hover:bg-red-50 rounded border border-red-200">
-                                                            Delete all orphaned tags
-                                                        </button>
-                                                    </>
-                                                )}
+                                                    );
+                                                })()}
                                             </>
                                         );
                                     })()}
