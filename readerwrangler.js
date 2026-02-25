@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.20";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10901,7 +10901,7 @@
                                                     const allSelected = orphanedTags.length > 0 && selectedOrphans.size === orphanedTags.length;
                                                     return (
                                                         <div>
-                                                            <div className="flex items-center justify-between bg-gray-100 px-4 py-1.5 text-sm font-semibold">
+                                                            <div className="flex items-center justify-between bg-gray-100 border-b-2 border-gray-300 px-4 py-1.5 text-sm font-semibold">
                                                                 <span className="text-gray-500">Orphaned tags (0 books)</span>
                                                                 <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer font-normal">
                                                                     <input type="checkbox" checked={allSelected}
