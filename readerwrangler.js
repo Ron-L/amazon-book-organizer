@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.28";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.29";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8432,11 +8432,8 @@
                                         }}>
                                         <span className="pointer-events-none">{FOLDER_LIBRARY.icon}</span>
                                         <span className="flex-1 pointer-events-none">{FOLDER_LIBRARY.name}</span>
-                                        <span className="text-xs text-gray-500 pointer-events-none">
-                                            ({getChildFolders(null).length} folders)
-                                        </span>
-                                        {/* v5.1.0-alpha.14 - Collapse/Expand all controls — v5.5.15-alpha.28 absolute for count alignment */}
-                                        <div className="absolute right-1 top-0 bottom-0 flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                                        {/* v5.1.0-alpha.14 - Collapse/Expand all — v5.5.15-alpha.29 moved before count for alignment */}
+                                        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
                                             <button
                                                 onClick={() => {
                                                     // Collapse all folders
@@ -8456,6 +8453,9 @@
                                                 ▲
                                             </button>
                                         </div>
+                                        <span className="text-xs text-gray-500 pointer-events-none">
+                                            ({getChildFolders(null).length} folders)
+                                        </span>
                                     </div>
                                     {/* Inbox - indented as part of folder hierarchy */}
                                     <div
