@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.16";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.17";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10880,7 +10880,7 @@
                                                 {orphanedTags.length > 0 && (() => {
                                                     const allSelected = orphanedTags.length > 0 && selectedOrphans.size === orphanedTags.length;
                                                     return (
-                                                        <div className="mt-4">
+                                                        <div>
                                                             <div className="flex items-center justify-between mb-2 bg-gray-100 -mx-4 px-4 py-2">
                                                                 <h3 className="text-sm font-semibold text-gray-500">Orphaned tags (0 books)</h3>
                                                                 <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
