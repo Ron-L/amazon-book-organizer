@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.21";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.22";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1363,6 +1363,8 @@
                     // Truncate forward history and add new entry
                     setNavHistory(prev => [...prev.slice(0, navHistoryIndex + 1), folderId]);
                     setNavHistoryIndex(prev => prev + 1);
+                    // v5.5.15-alpha.22 - Sync browser history for back/forward button support
+                    history.pushState({ folderId, navIndex: navHistoryIndex + 1 }, '');
                 }
             };
 
@@ -1377,6 +1379,9 @@
                     // v5.0.0-alpha.161 - Clear right panel selections when navigating
                     setExplorerSelectedFolders(new Set());
                     setExplorerSelectedBooks(new Set());
+                    // v5.5.15-alpha.22 - Sync browser history
+                    pendingBrowserNavRef.current++;
+                    history.back();
                 }
             };
 
@@ -1388,13 +1393,47 @@
                     // v5.0.0-alpha.161 - Clear right panel selections when navigating
                     setExplorerSelectedFolders(new Set());
                     setExplorerSelectedBooks(new Set());
+                    // v5.5.15-alpha.22 - Sync browser history
+                    pendingBrowserNavRef.current++;
+                    history.forward();
                 }
             };
+
+            // v5.5.15-alpha.22 - Browser back/forward button support via History API
+            useEffect(() => {
+                // Set initial browser history entry
+                history.replaceState({ folderId: '__all__', navIndex: 0 }, '');
+
+                const handlePopState = (e) => {
+                    // Skip if this popstate was triggered by our own goBack/goForward
+                    if (pendingBrowserNavRef.current > 0) {
+                        pendingBrowserNavRef.current--;
+                        return;
+                    }
+                    // Browser back/forward button pressed — update app state
+                    const folderId = e.state?.folderId;
+                    const navIndex = e.state?.navIndex;
+                    if (folderId) {
+                        setSelectedFolderId(folderId);
+                        setExplorerSelectedFolders(new Set());
+                        setExplorerSelectedBooks(new Set());
+                        if (navIndex !== undefined) {
+                            setNavHistoryIndex(navIndex);
+                        }
+                    }
+                };
+
+                window.addEventListener('popstate', handlePopState);
+                return () => window.removeEventListener('popstate', handlePopState);
+            }, []);
 
             // v4.15.6: Track initial mount to prevent save effect from overwriting loaded values
             const filtersLoadedRef = useRef(false);
             const explorerSettingsLoadedRef = useRef(false); // v5.0.0-alpha.169.10 - Track Explorer settings load
             const wizardSettingsLoadedRef = useRef(false); // v5.1.0-alpha.23 - Track wizard settings load
+
+            // v5.5.15-alpha.22 - Prevent double-handling when in-app nav triggers popstate
+            const pendingBrowserNavRef = useRef(0);
 
             // v5.0.0-alpha.82 - Timeout for auto-expanding folder on drag hover
             const dragHoverExpandTimeoutRef = useRef(null);
