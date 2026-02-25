@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.23";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.24";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -500,7 +500,9 @@
             const [tagFilter, setTagFilter] = useState([]); // v4.27.0 - Filter by tags (array of tag names, OR logic)
             const [tagRegistry, setTagRegistry] = useState({}); // v4.27.0 - Central tag registry {tagName: {label, count}}
             const [pinnedTagFolders, setPinnedTagFolders] = useState([]); // v5.5.15-alpha.8 - Tag virtual folders [{tagId, position}]
-            const [selectedOrphans, setSelectedOrphans] = useState(new Set()); // v5.5.15-alpha.14 - Orphaned tag selection for bulk delete
+            const [selectedTags, setSelectedTags] = useState(new Set()); // v5.5.15-alpha.24 - Tag selection for bulk delete (unified, replaces selectedOrphans)
+            const [tagSortColumn, setTagSortColumn] = useState('name'); // v5.5.15-alpha.24 - Tag Manager sort column ('name' | 'count')
+            const [tagSortAsc, setTagSortAsc] = useState(true); // v5.5.15-alpha.24 - Tag Manager sort direction
             const [selectedCollections, setSelectedCollections] = useState([]); // v5.0.0-alpha.175.41 - Phase 5.2: Collections filter (array, OR logic)
             const [minAmazonRating, setMinAmazonRating] = useState(''); // v5.0.0-alpha.175.42 - Phase 5.3: Amazon Rating filter (single-select, minimum rating)
             const [minMyRating, setMinMyRating] = useState(''); // v5.0.0-alpha.175.43 - Phase 5.4: My Rating filter (single-select, '' = all, 'unrated' = 0, '1'-'5' = minimum rating)
@@ -1440,6 +1442,9 @@
 
             // v5.5.15-alpha.22 - Prevent double-handling when in-app nav triggers popstate
             const pendingBrowserNavRef = useRef(0);
+
+            // v5.5.15-alpha.24 - Last clicked tag for shift-click range selection in Tag Manager
+            const lastClickedTagRef = useRef(null);
 
             // v5.0.0-alpha.82 - Timeout for auto-expanding folder on drag hover
             const dragHoverExpandTimeoutRef = useRef(null);
@@ -10869,26 +10874,156 @@
                                     {Object.keys(tagRegistry).length === 0 ? (
                                         <p className="text-gray-500 text-center py-8 px-4">No tags created yet.</p>
                                     ) : (() => {
-                                        const sortedTags = Object.entries(tagRegistry).sort((a, b) => a[1].label.localeCompare(b[1].label));
-                                        const activeTags = sortedTags.filter(([tagId, data]) => getTagCount(tagId) > 0);
-                                        const orphanedTags = sortedTags.filter(([tagId, data]) => getTagCount(tagId) === 0);
+                                        // v5.5.15-alpha.24 - Unified Tag Manager: single sorted table, no orphan section
+                                        const allTags = Object.entries(tagRegistry).map(([tagId, data]) => ({
+                                            tagId, label: data.label, count: getTagCount(tagId)
+                                        }));
+                                        const sorted = [...allTags].sort((a, b) => {
+                                            let cmp;
+                                            if (tagSortColumn === 'count') {
+                                                cmp = a.count - b.count;
+                                                if (cmp === 0) cmp = a.label.localeCompare(b.label);
+                                            } else {
+                                                cmp = a.label.localeCompare(b.label);
+                                            }
+                                            return tagSortAsc ? cmp : -cmp;
+                                        });
+                                        const allSelected = sorted.length > 0 && selectedTags.size === sorted.length;
+
+                                        // Row click handler: click = select only this, Ctrl = toggle, Shift = range
+                                        const handleRowClick = (tagId, e) => {
+                                            e.stopPropagation();
+                                            if (e.shiftKey && lastClickedTagRef.current) {
+                                                // Range select from last clicked to this
+                                                const ids = sorted.map(t => t.tagId);
+                                                const fromIdx = ids.indexOf(lastClickedTagRef.current);
+                                                const toIdx = ids.indexOf(tagId);
+                                                if (fromIdx !== -1 && toIdx !== -1) {
+                                                    const [start, end] = fromIdx < toIdx ? [fromIdx, toIdx] : [toIdx, fromIdx];
+                                                    const rangeIds = ids.slice(start, end + 1);
+                                                    setSelectedTags(prev => {
+                                                        const next = new Set(prev);
+                                                        rangeIds.forEach(id => next.add(id));
+                                                        return next;
+                                                    });
+                                                }
+                                            } else if (e.ctrlKey || e.metaKey) {
+                                                // Toggle this one
+                                                setSelectedTags(prev => {
+                                                    const next = new Set(prev);
+                                                    if (next.has(tagId)) { next.delete(tagId); } else { next.add(tagId); }
+                                                    return next;
+                                                });
+                                            } else {
+                                                // Select only this
+                                                setSelectedTags(new Set([tagId]));
+                                            }
+                                            lastClickedTagRef.current = tagId;
+                                        };
+
+                                        // Checkbox always toggles regardless of modifiers
+                                        const handleCheckboxChange = (tagId) => {
+                                            setSelectedTags(prev => {
+                                                const next = new Set(prev);
+                                                if (next.has(tagId)) { next.delete(tagId); } else { next.add(tagId); }
+                                                return next;
+                                            });
+                                            lastClickedTagRef.current = tagId;
+                                        };
+
+                                        const toggleSort = (col) => {
+                                            if (tagSortColumn === col) {
+                                                setTagSortAsc(prev => !prev);
+                                            } else {
+                                                setTagSortColumn(col);
+                                                setTagSortAsc(true);
+                                            }
+                                        };
+
+                                        const sortArrow = (col) => tagSortColumn === col ? (tagSortAsc ? ' ▲' : ' ▼') : '';
+
+                                        // Bulk delete handler
+                                        const handleBulkDelete = async () => {
+                                            if (selectedTags.size === 0) return;
+                                            const tagNames = [...selectedTags].map(id => tagRegistry[id]?.label || id).join(', ');
+                                            const totalBooks = [...selectedTags].reduce((sum, id) => sum + getTagCount(id), 0);
+                                            const msg = totalBooks > 0
+                                                ? `Delete ${selectedTags.size} tag${selectedTags.size !== 1 ? 's' : ''} (${tagNames})? This will remove tags from ${totalBooks} book${totalBooks !== 1 ? 's' : ''}.`
+                                                : `Delete ${selectedTags.size} tag${selectedTags.size !== 1 ? 's' : ''} (${tagNames})?`;
+                                            if (await showConfirmDialog('Delete Tags', msg)) {
+                                                const toDelete = new Set(selectedTags);
+                                                setBooks(prev => {
+                                                    const updated = prev.map(b => {
+                                                        if (b.tags && b.tags.some(t => toDelete.has(t))) {
+                                                            return { ...b, tags: b.tags.filter(t => !toDelete.has(t)) };
+                                                        }
+                                                        return b;
+                                                    });
+                                                    saveBooksToIndexedDB(updated);
+                                                    return updated;
+                                                });
+                                                setTagRegistry(prev => {
+                                                    const updated = { ...prev };
+                                                    toDelete.forEach(tagId => delete updated[tagId]);
+                                                    return updated;
+                                                });
+                                                setTagFilter(prev => prev.filter(t => !toDelete.has(t)));
+                                                setPinnedTagFolders(prev => prev.filter(p => !toDelete.has(p.tagId)));
+                                                setSelectedTags(new Set());
+                                            }
+                                        };
 
                                         return (
                                             <>
-                                                {/* v5.5.15-alpha.19 - Redesigned Tag Manager modal */}
+                                                {/* Header row */}
                                                 <div className="flex items-center bg-gray-100 border-b-2 border-gray-300 px-4 py-1.5 text-sm font-semibold">
-                                                    <span className="w-6"></span>
-                                                    <span className="flex-1">Tag</span>
-                                                    <span className="w-14 text-center">Books</span>
+                                                    <span className="w-6 flex-shrink-0">
+                                                        <input type="checkbox" checked={allSelected}
+                                                            onChange={() => {
+                                                                if (allSelected) {
+                                                                    setSelectedTags(new Set());
+                                                                } else {
+                                                                    setSelectedTags(new Set(sorted.map(t => t.tagId)));
+                                                                }
+                                                            }}
+                                                            className="rounded" />
+                                                    </span>
+                                                    <span className="w-7 flex-shrink-0"></span>
+                                                    <span className="flex-1 cursor-pointer select-none hover:text-blue-600"
+                                                          onClick={() => toggleSort('name')}>
+                                                        Tag{sortArrow('name')}
+                                                    </span>
+                                                    <span className="w-14 text-center cursor-pointer select-none hover:text-blue-600"
+                                                          onClick={() => toggleSort('count')}>
+                                                        Books{sortArrow('count')}
+                                                    </span>
                                                     <span className="w-8"></span>
-                                                    <span className="w-8"></span>
+                                                    <span className="w-8 flex-shrink-0 text-center">
+                                                        {selectedTags.size > 0 && (
+                                                            <button onClick={handleBulkDelete}
+                                                                    className="p-1 rounded hover:bg-red-50"
+                                                                    title={`Delete ${selectedTags.size} selected`}>
+                                                                <TrashIconSVG size={14} color="#ef4444" />
+                                                            </button>
+                                                        )}
+                                                    </span>
                                                 </div>
                                                 <div className="px-4">
                                                 <table className="w-full text-sm">
                                                     <tbody>
-                                                        {activeTags.map(([tagId, tagData]) => (
-                                                            <tr key={tagId} className="border-b border-gray-100 hover:bg-gray-50">
-                                                                <td className="py-1.5">
+                                                        {sorted.map(({ tagId, label, count }) => {
+                                                            const tagData = tagRegistry[tagId];
+                                                            const isSelected = selectedTags.has(tagId);
+                                                            return (
+                                                            <tr key={tagId}
+                                                                className={`border-b border-gray-100 cursor-pointer ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                                                                onClick={(e) => handleRowClick(tagId, e)}>
+                                                                <td className="py-1.5 w-6" onClick={(e) => e.stopPropagation()}>
+                                                                    <input type="checkbox" checked={isSelected}
+                                                                        onChange={() => handleCheckboxChange(tagId)}
+                                                                        className="rounded" />
+                                                                </td>
+                                                                <td className="py-1.5 w-7" onClick={(e) => e.stopPropagation()}>
                                                                     <button
                                                                         onClick={() => {
                                                                             const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
@@ -10907,11 +11042,11 @@
                                                                         }
                                                                     </button>
                                                                 </td>
-                                                                <td className="py-1.5">
+                                                                <td className="py-1.5" onClick={(e) => e.stopPropagation()}>
                                                                     {editingTagId === tagId ? (
                                                                         <input
                                                                             type="text"
-                                                                            defaultValue={tagData.label}
+                                                                            defaultValue={label}
                                                                             autoFocus
                                                                             className="px-2 py-0.5 border border-blue-500 rounded text-sm w-full"
                                                                             onKeyDown={(e) => {
@@ -10920,7 +11055,7 @@
                                                                                     setEditingTagId(null);
                                                                                 } else if (e.key === 'Enter') {
                                                                                     const newLabel = e.target.value.trim();
-                                                                                    if (newLabel && newLabel !== tagData.label) {
+                                                                                    if (newLabel && newLabel !== label) {
                                                                                         setTagRegistry(prev => ({
                                                                                             ...prev,
                                                                                             [tagId]: { ...prev[tagId], label: newLabel }
@@ -10931,7 +11066,7 @@
                                                                             }}
                                                                             onBlur={(e) => {
                                                                                 const newLabel = e.target.value.trim();
-                                                                                if (newLabel && newLabel !== tagData.label) {
+                                                                                if (newLabel && newLabel !== label) {
                                                                                     setTagRegistry(prev => ({
                                                                                         ...prev,
                                                                                         [tagId]: { ...prev[tagId], label: newLabel }
@@ -10941,11 +11076,11 @@
                                                                             }}
                                                                         />
                                                                     ) : (
-                                                                        <span onDoubleClick={() => setEditingTagId(tagId)} style={{ cursor: 'default' }}>{tagData.label}</span>
+                                                                        <span onDoubleClick={() => setEditingTagId(tagId)} style={{ cursor: 'default' }}>{label}</span>
                                                                     )}
                                                                 </td>
-                                                                <td className="py-1.5 text-center text-gray-500">{getTagCount(tagId)}</td>
-                                                                <td className="py-1.5 text-center">
+                                                                <td className="py-1.5 text-center text-gray-500 w-14">{count}</td>
+                                                                <td className="py-1.5 text-center w-8" onClick={(e) => e.stopPropagation()}>
                                                                     <button
                                                                         onClick={() => setEditingTagId(tagId)}
                                                                         className="p-1 rounded hover:bg-blue-50"
@@ -10953,10 +11088,11 @@
                                                                         <PencilIconSVG size={14} color="#9ca3af" />
                                                                     </button>
                                                                 </td>
-                                                                <td className="py-1.5 text-center">
+                                                                <td className="py-1.5 text-center w-8" onClick={(e) => e.stopPropagation()}>
                                                                     <button
                                                                         onClick={async () => {
-                                                                            if (await showConfirmDialog('Delete Tag', `Delete tag "${tagData.label}"? This will remove it from ${getTagCount(tagId)} book${getTagCount(tagId) !== 1 ? 's' : ''}.`)) {
+                                                                            const bookCount = getTagCount(tagId);
+                                                                            if (await showConfirmDialog('Delete Tag', `Delete tag "${label}"?${bookCount > 0 ? ` This will remove it from ${bookCount} book${bookCount !== 1 ? 's' : ''}.` : ''}`)) {
                                                                                 setBooks(prev => {
                                                                                     const updated = prev.map(b => {
                                                                                         if (b.tags && b.tags.includes(tagId)) {
@@ -10974,6 +11110,7 @@
                                                                                 });
                                                                                 setTagFilter(prev => prev.filter(t => t !== tagId));
                                                                                 setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
+                                                                                setSelectedTags(prev => { const next = new Set(prev); next.delete(tagId); return next; });
                                                                             }
                                                                         }}
                                                                         className="p-1 rounded hover:bg-red-50"
@@ -10982,91 +11119,11 @@
                                                                     </button>
                                                                 </td>
                                                             </tr>
-                                                        ))}
+                                                            );
+                                                        })}
                                                     </tbody>
                                                 </table>
                                                 </div>
-                                                {orphanedTags.length > 0 && (() => {
-                                                    const allSelected = orphanedTags.length > 0 && selectedOrphans.size === orphanedTags.length;
-                                                    return (
-                                                        <div>
-                                                            <div className="flex items-center justify-between bg-gray-100 border-b-2 border-gray-300 px-4 py-1.5 text-sm font-semibold">
-                                                                <span className="text-gray-500">Orphaned tags (0 books)</span>
-                                                                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer font-normal">
-                                                                    <input type="checkbox" checked={allSelected}
-                                                                        onChange={() => {
-                                                                            if (allSelected) {
-                                                                                setSelectedOrphans(new Set());
-                                                                            } else {
-                                                                                setSelectedOrphans(new Set(orphanedTags.map(([tagId]) => tagId)));
-                                                                            }
-                                                                        }}
-                                                                        className="rounded" />
-                                                                    Select all
-                                                                </label>
-                                                            </div>
-                                                            <div className="px-4">
-                                                            <table className="w-full text-sm">
-                                                                <tbody>
-                                                                    {orphanedTags.map(([tagId, tagData]) => (
-                                                                        <tr key={tagId} className="border-b border-gray-100 hover:bg-gray-50">
-                                                                            <td className="py-1.5 w-6">
-                                                                                <input type="checkbox" checked={selectedOrphans.has(tagId)}
-                                                                                    onChange={() => {
-                                                                                        setSelectedOrphans(prev => {
-                                                                                            const next = new Set(prev);
-                                                                                            if (next.has(tagId)) { next.delete(tagId); } else { next.add(tagId); }
-                                                                                            return next;
-                                                                                        });
-                                                                                    }}
-                                                                                    className="rounded" />
-                                                                            </td>
-                                                                            <td className="py-1.5">
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
-                                                                                        if (isPinned) {
-                                                                                            setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
-                                                                                        } else {
-                                                                                            const maxPos = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
-                                                                                            setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
-                                                                                        }
-                                                                                    }}
-                                                                                    className="p-0.5 rounded hover:bg-gray-200"
-                                                                                    title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
-                                                                                    {pinnedTagFolders.some(p => p.tagId === tagId)
-                                                                                        ? <TagIconSVG size={16} color="#d97706" />
-                                                                                        : <FolderIconSVG size={16} color="#eab308" opacity={0.4} />
-                                                                                    }
-                                                                                </button>
-                                                                            </td>
-                                                                            <td className="py-1.5 text-gray-400">{tagData.label}</td>
-                                                                            <td className="py-1.5 text-center text-gray-400 w-14">0</td>
-                                                                            <td className="py-1.5 w-8"></td>
-                                                                            <td className="py-1.5 w-8"></td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                            <button
-                                                                onClick={() => {
-                                                                    const toDelete = selectedOrphans;
-                                                                    setTagRegistry(prev => {
-                                                                        const updated = { ...prev };
-                                                                        toDelete.forEach(tagId => delete updated[tagId]);
-                                                                        return updated;
-                                                                    });
-                                                                    setPinnedTagFolders(prev => prev.filter(p => !toDelete.has(p.tagId)));
-                                                                    setSelectedOrphans(new Set());
-                                                                }}
-                                                                disabled={selectedOrphans.size === 0}
-                                                                className={`mt-2 mb-2 px-3 py-1 text-xs rounded border ${selectedOrphans.size > 0 ? 'text-red-600 border-red-200 hover:bg-red-50 cursor-pointer' : 'text-gray-400 border-gray-200 cursor-not-allowed'}`}>
-                                                                Delete selected ({selectedOrphans.size})
-                                                            </button>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })()}
                                             </>
                                         );
                                     })()}
