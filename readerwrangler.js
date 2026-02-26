@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.32";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.33";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9134,7 +9134,8 @@
 
                                                         if (isBookDrag) {
                                                             // v5.5.15-alpha.31 - Book drag → tag view: accept drop to add tag
-                                                            e.dataTransfer.dropEffect = 'copy';
+                                                            // v5.5.15-alpha.33 - Ctrl = copy (keep source tag), plain = move (remove source tag)
+                                                            e.dataTransfer.dropEffect = e.ctrlKey ? 'copy' : 'move';
                                                             setFolderDropHighlight(e.currentTarget);
                                                         } else if (isTagDrag || isFolderDrag) {
                                                             e.dataTransfer.dropEffect = 'move';
@@ -9222,19 +9223,31 @@
                                                         }
 
                                                         // v5.5.15-alpha.31 - Handle book drop on tag view (add tag)
+                                                        // v5.5.15-alpha.33 - Move semantics: remove source tag when dragging from tag view (Ctrl = copy/keep)
                                                         const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
                                                         if (bookDataStr) {
-                                                            const { bookIds } = JSON.parse(bookDataStr);
-                                                            const tagId = item.tagId;
-                                                            const tagLabel = tagRegistry[tagId]?.label || tagId;
+                                                            const { sourceFolder, bookIds } = JSON.parse(bookDataStr);
+                                                            const destTagId = item.tagId;
+                                                            const destTagLabel = tagRegistry[destTagId]?.label || destTagId;
+                                                            const isCopy = e.ctrlKey;
+                                                            const isFromTagView = sourceFolder?.startsWith('__tag_') && sourceFolder?.endsWith('__');
+                                                            const sourceTagId = isFromTagView ? sourceFolder.slice(6, -2) : null;
+                                                            const isMove = isFromTagView && !isCopy && sourceTagId !== destTagId;
                                                             let addedCount = 0;
                                                             setBooks(prev => {
                                                                 const updated = prev.map(b => {
-                                                                    if (bookIds.includes(b.id) && !(b.tags || []).includes(tagId)) {
-                                                                        addedCount++;
-                                                                        return { ...b, tags: [...(b.tags || []), tagId] };
+                                                                    if (!bookIds.includes(b.id)) return b;
+                                                                    let tags = [...(b.tags || [])];
+                                                                    // Remove source tag if moving between tag views
+                                                                    if (isMove && tags.includes(sourceTagId)) {
+                                                                        tags = tags.filter(t => t !== sourceTagId);
                                                                     }
-                                                                    return b;
+                                                                    // Add dest tag if not already present
+                                                                    if (!tags.includes(destTagId)) {
+                                                                        tags.push(destTagId);
+                                                                        addedCount++;
+                                                                    }
+                                                                    return { ...b, tags };
                                                                 });
                                                                 saveBooksToIndexedDB(updated);
                                                                 return updated;
@@ -9244,11 +9257,15 @@
                                                             stopDragVirtualization();
                                                             setExplorerDragBookId(null);
                                                             setExplorerDragData(null);
-                                                            if (addedCount > 0) {
+                                                            if (isMove) {
+                                                                const sourceLabel = tagRegistry[sourceTagId]?.label || sourceTagId;
+                                                                const bookWord = bookIds.length === 1 ? 'book' : 'books';
+                                                                showToast(`Moved ${bookIds.length} ${bookWord}: "${sourceLabel}" → "${destTagLabel}"`, e.clientX, e.clientY);
+                                                            } else if (addedCount > 0) {
                                                                 const bookWord = addedCount === 1 ? 'book' : 'books';
-                                                                showToast(`Tagged ${addedCount} ${bookWord} as "${tagLabel}"`, e.clientX, e.clientY);
+                                                                showToast(`Tagged ${addedCount} ${bookWord} as "${destTagLabel}"`, e.clientX, e.clientY);
                                                             } else {
-                                                                showToast(`Already tagged as "${tagLabel}"`, e.clientX, e.clientY);
+                                                                showToast(`Already tagged as "${destTagLabel}"`, e.clientX, e.clientY);
                                                             }
                                                         }
                                                     }}
