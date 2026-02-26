@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.34";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.35";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8650,6 +8650,12 @@
                                                             const isTagDrag = types.includes('application/x-tagview-reorder');
 
                                                             if (isBookDrag) {
+                                                                // v5.5.15-alpha.34 - 1I: Disallow drag from tag view to real folder
+                                                                const srcFolder = explorerDragData?.sourceFolder;
+                                                                if (srcFolder?.startsWith('__tag_') && srcFolder?.endsWith('__')) {
+                                                                    e.dataTransfer.dropEffect = 'none';
+                                                                    return;
+                                                                }
                                                                 // Book drag - existing behavior
                                                                 const isCopy = e.ctrlKey;
                                                                 explorerIsCopyDragRef.current = isCopy;
@@ -8828,6 +8834,13 @@
 
                                                             if (sourceFolder === '__all__') {
                                                                 showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
+                                                                setFolderDropHighlight(null);
+                                                                setExplorerSelectedBooks(new Set());
+                                                                return;
+                                                            }
+                                                            // v5.5.15-alpha.34 - 1I: Disallow drag from tag view to real folder
+                                                            if (sourceFolder?.startsWith('__tag_') && sourceFolder?.endsWith('__')) {
+                                                                showToast('Can\'t move from tag view to folder. Use folders to organize.', e.clientX, e.clientY);
                                                                 setFolderDropHighlight(null);
                                                                 setExplorerSelectedBooks(new Set());
                                                                 return;
