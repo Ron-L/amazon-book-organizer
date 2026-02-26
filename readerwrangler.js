@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.6.0";  // Build version for this file
+        const ORGANIZER_VERSION = "5.6.1-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6797,7 +6797,7 @@
                                     <img src="icons/ReaderWranglerXparent.png" alt="ReaderWrangler" className="about-logo" style={{ width: '200px', height: '200px', margin: '0 auto' }} />
                                     <p className="text-sm text-gray-600">Wrangle your Kindle library with power and precision</p>
                                     <div className="text-sm text-gray-700 border-t border-gray-200 pt-4">
-                                        <p className="font-semibold">Version {APP_VERSION}</p>
+                                        <p className="font-semibold"><a href="changelog.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">Version {APP_VERSION}</a></p>
                                         <p className="mt-2">Copyright © 2025, 2026 <a href="https://AlloidLabs.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">AlloidLabs.com</a></p>
                                     </div>
                                     <div className="text-sm text-gray-600 border-t border-gray-200 pt-4 text-left">

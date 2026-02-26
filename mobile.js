@@ -651,7 +651,7 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
                 {/* Help & About */}
                 <div className="py-3 px-4 text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>
                     <p className="font-semibold mb-1" style={{ color: 'var(--text-primary, #1e293b)' }}>Help &amp; About</p>
-                    <p>App v{APP_VERSION}</p>
+                    <p><a href="changelog.html" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-link, #2563eb)', textDecoration: 'none' }}>App v{APP_VERSION}</a></p>
                     <p>Mobile v{MOBILE_VERSION}</p>
                 </div>
             </div>
