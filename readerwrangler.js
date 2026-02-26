@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.35";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.36";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2518,10 +2518,36 @@
                             console.log('🚫 Cannot remove books from All Books or Inbox');
                             return;
                         }
+                        const bookIdsToRemove = [...explorerSelectedBooks];
+
+                        // v5.5.15-alpha.35 - 1J: Delete key removes tag from books in tag view
+                        if (selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__')) {
+                            const tagId = selectedFolderId.slice(6, -2);
+                            setBooks(prev => {
+                                const updated = prev.map(b => {
+                                    if (bookIdsToRemove.includes(b.id) && (b.tags || []).includes(tagId)) {
+                                        return { ...b, tags: b.tags.filter(t => t !== tagId) };
+                                    }
+                                    return b;
+                                });
+                                saveBooksToIndexedDB(updated);
+                                return updated;
+                            });
+                            recordAction({
+                                type: 'TAG_BOOKS_DRAG',
+                                bookIds: bookIdsToRemove,
+                                destTagId: null,
+                                sourceTagId: tagId,
+                                addedDest: [],
+                                removedSource: bookIdsToRemove
+                            });
+                            setExplorerSelectedBooks(new Set());
+                            return;
+                        }
+
                         const folder = folders.find(f => f.id === selectedFolderId);
                         if (!folder) return;
 
-                        const bookIdsToRemove = [...explorerSelectedBooks];
                         const fromIndices = bookIdsToRemove.map(id => (folder.bookIds || []).indexOf(id));
 
                         // Remove books from folder
@@ -12286,6 +12312,10 @@
 
                         // v5.0.0-alpha.166.1 - Check if current folder is special (can't move books from virtual folders)
                         const isSpecialFolder = ['__all__', '__library__', '__inbox__'].includes(selectedFolderId);
+                        // v5.5.15-alpha.35 - 1J: Detect tag view for "Remove from [tag]" context menu
+                        const isTagViewCtx = selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__');
+                        const tagViewCtxId = isTagViewCtx ? selectedFolderId.slice(6, -2) : null;
+                        const tagViewCtxLabel = isTagViewCtx ? (tagRegistry[tagViewCtxId]?.label || tagViewCtxId) : null;
 
                         // Move books to target folder
                         const handleMoveToFolder = (targetFolderId) => {
@@ -13170,8 +13200,41 @@
                                                 );
                                             })()}
 
-                                            {/* Remove from Folder */}
-                                            {isSpecialFolder ? (
+                                            {/* Remove from Folder / Tag View */}
+                                            {isTagViewCtx ? (
+                                                <div
+                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
+                                                    onClick={() => {
+                                                        const bookIdsToRemove = Array.from(explorerSelectedBooks);
+                                                        setBooks(prev => {
+                                                            const updated = prev.map(b => {
+                                                                if (bookIdsToRemove.includes(b.id) && (b.tags || []).includes(tagViewCtxId)) {
+                                                                    return { ...b, tags: b.tags.filter(t => t !== tagViewCtxId) };
+                                                                }
+                                                                return b;
+                                                            });
+                                                            saveBooksToIndexedDB(updated);
+                                                            return updated;
+                                                        });
+                                                        recordAction({
+                                                            type: 'TAG_BOOKS_DRAG',
+                                                            bookIds: bookIdsToRemove,
+                                                            destTagId: null,
+                                                            sourceTagId: tagViewCtxId,
+                                                            addedDest: [],
+                                                            removedSource: bookIdsToRemove
+                                                        });
+                                                        const bookWord = bookIdsToRemove.length === 1 ? 'book' : 'books';
+                                                        showToast(`Removed ${bookIdsToRemove.length} ${bookWord} from "${tagViewCtxLabel}"`);
+                                                        setExplorerSelectedBooks(new Set());
+                                                        setExplorerBookContextMenu(null);
+                                                        setContextSubmenu(null);
+                                                    }}>
+                                                    <span>🗑️</span>
+                                                    <span>Remove from "{tagViewCtxLabel}"</span>
+                                                    <span className="ml-auto text-xs text-gray-400">Del</span>
+                                                </div>
+                                            ) : isSpecialFolder ? (
                                                 <div
                                                     className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
                                                     title="Cannot remove books from virtual folders">
