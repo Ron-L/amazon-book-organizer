@@ -9,10 +9,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔒 Priority 3: Pre-Launch Gate
 
-~~**0. 📱 Mobile Viewer**~~ ✅ v5.6.0
-   - Completed: All phases 1-9. Dashboard, folder navigation, tag views, search & sort, book detail, import, themes, PWA icons, iOS/Android home screen support.
-   - Remaining: Desktop Mode escape hatch (deferred — see Priority 6)
-
 **1. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
    - Link version display (e.g., "v3.6.0") to CHANGELOG.md
    - Problem: Users see version numbers but no context
@@ -82,13 +78,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🚀 Priority 6: Post-Launch Internal Improvements
 
-~~**0. 🏷️ Desktop Backlog (Tag Virtual Folders + misc)**~~ ✅ v5.6.0 (items 1A–1K)
-   - Completed: Tag Virtual Folders (pin/unpin, left pane rendering, drag-to-tag, manual ordering, undo/redo, background tints, Tag Manager redesign)
-   - Remaining:
-     - Left pane keyboard navigation: Up/Down arrow, Left/Right collapse/expand, Home/End
-     - Desktop Mode escape hatch: "Return to Mobile" button when mobile viewport has `desktopMode` flag
-     - Directional shadow consistency with mobile cover view
-
 **1. 🔄 Extend Gap-Fill to Include Reviews** - LOW/LOW (1 hour)
    - File: `amazon-library-fetcher.js`
    - Current gap-fill only targets books missing descriptions
@@ -122,7 +111,12 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: 2+ file picker interactions per fetch cycle due to cross-domain isolation (amazon.com → readerwrangler.com)
    - Impact: Phase 1 halves friction immediately; Phase 2 eliminates file picker entirely
 
-**5. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
+**6. 🏷️ Deferred Desktop Polish** - LOW/LOW (2-3 hours)
+   - Left pane keyboard navigation: Up/Down arrow, Left/Right collapse/expand, Home/End
+   - Desktop Mode escape hatch: "Return to Mobile" button when mobile viewport has `desktopMode` flag
+   - Directional shadow consistency with mobile cover view
+
+**7. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
    - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
    - Step 1 (Babel): `npm install --save-dev @babel/cli @babel/core @babel/preset-react`, add `build.bat` that runs `npx babel readerwrangler.js --presets=@babel/preset-react -o dist/readerwrangler.js`. Update HTML to load `dist/readerwrangler.js` as regular `<script>` instead of `type="text/babel"`. Remove Babel CDN.
    - Step 2 (optional, Tailwind): `npx tailwindcss -i input.css -o dist/styles.css --content "readerwrangler.js,readerwrangler.html"`. Swap Tailwind CDN `<script>` for `<link>` to generated CSS.
