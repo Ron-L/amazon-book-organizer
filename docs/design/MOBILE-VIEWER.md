@@ -735,32 +735,32 @@ Useful for scanning large collections (e.g., "I'm at the library, let me scroll 
 - [x] Bookmarklet mobile note (already existed; added PWA home screen tip, v2.1.2)
 - [x] General mobile readability (container/hero/how-it-works/workflow-step padding, ul indent, FreeDNS removal, v2.1.3–v2.1.6)
 
-### Phase 8B: Tag Virtual Folders (not started — desktop prerequisite DONE)
+### Phase 8B: Tag Virtual Folders (COMPLETE)
 
 Tag views (virtual folders based on tags) provide persistent, cross-folder browsing by tag. Configured on desktop, displayed read-only on mobile. See `docs/design/TAG-VIRTUAL-FOLDERS.md` for full design.
 
 **Desktop (prerequisite — COMPLETE):**
 - [x] Tag management UI, left pane rendering, drag rules, remove-from-view, export `pinnedTagFolders` *(1A-1K, v5.5.15-alpha.37)*
 
-**Mobile (this phase):**
-- [ ] Read `pinnedTagFolders` from imported backup settings
-- [ ] Render tag views in drawer (tag icon, positioned per desktop ordering)
-- [ ] Render tag views as dashboard shelves (tag icon, subtle background tint)
-- [ ] FolderView handles tag view IDs (filter books by tag, like `__recent__`)
-- [ ] Tag icon SVG component
-- [ ] No configuration, no reordering, no remove — read-only display
+**Mobile (COMPLETE):**
+- [x] Read `pinnedTagFolders` from imported backup settings *(alpha.61, 158eaf8)*
+- [x] Render tag views in drawer (🏷️ emoji, positioned per desktop ordering) *(alpha.61)*
+- [x] Render tag views as dashboard shelves (with bookOrder support) *(alpha.61)*
+- [x] FolderView handles tag view IDs (filter books by tag, respects bookOrder) *(alpha.61)*
+- [x] Tag icon: 🏷️ emoji (consistent with mobile drawer pattern) *(alpha.61)*
+- [x] Read-only display, no configuration/reordering/remove *(alpha.61)*
 
 **Not included on mobile**: Tag configuration, drag interactions, un-tagging. Desktop handles all curation.
 
-### Phase 9: Documentation & Polish (not started)
+### Phase 9: Documentation & Polish — COMPLETE
 
-- [ ] Update FAQ
-- [ ] Update README.md / index.html
+- ~~Update FAQ~~ (no FAQ exists; struck)
+- [x] Update README.md / index.html — wordsmith pass, mobile content, column→folder sync (`8fa00d7`)
 - [x] Test on actual phone (ongoing since alpha.40)
 - [x] Splash/loading screen (completed alpha.38-39)
-- [ ] Apple PWA meta tags (`apple-mobile-web-app-capable`, `apple-touch-icon` 180×180) in readerwrangler.html
-- [ ] iOS Safari "Add to Home Screen" hint banner (detect iOS Safari, show once, dismiss + remember in localStorage)
-- [ ] Android maskable icon (512×512 + 192×192, blue background edge-to-edge, logo in center 80% safe zone, `"purpose": "maskable"` in manifest.json)
+- [x] Apple PWA meta tags — `apple-mobile-web-app-capable`, status bar style, app title, updated touch icon (`d203358`)
+- [x] iOS Safari "Add to Home Screen" hint banner — bottom banner, localStorage dismiss, iOS-only detection (`dfe6cfd`)
+- [x] Android maskable icon — `purpose: "any maskable"`, blue `background_color`, `theme-color` meta, padded icons (`924dd70`–`f0512ee`)
 
 ### Post-Implementation
 
