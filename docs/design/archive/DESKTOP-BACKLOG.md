@@ -23,8 +23,8 @@ Desktop is the control plane for tag views. All configuration, drag interactions
 - [x] **1H. Drag: tag view → tag view** — Move (remove source tag, add dest tag) / Ctrl+drag = copy (keep source, add dest). Undo/redo support. *(v5.5.15-alpha.34, 305b83f)*
 - [x] **1I. Drag: tag view → real folder** — DISALLOWED (no-drop cursor, toast on drop). *(v5.5.15-alpha.35, 59c43ac)*
 - [x] **1J. Remove from tag view** — Right-click "Remove from [tag name]" + Delete key. Undo support. *(v5.5.15-alpha.36, 5af26e0)*
-- [ ] **1K. CSS variables** — Background tint for tag view content area (light + dark + HC-dark themes)
-- [ ] **1L. Mobile read-only support** — Import `pinnedTagFolders` from backup, render in drawer + dashboard shelves (Phase 8B, mobile.js)
+- [x] **1K. CSS variables** — Background tint: warm canary `#fffef5` for folders, cool blue `#eef2ff` for tag views (light + dark + HC-dark themes). Tag icon always amber. *(v5.5.15-alpha.37, 1b5c283)*
+- ~~**1L. Mobile read-only support**~~ — Deferred to `docs/design/MOBILE-VIEWER.md` Phase 8B
 
 ---
 

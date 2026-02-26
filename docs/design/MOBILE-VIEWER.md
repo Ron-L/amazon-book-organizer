@@ -735,12 +735,12 @@ Useful for scanning large collections (e.g., "I'm at the library, let me scroll 
 - [x] Bookmarklet mobile note (already existed; added PWA home screen tip, v2.1.2)
 - [x] General mobile readability (container/hero/how-it-works/workflow-step padding, ul indent, FreeDNS removal, v2.1.3–v2.1.6)
 
-### Phase 8B: Tag Virtual Folders (not started — requires desktop work first)
+### Phase 8B: Tag Virtual Folders (not started — desktop prerequisite DONE)
 
-Tag views (virtual folders based on tags) provide persistent, cross-folder browsing by tag. Configured on desktop, displayed read-only on mobile. **Desktop implementation must come first** — see `docs/design/DESKTOP-BACKLOG.md` item #1 and `docs/design/TAG-VIRTUAL-FOLDERS.md` for full design.
+Tag views (virtual folders based on tags) provide persistent, cross-folder browsing by tag. Configured on desktop, displayed read-only on mobile. See `docs/design/TAG-VIRTUAL-FOLDERS.md` for full design.
 
-**Desktop (prerequisite):**
-- [ ] Tag management UI, left pane rendering, drag rules, remove-from-view, export `pinnedTagFolders`
+**Desktop (prerequisite — COMPLETE):**
+- [x] Tag management UI, left pane rendering, drag rules, remove-from-view, export `pinnedTagFolders` *(1A-1K, v5.5.15-alpha.37)*
 
 **Mobile (this phase):**
 - [ ] Read `pinnedTagFolders` from imported backup settings
