@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.36";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.37";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9372,7 +9372,7 @@
                                                     }}
                                                     title={`Tag view: ${tagLabel} (${bookCount} books)`}>
                                                     <span className="pointer-events-none">
-                                                        <TagIconSVG size={16} color={selectedFolderId === tagFolderId ? '#1e40af' : '#d97706'} />
+                                                        <TagIconSVG size={16} color="#d97706" />
                                                     </span>
                                                     {editingFolderId === tagFolderId ? (
                                                         <input
@@ -9427,7 +9427,7 @@
                             />
 
                             {/* Right pane: Book list — v5.5.15-alpha.36 subtle tint for tag views */}
-                            <div className={`flex-1 overflow-hidden flex flex-col ${selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__') ? 'tag-view-tint' : 'bg-white'}`}>
+                            <div className={`flex-1 overflow-hidden flex flex-col ${selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__') ? 'tag-view-tint' : 'folder-view-tint'}`}>
                                 <div className="p-3 border-b border-gray-200 flex items-center justify-between">
                                     <div className="font-medium text-gray-700 flex items-center">
                                         {/* v5.0.0-alpha.80 - Breadcrumb navigation, v5.0.0-alpha.83 - Drop target for folder reparenting */}

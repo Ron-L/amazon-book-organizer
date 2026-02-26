@@ -699,10 +699,13 @@ body { margin: 0; padding: 0; overflow: hidden; }
 [data-theme="dark"] .folder-scroll-container::-webkit-scrollbar-thumb { background: #475569; }
 [data-theme="dark"] .folder-scroll-container::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
-/* v5.5.15-alpha.36 - 1K: Subtle background tint for tag view content area */
-.tag-view-tint { background-color: #f8fafc; }
-[data-theme="dark"] .tag-view-tint { background-color: #1a1f2e; }
-[data-theme="hc-dark"] .tag-view-tint { background-color: #0d0d14; }
+/* v5.5.15-alpha.37 - 1K: Warm/cool background tints for folder vs tag view */
+.folder-view-tint { background-color: #fffef5; }
+.tag-view-tint { background-color: #eef2ff; }
+[data-theme="dark"] .folder-view-tint { background-color: #1a1a14; }
+[data-theme="dark"] .tag-view-tint { background-color: #141a2e; }
+[data-theme="hc-dark"] .folder-view-tint { background-color: #0a0a08; }
+[data-theme="hc-dark"] .tag-view-tint { background-color: #080a14; }
 
 /* v4.21.0.a - Book Notes sticky note styling */
 .book-note {
