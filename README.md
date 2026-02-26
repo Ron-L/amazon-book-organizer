@@ -4,9 +4,9 @@
 
 ## Organize your Kindle library visually
 
-**The problem:** You have hundreds (or thousands) of Kindle books. Amazon shows beautiful covers but won't let you organize them. Great reads get buried.
+**The problem:** You have hundreds (or thousands) of Kindle books. Your Kindle library on Amazon shows beautiful covers but won't let you organize them. Great reads get buried.
 
-**The solution:** ReaderWrangler imports your Amazon Kindle library and lets you organize it with drag-and-drop columns—like Trello for your reading list.
+**The solution:** ReaderWrangler imports your Amazon Kindle library and lets you organize it with drag-and-drop folders—like a file manager for your reading list. Then browse your curated library on your phone.
 
 **[Get Started](https://readerwrangler.com/install-bookmarklet.html)** | **[Launch App](https://readerwrangler.com/readerwrangler.html)** | **[Watch Demo](https://readerwrangler.com/images/walk-through.mp4)**
 
@@ -14,7 +14,7 @@
 
 ## Your Books, Your Order
 
-See all your [Kindle books from Amazon.com](https://www.amazon.com/yourbooks) in one dashboard—covers, ratings, descriptions, and reviews. Create custom groups like "Next to Read" or "Time Travel Books," drag and drop books into organized columns, and double-click any cover to see full details.
+See all your [Kindle books](https://www.amazon.com/yourbooks) in one dashboard—covers, ratings, descriptions, and reviews. Organize with nested folders like Author / Series / Books (think Artist / Album / Song), tag books as "Next to Read" or "Time Travel," and double-click any cover to see full details. An All Books view lets you browse, filter, and sort your entire library at any time—your organization never hides anything.
 
 <p align="center">
   <img src="images/bookmarklet-install.gif" alt="Drag bookmarklet to bookmarks bar" width="50%">
@@ -42,13 +42,13 @@ C. **Click the bookmarklet** and select "Go to Collections Page"
 
 D. **Click the bookmarklet again** and select "Import Collections"
 
-**💡 Keeping Your Library Current:** Do this once to get your complete library, then repeat occasionally to add newly purchased books. ReaderWrangler merges new books while preserving your organization.
+**💡 Keeping Your Library Current:** Do this once to get your complete library, then repeat occasionally to add newly purchased books and refresh your collections. ReaderWrangler merges new books while preserving your organization.
 
 ### 3. Start Organizing!
 
 A. **Click the bookmarklet** and select "Launch App"
 
-B. **Load your library**: Click the status line and select your downloaded JSON file
+B. **Load your library**: Click "Load Library File" on first launch, or use File / Import on return visits
 
 **🔒 Your Privacy:** All processing happens in your browser—your data never leaves your computer.
 
@@ -61,15 +61,15 @@ B. **Load your library**: Click the status line and select your downloaded JSON 
 | **Unbury your next great read.** | **Amazon shows you all your books online, but won't let you organize them.** |
 | If you're like most book lovers, your ebook library has grown to hundreds—even thousands—of books. You buy new titles faster than you can read them, and buried in that digital pile are gems you've completely forgotten about. That book you were excited to read last year? Lost in the shuffle. The entire series you meant to binge? Scattered and out of order. | Amazon's "Your Books" page displays beautiful thumbnails with ratings and reviews, but there's a critical problem: you can't reorder them or group them in meaningful ways. With a massive library, it's impossible to keep track of what you own, what you've read, and what's next on your list. |
 | **ReaderWrangler gives you the control Amazon doesn't.** | **Then the magic happens.** |
-| ReaderWrangler is a free web app that imports your Amazon Kindle library and transforms it into an organized, personalized reading dashboard. Using a simple bookmarklet, you import your complete library—covers, ratings, reviews, and descriptions—all in one place. No local ebook files required. No manual exports. Simple and straightforward. | **You** create custom columns like "Next to Read," "Favorites," "Time Travel Books," or "Beach Reads"—whatever makes sense for you. Drag and drop books between columns, reorder them within groups, and use multi-select to move entire series at once. Search by author or title to quickly find and organize specific books. Double-click any book cover to see its full details—larger cover image, title, author, Amazon rating, description, and top reviews—then navigate through your filtered results without leaving the detail view. |
+| ReaderWrangler is a free web app that imports your Amazon Kindle library and transforms it into an organized, personalized reading dashboard—on your computer and your phone. Using a simple bookmarklet, you import your complete library—covers, ratings, reviews, and descriptions—all in one place. No local ebook files required. No manual exports. Simple and straightforward. | **You** build a folder hierarchy that fits how you think—by author, by series, by mood, whatever works. Or let Auto-Organize do it for you: it builds an Author / Series / Books structure automatically, one book at a time or your entire library at once. Tag books as "Next to Read," "Favorites," or "Beach Reads" for cross-cutting themes. Pin your favorite tags as virtual folders for instant access. Drag and drop books between folders, reorder them within a folder, and use multi-select to move entire series at once. Search by author or title to quickly find and organize specific books. Double-click any book cover to see its full details—larger cover image, title, author, Amazon rating, description, and top reviews—then navigate through your filtered results without leaving the detail view. |
 
 ---
 
 ## See the Difference
 
-From chaos to control - slide to compare Amazon's view vs. ReaderWrangler's organized columns
+From chaos to control - slide to compare Amazon's view vs. ReaderWrangler
 
-<img src="images/before.png" alt="Before: Amazon's chaotic book list" width="49%"> <img src="images/after.png" alt="After: Organized ReaderWrangler columns" width="49%">
+<img src="images/before.png" alt="Before: Amazon's chaotic book list" width="49%"> <img src="images/after.png" alt="After: Organized ReaderWrangler folders" width="49%">
 
 *Note: In the live website, this is an interactive slider you can drag left/right*
 
@@ -81,8 +81,10 @@ From chaos to control - slide to compare Amazon's view vs. ReaderWrangler's orga
 |---|---|
 | **Works With Your Amazon Library** | **Library Management** |
 | • See all your Kindle books in one visual dashboard<br>• Covers, ratings, reviews, and descriptions all in one place<br>• No manual CSV exports or local ebook files required<br>• Works with your Amazon library page | • View your entire ebook library with titles, authors, covers, descriptions, and ratings<br>• Advanced filtering by author, series, genre, and reading status<br>• Smart search across titles and authors<br>• **Wishlist** - Add books from Amazon to track what you want to buy |
-| **Organization** | **Data & Privacy** |
-| • Drag-and-drop interface for organizing books into custom collections<br>• Multi-select with Ctrl/Shift for bulk operations<br>• Custom columns for creating your own organization system<br>• **Hide books** - Soft-delete books you don't want to see<br>• **Context menu** - Right-click for quick actions (Open in Amazon, Copy Title) | • Your data stays in your browser<br>• IndexedDB storage for persistent local storage<br>• Export your organization to JSON for backup |
+| **Organization (Desktop)** | **Data & Privacy** |
+| • Drag-and-drop interface for organizing books into folders<br>• Multi-select with Ctrl/Shift for bulk operations<br>• Nested folder hierarchy with Auto-Organize<br>• **Tags & Tag Views** - Label books across folders; pin tags as virtual folders<br>• **Hide books** - Soft-delete books you don't want to see<br>• **Context menu** - Right-click for quick actions (Open in Amazon, Copy Title) | • Your data stays in your browser<br>• IndexedDB storage for persistent local storage<br>• Export your organization to JSON for backup |
+| **Mobile Viewer** | |
+| • Browse your organized library on any phone<br>• Dashboard shelves, folder navigation, tag views<br>• Search, sort, and view full book details<br>• Add to home screen for app-like experience | |
 
 **Your books, your order. Finally!**
 
@@ -94,7 +96,7 @@ Rediscover forgotten treasures, prioritize your reading stack, and organize the 
 
 **1. Import Your Kindle Library**
 
-Your Amazon Kindle library already has your complete collection. Install the bookmarklet, visit your Amazon library page, and import your books—covers, descriptions, ratings, and reviews—into a local file on your computer.
+Your Amazon Kindle library already has your complete collection. Install the bookmarklet, visit your Amazon library page, and import your books and collections—covers, descriptions, ratings, and reviews—into a local file on your computer.
 
 ⏱️ The initial import may take a while depending on your library size, but you only need to do it once
 
@@ -102,11 +104,19 @@ Your Amazon Kindle library already has your complete collection. Install the boo
 
 **2. Organize Your Collection**
 
-Once your library file is saved, launch ReaderWrangler and click the status line that says "No Library" to load it. Instantly see all your books in a visual grid. Now the fun begins—drag books into custom columns ("Next to Read," "Favorites," "Series to Binge"), rearrange them however you like, and finally take control of your reading chaos.
+Once your library file is saved, launch ReaderWrangler and click "Load Library File" on first launch, or use File / Import on return visits. Instantly see all your books in a visual grid. Now the fun begins—run Auto-Organize to build an Author / Series / Books hierarchy, drag books between folders, tag them however you like, and finally take control of your reading chaos.
 
 **3. Keep It Fresh**
 
-Bought new books on Amazon? Just run the import again—ReaderWrangler will merge the new additions while preserving your organization. Your custom columns stay intact while your library stays current.
+Bought new books on Amazon? Just run the bookmarklet again to refresh your library file, then re-import it—ReaderWrangler will merge the new additions while preserving your organization. Your folders, tags, and sort order stay intact while your library stays current.
+
+**4. Browse on Mobile**
+
+Export a backup from ReaderWrangler, transfer it to your phone (cloud storage, email, AirDrop), and import it in your phone's browser. Your folders, tags, and organization are all there—browse your curated library from anywhere.
+
+📱 Add to your home screen for an app-like experience
+
+🖥️ All organizing happens on desktop. Mobile is your read-only companion for browsing.
 
 **💡 Smart Recovery:** Sometimes a few book details get missed during the initial import. No worries! Every time you refresh your library, ReaderWrangler re-attempts any missing descriptions or reviews. Your library gets more complete with each update.
 
@@ -134,6 +144,12 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 ---
 
 ## Recent Features
+
+**v5.5 - Mobile Viewer** (February 2026)
+- Browse your organized library on your phone — dashboard shelves, folder navigation, tag views, search & sort
+
+**v5.5 - Tag Virtual Folders** (February 2026)
+- Pin any tag as a virtual folder alongside real folders; drag-to-tag, manual ordering, move/copy between views
 
 **v5.5 - Dark Mode + High Contrast Themes** (February 2026)
 - Four themes: Light, Dark, High Contrast Light, High Contrast Dark
@@ -163,8 +179,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ## Coming Soon!
 
-- **Mobile viewer** - Browse your organized library on your phone
-- **Public launch** - Share ReaderWrangler with the world
+- **Public launch** — Share ReaderWrangler with the world
 
 Have a feature request? [Let us know on GitHub!](https://github.com/Ron-L/ReaderWrangler/issues)
 
