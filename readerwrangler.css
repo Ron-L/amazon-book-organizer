@@ -690,6 +690,15 @@ body { margin: 0; padding: 0; overflow: hidden; }
     scrollbar-gutter: stable;           /* Reserve space for scrollbar */
 }
 
+/* v5.5.15-alpha.30 - Left pane folder scrollbar with visible thumb */
+.folder-scroll-container::-webkit-scrollbar { width: 8px; }
+.folder-scroll-container::-webkit-scrollbar-track { background: #f1f5f9; }
+.folder-scroll-container::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+.folder-scroll-container::-webkit-scrollbar-thumb:hover { background: #64748b; }
+[data-theme="dark"] .folder-scroll-container::-webkit-scrollbar-track { background: #1e293b; }
+[data-theme="dark"] .folder-scroll-container::-webkit-scrollbar-thumb { background: #475569; }
+[data-theme="dark"] .folder-scroll-container::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
 /* v4.21.0.a - Book Notes sticky note styling */
 .book-note {
     position: relative;

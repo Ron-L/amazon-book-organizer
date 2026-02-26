@@ -8511,7 +8511,7 @@
                                 </div>
                                 </div>
                                 {/* Scrollable section: User folders */}
-                                <div className="flex-1 overflow-y-auto p-2 columns-scroll-container" style={{ contain: 'layout style paint' }}>
+                                <div className="flex-1 overflow-y-auto p-2 folder-scroll-container" style={{ contain: 'layout style paint' }}>
                                     {/* User folders with recursive subfolder rendering */}
                                     {(() => {
                                         // Recursive folder renderer
