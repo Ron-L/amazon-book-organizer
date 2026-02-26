@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.1] - 2026-02-26
+
+### Added
+- **Changelog page** - Version links in About dialog (desktop) and hamburger menu (mobile) now open a rendered changelog page (`changelog.html`). Uses marked.js to render CHANGELOG.md at runtime — no maintenance needed when changelog is updated. Includes "Back to Top" footer link. Mobile navigates in-app (PWA-safe); desktop opens in new tab.
+
 ## [5.6.0] - 2026-02-26
 
 ### Added

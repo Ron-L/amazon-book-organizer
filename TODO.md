@@ -9,12 +9,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔒 Priority 3: Pre-Launch Gate
 
-**1. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
-   - Link version display (e.g., "v3.6.0") to CHANGELOG.md
-   - Problem: Users see version numbers but no context
-   - Impact: Transparency about what changed
-
-**2. Browser Compatibility Documentation** - LOW/LOW (30 min)
+**1. Browser Compatibility Documentation** - LOW/LOW (30 min)
    - Document Chrome-only requirement in README and app footer
    - Note: Edge smoke-tested (2026-02-26, cursory — looks good). Firefox untested.
    - Optional: 30-min Firefox smoke test before public release
