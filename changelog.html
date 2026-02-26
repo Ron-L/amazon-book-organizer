@@ -34,7 +34,7 @@
     <header>
         <img src="icons/logo-transparent-32.png" alt="ReaderWrangler">
         <h1>ReaderWrangler Changelog</h1>
-        <a href="readerwrangler.html">Back to App</a>
+        <a href="#" onclick="if (history.length > 1) { history.back(); } else { location.href='readerwrangler.html'; } return false;">Back to App</a>
     </header>
     <div id="content">
         <div id="loading">Loading changelog...</div>
@@ -44,7 +44,10 @@
     <script>
         fetch('CHANGELOG.md')
             .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
-            .then(md => { document.getElementById('content').innerHTML = marked.parse(md); })
+            .then(md => {
+                document.getElementById('content').innerHTML = marked.parse(md)
+                    + '<div style="text-align:center;padding:32px 0 48px;"><a href="#" onclick="window.scrollTo({top:0,behavior:\'smooth\'});return false;" style="color:#2563eb;text-decoration:none;font-size:0.9em;">Back to Top</a></div>';
+            })
             .catch(() => {
                 document.getElementById('loading').style.display = 'none';
                 document.getElementById('error').style.display = 'block';
