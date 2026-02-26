@@ -9,19 +9,9 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔒 Priority 3: Pre-Launch Gate
 
-**0. 📱 Mobile Viewer** - MEDIUM/MEDIUM (12-16 hours)
-   - Purpose-built read-only mobile UI (separate `mobile.js`), not responsive CSS
-   - Dashboard home: configurable tag-based shelves (e.g., "Next Reads") + folder shelves + "Recently Added"
-   - Cover grid folder view (3-wide portrait, 5-wide landscape), folder drawer, book detail view
-   - Search ("do I own this?"), sort, filter — all read-only for v1
-   - Reuses `storage.js` / `uiHelpers.js`, same IndexedDB data, no changes to desktop code
-   - Empty state with import instructions for first-run on a new device
-   - App menu `[⋮]` with Import Backup, View toggle, Theme, Deals Only, Show Hidden, Desktop Mode, Help
-   - Landing page (index.html): responsive CSS for mobile visitors, bookmarklet note pointing to desktop
-   - Update FAQ and main page to document mobile support (absorbed from former P3-T1)
-   - Desktop Mode escape hatch: When mobile viewport has `desktopMode` flag set, show a "Return to Mobile" button in the desktop app (upper-left corner) so users aren't stuck. Requires small change in `readerwrangler.js` — implement after mobile v1 is complete.
-   - Design doc: `docs/design/MOBILE-VIEWER.md`
-   - Impact: Makes library browsable on phone; key use case is checking ownership while away from desktop
+~~**0. 📱 Mobile Viewer**~~ ✅ v5.6.0
+   - Completed: All phases 1-9. Dashboard, folder navigation, tag views, search & sort, book detail, import, themes, PWA icons, iOS/Android home screen support.
+   - Remaining: Desktop Mode escape hatch (deferred — see Priority 6)
 
 **1. 📋 Changelog Visibility** - MEDIUM/LOW (30 minutes)
    - Link version display (e.g., "v3.6.0") to CHANGELOG.md
@@ -92,11 +82,12 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🚀 Priority 6: Post-Launch Internal Improvements
 
-**0. 🏷️ Desktop Backlog (Tag Virtual Folders + misc)** - See [docs/design/DESKTOP-BACKLOG.md](docs/design/DESKTOP-BACKLOG.md)
-   - Tag Virtual Folders: Promote tags to navigable views in left pane — see [TAG-VIRTUAL-FOLDERS.md](docs/design/TAG-VIRTUAL-FOLDERS.md)
-   - Desktop Mode escape hatch: "Return to Mobile" button when mobile viewport has `desktopMode` flag
-   - Directional shadow consistency with mobile cover view
-   - Desktop is control plane; mobile displays tag views read-only via backup
+~~**0. 🏷️ Desktop Backlog (Tag Virtual Folders + misc)**~~ ✅ v5.6.0 (items 1A–1K)
+   - Completed: Tag Virtual Folders (pin/unpin, left pane rendering, drag-to-tag, manual ordering, undo/redo, background tints, Tag Manager redesign)
+   - Remaining:
+     - Left pane keyboard navigation: Up/Down arrow, Left/Right collapse/expand, Home/End
+     - Desktop Mode escape hatch: "Return to Mobile" button when mobile viewport has `desktopMode` flag
+     - Directional shadow consistency with mobile cover view
 
 **1. 🔄 Extend Gap-Fill to Include Reviews** - LOW/LOW (1 hour)
    - File: `amazon-library-fetcher.js`

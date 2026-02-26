@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.0] - 2026-02-26
+
+### Added
+- **Tag Virtual Folders (Desktop)** - Pin any tag as a virtual folder in the left pane alongside real folders. Drag books to tag views, manual ordering within tag views, move/copy between views. Tag Manager redesigned with SVG icons, compact rows, full-bleed headers, and orphan checkbox selection.
+- **Mobile Tag Views** - Pinned tag views appear in mobile's folder drawer and dashboard shelves, respecting book order from desktop.
+- **iOS Safari "Add to Home Screen" hint** - Bottom banner on iOS Safari prompts users to install as PWA. Dismisses permanently on tap.
+- **Apple PWA meta tags** - `apple-mobile-web-app-capable`, status bar style, app title for proper iOS standalone mode.
+- **Android maskable icons** - Icons marked `purpose: "any maskable"` so they fill the adaptive icon circle instead of floating in a white border.
+
+### Improved
+- **Android splash screen** - Background changed from white to blue (`#dbeafe`) to match icon background. Icon logo repositioned with safe-zone padding.
+- **PWA theme color** - Added `theme-color` meta tag (`#dbeafe`) for Android status bar.
+- **README.md & index.html** - Full content sync: replaced 8 leftover v4 "column" references with v5 "folder" terminology, added mobile viewer content throughout, added tag virtual folders to features, wordsmith pass for clarity and accuracy.
+
+### Fixed
+- **Desktop tag view rendering** - Left pane renders tag views after Inbox with proper icons, browser back/forward via History API, auto-scroll to selected folder.
+
 ## [5.5.14] - 2026-02-16
 
 ### Added
