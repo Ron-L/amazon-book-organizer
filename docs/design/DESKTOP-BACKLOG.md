@@ -14,11 +14,12 @@ Desktop is the control plane for tag views. All configuration, drag interactions
 
 - [x] **1A. Data model** — Add `pinnedTagFolders: [{tagId, position}]` to settings state, persist to localStorage, include in backup export/import *(v5.5.15-alpha.8, ef8c6d7)*
 - [x] **1B. Tag icon** — Inline SVG components: `TagIconSVG` (eyelet tag shape) + `FolderIconSVG` (folder shape for unpinned state)
-- [ ] **1C. "Pin as view" UI** — Add toggle in Tag Manager modal to promote/demote a tag to a virtual folder
-- [ ] **1D. Left pane rendering** — Render pinned tag views among real folders using position, with tag icon and distinct styling
-- [ ] **1E. Left pane drag reorder** — Allow repositioning tag views among real folders (updates position in `pinnedTagFolders`)
-- [ ] **1F. Right pane content** — When tag view selected, show all books with that tag (flat list, no subfolders), with subtle background tint
-- [ ] **1G. Drag: real folder → tag view** — Drop adds tag to book, toast "Tagged as [name]"
+- [x] **1C. "Pin as view" UI** — Pin toggle in Tag Manager modal + modal UX redesign: SVG icons, compact rows, full-bleed headers, orphan checkboxes *(v5.5.15-alpha.20, d62ce2b)*
+- [x] **1D. Left pane rendering** — Render pinned tag views among real folders using position, with tag icon and distinct styling + browser back/forward support + auto-scroll left pane *(v5.5.15-alpha.23, 12e1f6c)*
+- [x] **1E. Left pane drag reorder** — Unified interleaved display with folders (Option B), float position system, drag reorder + context menu (Open, Rename, Unpin, Delete Tag, Properties) *(v5.5.15-alpha.27, d9b59b4)*
+- [x] **1F. Right pane content** — Tag view book filtering + breadcrumb already working since alpha.21; background tint deferred to 1K
+- [ ] **1G. Drag: real folder → tag view** — Drop adds tag to book, toast "Tagged as [name]". Add `bookOrder` to data model for manual ordering within tag views.
+- [ ] **1G.2 Manual reorder within tag view** — Drag books within tag view to reorder. Persisted in `bookOrder` array on each pinned tag entry.
 - [ ] **1H. Drag: tag view → tag view** — Move (remove source tag, add dest tag) / Ctrl+drag = copy (add dest tag, keep source)
 - [ ] **1I. Drag: tag view → real folder** — DISALLOWED (cursor feedback, no drop)
 - [ ] **1J. Remove from tag view** — X overlay on covers in tag view + right-click "Remove from [tag name]"

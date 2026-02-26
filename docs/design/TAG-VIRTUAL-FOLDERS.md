@@ -98,8 +98,9 @@ Since drag-out-of-tag-view is disallowed, tag removal uses an **explicit remove 
 
 - **Real folder count**: Books assigned to that folder (existing behavior).
 - **Tag view count**: Books with that tag (cross-folder). These are NOT added to "All Books" total — books are counted once in their real folder, not again for each tag view they appear in.
-- **No subfolders** within tag views. Tag views are flat lists, sorted by the active sort order.
-- **No manual ordering** within tag views. Follows the current sort (Date Added, Title, Author, Rating).
+- **No subfolders** within tag views. Tag views are flat lists.
+- **Manual ordering supported** within tag views. Each pinned tag view stores a `bookOrder: [bookId, ...]` array. Drag reorder within the view updates this array. Books not in the array (newly tagged) appear at the end. When manual order is active (default for tag views), Explorer sort headers still work as a temporary override — but the "custom" order is the persisted one.
+- **Data model**: `pinnedTagFolders: [{ tagId, position, bookOrder: [] }]`
 
 ---
 

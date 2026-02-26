@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.30";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.31";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -764,9 +764,18 @@
                 if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first
                 if (folderId === '__library__') return []; // v5.0.0-alpha.63 - My Library shows folders, not books
                 // v5.5.15-alpha.21 - Tag virtual folder: return books with this tag
+                // v5.5.15-alpha.31 - Respect bookOrder for manual ordering
                 if (folderId?.startsWith('__tag_') && folderId?.endsWith('__')) {
                     const tagId = folderId.slice(6, -2);
-                    return books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
+                    const taggedBookIds = books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
+                    const pinnedEntry = pinnedTagFolders.find(p => p.tagId === tagId);
+                    const bookOrder = pinnedEntry?.bookOrder || [];
+                    if (bookOrder.length === 0) return taggedBookIds;
+                    // Return in manual order, with unordered books appended
+                    const orderedSet = new Set(bookOrder);
+                    const ordered = bookOrder.filter(id => taggedBookIds.includes(id));
+                    const unordered = taggedBookIds.filter(id => !orderedSet.has(id));
+                    return [...ordered, ...unordered];
                 }
                 const folder = folders.find(f => f.id === folderId);
                 return folder?.bookIds || [];
@@ -1207,6 +1216,25 @@
                     toIndex: targetIndex
                 });
                 console.log(`🔄 Reordered ${bookIdsToMove.length} book(s) in folder`);
+            };
+
+            // v5.5.15-alpha.31 - Reorder books within a tag view's bookOrder
+            const reorderBooksInTagView = (tagId, bookIdsToMove, targetIndex) => {
+                setPinnedTagFolders(prev => prev.map(p => {
+                    if (p.tagId !== tagId) return p;
+                    // Initialize bookOrder from current tag book list if empty
+                    let bookOrder = p.bookOrder && p.bookOrder.length > 0
+                        ? [...p.bookOrder]
+                        : books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
+                    const moveSet = new Set(bookIdsToMove);
+                    const remaining = bookOrder.filter(id => !moveSet.has(id));
+                    const removedBefore = bookOrder.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
+                    const adjustedIndex = targetIndex - removedBefore;
+                    const orderedToMove = bookIdsToMove.filter(id => bookOrder.includes(id));
+                    remaining.splice(adjustedIndex, 0, ...orderedToMove);
+                    return { ...p, bookOrder: remaining };
+                }));
+                console.log(`🏷️ Reordered ${bookIdsToMove.length} book(s) in tag view`);
             };
 
             // v5.0.0-alpha.79 - Reorder folders within their parent (with undo)
@@ -9102,8 +9130,13 @@
                                                         const types = Array.from(e.dataTransfer.types);
                                                         const isTagDrag = types.includes('application/x-tagview-reorder');
                                                         const isFolderDrag = types.includes('application/x-folder-reorder');
+                                                        const isBookDrag = types.includes('application/x-readerwrangler');
 
-                                                        if (isTagDrag || isFolderDrag) {
+                                                        if (isBookDrag) {
+                                                            // v5.5.15-alpha.31 - Book drag → tag view: accept drop to add tag
+                                                            e.dataTransfer.dropEffect = 'copy';
+                                                            setFolderDropHighlight(e.currentTarget);
+                                                        } else if (isTagDrag || isFolderDrag) {
                                                             e.dataTransfer.dropEffect = 'move';
                                                             const rect = e.currentTarget.getBoundingClientRect();
                                                             const y = e.clientY - rect.top;
@@ -9119,6 +9152,7 @@
                                                     onDragLeave={(e) => {
                                                         if (!e.currentTarget.contains(e.relatedTarget)) {
                                                             setSidebarFolderDragTarget(null);
+                                                            setFolderDropHighlight(null);
                                                         }
                                                     }}
                                                     onDrop={(e) => {
@@ -9183,6 +9217,38 @@
                                                                 }
                                                             } catch (err) {
                                                                 console.error('Folder on tag view drop error:', err);
+                                                            }
+                                                            return;
+                                                        }
+
+                                                        // v5.5.15-alpha.31 - Handle book drop on tag view (add tag)
+                                                        const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                        if (bookDataStr) {
+                                                            const { bookIds } = JSON.parse(bookDataStr);
+                                                            const tagId = item.tagId;
+                                                            const tagLabel = tagRegistry[tagId]?.label || tagId;
+                                                            let addedCount = 0;
+                                                            setBooks(prev => {
+                                                                const updated = prev.map(b => {
+                                                                    if (bookIds.includes(b.id) && !(b.tags || []).includes(tagId)) {
+                                                                        addedCount++;
+                                                                        return { ...b, tags: [...(b.tags || []), tagId] };
+                                                                    }
+                                                                    return b;
+                                                                });
+                                                                saveBooksToIndexedDB(updated);
+                                                                return updated;
+                                                            });
+                                                            setFolderDropHighlight(null);
+                                                            setExplorerSelectedBooks(new Set());
+                                                            stopDragVirtualization();
+                                                            setExplorerDragBookId(null);
+                                                            setExplorerDragData(null);
+                                                            if (addedCount > 0) {
+                                                                const bookWord = addedCount === 1 ? 'book' : 'books';
+                                                                showToast(`Tagged ${addedCount} ${bookWord} as "${tagLabel}"`, e.clientX, e.clientY);
+                                                            } else {
+                                                                showToast(`Already tagged as "${tagLabel}"`, e.clientX, e.clientY);
                                                             }
                                                         }
                                                     }}
@@ -10423,7 +10489,13 @@
                                                                 if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
                                                                     const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                                                     if (dragData.sourceFolder === selectedFolderId) {
-                                                                        reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
+                                                                        // v5.5.15-alpha.31 - Route to tag view reorder for tag views
+                                                                        if (selectedFolderId.startsWith('__tag_') && selectedFolderId.endsWith('__')) {
+                                                                            const tagId = selectedFolderId.slice(6, -2);
+                                                                            reorderBooksInTagView(tagId, dragData.bookIds, index);
+                                                                        } else {
+                                                                            reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
+                                                                        }
                                                                     }
                                                                 } else if (selectedFolderId === '__all__' || selectedFolderId === '__library__') {
                                                                     showToast('Manual ordering not available in All Books and My Library. These views aggregate books from multiple folders. Use column sorting instead.', e.clientX, e.clientY);
@@ -10966,7 +11038,13 @@
                                                             if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
                                                                 const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
                                                                 if (dragData.sourceFolder === selectedFolderId) {
-                                                                    reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
+                                                                    // v5.5.15-alpha.31 - Route to tag view reorder for tag views
+                                                                    if (selectedFolderId.startsWith('__tag_') && selectedFolderId.endsWith('__')) {
+                                                                        const tagId = selectedFolderId.slice(6, -2);
+                                                                        reorderBooksInTagView(tagId, dragData.bookIds, index);
+                                                                    } else {
+                                                                        reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
+                                                                    }
                                                                 }
                                                             } else if (selectedFolderId === '__all__' || selectedFolderId === '__library__') {
                                                                 showToast('Manual ordering not available in All Books and My Library. These views aggregate books from multiple folders. Use column sorting instead.', e.clientX, e.clientY);
