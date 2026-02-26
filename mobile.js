@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '0.1.0-alpha.61';
+const MOBILE_VERSION = '0.1.0-alpha.62';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -1733,6 +1733,14 @@ function MobileApp() {
     const [importStatus, setImportStatus] = useState(null);
     const [error, setError] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(null);
+    // iOS "Add to Home Screen" hint banner
+    const [showA2HS, setShowA2HS] = useState(() => {
+        if (localStorage.getItem('readerwrangler-mobile-a2hs-dismissed')) return false;
+        const ua = navigator.userAgent;
+        const isIOS = /iPhone|iPad|iPod/.test(ua);
+        const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+        return isIOS && !isStandalone;
+    });
     const [navStack, setNavStack] = useState(() => {
         try {
             const saved = JSON.parse(localStorage.getItem(NAV_STACK_KEY));
@@ -2172,6 +2180,32 @@ function MobileApp() {
                         {importStatus}
                     </div>
                     <div className="splash-spinner" />
+                </div>
+            )}
+
+            {/* iOS "Add to Home Screen" hint banner */}
+            {showA2HS && (
+                <div style={{
+                    position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 8000,
+                    background: 'var(--bg-card, #f0f7ff)', borderTop: '1px solid var(--border-color, #e2e8f0)',
+                    padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px',
+                    boxShadow: '0 -2px 8px rgba(0,0,0,0.1)'
+                }}>
+                    <div style={{ flex: 1, fontSize: '0.85em', lineHeight: 1.4, color: 'var(--text-primary, #1e293b)' }}>
+                        <strong>Add to Home Screen</strong> for a full-screen app experience.
+                        Tap <span style={{ fontSize: '1.1em' }}>⎙</span> then "Add to Home Screen."
+                    </div>
+                    <button
+                        onClick={() => {
+                            localStorage.setItem('readerwrangler-mobile-a2hs-dismissed', '1');
+                            setShowA2HS(false);
+                        }}
+                        style={{
+                            background: 'none', border: 'none', fontSize: '1.3em', cursor: 'pointer',
+                            color: 'var(--text-muted, #64748b)', padding: '4px 8px', flexShrink: 0
+                        }}
+                        aria-label="Dismiss"
+                    >✕</button>
                 </div>
             )}
         </div>
