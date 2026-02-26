@@ -16,7 +16,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 **2. Browser Compatibility Documentation** - LOW/LOW (30 min)
    - Document Chrome-only requirement in README and app footer
-   - Note: Firefox/Edge may work but untested
+   - Note: Edge smoke-tested (2026-02-26, cursory — looks good). Firefox untested.
    - Optional: 30-min Firefox smoke test before public release
    - Problem: Users may try on unsupported browsers
    - Impact: Clear expectations, reduced support burden
