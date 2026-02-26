@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.5.15-alpha.31";  // Build version for this file
+        const ORGANIZER_VERSION = "5.5.15-alpha.32";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -981,7 +981,7 @@
                     }
                 });
                 return items;
-            }, [bookMap, books, folders, selectedFolderId, searchTerm, readStatusFilter,
+            }, [bookMap, books, folders, pinnedTagFolders, selectedFolderId, searchTerm, readStatusFilter,
                 collectionFilter, selectedCollections, minAmazonRating, minMyRating,
                 ratingFilter, ownershipFilter, showHidden, seriesFilter, selectedSeries,
                 dateFrom, dateTo, dealsFilterActive, tagFilter, explorerSort,
