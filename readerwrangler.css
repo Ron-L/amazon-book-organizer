@@ -699,6 +699,11 @@ body { margin: 0; padding: 0; overflow: hidden; }
 [data-theme="dark"] .folder-scroll-container::-webkit-scrollbar-thumb { background: #475569; }
 [data-theme="dark"] .folder-scroll-container::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
+/* v5.5.15-alpha.36 - 1K: Subtle background tint for tag view content area */
+.tag-view-tint { background-color: #f8fafc; }
+[data-theme="dark"] .tag-view-tint { background-color: #1a1f2e; }
+[data-theme="hc-dark"] .tag-view-tint { background-color: #0d0d14; }
+
 /* v4.21.0.a - Book Notes sticky note styling */
 .book-note {
     position: relative;

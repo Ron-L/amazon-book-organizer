@@ -9426,8 +9426,8 @@
                                 title="Drag to resize sidebar"
                             />
 
-                            {/* Right pane: Book list */}
-                            <div className="flex-1 bg-white overflow-hidden flex flex-col">
+                            {/* Right pane: Book list — v5.5.15-alpha.36 subtle tint for tag views */}
+                            <div className={`flex-1 overflow-hidden flex flex-col ${selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__') ? 'tag-view-tint' : 'bg-white'}`}>
                                 <div className="p-3 border-b border-gray-200 flex items-center justify-between">
                                     <div className="font-medium text-gray-700 flex items-center">
                                         {/* v5.0.0-alpha.80 - Breadcrumb navigation, v5.0.0-alpha.83 - Drop target for folder reparenting */}
