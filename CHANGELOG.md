@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.2] - 2026-02-27
+
+### Fixed
+- **Reset App** - Now fully deletes the IndexedDB database instead of just emptying it. Previously left an empty `ReaderWranglerDB` behind after reset.
+
 ## [5.6.1] - 2026-02-26
 
 ### Added
