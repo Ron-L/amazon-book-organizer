@@ -231,12 +231,13 @@ const loadBooksFromIndexedDB = async () => {
     });
 };
 
-const clearIndexedDB = async () => {
-    const db = await openDB();
-    const transaction = db.transaction([BOOKS_STORE], 'readwrite');
-    const store = transaction.objectStore(BOOKS_STORE);
-    await store.clear();
-    console.log('✅ Cleared IndexedDB');
+const clearIndexedDB = () => {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.deleteDatabase(DB_NAME);
+        request.onsuccess = () => { console.log('✅ Deleted IndexedDB:', DB_NAME); resolve(); };
+        request.onerror = () => { console.error('❌ Failed to delete IndexedDB:', DB_NAME, request.error); reject(request.error); };
+        request.onblocked = () => { console.warn('⚠️ IndexedDB delete blocked — close other tabs'); resolve(); };
+    });
 };
 
 // ===== Cover Image Caching (v4.13.0) =====
