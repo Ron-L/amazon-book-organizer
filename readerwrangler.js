@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.6.2";  // Build version for this file
+        const ORGANIZER_VERSION = "5.6.3-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1219,13 +1219,21 @@
             };
 
             // v5.5.15-alpha.31 - Reorder books within a tag view's bookOrder
+            // v5.6.3-alpha.1 - Fix: include unordered books (newly tagged) in bookOrder before reordering
             const reorderBooksInTagView = (tagId, bookIdsToMove, targetIndex) => {
                 setPinnedTagFolders(prev => prev.map(p => {
                     if (p.tagId !== tagId) return p;
-                    // Initialize bookOrder from current tag book list if empty
-                    let bookOrder = p.bookOrder && p.bookOrder.length > 0
-                        ? [...p.bookOrder]
-                        : books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
+                    // Build full working list: ordered + unordered (mirrors getFolderBookIds render logic)
+                    const taggedBookIds = books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
+                    let bookOrder;
+                    if (p.bookOrder && p.bookOrder.length > 0) {
+                        const orderedSet = new Set(p.bookOrder);
+                        const ordered = p.bookOrder.filter(id => taggedBookIds.includes(id));
+                        const unordered = taggedBookIds.filter(id => !orderedSet.has(id));
+                        bookOrder = [...ordered, ...unordered];
+                    } else {
+                        bookOrder = [...taggedBookIds];
+                    }
                     const moveSet = new Set(bookIdsToMove);
                     const remaining = bookOrder.filter(id => !moveSet.has(id));
                     const removedBefore = bookOrder.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
