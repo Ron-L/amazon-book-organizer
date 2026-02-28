@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.0.1';
+const MOBILE_VERSION = '1.0.2-alpha.1';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -722,6 +722,86 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                         </svg>
                     </div>
                 )}
+                {/* v1.0.2 - Cover badges (ported from desktop v5.6.7) */}
+                {/* Top-right: Rating badge */}
+                {book.rating > 0 && (
+                    <div style={{
+                        position: 'absolute', top: '3px', right: '3px',
+                        backgroundColor: 'rgba(0,0,0,0.75)', borderRadius: '3px',
+                        padding: '1px 5px', fontSize: '10px', fontWeight: 700,
+                        color: '#facc15', whiteSpace: 'nowrap'
+                    }}>
+                        ★ {book.rating.toFixed(1)}
+                    </div>
+                )}
+                {/* Bottom-right: Read status checkmark */}
+                {book.readStatus === 'READ' && (
+                    <div style={{
+                        position: 'absolute', bottom: '3px', right: '3px',
+                        backgroundColor: '#16a34a', borderRadius: '50%',
+                        width: '18px', height: '18px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }} title="Read">
+                        <svg viewBox="0 0 20 20" fill="white" style={{ width: '12px', height: '12px' }}>
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                        </svg>
+                    </div>
+                )}
+                {/* Top-left: Collections count or Wishlist heart (no selection on mobile) */}
+                {book.collections && book.collections.length > 0 ? (
+                    <div style={{
+                        position: 'absolute', top: '3px', left: '3px',
+                        backgroundColor: 'rgba(55,65,81,0.75)', borderRadius: '3px',
+                        padding: '1px 5px', fontSize: '10px', fontWeight: 700,
+                        color: 'white', whiteSpace: 'nowrap'
+                    }}>
+                        📁 {book.collections.length}
+                    </div>
+                ) : book.onWishlist && (
+                    <div style={{
+                        position: 'absolute', top: '3px', left: '3px',
+                        backgroundColor: 'rgba(219,39,119,0.85)', borderRadius: '3px',
+                        padding: '1px 5px', fontSize: '10px', fontWeight: 700,
+                        color: 'white', letterSpacing: '1px', whiteSpace: 'nowrap'
+                    }}>
+                        ♡+
+                    </div>
+                )}
+                {/* Bottom-left: Price tag (wishlist) or Ownership badge */}
+                {book.onWishlist && book.currentPrice != null ? (
+                    <div style={{
+                        position: 'absolute', bottom: '3px', left: '3px',
+                        backgroundColor: book.priceTrigger && book.currentPrice <= book.priceTrigger ? '#22c55e' : '#6b7280',
+                        opacity: 0.9, borderRadius: '3px',
+                        padding: '1px 5px', fontSize: '10px', fontWeight: 700,
+                        color: 'white', whiteSpace: 'nowrap'
+                    }}
+                        title={book.priceTrigger ? `Goal: $${book.priceTrigger.toFixed(2)} or less` : 'Current price'}
+                    >
+                        ${book.currentPrice.toFixed(2)}
+                    </div>
+                ) : book.ownershipType && book.ownershipType !== 'purchased' && (() => {
+                    const badgeConfig = {
+                        sample: { bg: '#f59e0b', text: 'SAMPLE' },
+                        borrowed: { bg: '#14b8a6', text: 'BORROWED' },
+                        prime: { bg: '#a855f7', text: 'PRIME' },
+                        kindleUnlimited: { bg: '#a855f7', text: 'KU' },
+                        koll: { bg: '#a855f7', text: 'KOLL' },
+                        comixology: { bg: '#a855f7', text: 'COMIX' },
+                        unknown: { bg: '#6b7280', text: '?' }
+                    };
+                    const config = badgeConfig[book.ownershipType];
+                    return config ? (
+                        <div style={{
+                            position: 'absolute', bottom: '3px', left: '3px',
+                            backgroundColor: config.bg, opacity: 0.9, borderRadius: '3px',
+                            padding: '1px 5px', fontSize: '10px', fontWeight: 700,
+                            color: 'white', whiteSpace: 'nowrap'
+                        }}>
+                            {config.text}
+                        </div>
+                    ) : null;
+                })()}
             </div>
             <div className="truncate" style={{
                 marginTop: '4px', fontSize: '12px', fontWeight: 600,
