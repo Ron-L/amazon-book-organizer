@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.6] - 2026-02-28
+
+### Added
+- **Amazon links on book detail modal** - Book cover and title now link directly to Amazon product page (desktop and mobile). "View on Amazon" button now shows for all books, not just wishlist items.
+- **Always-show Collections & My Rating (mobile)** - Mobile book detail now always displays Collections and My Rating fields, showing "No collections" / "Not rated" when empty instead of hiding them.
+
 ## [5.6.5] - 2026-02-28
 
 ### Fixed
