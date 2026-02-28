@@ -126,6 +126,8 @@ Export a backup from ReaderWrangler, transfer it to your phone (cloud storage, e
 
 Amazon Kindle™ Library
 
+**Tested browsers:** Chrome, Edge, Firefox. Safari is untested.
+
 ---
 
 ## What Makes ReaderWrangler Different?

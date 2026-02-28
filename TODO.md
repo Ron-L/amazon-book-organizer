@@ -10,9 +10,9 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 ### 🔒 Priority 3: Pre-Launch Gate
 
 **1. Browser Compatibility Documentation** - LOW/LOW (30 min)
-   - Document Chrome-only requirement in README and app footer
-   - Note: Edge smoke-tested (2026-02-26, cursory — looks good). Firefox untested.
-   - Optional: 30-min Firefox smoke test before public release
+   - ~~Document Chrome-only requirement in README and app footer~~ → Document tested browsers in README and index.html
+   - Tested: Chrome (primary), Edge (2026-02-26, cursory), Firefox (2026-02-27, full)
+   - Safari: Untested (no access). Known gap — list as untested in docs.
    - Problem: Users may try on unsupported browsers
    - Impact: Clear expectations, reduced support burden
 **3. Button Consistency Audit** - LOW/LOW (2-4 hours)
@@ -32,7 +32,24 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Impact: Broader user base support with minimal effort
 
 
-**5. Quality Attribute Validation** - LOW/LOW (2-3 hours)
+**5. 🔗 Cloudflare Relay + Delete Books** - HIGH/HIGH (65-85 hours)
+   - See [docs/design/DELETE-BOOKS-PROBLEM-STATEMENT.md](docs/design/DELETE-BOOKS-PROBLEM-STATEMENT.md) and [docs/design/DELETE-BOOKS-DESIGN.md](docs/design/DELETE-BOOKS-DESIGN.md)
+   - Cloudflare relay replaces file picker as sole transfer path. Trash Bin enables permanent book deletion. Mobile sync via QR pairing replaces Dropbox workaround.
+   - **Milestone 1: Relay Pipeline (A→B→C)** ~28-39 hours
+     - A. Cloudflare Worker + Crypto foundation (8 endpoints, AES-256-GCM, compression, chunking)
+     - B. Bookmarklet relay integration (replace file-write output with relay upload; extend gap-fill to include reviews; wishlist-add toast feedback: "Already on wishlist" / "Already in library"; orphan detection: compare current vs previous fetch, include removedAsins in manifest)
+     - C. App import via relay (polling, decrypt, merge, PUT /device-state, wishlist dedup Layer 1, handle orphan list — flag or auto-move to Trash)
+   - **Milestone 2: Mobile Sync (F→G)** ~12-18 hours
+     - F. Settings page + QR pairing (relay setup wizard, credential management, backup/restore)
+     - G. Mobile relay integration (GET /device-state, QR handler, remove file picker from mobile)
+   - **Milestone 3: Delete & Cleanup (E→D)** ~12-17 hours
+     - E. Wishlist duplicate detection Layers 2 & 3 (per-folder right-click, Tools menu global cleanup)
+     - D. Trash Bin (two-stage delete lifecycle, exclusion list, auto-purge, left pane fixed bottom)
+   - Absorbs: P6-T1 (Gap-Fill Reviews → Phase B), P6-T2 (Wishlist Dedup → Layers 1-3 + Phase B toasts), P6-T3 (Orphan Detection → Phase B/C + Trash Bin), P6-T4 (Cross-Domain Transfer → fully superseded)
+   - Problem: No permanent delete (books return on next import); file picker friction; manual mobile sync via Dropbox
+   - Impact: Frictionless import, permanent deletes, automatic mobile sync, orphan detection, gap-fill reviews, wishlist-add feedback
+
+**6. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
    - ~~**Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second~~ ✅ v5.5.4
    - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
@@ -73,45 +90,12 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🚀 Priority 6: Post-Launch Internal Improvements
 
-**1. 🔄 Extend Gap-Fill to Include Reviews** - LOW/LOW (1 hour)
-   - File: `amazon-library-fetcher.js`
-   - Current gap-fill only targets books missing descriptions
-   - Extend filter: `!description || (reviewCount > 0 && !topReviews?.length)`
-   - When enrichBook returns data, update ALL fields (not just the missing one)
-   - Same `enrichBook` API returns both description and reviews in one call
-   - Problem: ~1.3% of books missing reviews despite having review count
-   - Impact: Progressive data completeness improvement
-
-**2. 🔄 Wishlist Deduplication** - LOW/LOW (2-3 hours)
-   - See [docs/design/WISHLIST-DEDUP.md](docs/design/WISHLIST-DEDUP.md) for full spec
-   - Prevent duplicate wishlist entries (dedupe on save by ASIN)
-   - Toast notifications for user feedback (non-blocking, auto-dismiss)
-   - Single add: "Added to wishlist" / "Already on wishlist" / "Already in library"
-   - Series add: Summary toast "Added 15. Skipped: 3 owned, 2 on wishlist"
-   - One-time cleanup utility in Data Status for existing duplicates
-   - Problem: Easy to add same book multiple times; no feedback; bloats JSON
-   - Impact: Cleaner data, user awareness without workflow interruption
-
-**3. 🗑️ Orphan Detection & Recycle Bin** - MEDIUM/MEDIUM (9-13 hours)
-   - Detect books no longer in Amazon library after re-import
-   - Recycle Bin virtual column for soft-deleted books
-   - See [docs/design/ORPHAN-DETECTION-RECYCLE-BIN.md](docs/design/ORPHAN-DETECTION-RECYCLE-BIN.md) for full spec
-   - Problem: Orphaned books (samples replaced by purchase, returns, expired subscriptions) clutter library
-   - Impact: Clean library management, safe deletion with restore capability
-
-**4. 🔗 Cross-Domain Data Transfer** - MEDIUM/MEDIUM (Phase 1: 1 hour, Phase 2: 8-12 hours)
-   - See [docs/design/CROSS-DOMAIN-TRANSFER.md](docs/design/CROSS-DOMAIN-TRANSFER.md) for full spec
-   - Phase 1: FSAA Enhancement — store file handle in app's IndexedDB to skip app-side file picker (~30 LOC)
-   - Phase 2: Cloudflare Worker Relay — opt-in zero-touch transfer via compressed/encrypted relay (if user demand warrants)
-   - Problem: 2+ file picker interactions per fetch cycle due to cross-domain isolation (amazon.com → readerwrangler.com)
-   - Impact: Phase 1 halves friction immediately; Phase 2 eliminates file picker entirely
-
-**6. 🏷️ Deferred Desktop Polish** - LOW/LOW (2-3 hours)
+**1. 🏷️ Deferred Desktop Polish** - LOW/LOW (2-3 hours)
    - Left pane keyboard navigation: Up/Down arrow, Left/Right collapse/expand, Home/End
    - Desktop Mode escape hatch: "Return to Mobile" button when mobile viewport has `desktopMode` flag
    - Directional shadow consistency with mobile cover view
 
-**7. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
+**2. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
    - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
    - Step 1 (Babel): `npm install --save-dev @babel/cli @babel/core @babel/preset-react`, add `build.bat` that runs `npx babel readerwrangler.js --presets=@babel/preset-react -o dist/readerwrangler.js`. Update HTML to load `dist/readerwrangler.js` as regular `<script>` instead of `type="text/babel"`. Remove Babel CDN.
    - Step 2 (optional, Tailwind): `npx tailwindcss -i input.css -o dist/styles.css --content "readerwrangler.js,readerwrangler.html"`. Swap Tailwind CDN `<script>` for `<link>` to generated CSS.
