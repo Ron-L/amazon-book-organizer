@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.7] - 2026-02-28
+
+### Added
+- **Cover badges** - Book covers now display visual indicators: rating (top-right, gold star), read status (bottom-right, green checkmark), collections count (top-left, folder icon), wishlist heart (top-left), price tag (bottom-left, green if at goal price), and ownership badges (SAMPLE, BORROWED, KU, etc.). Selection uses a blue checkmark overlay instead of the previous ring outline. Ported from v4 Column App. Desktop and mobile (CoverCard).
+- **Manual Order sort (mobile)** - "Manual Order" is now the first sort option on mobile, preserving the book arrangement you set on desktop. Previously mobile always re-sorted books, losing custom folder and tag view ordering.
+
 ## [5.6.6] - 2026-02-28
 
 ### Added
