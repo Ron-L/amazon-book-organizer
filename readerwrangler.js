@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.6.5";  // Build version for this file
+        const ORGANIZER_VERSION = "5.6.6-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7670,9 +7670,12 @@
 
                                 <div className="p-6">
                                     <div className="flex gap-6 mb-6">
+                                        {/* v5.6.6 - Cover links to Amazon */}
+                                        <a href={getAmazonUrl(modalBook.asin)} target="_blank" rel="noopener noreferrer"
+                                            className="flex-shrink-0" title="View on Amazon">
                                         {blankImageBooks.has(modalBook.id) ? (
-                                            <div className="w-48 h-72 rounded shadow-lg overflow-hidden flex flex-col flex-shrink-0"
-                                                 style={{ backgroundColor: 'var(--bg-book-placeholder)' }}>
+                                            <div className="w-48 h-72 rounded shadow-lg overflow-hidden flex flex-col"
+                                                 style={{ backgroundColor: 'var(--bg-book-placeholder)', cursor: 'pointer' }}>
                                                 <div className="flex-1 flex items-center justify-center px-4">
                                                     <div className="text-center">
                                                         <div className="text-sm font-serif font-bold text-gray-800 leading-tight mb-3">
@@ -7685,10 +7688,12 @@
                                         ) : (
                                             <img src={coverUrlMap[modalBook.coverUrl] || modalBook.coverUrl}
                                                  alt={modalBook.title}
-                                                 className="w-48 h-72 object-cover rounded shadow-lg flex-shrink-0"
+                                                 className="w-48 h-72 object-cover rounded shadow-lg"
+                                                 style={{ cursor: 'pointer' }}
                                                  onError={() => setBlankImageBooks(prev => new Set([...prev, modalBook.id]))}
                                                  onLoad={(e) => checkIfBlankImage(e.target, modalBook.id)} />
                                         )}
+                                        </a>
                                         <div className="flex-1">
                                             {isEditingBook ? (
                                                 <input
@@ -7700,7 +7705,10 @@
                                                     placeholder="Title"
                                                 />
                                             ) : (
-                                                <h2 className="text-3xl font-bold text-gray-900 mb-3">{modalBook.title}</h2>
+                                                /* v5.6.6 - Title links to Amazon */
+                                                <a href={getAmazonUrl(modalBook.asin)} target="_blank" rel="noopener noreferrer"
+                                                    className="text-3xl font-bold text-gray-900 mb-3 block hover:text-blue-700 transition-colors"
+                                                    title="View on Amazon">{modalBook.title}</a>
                                             )}
                                             {isEditingBook ? (
                                                 <div className="mb-3 flex items-center gap-3">
@@ -7731,25 +7739,25 @@
                                                     })()}
                                                 </div>
                                             ) : (
-                                                modalBook.onWishlist && (
-                                                    <div className="mb-3 flex items-center gap-3">
+                                                /* v5.6.6 - View on Amazon shown for all books, not just wishlist */
+                                                <div className="mb-3 flex items-center gap-3">
+                                                    {modalBook.onWishlist && (
                                                         <span className="inline-flex items-center bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
                                                             ⭐ Wishlist Item
                                                         </span>
-                                                        {/* v4.17.0.k - Green styling when at goal price */}
-                                                        {(() => {
-                                                            const atGoal = modalBook.priceTrigger != null && modalBook.currentPrice != null && modalBook.currentPrice <= modalBook.priceTrigger;
-                                                            return (
-                                                                <button
-                                                                    onClick={() => window.open(getAmazonUrl(modalBook.asin), '_blank')}
-                                                                    className={`px-3 py-1 ${atGoal ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'} text-white rounded text-sm font-medium`}
-                                                                    title="Opens Amazon with affiliate link">
-                                                                    View on Amazon {atGoal ? `— $${modalBook.currentPrice.toFixed(2)}` : '→'}
-                                                                </button>
-                                                            );
-                                                        })()}
-                                                    </div>
-                                                )
+                                                    )}
+                                                    {(() => {
+                                                        const atGoal = modalBook.priceTrigger != null && modalBook.currentPrice != null && modalBook.currentPrice <= modalBook.priceTrigger;
+                                                        return (
+                                                            <button
+                                                                onClick={() => window.open(getAmazonUrl(modalBook.asin), '_blank')}
+                                                                className={`px-3 py-1 ${atGoal ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'} text-white rounded text-sm font-medium`}
+                                                                title="Opens Amazon with affiliate link">
+                                                                View on Amazon {atGoal ? `— $${modalBook.currentPrice.toFixed(2)}` : '→'}
+                                                            </button>
+                                                        );
+                                                    })()}
+                                                </div>
                                             )}
                                             {isEditingBook ? (
                                                 <div className="flex items-center gap-2 mb-4">
