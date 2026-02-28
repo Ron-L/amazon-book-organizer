@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.6.4";  // Build version for this file
+        const ORGANIZER_VERSION = "5.6.5-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8578,7 +8578,9 @@
                                         }}
                                         onDrop={(e) => {
                                             e.preventDefault();
-                                            const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
+                                            const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                            if (!bookDataStr) return;
+                                            const dragData = JSON.parse(bookDataStr);
                                             const { sourceFolder, bookIds } = dragData;
 
                                             // Check if dragging from All Books (view-only)
@@ -10605,8 +10607,9 @@
                                                                 e.preventDefault();
                                                                 e.stopPropagation();
                                                                 if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.borderTop = ''; explorerReorderTargetRef.current = null; }
-                                                                if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
-                                                                    const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
+                                                                const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                                if (bookDataStr && explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
+                                                                    const dragData = JSON.parse(bookDataStr);
                                                                     if (dragData.sourceFolder === selectedFolderId) {
                                                                         // v5.5.15-alpha.31 - Route to tag view reorder for tag views
                                                                         if (selectedFolderId.startsWith('__tag_') && selectedFolderId.endsWith('__')) {
@@ -11154,8 +11157,9 @@
                                                             e.preventDefault();
                                                             e.stopPropagation();
                                                             if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.outline = ''; explorerReorderTargetRef.current.style.outlineOffset = ''; explorerReorderTargetRef.current = null; }
-                                                            if (explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
-                                                                const dragData = JSON.parse(e.dataTransfer.getData('application/x-readerwrangler'));
+                                                            const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                            if (bookDataStr && explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
+                                                                const dragData = JSON.parse(bookDataStr);
                                                                 if (dragData.sourceFolder === selectedFolderId) {
                                                                     // v5.5.15-alpha.31 - Route to tag view reorder for tag views
                                                                     if (selectedFolderId.startsWith('__tag_') && selectedFolderId.endsWith('__')) {
