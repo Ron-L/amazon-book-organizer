@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.6.3";  // Build version for this file
+        const ORGANIZER_VERSION = "5.6.4-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9313,6 +9313,7 @@
 
                                                         // v5.5.15-alpha.31 - Handle book drop on tag view (add tag)
                                                         // v5.5.15-alpha.33 - Move semantics: remove source tag when dragging from tag view (Ctrl = copy/keep)
+                                                        // v5.6.4-alpha.1 - Fix: compute tag changes synchronously before setBooks (updater is deferred in React 18)
                                                         const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
                                                         if (bookDataStr) {
                                                             const { sourceFolder, bookIds } = JSON.parse(bookDataStr);
@@ -9322,23 +9323,20 @@
                                                             const isFromTagView = sourceFolder?.startsWith('__tag_') && sourceFolder?.endsWith('__');
                                                             const sourceTagId = isFromTagView ? sourceFolder.slice(6, -2) : null;
                                                             const isMove = isFromTagView && !isCopy && sourceTagId !== destTagId;
-                                                            let addedCount = 0;
-                                                            const addedDest = [];
-                                                            const removedSource = [];
+                                                            // Pre-compute which books need tag changes (synchronous — reads current books state)
+                                                            const bookIdSet = new Set(bookIds);
+                                                            const addedDest = books.filter(b => bookIdSet.has(b.id) && !(b.tags || []).includes(destTagId)).map(b => b.id);
+                                                            const removedSource = isMove ? books.filter(b => bookIdSet.has(b.id) && (b.tags || []).includes(sourceTagId)).map(b => b.id) : [];
+                                                            const addedCount = addedDest.length;
                                                             setBooks(prev => {
                                                                 const updated = prev.map(b => {
-                                                                    if (!bookIds.includes(b.id)) return b;
+                                                                    if (!bookIdSet.has(b.id)) return b;
                                                                     let tags = [...(b.tags || [])];
-                                                                    // Remove source tag if moving between tag views
                                                                     if (isMove && tags.includes(sourceTagId)) {
                                                                         tags = tags.filter(t => t !== sourceTagId);
-                                                                        removedSource.push(b.id);
                                                                     }
-                                                                    // Add dest tag if not already present
                                                                     if (!tags.includes(destTagId)) {
                                                                         tags.push(destTagId);
-                                                                        addedCount++;
-                                                                        addedDest.push(b.id);
                                                                     }
                                                                     return { ...b, tags };
                                                                 });
