@@ -7,4 +7,4 @@ ALLOWED_ORIGINS = "https://www.amazon.com,https://readerwrangler.com,https://ron
 
 [[kv_namespaces]]
 binding = "RELAY_KV"
-id = ""  # Will be set after creating KV namespace: wrangler kv namespace create RELAY_KV
+id = "4a445b412fb34860a896cfc145a67b9b"

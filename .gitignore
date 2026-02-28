@@ -31,6 +31,9 @@ ENV/
 # Node modules (if needed in future)
 node_modules/
 
+# Wrangler cache (Cloudflare account credentials)
+.wrangler/
+
 # Build outputs
 dist/
 build/
