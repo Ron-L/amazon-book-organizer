@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.6.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -708,6 +708,11 @@
             ]);
             const [draggingColumn, setDraggingColumn] = useState(null); // v5.0.0-alpha.172 - Column header being dragged
             const [headerDropTarget, setHeaderDropTarget] = useState(null); // v5.0.0-alpha.172 - { column, side: 'left'|'right' }
+
+            // v6.0.0 - Relay state
+            const [relayManifest, setRelayManifest] = useState(null); // manifest object from relay status check (null = no data or not configured)
+            const [relaySetupOpen, setRelaySetupOpen] = useState(false); // Relay Setup modal
+            const [relayImporting, setRelayImporting] = useState(false); // true while importing from relay
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -1550,6 +1555,23 @@
                     filtersLoadedRef.current = true;
                 }, 100);
             }, []); // Empty dependency array = run once on mount
+
+            // v6.0.0 - Check relay for available library data on mount
+            React.useEffect(() => {
+                if (window.RWRelay) {
+                    window.RWRelay.initFromStorage();
+                    if (window.RWRelay.isConfigured()) {
+                        window.RWRelay.checkStatus()
+                            .then(manifest => {
+                                if (manifest) {
+                                    console.log(`📡 Relay: Library data available (${manifest.bookCount} books, uploaded ${manifest.timestamp})`);
+                                    setRelayManifest(manifest);
+                                }
+                            })
+                            .catch(err => console.warn('Relay status check failed:', err.message));
+                    }
+                }
+            }, []);
 
             // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d, v4.15.6)
             React.useEffect(() => {
@@ -2882,6 +2904,26 @@
 
             // v5.0.0-alpha.175.48 - Removed saveSettings function (dead code)
 
+            // v6.0.0 - Import library data from Cloudflare relay
+            const importFromRelay = async () => {
+                if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
+                setRelayImporting(true);
+                try {
+                    const jsonString = await window.RWRelay.download((phase, detail) => {
+                        console.log(`📡 Relay import: ${detail}`);
+                    });
+                    await loadLibrary(jsonString);
+                    await window.RWRelay.cleanup();
+                    setRelayManifest(null);
+                    console.log('✅ Relay import complete, ephemeral data cleaned up');
+                } catch (err) {
+                    console.error('❌ Relay import failed:', err);
+                    showInfoDialog('Relay Import Error', `Failed to import from relay: ${err.message}`);
+                } finally {
+                    setRelayImporting(false);
+                }
+            };
+
             const importLibrary = async () => {
                 // Close the dialog immediately when file picker opens
                 setStatusModalOpen(false);
@@ -2916,6 +2958,12 @@
                                     console.log('📋 Restoring organization from backup file');
                                 } else {
                                     console.log('⚠️ Backup file has no organization section - will start fresh');
+                                }
+                                // v6.0.0 - Restore relay credentials from backup
+                                if (parsedData.relay && parsedData.relay.channelId) {
+                                    localStorage.setItem(RELAY_KEY, JSON.stringify(parsedData.relay));
+                                    if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                    console.log('📡 Restored relay credentials from backup');
                                 }
                             } else {
                                 // Library file - keep current organization, ignore any org in file
@@ -3158,6 +3206,14 @@
                             appVersion: ORGANIZER_VERSION
                         }
                     };
+
+                    // v6.0.0 - Include relay credentials in backup
+                    try {
+                        const relayData = JSON.parse(localStorage.getItem(RELAY_KEY));
+                        if (relayData && relayData.channelId) {
+                            exportData.relay = relayData;
+                        }
+                    } catch { /* no relay configured */ }
 
                     // v4.15.1.b: Only add collections section if we have real data (fix 0-A bug)
                     if (hasRealCollections) {
@@ -5497,6 +5553,19 @@
                                                 }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     Export Library…
                                                 </button>
+                                                {/* v6.0.0 - Relay import (only shown when relay is configured) */}
+                                                {window.RWRelay && window.RWRelay.isConfigured() && (
+                                                    <button onClick={() => { importFromRelay(); setOpenMenuBar(null); }} disabled={!relayManifest || relayImporting} style={{
+                                                        width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                        border: 'none', background: 'var(--bg-surface)',
+                                                        cursor: (!relayManifest || relayImporting) ? 'not-allowed' : 'pointer',
+                                                        transition: 'background 0.1s',
+                                                        color: (!relayManifest || relayImporting) ? 'var(--text-muted)' : 'var(--text-primary)',
+                                                        opacity: (!relayManifest || relayImporting) ? 0.5 : 1
+                                                    }} onMouseEnter={e => relayManifest && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
+                                                        📡 Import from Relay{relayManifest ? ` (${relayManifest.bookCount} books)` : ''}
+                                                    </button>
+                                                )}
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 {/* v5.1.0-alpha.2 - Auto-Organize wizard */}
                                                 <button onClick={() => { setWizardModalOpen(true); setOpenMenuBar(null); }} disabled={books.length === 0} style={{
@@ -5506,6 +5575,15 @@
                                                     opacity: books.length === 0 ? 0.5 : 1
                                                 }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     ✨ Auto-Organize…
+                                                </button>
+                                                <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
+                                                {/* v6.0.0 - Relay Setup */}
+                                                <button onClick={() => { setRelaySetupOpen(true); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
+                                                    📡 Relay Setup…
                                                 </button>
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 <button onClick={() => { setResetConfirmOpen(true); setOpenMenuBar(null); }} style={{
@@ -5641,6 +5719,46 @@
                             </div>
                         ))}
                     </div>
+
+                    {/* v6.0.0 - Relay banner: shows when library data is available on relay */}
+                    {relayManifest && !relayImporting && (
+                        <div style={{
+                            background: 'linear-gradient(135deg, #dbeafe, #ede9fe)',
+                            borderBottom: '1px solid var(--border-default)',
+                            padding: '8px 16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            fontSize: '13px'
+                        }}>
+                            <span style={{ color: 'var(--text-primary)' }}>
+                                📡 New library data available ({relayManifest.bookCount} books, uploaded {new Date(relayManifest.timestamp).toLocaleString()})
+                            </span>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <button onClick={importFromRelay} style={{
+                                    padding: '4px 12px', fontSize: '12px', fontWeight: 'bold',
+                                    background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
+                                    border: 'none', borderRadius: '4px', cursor: 'pointer'
+                                }}>Import</button>
+                                <button onClick={() => setRelayManifest(null)} style={{
+                                    padding: '4px 12px', fontSize: '12px',
+                                    background: 'var(--bg-surface)', color: 'var(--text-muted)',
+                                    border: '1px solid var(--border-default)', borderRadius: '4px', cursor: 'pointer'
+                                }}>Dismiss</button>
+                            </div>
+                        </div>
+                    )}
+                    {relayImporting && (
+                        <div style={{
+                            background: 'linear-gradient(135deg, #dbeafe, #ede9fe)',
+                            borderBottom: '1px solid var(--border-default)',
+                            padding: '8px 16px',
+                            fontSize: '13px',
+                            color: 'var(--text-primary)'
+                        }}>
+                            📡 Importing from relay...
+                        </div>
+                    )}
 
                     {/* v5.0.0-alpha.175.3 - Toolbar (Phase 3 foundation) */}
                     <div style={{
@@ -6752,6 +6870,97 @@
                         </div>
                         );
                     })()}
+
+                    {/* v6.0.0 - Relay Setup Modal */}
+                    {relaySetupOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setRelaySetupOpen(false); backdropMouseDownRef.current = null; }}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
+                                <div className="flex justify-between items-start p-4 rounded-t-lg border-b" style={{ background: 'var(--bg-chrome)', borderColor: 'var(--border-default)' }}>
+                                    <h2 className="text-xl font-bold">📡 Relay Setup</h2>
+                                    <button onClick={() => setRelaySetupOpen(false)} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close">×</button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    {(() => {
+                                        const stored = (() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY)); } catch { return null; } })();
+                                        if (stored && stored.channelId) {
+                                            // Already configured
+                                            return React.createElement(React.Fragment, null,
+                                                React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-success)', border: '1px solid var(--border-success, #86efac)' } },
+                                                    React.createElement('p', { className: 'font-semibold' }, '✅ Relay is configured'),
+                                                    React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
+                                                ),
+                                                React.createElement('div', { className: 'space-y-2' },
+                                                    React.createElement('p', { className: 'font-semibold text-sm' }, 'Bookmarklet (drag to toolbar):'),
+                                                    React.createElement('div', { className: 'rounded p-3 text-center', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)' } },
+                                                        React.createElement('a', {
+                                                            href: `javascript:(function(){window._READERWRANGLER_TARGET_ENV='PROD';window._RW_RELAY_CHANNEL='${stored.channelId}';window._RW_RELAY_PASSPHRASE='${stored.passphrase}';var s=document.createElement('script');s.src='https://ron-l.github.io/readerwrangler/bookmarklet-nav-hub.js';document.body.appendChild(s);})();`,
+                                                            onClick: (e) => e.preventDefault(),
+                                                            style: { display: 'inline-block', padding: '8px 20px', background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', borderRadius: '8px', fontWeight: 'bold', fontSize: '14px', textDecoration: 'none', cursor: 'grab' }
+                                                        }, '📚 ReaderWrangler')
+                                                    ),
+                                                    React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)' } }, 'Drag the purple button above to your browser\'s bookmarks bar. This bookmarklet has your relay credentials baked in.')
+                                                ),
+                                                React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-info, #eff6ff)', border: '1px solid var(--border-info, #93c5fd)' } },
+                                                    React.createElement('p', null, '🔒 Your library data is encrypted before leaving your browser and automatically deleted from the relay after import. The relay never sees your data in plaintext.')
+                                                ),
+                                                React.createElement('div', { className: 'flex gap-3 justify-end pt-2' },
+                                                    React.createElement('button', {
+                                                        onClick: () => {
+                                                            if (confirm('This will invalidate your current bookmarklet. You will need to drag a new one to your toolbar. Continue?')) {
+                                                                localStorage.removeItem(RELAY_KEY);
+                                                                if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                                setRelayManifest(null);
+                                                                setRelaySetupOpen(false);
+                                                                setTimeout(() => setRelaySetupOpen(true), 100);
+                                                            }
+                                                        },
+                                                        className: 'px-4 py-2 rounded-lg font-medium text-sm',
+                                                        style: { background: 'var(--bg-muted)', color: 'var(--text-danger)', border: '1px solid var(--border-default)' }
+                                                    }, 'Regenerate Credentials'),
+                                                    React.createElement('button', {
+                                                        onClick: () => setRelaySetupOpen(false),
+                                                        className: 'px-4 py-2 rounded-lg font-medium text-sm',
+                                                        style: { background: 'var(--bg-accent)', color: 'white' }
+                                                    }, 'Done')
+                                                )
+                                            );
+                                        } else {
+                                            // Not yet configured
+                                            return React.createElement(React.Fragment, null,
+                                                React.createElement('p', { style: { color: 'var(--text-secondary)' } }, 'The relay lets you transfer your library from Amazon to ReaderWrangler without saving/loading files. Your data is encrypted end-to-end.'),
+                                                React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-info, #eff6ff)', border: '1px solid var(--border-info, #93c5fd)' } },
+                                                    React.createElement('p', null, '🔒 Data is encrypted in your browser before it leaves. The relay only ever sees ciphertext. Data is automatically deleted after you import it.')
+                                                ),
+                                                React.createElement('div', { className: 'flex gap-3 justify-end pt-2' },
+                                                    React.createElement('button', {
+                                                        onClick: () => setRelaySetupOpen(false),
+                                                        className: 'px-4 py-2 rounded-lg font-medium text-sm',
+                                                        style: { background: 'var(--bg-muted)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }
+                                                    }, 'Cancel'),
+                                                    React.createElement('button', {
+                                                        onClick: () => {
+                                                            const channelId = crypto.randomUUID();
+                                                            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                                                            let passphrase = '';
+                                                            const arr = new Uint8Array(32);
+                                                            crypto.getRandomValues(arr);
+                                                            for (let i = 0; i < 32; i++) passphrase += chars[arr[i] % chars.length];
+                                                            localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
+                                                            if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                            setRelaySetupOpen(false);
+                                                            setTimeout(() => setRelaySetupOpen(true), 100);
+                                                        },
+                                                        className: 'px-4 py-2 rounded-lg font-medium text-sm',
+                                                        style: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white' }
+                                                    }, 'Generate Credentials')
+                                                )
+                                            );
+                                        }
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {resetConfirmOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setResetConfirmOpen(false); backdropMouseDownRef.current = null; }}>

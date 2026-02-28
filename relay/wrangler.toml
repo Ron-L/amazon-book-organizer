@@ -1,0 +1,10 @@
+name = "readerwrangler-relay"
+main = "relay-worker.js"
+compatibility_date = "2024-09-25"
+
+[vars]
+ALLOWED_ORIGINS = "https://www.amazon.com,https://readerwrangler.com,https://ron-l.github.io,http://localhost:8000"
+
+[[kv_namespaces]]
+binding = "RELAY_KV"
+id = ""  # Will be set after creating KV namespace: wrangler kv namespace create RELAY_KV

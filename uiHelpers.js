@@ -13,6 +13,7 @@ const FOLDERS_KEY = "readerwrangler-folders"; // v5.0.0 - User folder organizati
 const WIZARD_KEY = "readerwrangler-wizard"; // v5.1.0-alpha.23 - Wizard settings
 const SEARCH_HISTORY_KEY = "readerwrangler-search-history"; // v5.4.9 - Search history
 const THEME_KEY = "readerwrangler-theme"; // v5.5.7 - Theme preference
+const RELAY_KEY = "readerwrangler-relay"; // v6.0.0 - Relay credentials (channelId, passphrase)
 
 // ===== Amazon =====
 const AMAZON_AFFILIATE_TAG = 'rclewent-20';

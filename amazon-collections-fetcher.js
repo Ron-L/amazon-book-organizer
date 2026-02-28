@@ -19,7 +19,7 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v2.1.2';
+    const FETCHER_VERSION = 'v2.1.2-alpha.1';
     const SCHEMA_VERSION = '2.1';
     const PAGE_TITLE = document.title;
 
@@ -896,8 +896,26 @@ async function fetchAmazonCollections() {
 
     const jsonString = JSON.stringify(outputData, null, 2);
 
-    // Save using File System Access API if we have a file handle, otherwise download
-    if (fileHandle) {
+    // Save: Relay upload (primary if configured), then file save as fallback
+    let saveSucceeded = false;
+
+    // Path 0: Relay upload (if configured)
+    if (window.RWRelay && window.RWRelay.isConfigured()) {
+        try {
+            window.RWRelay.initFromGlobals();
+            progressUI.updatePhase('Uploading', 'Compressing and encrypting...');
+            const manifest = await window.RWRelay.upload(jsonString, (phase, detail) => {
+                progressUI.updatePhase('Uploading', detail);
+            });
+            console.log(`✅ Uploaded to relay (${manifest.bookCount} books, ${(manifest.compressedBytes / 1024).toFixed(0)} KB compressed)`);
+            saveSucceeded = true;
+        } catch (relayError) {
+            console.error('⚠️ Relay upload failed, falling back to file save:', relayError.message);
+        }
+    }
+
+    // File save (fallback if relay not configured or failed)
+    if (!saveSucceeded && fileHandle) {
         // Show save button to get fresh user gesture before writing
         // Chrome requires an active "user gesture" for createWritable() - the original
         // gesture from file selection has expired after fetching collections data
@@ -920,7 +938,7 @@ async function fetchAmazonCollections() {
             progressUI.showError(`Failed to save: ${e.message}`);
             return;
         }
-    } else {
+    } else if (!saveSucceeded) {
         // Fallback for Firefox/Safari - traditional download
         console.log(`   ⚠️  IMPORTANT: Save this file as "${FILENAME}", replacing your existing file!`);
         console.log(`   (Your browser may save it as "${FILENAME.replace('.json', '')}(1).json" - rename it manually)\n`);

@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.1';
+    const FETCHER_VERSION = 'v1.0.1-alpha.1';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -928,6 +928,22 @@ async function importBibliography() {
 
         const jsonData = JSON.stringify(existingData, null, 2);
 
+        // Path 0: Relay upload (if configured)
+        if (window.RWRelay && window.RWRelay.isConfigured()) {
+            try {
+                window.RWRelay.initFromGlobals();
+                progressUI.updatePhase('Uploading', 'Compressing and encrypting...');
+                const manifest = await window.RWRelay.upload(jsonData, (phase, detail) => {
+                    progressUI.updatePhase('Uploading', detail);
+                });
+                console.log(`✅ Uploaded to relay (${manifest.bookCount} books, ${(manifest.compressedBytes / 1024).toFixed(0)} KB compressed)`);
+                return; // Relay succeeded, skip file save
+            } catch (relayError) {
+                console.error('⚠️ Relay upload failed, falling back to file save:', relayError.message);
+            }
+        }
+
+        // File save (fallback if relay not configured or failed)
         if (fileHandle) {
             // Show save button to get fresh user gesture before writing
             // Chrome requires an active "user gesture" for createWritable() - the original

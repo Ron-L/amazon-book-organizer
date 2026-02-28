@@ -21,7 +21,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.9.0-alpha.2';
+    const FETCHER_VERSION = 'v4.9.0-alpha.3';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -2178,9 +2178,26 @@ async function fetchAmazonLibrary() {
         }
         console.log('');
 
-        // Save using File System Access API if we have a file handle, otherwise prompt user
+        // Save: Relay upload (primary if configured), then file save as fallback
         let saveSucceeded = false;
-        if (fileHandle) {
+
+        // Path 0: Relay upload (if configured)
+        if (window.RWRelay && window.RWRelay.isConfigured()) {
+            try {
+                window.RWRelay.initFromGlobals();
+                progressUI.updatePhase('Uploading', 'Compressing and encrypting...');
+                const manifest = await window.RWRelay.upload(jsonData, (phase, detail) => {
+                    progressUI.updatePhase('Uploading', detail);
+                });
+                console.log(`✅ Uploaded to relay (${manifest.bookCount} books, ${(manifest.compressedBytes / 1024).toFixed(0)} KB compressed)`);
+                saveSucceeded = true;
+            } catch (relayError) {
+                console.error('⚠️ Relay upload failed, falling back to file save:', relayError.message);
+            }
+        }
+
+        // File save (fallback if relay not configured or failed)
+        if (!saveSucceeded && fileHandle) {
             // Re-run case: Show save button to get fresh user gesture before writing
             // Chrome requires an active "user gesture" for createWritable() - the original
             // gesture from file selection has expired after fetching library data
@@ -2204,7 +2221,7 @@ async function fetchAmazonLibrary() {
                 progressUI.showError(`Failed to save: ${e.message}`);
                 return;
             }
-        } else if (hasFileSystemAccess) {
+        } else if (!saveSucceeded && hasFileSystemAccess) {
             // Full fetch case: Need user click for fresh gesture before showSaveFilePicker
             // Show save button and wait for user choice (provides fresh user gesture)
             const userChoice = await progressUI.showSaveButton(finalBooks.length);
@@ -2232,7 +2249,7 @@ async function fetchAmazonLibrary() {
                 }
                 throw e;
             }
-        } else {
+        } else if (!saveSucceeded) {
             // Fallback for Firefox/Safari - traditional download
             console.log(`   ⚠️  IMPORTANT: Save this file as "${LIBRARY_FILENAME}", replacing your existing file!`);
             console.log(`   (Your browser may save it as "${LIBRARY_FILENAME.replace('.json', '')}(1).json" - rename it manually)\n`);

@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.4.1';
+    const NAV_HUB_VERSION = 'v1.5.0';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
@@ -203,45 +203,84 @@
     dialog.innerHTML = dialogContent;
     document.body.appendChild(dialog);
 
-    // Helper function to load script
+    // Helper function to load a single script
     function loadScript(scriptName, description) {
+        return new Promise((resolve, reject) => {
+            console.log(`📚 ReaderWrangler: Loading ${description}...`);
+            const script = document.createElement('script');
+
+            // ARCHITECTURE: Cache-Busting - See docs/design/ARCHITECTURE.md (Cache-Busting section)
+            // Cache-busting in dev environments for fresh code
+            const cacheBuster = IS_DEV_MODE ? '?v=' + Date.now() : '';
+            script.src = finalBaseUrl + scriptName + cacheBuster;
+
+            console.log(`   Loading from: ${script.src}`);
+            console.log(`   Cache-busting enabled: ${IS_DEV_MODE}`);
+
+            script.onload = resolve;
+            script.onerror = function() {
+                console.error(`❌ Failed to load ${scriptName}`);
+                reject(new Error(`Failed to load ${scriptName}`));
+            };
+            document.body.appendChild(script);
+        });
+    }
+
+    // Relay module names (loaded before fetcher when relay credentials exist)
+    const RELAY_MODULES = ['relay-crypto.js', 'relay-compress.js', 'relay-client.js'];
+    const hasRelay = !!window._RW_RELAY_CHANNEL;
+
+    if (hasRelay) {
+        console.log(`📚 ReaderWrangler: Relay credentials detected (channel: ${window._RW_RELAY_CHANNEL.slice(0, 8)}...)`);
+    }
+
+    // Load a fetcher script, prepending relay modules if relay is configured.
+    // Graceful degradation: if a relay module fails, skip relay and load fetcher directly.
+    function loadFetcher(scriptName, description) {
         dialog.remove();
-        console.log(`📚 ReaderWrangler: Loading ${description}...`);
-        const script = document.createElement('script');
 
-        // ARCHITECTURE: Cache-Busting - See docs/design/ARCHITECTURE.md (Cache-Busting section)
-        // Cache-busting in dev environments for fresh code
-        const cacheBuster = IS_DEV_MODE ? '?v=' + Date.now() : '';
-        script.src = finalBaseUrl + scriptName + cacheBuster;
-
-        console.log(`   Loading from: ${script.src}`);
-        console.log(`   Cache-busting enabled: ${IS_DEV_MODE}`);
-
-        script.onerror = function() {
-            alert(`❌ Failed to load ${description}. Please check your internet connection.`);
-        };
-        document.body.appendChild(script);
+        if (hasRelay) {
+            // Chain: relay-crypto → relay-compress → relay-client → fetcher
+            console.log('📚 ReaderWrangler: Loading relay modules before fetcher...');
+            let chain = Promise.resolve();
+            for (const mod of RELAY_MODULES) {
+                chain = chain.then(() => loadScript(mod, mod));
+            }
+            chain
+                .then(() => loadScript(scriptName, description))
+                .catch((err) => {
+                    console.warn('📚 ReaderWrangler: Relay module failed, loading fetcher without relay:', err.message);
+                    // Fetcher will check RWRelay.isConfigured() and fall through to file save
+                    loadScript(scriptName, description).catch(() => {
+                        alert(`❌ Failed to load ${description}. Please check your internet connection.`);
+                    });
+                });
+        } else {
+            loadScript(scriptName, description).catch(() => {
+                alert(`❌ Failed to load ${description}. Please check your internet connection.`);
+            });
+        }
     }
 
     // Event handlers
     const runLibraryBtn = dialog.querySelector('#runLibrary');
     if (runLibraryBtn) {
-        runLibraryBtn.onclick = () => loadScript('amazon-library-fetcher.js', 'library fetcher');
+        runLibraryBtn.onclick = () => loadFetcher('amazon-library-fetcher.js', 'library fetcher');
     }
 
     const runCollectionsBtn = dialog.querySelector('#runCollections');
     if (runCollectionsBtn) {
-        runCollectionsBtn.onclick = () => loadScript('amazon-collections-fetcher.js', 'collections fetcher');
+        runCollectionsBtn.onclick = () => loadFetcher('amazon-collections-fetcher.js', 'collections fetcher');
     }
 
     const runWishlistBtn = dialog.querySelector('#runWishlist');
     if (runWishlistBtn && onWishlistPage) {
         if (onAuthorPage) {
-            runWishlistBtn.onclick = () => loadScript('author-bibliography-fetcher.js', 'bibliography fetcher');
+            runWishlistBtn.onclick = () => loadFetcher('author-bibliography-fetcher.js', 'bibliography fetcher');
         } else if (onSeriesPage) {
-            runWishlistBtn.onclick = () => loadScript('series-page-fetcher.js', 'series fetcher');
+            runWishlistBtn.onclick = () => loadFetcher('series-page-fetcher.js', 'series fetcher');
         } else {
-            runWishlistBtn.onclick = () => loadScript('amazon-wishlist-fetcher.js', 'wishlist fetcher');
+            runWishlistBtn.onclick = () => loadFetcher('amazon-wishlist-fetcher.js', 'wishlist fetcher');
         }
     }
 
