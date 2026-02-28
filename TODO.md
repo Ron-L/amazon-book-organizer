@@ -9,13 +9,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔒 Priority 3: Pre-Launch Gate
 
-**1. Browser Compatibility Documentation** - LOW/LOW (30 min)
-   - ~~Document Chrome-only requirement in README and app footer~~ → Document tested browsers in README and index.html
-   - Tested: Chrome (primary), Edge (2026-02-26, cursory), Firefox (2026-02-27, full)
-   - Safari: Untested (no access). Known gap — list as untested in docs.
-   - Problem: Users may try on unsupported browsers
-   - Impact: Clear expectations, reduced support burden
-**3. Button Consistency Audit** - LOW/LOW (2-4 hours)
+**1. Button Consistency Audit** - LOW/LOW (2-4 hours)
    - Audit all button hover states across the app
    - Define 3 button styles: Primary/Secondary/Tertiary
    - Apply consistently everywhere (price goals, Add Tag, View on Amazon, Add Note, Edit Series, etc.)
@@ -23,7 +17,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Different buttons have different hover behaviors, users can't predict interaction
    - Impact: Consistent, predictable UI interactions
 
-**4. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
+**2. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
    - Semantic HTML audit (use `<button>` not `<div onclick>`)
    - ARIA labels for key interactions (context menus, drag operations)
    - Keyboard-only navigation validation (tab order, focus indicators)
@@ -32,7 +26,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Impact: Broader user base support with minimal effort
 
 
-**5. 🔗 Cloudflare Relay + Delete Books** - HIGH/HIGH (65-85 hours)
+**3. 🔗 Cloudflare Relay + Delete Books** - HIGH/HIGH (65-85 hours)
    - See [docs/design/DELETE-BOOKS-PROBLEM-STATEMENT.md](docs/design/DELETE-BOOKS-PROBLEM-STATEMENT.md) and [docs/design/DELETE-BOOKS-DESIGN.md](docs/design/DELETE-BOOKS-DESIGN.md)
    - Cloudflare relay replaces file picker as sole transfer path. Trash Bin enables permanent book deletion. Mobile sync via QR pairing replaces Dropbox workaround.
    - **Milestone 1: Relay Pipeline (A→B→C)** ~28-39 hours
@@ -49,7 +43,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: No permanent delete (books return on next import); file picker friction; manual mobile sync via Dropbox
    - Impact: Frictionless import, permanent deletes, automatic mobile sync, orphan detection, gap-fill reviews, wishlist-add feedback
 
-**6. Quality Attribute Validation** - LOW/LOW (2-3 hours)
+**4. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
    - ~~**Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second~~ ✅ v5.5.4
    - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
