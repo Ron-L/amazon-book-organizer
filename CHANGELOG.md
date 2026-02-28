@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.3] - 2026-02-27
+
+### Fixed
+- **Tag view reorder** - Newly tagged books could not be reordered within a pinned tag view. They appeared stuck at the bottom, and existing books couldn't be dragged past them. Fixed by including unordered books in the working list before splicing.
+
 ## [5.6.2] - 2026-02-27
 
 ### Fixed
