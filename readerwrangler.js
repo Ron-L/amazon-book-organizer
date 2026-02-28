@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "5.6.6";  // Build version for this file
+        const ORGANIZER_VERSION = "5.6.7-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -11094,7 +11094,7 @@
                                                     return (
                                                     <div
                                                         key={book.id}
-                                                        className={`cursor-pointer hover:opacity-80 ${explorerSelectedBooks.has(book.id) ? 'ring-2 ring-blue-400' : ''}`}
+                                                        className="cursor-pointer hover:opacity-80"
                                                         style={(() => {
                                                             const styles = {};
                                                             // v5.0.6 - Hidden book visual feedback (check both current and legacy formats)
@@ -11255,6 +11255,66 @@
                                                                     </svg>
                                                                 </div>
                                                             )}
+                                                            {/* v5.6.7 - Cover badges (ported from v4 Column App) */}
+                                                            {/* Top-right: Rating badge */}
+                                                            {book.rating > 0 && (
+                                                                <div className="absolute top-1 right-1 bg-black bg-opacity-75 rounded px-1.5 py-0.5 text-xs font-bold text-yellow-400">
+                                                                    ★ {book.rating.toFixed(1)}
+                                                                </div>
+                                                            )}
+                                                            {/* Bottom-right: Read status checkmark */}
+                                                            {book.readStatus === 'READ' && (
+                                                                <div className="absolute bottom-1 right-1 bg-green-600 rounded-full w-6 h-6 flex items-center justify-center" title="Read">
+                                                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                                                    </svg>
+                                                                </div>
+                                                            )}
+                                                            {/* Top-left: Selection checkmark > Collections count > Wishlist heart (mutually exclusive) */}
+                                                            {explorerSelectedBooks.has(book.id) ? (
+                                                                <div className="absolute top-1 left-1 bg-blue-700 rounded-full w-6 h-6 flex items-center justify-center z-10">
+                                                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                                                                    </svg>
+                                                                </div>
+                                                            ) : book.collections && book.collections.length > 0 ? (
+                                                                <div className="absolute top-1 left-1 bg-gray-700 bg-opacity-75 rounded px-1.5 py-0.5 text-xs font-bold text-white">
+                                                                    📁 {book.collections.length}
+                                                                </div>
+                                                            ) : book.onWishlist && (
+                                                                <div className="absolute top-1 left-1 bg-red-500 bg-opacity-80 rounded px-1.5 py-0.5 text-xs font-bold text-white">
+                                                                    ❤+
+                                                                </div>
+                                                            )}
+                                                            {/* Bottom-left: Price tag (wishlist) or Ownership badge (mutually exclusive) */}
+                                                            {book.onWishlist && book.currentPrice != null ? (
+                                                                <div
+                                                                    className={`absolute bottom-1 left-1 ${book.priceTrigger && book.currentPrice <= book.priceTrigger ? 'bg-green-500' : 'bg-gray-500'} bg-opacity-90 text-xs font-bold text-white`}
+                                                                    style={{
+                                                                        clipPath: 'polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%)',
+                                                                        padding: '3px 14px 3px 6px'
+                                                                    }}
+                                                                    title={book.priceTrigger ? `Goal: $${book.priceTrigger.toFixed(2)} or less` : 'Current price'}
+                                                                >
+                                                                    ${book.currentPrice.toFixed(2)}
+                                                                </div>
+                                                            ) : book.ownershipType && book.ownershipType !== 'purchased' && (() => {
+                                                                const badgeConfig = {
+                                                                    sample: { bg: 'bg-amber-500', text: 'SAMPLE' },
+                                                                    borrowed: { bg: 'bg-teal-500', text: 'BORROWED' },
+                                                                    prime: { bg: 'bg-purple-500', text: 'PRIME' },
+                                                                    kindleUnlimited: { bg: 'bg-purple-500', text: 'KU' },
+                                                                    koll: { bg: 'bg-purple-500', text: 'KOLL' },
+                                                                    comixology: { bg: 'bg-purple-500', text: 'COMIX' },
+                                                                    unknown: { bg: 'bg-gray-500', text: '?' }
+                                                                };
+                                                                const config = badgeConfig[book.ownershipType];
+                                                                return config ? (
+                                                                    <div className={`absolute bottom-1 left-1 ${config.bg} bg-opacity-90 rounded px-1.5 py-0.5 text-xs font-bold text-white`}>
+                                                                        {config.text}
+                                                                    </div>
+                                                                ) : null;
+                                                            })()}
                                                         </div>
                                                         <div className="mt-1 text-xs text-gray-700 truncate">{book.title}</div>
                                                     </div>
