@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.0.2-alpha.1';
+const MOBILE_VERSION = '1.0.2-alpha.2';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -212,6 +212,7 @@ function filterBooks(books, { showDealsOnly, showHidden }) {
 }
 
 const SORT_OPTIONS = [
+    { key: 'manual', label: 'Manual Order' },
     { key: 'dateAdded', label: 'Date Added' },
     { key: 'titleAZ', label: 'Title A-Z' },
     { key: 'authorAZ', label: 'Author A-Z' },
@@ -219,6 +220,7 @@ const SORT_OPTIONS = [
 ];
 
 function sortBooks(books, sortKey) {
+    if (sortKey === 'manual') return books; // Preserve folder.bookIds / bookOrder array order
     return [...books].sort((a, b) => {
         switch (sortKey) {
             case 'titleAZ': return a.title.localeCompare(b.title);
@@ -1358,8 +1360,10 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, s
         } else if (!folder) {
             return [];
         } else {
-            const bookIds = new Set(folder.bookIds || []);
-            result = filtered.filter(b => bookIds.has(b.id));
+            // v1.0.2 - Preserve folder.bookIds order for manual sort (matches desktop getFolderBookIds)
+            const filteredSet = new Set(filtered.map(b => b.id));
+            const bookMap = new Map(filtered.map(b => [b.id, b]));
+            result = (folder.bookIds || []).filter(id => filteredSet.has(id)).map(id => bookMap.get(id));
         }
         return sortBooks(result, sortOption);
     }, [folder, books, pinnedTagFolders, showDealsOnly, showHidden, isAllBooks, isTagView, folderId, sortOption]);
