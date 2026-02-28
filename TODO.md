@@ -254,3 +254,13 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Multiple Amazon accounts on same device
    - Impact: Household/family sharing
    - **Workaround Available**: See [USER-GUIDE.md FAQ](USER-GUIDE.md#faq) "Can I maintain separate organizational states?" for Backup/Restore method to swap between different organizational states (demo vs. actual collection, testing vs. production, etc.)
+
+---
+
+### 🧊 Icebox (No Timeline)
+
+**1. Safari Browser Testing**
+   - Desktop Safari + iOS Safari untested (no access to macOS/iOS devices)
+   - Requires volunteer with Safari or access to a Mac
+   - Key risk areas: IndexedDB behavior, PWA manifest handling, CSS rendering differences
+   - If issues found, may need Safari-specific fixes or a "Safari unsupported" notice
