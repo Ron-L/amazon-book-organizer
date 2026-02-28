@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.0.1-alpha.1';
+    const FETCHER_VERSION = 'v1.1.0-alpha.1';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
