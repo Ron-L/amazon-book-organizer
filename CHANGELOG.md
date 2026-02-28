@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.4] - 2026-02-27
+
+### Fixed
+- **Drag-to-tag toast** - Dragging a book from a folder or All Books to a tag view always showed "Already tagged" even when the tag was successfully added. Caused by React 18 deferred setState updater — toast read closure variables before they were set.
+
 ## [5.6.3] - 2026-02-27
 
 ### Fixed
