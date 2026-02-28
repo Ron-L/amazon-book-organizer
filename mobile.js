@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.0.0';
+const MOBILE_VERSION = '1.0.1-alpha.1';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -1423,8 +1423,9 @@ function BookDetailView({ bookId, books, coverUrlMap, blankImageBooks, setBlankI
         <div style={{ padding: '16px 16px 32px' }}>
             <StarDefs />
 
-            {/* Large cover */}
+            {/* Large cover — v5.6.6: links to Amazon */}
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                <a href={getAmazonUrl(book.asin)} target="_blank" rel="noopener noreferrer">
                 {isBlank || !book.coverUrl ? (
                     <div style={{
                         width: '180px', aspectRatio: '2/3', borderRadius: '6px',
@@ -1445,27 +1446,41 @@ function BookDetailView({ bookId, books, coverUrlMap, blankImageBooks, setBlankI
                         onLoad={(e) => checkIfBlankImage(e.target, book.id, setBlankImageBooks)}
                     />
                 )}
+                </a>
             </div>
 
-            {/* Title & Author */}
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', fontWeight: 700,
-                color: 'var(--text-primary)', textAlign: 'center', marginBottom: '4px', lineHeight: 1.3 }}>
+            {/* Title & Author — v5.6.6: title links to Amazon */}
+            <a href={getAmazonUrl(book.asin)} target="_blank" rel="noopener noreferrer"
+                style={{ fontFamily: 'var(--font-heading)', fontSize: '20px', fontWeight: 700,
+                    color: 'var(--text-primary)', textAlign: 'center', marginBottom: '4px', lineHeight: 1.3,
+                    display: 'block', textDecoration: 'none' }}>
                 {book.title}
-            </h2>
+            </a>
             <p style={{ fontSize: '16px', color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '16px' }}>
                 by {book.author}
             </p>
 
-            {/* Wishlist badge */}
-            {book.onWishlist && (
-                <div style={{ textAlign: 'center', marginBottom: '12px' }}>
+            {/* Wishlist badge + View on Amazon — v5.6.6: button for all books */}
+            <div style={{ textAlign: 'center', marginBottom: '12px', display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {book.onWishlist && (
                     <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: '999px',
                         fontSize: '12px', fontWeight: 600,
                         backgroundColor: 'var(--bg-selected, #dbeafe)', color: 'var(--text-accent, #2563eb)' }}>
                         Wishlist Item
                     </span>
-                </div>
-            )}
+                )}
+                {(() => {
+                    const atGoal = book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger;
+                    return (
+                        <a href={getAmazonUrl(book.asin)} target="_blank" rel="noopener noreferrer"
+                            style={{ display: 'inline-block', padding: '4px 12px', borderRadius: '6px',
+                                fontSize: '12px', fontWeight: 600, textDecoration: 'none', color: 'white',
+                                backgroundColor: atGoal ? '#22c55e' : '#f97316' }}>
+                            View on Amazon {atGoal ? `— $${book.currentPrice.toFixed(2)}` : '→'}
+                        </a>
+                    );
+                })()}
+            </div>
 
             <div style={{ borderTop: '1px solid var(--border-default)', margin: '0 0 16px' }} />
 
@@ -1482,12 +1497,13 @@ function BookDetailView({ bookId, books, coverUrlMap, blankImageBooks, setBlankI
                 </DetailRow>
             )}
 
-            {/* My Rating */}
-            {book.myRating > 0 && (
-                <DetailRow label="My Rating">
-                    {renderStars(book.myRating, { color: 'var(--border-focus, #3b82f6)' })}
-                </DetailRow>
-            )}
+            {/* My Rating — v5.6.6: always show */}
+            <DetailRow label="My Rating">
+                {book.myRating > 0
+                    ? renderStars(book.myRating, { color: 'var(--border-focus, #3b82f6)' })
+                    : <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Not rated</span>
+                }
+            </DetailRow>
 
             {/* Series */}
             {book.series && (
@@ -1520,10 +1536,13 @@ function BookDetailView({ bookId, books, coverUrlMap, blankImageBooks, setBlankI
                 </DetailRow>
             )}
 
-            {/* Collections */}
-            {book.collections && book.collections.length > 0 && (
-                <DetailRow label="Collections">{book.collections.map(c => c.name).join(', ')}</DetailRow>
-            )}
+            {/* Collections — v5.6.6: always show */}
+            <DetailRow label="Collections">
+                {book.collections && book.collections.length > 0
+                    ? book.collections.map(c => c.name).join(', ')
+                    : <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No collections</span>
+                }
+            </DetailRow>
 
             {/* Notes */}
             {book.userNote && (
