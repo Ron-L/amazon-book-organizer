@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [5.6.8] - 2026-02-28
+
+### Changed
+- **Ownership filter label** - Renamed "Source" dropdown to "Ownership" for better discoverability when filtering by wishlist vs. purchased books.
+
 ## [5.6.7] - 2026-02-28
 
 ### Added
