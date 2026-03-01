@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.3';
+const MOBILE_VERSION = '1.1.0-alpha.4';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -578,9 +578,10 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, onSelectF
 
 // --- App Menu ---
 
-function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApplyTheme, onToggleViewMode, onToggleDeals, onToggleHidden, onDesktopMode, onImport, onClose }) {
+function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApplyTheme, onToggleViewMode, onToggleDeals, onToggleHidden, onDesktopMode, onImport, onUnpair, relayCreds, onClose }) {
     const themeLabels = { auto: 'Auto', light: 'Light', dark: 'Dark' };
     const nextTheme = { auto: 'light', light: 'dark', dark: 'auto' };
+    const [showCreds, setShowCreds] = useState(false);
 
     return (
         <div className="fixed top-0 right-0 h-full z-50 flex flex-col overflow-y-auto"
@@ -649,6 +650,53 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
                     style={{ touchAction: 'manipulation' }}>
                     Desktop Mode
                 </button>
+
+                {/* Separator */}
+                <div style={{ borderTop: '1px solid var(--border-default, #e2e8f0)', margin: '4px 12px' }} />
+
+                {/* v6.0.0 Phase 2 - Sync / Pairing section */}
+                <div className="py-3 px-4 text-sm">
+                    <p className="font-semibold mb-2" style={{ color: 'var(--text-primary, #1e293b)' }}>Sync</p>
+                    {relayCreds ? (
+                        <div>
+                            <div className="flex items-center mb-2" style={{ color: 'var(--text-secondary, #475569)', fontSize: '0.85em' }}>
+                                <span style={{ color: '#16a34a', marginRight: '6px' }}>●</span>
+                                Paired with desktop
+                            </div>
+                            <button onClick={() => setShowCreds(prev => !prev)}
+                                className="w-full text-left mb-2"
+                                style={{ fontSize: '0.8em', color: 'var(--text-muted, #64748b)', touchAction: 'manipulation' }}>
+                                {showCreds ? '▾ Hide credentials' : '▸ Show credentials'}
+                            </button>
+                            {showCreds && (
+                                <div style={{ fontSize: '0.75em', fontFamily: 'monospace', background: 'var(--bg-muted, #f1f5f9)', padding: '8px', borderRadius: '6px', marginBottom: '8px', wordBreak: 'break-all', lineHeight: 1.5 }}>
+                                    <div><span style={{ color: 'var(--text-muted, #64748b)' }}>Channel:</span><br />{relayCreds.channelId}</div>
+                                    <div style={{ marginTop: '4px' }}><span style={{ color: 'var(--text-muted, #64748b)' }}>Passphrase:</span><br />{relayCreds.passphrase}</div>
+                                    <button onClick={() => {
+                                        const text = 'Channel ID: ' + relayCreds.channelId + '\nPassphrase: ' + relayCreds.passphrase;
+                                        navigator.clipboard.writeText(text).catch(() => {});
+                                    }} style={{
+                                        marginTop: '6px', padding: '4px 10px', fontSize: '0.9em',
+                                        background: 'var(--bg-surface, #ffffff)', border: '1px solid var(--border-default, #e2e8f0)',
+                                        borderRadius: '4px', cursor: 'pointer', touchAction: 'manipulation'
+                                    }}>Copy</button>
+                                </div>
+                            )}
+                            <button onClick={() => { onClose(); onUnpair(); }}
+                                style={{
+                                    width: '100%', padding: '8px', fontSize: '0.85em',
+                                    background: 'none', border: '1px solid #dc2626', borderRadius: '6px',
+                                    color: '#dc2626', cursor: 'pointer', touchAction: 'manipulation'
+                                }}>
+                                Unpair
+                            </button>
+                        </div>
+                    ) : (
+                        <div style={{ color: 'var(--text-muted, #64748b)', fontSize: '0.85em' }}>
+                            Not paired. Scan QR code from desktop to sync.
+                        </div>
+                    )}
+                </div>
 
                 {/* Separator */}
                 <div style={{ borderTop: '1px solid var(--border-default, #e2e8f0)', margin: '4px 12px' }} />
@@ -2179,6 +2227,13 @@ function MobileApp() {
         localStorage.setItem('readerwrangler-desktopMode', 'true');
         location.reload();
     };
+
+    // v6.0.0 Phase 2 - Unpair: clear relay credentials and return to pairing screen
+    const handleUnpair = () => {
+        if (!confirm('Unpair from desktop? Your local library data will be kept.')) return;
+        localStorage.removeItem(RELAY_KEY);
+        setPairingScreen('prompt');
+    };
     const handleSelectFolder = (folderId) => {
         if (folderId === '__all__') {
             const resetStack = [{ view: 'dashboard', scrollY: 0 }];
@@ -2220,8 +2275,10 @@ function MobileApp() {
                         scanner.stop().catch(() => {});
                         qrScannerRef.current = null;
                         setPairingScreen('success');
-                        // Proceed to load after brief success message
-                        setTimeout(() => setPairingScreen(null), 1500);
+                        // Pull device-state from relay, then dismiss pairing screen
+                        loadAllData()
+                            .then(() => { setPairingScreen(null); setLoading(false); })
+                            .catch(err => { console.error('❌ Post-pair load failed:', err); setPairingScreen(null); setLoading(false); });
                     } catch (e) {
                         console.error('❌ QR decode error:', e);
                         setPairingError('Not a valid ReaderWrangler pairing code. Try again.');
@@ -2252,7 +2309,10 @@ function MobileApp() {
         if (window.RWRelay) window.RWRelay.initFromStorage();
         console.log('✅ Paired manually: channel ' + ch.slice(0, 8) + '...');
         setPairingScreen('success');
-        setTimeout(() => setPairingScreen(null), 1500);
+        // Pull device-state from relay, then dismiss pairing screen
+        loadAllData()
+            .then(() => { setPairingScreen(null); setLoading(false); })
+            .catch(err => { console.error('❌ Post-pair load failed:', err); setPairingScreen(null); setLoading(false); });
     };
 
     // v6.0.0 Phase 2 - Pairing screen (shown when no credentials)
@@ -2387,6 +2447,8 @@ function MobileApp() {
                     onToggleHidden={handleToggleHidden}
                     onDesktopMode={handleDesktopMode}
                     onImport={handleImport}
+                    onUnpair={handleUnpair}
+                    relayCreds={(() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY)); } catch { return null; } })()}
                     onClose={closeOverlay}
                 />
             )}
