@@ -786,3 +786,62 @@ body { margin: 0; padding: 0; overflow: hidden; }
     outline: none;
     border-color: #2563eb;
 }
+
+/* v6.0.0 Phase 2 - Sync indicator (radio tower with pulsing arcs) */
+.sync-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    position: relative;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+.sync-tower {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 10px;
+    border-radius: 1px 1px 0 0;
+}
+
+.sync-tower-synced { background: #16a34a; }
+.sync-tower-unsynced { background: #dc2626; }
+
+.sync-arc {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 1.5px solid transparent;
+    border-radius: 50%;
+    opacity: 0;
+}
+
+.sync-arc-1 { width: 10px; height: 10px; }
+.sync-arc-2 { width: 16px; height: 16px; }
+
+/* Synced: static green, no arcs */
+.sync-indicator-synced .sync-arc { display: none; }
+
+/* Unsynced: red pulsing arcs */
+.sync-indicator-unsynced .sync-arc {
+    border-top-color: #dc2626;
+    border-left-color: #dc2626;
+    border-right-color: #dc2626;
+    animation: sync-pulse 1.5s ease-out infinite;
+}
+
+.sync-indicator-unsynced .sync-arc-2 {
+    animation-delay: 0.3s;
+}
+
+@keyframes sync-pulse {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.6); }
+    30% { opacity: 0.8; }
+    100% { opacity: 0; transform: translateX(-50%) scale(1); }
+}

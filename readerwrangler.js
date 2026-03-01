@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.14";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -14289,8 +14289,19 @@
                         <div className="text-center flex-1">
                             As an Amazon Associate, I earn from qualifying purchases. | <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700" title="Report issues or request features">Feedback</a> | <a href="security.html" className="hover:text-gray-700" title="Security & Privacy information">Security</a>
                         </div>
-                        {/* Right: Build version */}
-                        <div className="text-right">
+                        {/* Right: Sync indicator + Build version */}
+                        <div className="text-right flex items-center gap-2 justify-end">
+                            {window.RWRelay && window.RWRelay.isConfigured() && (
+                                <div
+                                    className={`sync-indicator ${deviceStateSynced ? 'sync-indicator-synced' : 'sync-indicator-unsynced'}`}
+                                    title={deviceStateSynced ? 'All changes synced to mobile' : 'Syncing changes...'}
+                                    onClick={() => setRelaySetupOpen(true)}
+                                >
+                                    <div className={`sync-tower ${deviceStateSynced ? 'sync-tower-synced' : 'sync-tower-unsynced'}`}></div>
+                                    <div className="sync-arc sync-arc-1"></div>
+                                    <div className="sync-arc sync-arc-2"></div>
+                                </div>
+                            )}
                             Build v{ORGANIZER_VERSION}
                         </div>
                     </div>
