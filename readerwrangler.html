@@ -91,17 +91,46 @@
         // (prevents accidental mobile switch on browser resize + reload)
         const forceDesktop = localStorage.getItem('readerwrangler-desktopMode') === 'true';
         const sessionMode = sessionStorage.getItem('readerwrangler-sessionMode');
-        // Priority: forceDesktop flag > session lock > viewport detection
-        const isMobile = !forceDesktop && (sessionMode === 'mobile' || (sessionMode !== 'desktop' && window.matchMedia('(max-width: 767px)').matches));
+        const isMobileViewport = window.matchMedia('(max-width: 767px)').matches;
 
-        // Lock mode for this session (prevents resize+reload from switching)
-        sessionStorage.setItem('readerwrangler-sessionMode', isMobile ? 'mobile' : 'desktop');
+        // Interstitial: mobile viewport + desktopMode flag → ask user before loading
+        if (forceDesktop && isMobileViewport && sessionMode !== 'desktop') {
+            var splash = document.getElementById('splash');
+            if (splash) {
+                splash.innerHTML =
+                    '<div style="text-align:center; padding:40px 20px; max-width:360px;">' +
+                        '<img src="icons/logo-transparent.png" alt="" style="width:64px; height:64px; margin-bottom:16px;">' +
+                        '<div style="font-family:\'Libre Baskerville\',Georgia,serif; font-size:1.5em; font-weight:700; color:var(--text-primary,#1e293b); margin-bottom:24px;">ReaderWrangler\u2122</div>' +
+                        '<div style="color:var(--text-secondary,#475569); font-size:0.95em; line-height:1.6; margin-bottom:28px;">' +
+                            'You previously switched to desktop mode on this device.' +
+                        '</div>' +
+                        '<button id="revertMobileBtn" style="display:block; width:100%; padding:14px; margin-bottom:12px; background:linear-gradient(135deg,#667eea,#764ba2); color:white; border:none; border-radius:12px; font-size:1.05em; font-weight:600; cursor:pointer;">Return to Mobile Mode</button>' +
+                        '<button id="continueDesktopBtn" style="display:block; width:100%; padding:14px; background:var(--bg-muted,#f1f5f9); color:var(--text-primary,#1e293b); border:1px solid var(--border-default,#e2e8f0); border-radius:12px; font-size:1em; cursor:pointer;">Continue in Desktop Mode</button>' +
+                    '</div>';
+                document.getElementById('revertMobileBtn').addEventListener('click', function() {
+                    localStorage.removeItem('readerwrangler-desktopMode');
+                    sessionStorage.removeItem('readerwrangler-sessionMode');
+                    location.reload();
+                });
+                document.getElementById('continueDesktopBtn').addEventListener('click', function() {
+                    sessionStorage.setItem('readerwrangler-sessionMode', 'desktop');
+                    location.reload();
+                });
+            }
+        } else {
+            // Normal flow: determine mode and load app
+            // Priority: forceDesktop flag > session lock > viewport detection
+            var isMobile = !forceDesktop && (sessionMode === 'mobile' || (sessionMode !== 'desktop' && isMobileViewport));
 
-        // Dynamically load the appropriate app with version-based cache busting
-        const script = document.createElement('script');
-        script.type = 'text/babel';
-        script.src = (isMobile ? 'mobile.js' : 'readerwrangler.js') + '?v=' + APP_VERSION;
-        document.body.appendChild(script);
+            // Lock mode for this session (prevents resize+reload from switching)
+            sessionStorage.setItem('readerwrangler-sessionMode', isMobile ? 'mobile' : 'desktop');
+
+            // Dynamically load the appropriate app with version-based cache busting
+            var script = document.createElement('script');
+            script.type = 'text/babel';
+            script.src = (isMobile ? 'mobile.js' : 'readerwrangler.js') + '?v=' + APP_VERSION;
+            document.body.appendChild(script);
+        }
     </script>
     <!-- Emergency reset fallback: if app fails to mount within 15s, offer reset -->
     <script>
