@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10200,7 +10200,7 @@
                                                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
                                                 <h2 style={{ fontSize: '22px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Welcome to ReaderWrangler</h2>
                                                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Organize your Kindle library your way.</p>
-                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>ReaderWrangler uses a secure relay to transfer your library from Amazon. Generate a connection below, install the bookmarklet, and fetch your books — no files to manage.</p>
+                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>ReaderWrangler's bookmarklet uses a secure relay to transfer your library from Amazon to the app. Generate a bookmarklet connection below, install the bookmarklet, and fetch your books — no files to manage.</p>
 
                                                 {(() => {
                                                     const stored = (() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY)); } catch { return null; } })();
