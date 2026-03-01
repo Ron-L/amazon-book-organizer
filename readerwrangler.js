@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.15";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -14297,7 +14297,7 @@
                                     title={deviceStateSynced ? 'All changes synced to mobile' : 'Syncing changes...'}
                                     onClick={() => setRelaySetupOpen(true)}
                                 >
-                                    <div className={`sync-tower ${deviceStateSynced ? 'sync-tower-synced' : 'sync-tower-unsynced'}`}></div>
+                                    <img className="sync-tower" src={`icons/sync-tower-${deviceStateSynced ? 'green' : 'red'}.svg`} alt="" />
                                     <div className="sync-arc sync-arc-1"></div>
                                     <div className="sync-arc sync-arc-2"></div>
                                 </div>
