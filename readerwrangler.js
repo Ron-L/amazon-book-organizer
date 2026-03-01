@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6961,7 +6961,7 @@
                                                     isLocalhost && React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)', fontStyle: 'italic' } }, 'Developer mode: showing all 3 environments.')
                                                 ),
                                                 React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-info, #eff6ff)', border: '1px solid var(--border-info, #93c5fd)' } },
-                                                    React.createElement('p', null, '🔒 Your library data is encrypted before leaving your browser. Your library is automatically synced to paired mobile devices. The relay never sees your data in plaintext.')
+                                                    React.createElement('p', null, '🔒 Your library data is encrypted before leaving your browser. Your library is automatically synced to paired mobile devices via Cloudflare. The relay never sees your data in plaintext.')
                                                 ),
                                                 // Mobile Pairing QR Code section
                                                 React.createElement('div', { className: 'space-y-2' },
@@ -6979,6 +6979,25 @@
                                                             style: { display: 'inline-block' }
                                                         }),
                                                         React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)' } }, 'Scan with your phone to pair')
+                                                    ),
+                                                    React.createElement('div', { className: 'mt-2 rounded p-2', style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', textAlign: 'left' } },
+                                                        React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)', marginBottom: '4px' } }, 'Or enter manually on your phone:'),
+                                                        React.createElement('div', { style: { fontFamily: 'monospace', fontSize: '11px', color: 'var(--text-primary)', wordBreak: 'break-all', lineHeight: '1.5' } },
+                                                            React.createElement('div', null, React.createElement('span', { style: { color: 'var(--text-muted)' } }, 'Channel: '), stored.channelId),
+                                                            React.createElement('div', null, React.createElement('span', { style: { color: 'var(--text-muted)' } }, 'Passphrase: '), stored.passphrase)
+                                                        ),
+                                                        React.createElement('button', {
+                                                            onClick: () => {
+                                                                const text = `Channel ID: ${stored.channelId}\nPassphrase: ${stored.passphrase}`;
+                                                                navigator.clipboard.writeText(text).then(() => {
+                                                                    const btn = document.getElementById('relay-copy-creds-btn');
+                                                                    if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy'; }, 2000); }
+                                                                });
+                                                            },
+                                                            id: 'relay-copy-creds-btn',
+                                                            className: 'text-xs mt-1',
+                                                            style: { color: 'var(--text-accent, #667eea)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }
+                                                        }, 'Copy')
                                                     )
                                                 ),
                                                 React.createElement('div', { className: 'flex gap-3 justify-end pt-2' },
@@ -7005,9 +7024,9 @@
                                         } else {
                                             // Not yet configured
                                             return React.createElement(React.Fragment, null,
-                                                React.createElement('p', { style: { color: 'var(--text-secondary)' } }, 'The relay lets you transfer your library from Amazon to ReaderWrangler without saving/loading files. Your data is encrypted end-to-end.'),
+                                                React.createElement('p', { style: { color: 'var(--text-secondary)' } }, 'The relay transfers your library from Amazon to ReaderWrangler via Cloudflare\'s encrypted infrastructure. Your data is encrypted end-to-end.'),
                                                 React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-info, #eff6ff)', border: '1px solid var(--border-info, #93c5fd)' } },
-                                                    React.createElement('p', null, '🔒 Data is encrypted in your browser before it leaves. The relay only ever sees ciphertext. Data is automatically deleted after you import it.')
+                                                    React.createElement('p', null, '🔒 Data is encrypted in your browser before it leaves. The Cloudflare relay only ever sees ciphertext.')
                                                 ),
                                                 React.createElement('div', { className: 'flex gap-3 justify-end pt-2' },
                                                     React.createElement('button', {
