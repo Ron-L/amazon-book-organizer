@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2918,7 +2918,11 @@
                     console.log('✅ Relay import complete, ephemeral data cleaned up');
                 } catch (err) {
                     console.error('❌ Relay import failed:', err);
-                    showInfoDialog('Relay Import Error', `Failed to import from relay: ${err.message}`);
+                    const isNoData = err.message && err.message.includes('No data available');
+                    const msg = isNoData
+                        ? 'No library data found on the relay.\n\nIf you recently regenerated your credentials, your bookmarklet may be out of date. Open File → Relay Setup and drag the updated bookmarklet to your toolbar, then re-fetch from Amazon.'
+                        : `Failed to import from relay: ${err.message}`;
+                    showInfoDialog('Relay Import', msg);
                 } finally {
                     setRelayImporting(false);
                 }
@@ -10195,7 +10199,8 @@
                                             <div style={{ textAlign: 'center', maxWidth: '480px' }}>
                                                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
                                                 <h2 style={{ fontSize: '22px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Welcome to ReaderWrangler</h2>
-                                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '24px' }}>Set up your library connection to get started.</p>
+                                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Organize your Kindle library your way.</p>
+                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>ReaderWrangler uses a secure relay to transfer your library from Amazon. Generate a connection below, install the bookmarklet, and fetch your books — no files to manage.</p>
 
                                                 {(() => {
                                                     const stored = (() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY)); } catch { return null; } })();
@@ -10214,12 +10219,12 @@
                                                         },
                                                             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' } },
                                                                 React.createElement('span', { style: { fontSize: '18px', fontWeight: '700', color: hasCredentials ? 'var(--text-success, #16a34a)' : 'var(--text-accent-strong)' } }, hasCredentials ? '✅' : '①'),
-                                                                React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' } }, 'Generate Connection')
+                                                                React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' } }, 'Set Up Secure Relay')
                                                             ),
                                                             hasCredentials
-                                                                ? React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', margin: 0 } }, `Connected (${stored.channelId.slice(0, 8)}…${stored.channelId.slice(-4)})`)
+                                                                ? React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', margin: 0 } }, `Relay active (${stored.channelId.slice(0, 8)}…${stored.channelId.slice(-4)})`)
                                                                 : React.createElement(React.Fragment, null,
-                                                                    React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '12px' } }, 'Create an encrypted connection between Amazon and ReaderWrangler.'),
+                                                                    React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '12px' } }, 'Creates an encrypted channel between your Amazon bookmarklet and this app. One-time setup.'),
                                                                     React.createElement('button', {
                                                                         onClick: () => {
                                                                             const channelId = crypto.randomUUID();
@@ -10256,7 +10261,7 @@
                                                                 React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' } }, 'Install Bookmarklet')
                                                             ),
                                                             hasCredentials && React.createElement(React.Fragment, null,
-                                                                React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '12px' } }, 'Drag to your bookmarks bar:'),
+                                                                React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '12px' } }, 'If you haven\u2019t already, drag to your bookmarks bar:'),
                                                                 React.createElement('div', {
                                                                     style: {
                                                                         display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center',
@@ -10297,7 +10302,7 @@
                                                             ),
                                                             hasCredentials && React.createElement(React.Fragment, null,
                                                                 React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', margin: 0 } },
-                                                                    'Go to ', React.createElement('a', { href: 'https://www.amazon.com/yourbooks', target: '_blank', style: { color: 'var(--text-accent)', textDecoration: 'underline' } }, 'amazon.com'), ', click the bookmarklet, then return here. Your library will appear automatically.'
+                                                                    'Go to ', React.createElement('a', { href: 'https://www.amazon.com/yourbooks', target: '_blank', style: { color: 'var(--text-accent)', textDecoration: 'underline' } }, 'amazon.com'), ', click the bookmarklet in your toolbar, and follow the prompts. When it finishes, return here and use ', React.createElement('strong', null, 'File \u203A Import from Relay'), ' to load your library.'
                                                                 )
                                                             )
                                                         ),
