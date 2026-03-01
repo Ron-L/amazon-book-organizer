@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6961,7 +6961,7 @@
                                                     isLocalhost && React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)', fontStyle: 'italic' } }, 'Developer mode: showing all 3 environments.')
                                                 ),
                                                 React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-info, #eff6ff)', border: '1px solid var(--border-info, #93c5fd)' } },
-                                                    React.createElement('p', null, '🔒 Your library data is encrypted before leaving your browser. Your library is automatically synced to paired mobile devices via Cloudflare. The relay never sees your data in plaintext.')
+                                                    React.createElement('p', null, '🔒 Your library is automatically synced to paired mobile devices via Cloudflare\'s encrypted relay. The relay never sees your data in plaintext.')
                                                 ),
                                                 // Mobile Pairing QR Code section
                                                 React.createElement('div', { className: 'space-y-2' },
@@ -6995,8 +6995,8 @@
                                                                 });
                                                             },
                                                             id: 'relay-copy-creds-btn',
-                                                            className: 'text-xs mt-1',
-                                                            style: { color: 'var(--text-accent, #667eea)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }
+                                                            className: 'text-xs mt-2 px-3 py-1 rounded',
+                                                            style: { background: 'var(--bg-muted)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
                                                         }, 'Copy')
                                                     )
                                                 ),
