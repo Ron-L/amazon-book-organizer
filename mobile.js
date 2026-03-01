@@ -1,7 +1,10 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.2';
+const MOBILE_VERSION = '1.1.0-alpha.3';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
+
+// Clear emergency reset timer — app code loaded successfully
+if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
 

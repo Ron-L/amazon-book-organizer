@@ -126,6 +126,7 @@
             sessionStorage.setItem('readerwrangler-sessionMode', isMobile ? 'mobile' : 'desktop');
 
             // Dynamically load the appropriate app with version-based cache busting
+            window._appLoading = true; // Signal to emergency reset timer
             var script = document.createElement('script');
             script.type = 'text/babel';
             script.src = (isMobile ? 'mobile.js' : 'readerwrangler.js') + '?v=' + APP_VERSION;
@@ -133,8 +134,9 @@
         }
     </script>
     <!-- Emergency reset fallback: if app fails to mount within 15s, offer reset -->
+    <!-- Skip timer if interstitial or no app code was loaded -->
     <script>
-        window._appMountTimer = setTimeout(function() {
+        if (window._appLoading) window._appMountTimer = setTimeout(function() {
             var splash = document.getElementById('splash');
             if (!splash) return; // React mounted and replaced splash — all good
             splash.innerHTML =
