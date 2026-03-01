@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2908,6 +2908,7 @@
             const importFromRelay = async () => {
                 if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
                 setRelayImporting(true);
+                setSyncStatus('loading'); // Guard: prevents Inbox useEffect from firing during import
                 try {
                     const jsonString = await window.RWRelay.download((phase, detail) => {
                         console.log(`📡 Relay import: ${detail}`);
