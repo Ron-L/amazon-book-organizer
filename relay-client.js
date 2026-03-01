@@ -329,6 +329,11 @@
     if (!response.ok) throw new Error('Failed to update device state');
   }
 
+  // Auto-detect context and initialize
+  if (window._RW_RELAY_CHANNEL) {
+    initFromGlobals();
+  }
+
   // Expose as global
   window.RWRelay = {
     initFromGlobals: initFromGlobals,

@@ -618,10 +618,9 @@ async function importSeries() {
 
         const jsonData = JSON.stringify(existingData, null, 2);
 
-        // Path 0: Relay upload (if configured)
+        // Path 0: Relay upload (if configured — auto-initialized by relay-client.js)
         if (window.RWRelay && window.RWRelay.isConfigured()) {
             try {
-                window.RWRelay.initFromGlobals();
                 progressUI.updatePhase('Uploading', 'Compressing and encrypting...');
                 const manifest = await window.RWRelay.upload(jsonData, (phase, detail) => {
                     progressUI.updatePhase('Uploading', detail);
