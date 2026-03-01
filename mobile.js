@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.0.2';
+const MOBILE_VERSION = '1.1.0-alpha.1';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -1823,6 +1823,38 @@ function SearchView({ books, folders, folderId, showDealsOnly, showHidden, sortO
 
 // --- Main app ---
 
+// v6.0.0 Phase 2 - Check for #pair= hash fragment and store credentials
+// Runs once before React mounts — credentials are available by the time MobileApp initializes
+(function checkPairingHash() {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#pair=')) return;
+    try {
+        const b64 = hash.slice(6); // strip '#pair='
+        const json = atob(b64);
+        const creds = JSON.parse(json);
+        if (creds.channelId && creds.passphrase) {
+            localStorage.setItem(RELAY_KEY, JSON.stringify(creds));
+            console.log('✅ Paired via QR: channel ' + creds.channelId.slice(0, 8) + '...');
+        }
+    } catch (e) {
+        console.error('❌ Failed to parse pairing data from URL:', e);
+    }
+    // Clear hash fragment (don't leave credentials in URL)
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+})();
+
+// v6.0.0 Phase 2 - Load html5-qrcode scanner library on demand
+function loadQRScanner() {
+    return new Promise((resolve, reject) => {
+        if (window.Html5Qrcode) { resolve(); return; }
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load QR scanner library'));
+        document.head.appendChild(script);
+    });
+}
+
 function MobileApp() {
     const [books, setBooks] = useState([]);
     const [folders, setFolders] = useState([]);
@@ -1833,6 +1865,15 @@ function MobileApp() {
     const [blankImageBooks, setBlankImageBooks] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
+    // v6.0.0 Phase 2 - Pairing state
+    const [pairingScreen, setPairingScreen] = useState(() => {
+        // Show pairing screen if no relay credentials AND no local books
+        const hasCreds = (() => { try { const r = JSON.parse(localStorage.getItem(RELAY_KEY)); return r && r.channelId; } catch { return false; } })();
+        if (hasCreds) return null; // Already paired
+        return 'prompt'; // 'prompt' | 'scanning' | 'success' | 'error'
+    });
+    const [pairingError, setPairingError] = useState(null);
+    const qrScannerRef = useRef(null);
     const [importStatus, setImportStatus] = useState(null);
     const [error, setError] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(null);
@@ -2118,6 +2159,145 @@ function MobileApp() {
         }
         closeOverlay();
     };
+
+    // v6.0.0 Phase 2 - QR scanner controls
+    const startQRScanner = async () => {
+        setPairingScreen('scanning');
+        setPairingError(null);
+        try {
+            await loadQRScanner();
+            // Small delay to let React render the scanner container div
+            await new Promise(r => setTimeout(r, 100));
+            const scanner = new window.Html5Qrcode('qr-reader');
+            qrScannerRef.current = scanner;
+            await scanner.start(
+                { facingMode: 'environment' },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    // Parse the URL and extract credentials from hash fragment
+                    try {
+                        const url = new URL(decodedText);
+                        const hash = url.hash;
+                        if (!hash.startsWith('#pair=')) throw new Error('Not a pairing QR code');
+                        const b64 = hash.slice(6);
+                        const creds = JSON.parse(atob(b64));
+                        if (!creds.channelId || !creds.passphrase) throw new Error('Invalid credentials');
+                        // Store credentials
+                        localStorage.setItem(RELAY_KEY, JSON.stringify(creds));
+                        if (window.RWRelay) window.RWRelay.initFromStorage();
+                        console.log('✅ Paired via QR scan: channel ' + creds.channelId.slice(0, 8) + '...');
+                        // Stop scanner and show success
+                        scanner.stop().catch(() => {});
+                        qrScannerRef.current = null;
+                        setPairingScreen('success');
+                        // Proceed to load after brief success message
+                        setTimeout(() => setPairingScreen(null), 1500);
+                    } catch (e) {
+                        console.error('❌ QR decode error:', e);
+                        setPairingError('Not a valid ReaderWrangler pairing code. Try again.');
+                    }
+                }
+            );
+        } catch (e) {
+            console.error('❌ QR scanner failed:', e);
+            setPairingError(e.message || 'Could not start camera. Check permissions.');
+            setPairingScreen('prompt');
+        }
+    };
+
+    const stopQRScanner = () => {
+        if (qrScannerRef.current) {
+            qrScannerRef.current.stop().catch(() => {});
+            qrScannerRef.current = null;
+        }
+        setPairingScreen('prompt');
+    };
+
+    // v6.0.0 Phase 2 - Manual credential entry for pairing
+    const handleManualPairing = () => {
+        const ch = document.getElementById('mobile-pair-channel')?.value?.trim();
+        const pp = document.getElementById('mobile-pair-passphrase')?.value?.trim();
+        if (!ch || !pp) { setPairingError('Both Channel ID and Passphrase are required.'); return; }
+        localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId: ch, passphrase: pp }));
+        if (window.RWRelay) window.RWRelay.initFromStorage();
+        console.log('✅ Paired manually: channel ' + ch.slice(0, 8) + '...');
+        setPairingScreen('success');
+        setTimeout(() => setPairingScreen(null), 1500);
+    };
+
+    // v6.0.0 Phase 2 - Pairing screen (shown when no credentials)
+    if (pairingScreen) {
+        return (
+            <div id="splash" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '24px', background: 'var(--bg-page, #ffffff)' }}>
+                <img src="icons/logo-transparent.png" alt="" style={{ width: '64px', height: '64px', marginBottom: '16px' }} />
+                <div style={{ fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: '1.5em', fontWeight: 700, color: 'var(--text-primary, #1e293b)', marginBottom: '8px' }}>ReaderWrangler™</div>
+
+                {pairingScreen === 'success' && (
+                    <div style={{ textAlign: 'center', marginTop: '24px' }}>
+                        <div style={{ fontSize: '3em', marginBottom: '12px' }}>✅</div>
+                        <div style={{ fontSize: '1.1em', fontWeight: 600, color: 'var(--text-primary, #1e293b)' }}>Paired successfully!</div>
+                        <div style={{ color: 'var(--text-muted, #64748b)', fontSize: '0.9em', marginTop: '8px' }}>Loading your library...</div>
+                    </div>
+                )}
+
+                {pairingScreen === 'scanning' && (
+                    <div style={{ width: '100%', maxWidth: '400px', marginTop: '16px' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '12px', color: 'var(--text-secondary, #475569)', fontSize: '0.95em' }}>
+                            Point your camera at the QR code on your desktop
+                        </div>
+                        <div id="qr-reader" style={{ width: '100%', borderRadius: '12px', overflow: 'hidden' }}></div>
+                        {pairingError && (
+                            <div style={{ color: '#dc2626', fontSize: '0.85em', textAlign: 'center', marginTop: '12px' }}>{pairingError}</div>
+                        )}
+                        <button onClick={stopQRScanner} style={{
+                            display: 'block', width: '100%', marginTop: '16px', padding: '14px',
+                            background: 'var(--bg-muted, #f1f5f9)', color: 'var(--text-primary, #1e293b)',
+                            border: '1px solid var(--border-default, #e2e8f0)', borderRadius: '12px',
+                            fontSize: '1em', cursor: 'pointer'
+                        }}>Cancel</button>
+                    </div>
+                )}
+
+                {pairingScreen === 'prompt' && (
+                    <div style={{ width: '100%', maxWidth: '360px', marginTop: '24px' }}>
+                        <div style={{ textAlign: 'center', color: 'var(--text-secondary, #475569)', fontSize: '0.95em', lineHeight: 1.6, marginBottom: '24px' }}>
+                            Pair with your desktop to sync your library. Open ReaderWrangler on your computer, go to <strong>File → Relay Setup</strong>, and scan the QR code.
+                        </div>
+
+                        <button onClick={startQRScanner} style={{
+                            display: 'block', width: '100%', padding: '16px',
+                            background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
+                            border: 'none', borderRadius: '12px', fontSize: '1.1em', fontWeight: 600, cursor: 'pointer'
+                        }}>Scan QR Code</button>
+
+                        {pairingError && (
+                            <div style={{ color: '#dc2626', fontSize: '0.85em', textAlign: 'center', marginTop: '12px' }}>{pairingError}</div>
+                        )}
+
+                        <div style={{ textAlign: 'center', margin: '20px 0 12px', color: 'var(--text-muted, #64748b)', fontSize: '0.85em' }}>— or enter credentials manually —</div>
+
+                        <input id="mobile-pair-channel" type="text" placeholder="Channel ID"
+                            style={{ width: '100%', padding: '12px', marginBottom: '8px', borderRadius: '8px', border: '1px solid var(--border-default, #e2e8f0)', background: 'var(--bg-surface, #fff)', color: 'var(--text-primary, #1e293b)', fontFamily: 'monospace', fontSize: '0.85em', boxSizing: 'border-box' }} />
+                        <input id="mobile-pair-passphrase" type="text" placeholder="Passphrase"
+                            style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '8px', border: '1px solid var(--border-default, #e2e8f0)', background: 'var(--bg-surface, #fff)', color: 'var(--text-primary, #1e293b)', fontFamily: 'monospace', fontSize: '0.85em', boxSizing: 'border-box' }} />
+                        <button onClick={handleManualPairing} style={{
+                            display: 'block', width: '100%', padding: '14px',
+                            background: 'var(--bg-muted, #f1f5f9)', color: 'var(--text-primary, #1e293b)',
+                            border: '1px solid var(--border-default, #e2e8f0)', borderRadius: '12px',
+                            fontSize: '1em', cursor: 'pointer'
+                        }}>Save Credentials</button>
+
+                        <div style={{ textAlign: 'center', marginTop: '24px' }}>
+                            <button onClick={() => setPairingScreen(null)} style={{
+                                background: 'none', border: 'none', color: 'var(--text-muted, #64748b)',
+                                fontSize: '0.85em', cursor: 'pointer', textDecoration: 'underline'
+                            }}>Skip — use local data only</button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
 
     if (loading) {
         return (
