@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.16";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.17";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5692,11 +5692,18 @@
                     }}>
                         {/* Logo + App Name - links to landing page */}
                         <a href="index.html" style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '12px', marginRight: '4px', borderRight: '1px solid var(--border-strong)', textDecoration: 'none' }}>
-                            <img src="icons/ReaderWranglerWordlessXparent32.png" alt="" style={{ width: '20px', height: '20px' }} />
+                            <img src="icons/logo-transparent-32.png" alt="" style={{ width: '20px', height: '20px' }} />
                             <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
                                 ReaderWrangler<span style={{ fontSize: '9px', verticalAlign: 'super', color: 'var(--text-muted)' }}>™</span>
                             </span>
                         </a>
+                        {/* Return to Mobile button - shows when mobile user forced desktop mode */}
+                        {localStorage.getItem('readerwrangler-desktopMode') === 'true' && window.matchMedia('(max-width: 767px)').matches && (
+                            <button onClick={() => { localStorage.removeItem('readerwrangler-desktopMode'); sessionStorage.removeItem('readerwrangler-sessionMode'); location.reload(); }}
+                                style={{ padding: '3px 8px', fontSize: '11px', background: '#667eea', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', marginRight: '8px', whiteSpace: 'nowrap' }}>
+                                ← Mobile
+                            </button>
+                        )}
                         {/* v5.0.0-alpha.175.2 - File/View/Help menus */}
                         {['File', 'View', 'Help'].map(menuName => (
                             <div key={menuName} style={{ position: 'relative' }} data-menu-area="true">
