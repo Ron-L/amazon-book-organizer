@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2914,9 +2914,7 @@
                         console.log(`📡 Relay import: ${detail}`);
                     });
                     await loadLibrary(jsonString);
-                    await window.RWRelay.cleanup();
-                    setRelayManifest(null);
-                    console.log('✅ Relay import complete, ephemeral data cleaned up');
+                    console.log('✅ Relay import complete (data remains on relay until next fetch or 24h TTL)');
                 } catch (err) {
                     console.error('❌ Relay import failed:', err);
                     const isNoData = err.message && err.message.includes('No data available');
