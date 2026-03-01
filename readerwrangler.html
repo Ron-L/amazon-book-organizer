@@ -126,15 +126,16 @@
             sessionStorage.setItem('readerwrangler-sessionMode', isMobile ? 'mobile' : 'desktop');
 
             // Dynamically load the appropriate app with version-based cache busting
-            window._appLoading = !isMobile; // Emergency reset timer only for desktop (mobile Babel compile can exceed 15s)
+            window._appLoading = true; // Signal to emergency reset timer
+            window._appTimeout = isMobile ? 45000 : 15000; // Mobile Babel compile is slow on phones
             var script = document.createElement('script');
             script.type = 'text/babel';
             script.src = (isMobile ? 'mobile.js' : 'readerwrangler.js') + '?v=' + APP_VERSION;
             document.body.appendChild(script);
         }
     </script>
-    <!-- Emergency reset fallback: if app fails to mount within 15s, offer reset -->
-    <!-- Skip timer if interstitial or no app code was loaded -->
+    <!-- Emergency reset fallback: offer reset if app fails to mount -->
+    <!-- Skip timer if interstitial shown (no app code loaded) -->
     <script>
         if (window._appLoading) window._appMountTimer = setTimeout(function() {
             var splash = document.getElementById('splash');
@@ -157,7 +158,7 @@
                 var req = indexedDB.deleteDatabase('ReaderWranglerDB');
                 req.onsuccess = req.onerror = req.onblocked = function() { location.reload(); };
             });
-        }, 15000);
+        }, window._appTimeout || 15000);
     </script>
     <script data-goatcounter="https://readerwrangler.goatcounter.com/count"
             async src="//gc.zgo.at/count.js"></script>
