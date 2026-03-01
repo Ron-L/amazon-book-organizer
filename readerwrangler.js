@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -713,6 +713,7 @@
             const [relayManifest, setRelayManifest] = useState(null); // manifest object from relay status check (null = no data or not configured)
             const [relaySetupOpen, setRelaySetupOpen] = useState(false); // Relay Setup modal
             const [relayImporting, setRelayImporting] = useState(false); // true while importing from relay
+            const [relayManualCreds, setRelayManualCreds] = useState(false); // show manual credential entry in Relay Setup
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -6960,12 +6961,30 @@
                                                     isLocalhost && React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)', fontStyle: 'italic' } }, 'Developer mode: showing all 3 environments.')
                                                 ),
                                                 React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-info, #eff6ff)', border: '1px solid var(--border-info, #93c5fd)' } },
-                                                    React.createElement('p', null, '🔒 Your library data is encrypted before leaving your browser and automatically deleted from the relay after import. The relay never sees your data in plaintext.')
+                                                    React.createElement('p', null, '🔒 Your library data is encrypted before leaving your browser. Your library is automatically synced to paired mobile devices. The relay never sees your data in plaintext.')
+                                                ),
+                                                // Mobile Pairing QR Code section
+                                                React.createElement('div', { className: 'space-y-2' },
+                                                    React.createElement('p', { className: 'font-semibold text-sm' }, '📱 Mobile Pairing'),
+                                                    React.createElement('div', { className: 'rounded p-4', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', textAlign: 'center' } },
+                                                        React.createElement('div', {
+                                                            ref: (el) => {
+                                                                if (el && !el.querySelector('canvas') && !el.querySelector('img') && window.QRCode) {
+                                                                    const baseUrl = (isLocalhost ? `http://${window.location.host}` : 'https://readerwrangler.com');
+                                                                    const creds = btoa(JSON.stringify({ channelId: stored.channelId, passphrase: stored.passphrase }));
+                                                                    const pairingUrl = `${baseUrl}/readerwrangler.html#pair=${creds}`;
+                                                                    new window.QRCode(el, { text: pairingUrl, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff' });
+                                                                }
+                                                            },
+                                                            style: { display: 'inline-block' }
+                                                        }),
+                                                        React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)' } }, 'Scan with your phone to pair')
+                                                    )
                                                 ),
                                                 React.createElement('div', { className: 'flex gap-3 justify-end pt-2' },
                                                     React.createElement('button', {
                                                         onClick: () => {
-                                                            if (confirm('This will invalidate your current bookmarklet. You will need to drag a new one to your toolbar. Continue?')) {
+                                                            if (confirm('This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet and re-pair your phone. Continue?')) {
                                                                 localStorage.removeItem(RELAY_KEY);
                                                                 if (window.RWRelay) { window.RWRelay.initFromStorage(); }
                                                                 setRelayManifest(null);
@@ -7006,12 +7025,60 @@
                                                             for (let i = 0; i < 32; i++) passphrase += chars[arr[i] % chars.length];
                                                             localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
                                                             if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                            setRelayManualCreds(false);
                                                             setRelaySetupOpen(false);
                                                             setTimeout(() => setRelaySetupOpen(true), 100);
                                                         },
                                                         className: 'px-4 py-2 rounded-lg font-medium text-sm',
                                                         style: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white' }
                                                     }, 'Generate Credentials')
+                                                ),
+                                                // "I have existing credentials" section
+                                                React.createElement('div', { className: 'pt-2', style: { borderTop: '1px solid var(--border-default)' } },
+                                                    !relayManualCreds
+                                                        ? React.createElement('button', {
+                                                            onClick: () => setRelayManualCreds(true),
+                                                            className: 'text-sm',
+                                                            style: { color: 'var(--text-accent, #667eea)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }
+                                                        }, 'I have existing credentials')
+                                                        : React.createElement('div', { className: 'space-y-2' },
+                                                            React.createElement('p', { className: 'text-sm font-semibold' }, 'Enter existing credentials:'),
+                                                            React.createElement('input', {
+                                                                id: 'relay-manual-channel',
+                                                                type: 'text',
+                                                                placeholder: 'Channel ID (e.g. 626a3744-6430-...)',
+                                                                className: 'w-full px-3 py-2 rounded text-sm',
+                                                                style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontFamily: 'monospace' }
+                                                            }),
+                                                            React.createElement('input', {
+                                                                id: 'relay-manual-passphrase',
+                                                                type: 'text',
+                                                                placeholder: 'Passphrase',
+                                                                className: 'w-full px-3 py-2 rounded text-sm',
+                                                                style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontFamily: 'monospace' }
+                                                            }),
+                                                            React.createElement('div', { className: 'flex gap-2 justify-end' },
+                                                                React.createElement('button', {
+                                                                    onClick: () => setRelayManualCreds(false),
+                                                                    className: 'px-3 py-1.5 rounded text-sm',
+                                                                    style: { background: 'var(--bg-muted)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }
+                                                                }, 'Cancel'),
+                                                                React.createElement('button', {
+                                                                    onClick: () => {
+                                                                        const ch = document.getElementById('relay-manual-channel')?.value?.trim();
+                                                                        const pp = document.getElementById('relay-manual-passphrase')?.value?.trim();
+                                                                        if (!ch || !pp) { alert('Both Channel ID and Passphrase are required.'); return; }
+                                                                        localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId: ch, passphrase: pp }));
+                                                                        if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                                        setRelayManualCreds(false);
+                                                                        setRelaySetupOpen(false);
+                                                                        setTimeout(() => setRelaySetupOpen(true), 100);
+                                                                    },
+                                                                    className: 'px-3 py-1.5 rounded text-sm',
+                                                                    style: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white' }
+                                                                }, 'Save Credentials')
+                                                            )
+                                                        )
                                                 )
                                             );
                                         }
