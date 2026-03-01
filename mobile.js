@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.1';
+const MOBILE_VERSION = '1.1.0-alpha.2';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 const { useState, useEffect, useCallback, useMemo, useRef } = React;
@@ -1865,6 +1865,7 @@ function MobileApp() {
     const [blankImageBooks, setBlankImageBooks] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
+    const [loadingMessage, setLoadingMessage] = useState('Loading...'); // v6.0.0 Phase 2 - dynamic loading text
     // v6.0.0 Phase 2 - Pairing state
     const [pairingScreen, setPairingScreen] = useState(() => {
         // Show pairing screen if no relay credentials AND no local books
@@ -1943,6 +1944,32 @@ function MobileApp() {
     };
 
     const loadAllData = async () => {
+        // v6.0.0 Phase 2 - Pull device-state from relay before loading local data
+        const hasCreds = (() => { try { const r = JSON.parse(localStorage.getItem(RELAY_KEY)); return r && r.channelId; } catch { return false; } })();
+        if (hasCreds && window.RWRelay) {
+            try {
+                setLoadingMessage('Syncing with desktop...');
+                window.RWRelay.initFromStorage();
+                const jsonString = await window.RWRelay.getDeviceState();
+                if (jsonString) {
+                    const data = JSON.parse(jsonString);
+                    if (data.isBackup && data.books?.items?.length) {
+                        console.log(`📡 Device-state received: ${data.books.items.length} books`);
+                        setLoadingMessage(`Loading ${data.books.items.length.toLocaleString()} books...`);
+                        const mappedBooks = data.books.items.map(mapBackupBook);
+                        await saveBooksToIndexedDB(mappedBooks, false);
+                        restoreOrganization(data.organization, mappedBooks.map(b => b.id));
+                        console.log('✅ Device-state applied to local storage');
+                    }
+                } else {
+                    console.log('📡 No device-state on relay (404) — using local data');
+                }
+            } catch (err) {
+                console.warn('⚠️ Device-state pull failed, using cached data:', err.message);
+            }
+        }
+        setLoadingMessage('Loading...');
+
         const loadedBooks = await loadBooksFromIndexedDB();
         setBooks(loadedBooks);
 
@@ -2304,7 +2331,7 @@ function MobileApp() {
             <div id="splash" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg-page, #ffffff)' }}>
                 <img src="icons/logo-transparent.png" alt="" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
                 <div style={{ fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: '1.8em', fontWeight: 700, color: 'var(--text-primary, #1e293b)', marginBottom: '8px' }}>ReaderWrangler™</div>
-                <div style={{ color: 'var(--text-muted, #64748b)', fontSize: '0.9em', marginBottom: '24px' }}>Loading...</div>
+                <div style={{ color: 'var(--text-muted, #64748b)', fontSize: '0.9em', marginBottom: '24px' }}>{loadingMessage}</div>
                 <div className="splash-spinner" />
             </div>
         );
