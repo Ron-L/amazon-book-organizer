@@ -126,7 +126,7 @@
             sessionStorage.setItem('readerwrangler-sessionMode', isMobile ? 'mobile' : 'desktop');
 
             // Dynamically load the appropriate app with version-based cache busting
-            window._appLoading = true; // Signal to emergency reset timer
+            window._appLoading = !isMobile; // Emergency reset timer only for desktop (mobile Babel compile can exceed 15s)
             var script = document.createElement('script');
             script.type = 'text/babel';
             script.src = (isMobile ? 'mobile.js' : 'readerwrangler.js') + '?v=' + APP_VERSION;
