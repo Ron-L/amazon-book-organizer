@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.13";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -714,6 +714,9 @@
             const [relaySetupOpen, setRelaySetupOpen] = useState(false); // Relay Setup modal
             const [relayImporting, setRelayImporting] = useState(false); // true while importing from relay
             const [relayManualCreds, setRelayManualCreds] = useState(false); // show manual credential entry in Relay Setup
+            const [deviceStateSynced, setDeviceStateSynced] = useState(true); // v6.0.0 Phase 2 - false = unsynced changes pending push to relay
+            const deviceStatePushTimerRef = useRef(null); // v6.0.0 Phase 2 - debounce timer for device-state push
+            const deviceStatePushingRef = useRef(false); // v6.0.0 Phase 2 - true while push is in flight
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -1953,6 +1956,57 @@
                 }
             }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, pinnedTagFolders]);
 
+            // v6.0.0 Phase 2 - Debounced device-state push to relay (15s after last change)
+            // Watches same dependencies as auto-save org + books for cross-device sync
+            useEffect(() => {
+                if (syncStatus === 'loading' || books.length === 0) return;
+                if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
+
+                // Mark as unsynced
+                setDeviceStateSynced(false);
+
+                // Clear any existing debounce timer
+                if (deviceStatePushTimerRef.current) {
+                    clearTimeout(deviceStatePushTimerRef.current);
+                }
+
+                // Set new 15-second debounce timer
+                deviceStatePushTimerRef.current = setTimeout(async () => {
+                    if (deviceStatePushingRef.current) return; // Already pushing
+                    deviceStatePushingRef.current = true;
+                    try {
+                        console.log('📡 Device-state push: building payload...');
+                        const payload = await buildDeviceStatePayload();
+                        const jsonString = JSON.stringify(payload);
+                        await window.RWRelay.putDeviceState(jsonString);
+                        setDeviceStateSynced(true);
+                        console.log(`✅ Device-state pushed (${payload.books.totalBooks} books, ${(jsonString.length / 1024).toFixed(0)} KB)`);
+                    } catch (err) {
+                        console.error('❌ Device-state push failed:', err);
+                        // Keep indicator red — will retry on next change
+                    } finally {
+                        deviceStatePushingRef.current = false;
+                    }
+                }, 15000);
+
+                return () => {
+                    if (deviceStatePushTimerRef.current) {
+                        clearTimeout(deviceStatePushTimerRef.current);
+                    }
+                };
+            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, pinnedTagFolders, books]);
+
+            // v6.0.0 Phase 2 - Warn user before closing if device-state is unsynced
+            useEffect(() => {
+                if (deviceStateSynced) return;
+                const handler = (e) => {
+                    e.preventDefault();
+                    e.returnValue = '';
+                };
+                window.addEventListener('beforeunload', handler);
+                return () => window.removeEventListener('beforeunload', handler);
+            }, [deviceStateSynced]);
+
             // v5.1.0-alpha.7 - Helper: Get all books in folder (including subfolders recursively)
             const getAllBooksInFolder = (folderId, folders) => {
                 const folder = folders.find(f => f.id === folderId);
@@ -3155,6 +3209,109 @@
                         {Array.from({ length: emptyStars }, (_, i) => <StarSVG key={`e${i}`} type="empty" size={size} color={color} />)}
                     </span>
                 );
+            };
+
+            // v6.0.0 Phase 2 - Build device-state payload (shared with exportLibrary and device-state push)
+            // Returns the same backup-format object but without relay credentials (mobile already has them from QR pairing)
+            const buildDeviceStatePayload = async () => {
+                const allBooks = await loadBooksFromIndexedDB();
+
+                const bookItems = allBooks.map(book => ({
+                    asin: book.asin,
+                    onWishlist: book.onWishlist || false,
+                    ownershipType: book.ownershipType || 'purchased',
+                    isHidden: book.isHidden || false,
+                    addedToWishlist: book.addedToWishlist || '',
+                    title: book.title,
+                    authors: book.author,
+                    coverUrl: book.coverUrl,
+                    rating: book.rating,
+                    reviewCount: book.ratingCount,
+                    series: book.series,
+                    seriesPosition: book.seriesPosition,
+                    acquisitionDate: book.acquired,
+                    description: book.description,
+                    topReviews: book.topReviews,
+                    binding: book.binding,
+                    currentPrice: book.currentPrice,
+                    listPrice: book.listPrice,
+                    priceAsOf: book.priceAsOf,
+                    targetPrice: book.targetPrice,
+                    genres: book.genres,
+                    genresAsOf: book.genresAsOf,
+                    tags: book.tags,
+                    note: book.userNote,
+                    priceTrigger: book.priceTrigger,
+                    myRating: book.myRating || 0,
+                    userEdited: book.userEdited || undefined
+                }));
+
+                const collectionItems = allBooks
+                    .filter(book => book.collections || book.readStatus)
+                    .map(book => ({
+                        asin: book.asin,
+                        readStatus: book.readStatus || 'UNKNOWN',
+                        collections: book.collections || []
+                    }));
+
+                const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
+                const payload = {
+                    schemaVersion: "2.3",
+                    isBackup: true,
+                    books: {
+                        fetchDate: libraryStatus.loadDate || new Date().toISOString(),
+                        fetcherVersion: "device-state",
+                        totalBooks: bookItems.length,
+                        items: bookItems
+                    },
+                    organization: {
+                        blankImageBooks: Array.from(blankImageBooks),
+                        folders: folders.map(folder => ({
+                            id: folder.id,
+                            name: folder.name,
+                            bookIds: folder.bookIds || [],
+                            parentId: folder.parentId,
+                            collapsed: folder.collapsed,
+                            childFolderIds: folder.childFolderIds
+                        })),
+                        explorerSettings: {
+                            folderSortSettings,
+                            explorerView,
+                            explorerCoverCols,
+                            leftPaneWidth,
+                            visibleColumns,
+                            columnWidths: (() => {
+                                const defaultWidths = {
+                                    title: 200, author: 150, series: 150, seriesNum: 50, rating: 96,
+                                    myRating: 100, dateAdded: 112, price: 80, priceGoal: 80, delta: 80, amazon: 70
+                                };
+                                return Object.fromEntries(
+                                    Object.keys(defaultWidths).map(key => [
+                                        key,
+                                        columnWidths[key] ?? defaultWidths[key]
+                                    ])
+                                );
+                            })()
+                        },
+                        exportDate: new Date().toISOString(),
+                        tagRegistry,
+                        pinnedTagFolders,
+                        hiddenInstances: Array.from(hiddenInstances),
+                        appVersion: ORGANIZER_VERSION
+                    }
+                };
+
+                if (hasRealCollections) {
+                    payload.collections = {
+                        fetchDate: collectionsStatus.loadDate,
+                        fetcherVersion: "device-state",
+                        totalBooksScanned: collectionItems.length,
+                        booksWithCollections: collectionItems.filter(b => b.collections.length > 0).length,
+                        items: collectionItems
+                    };
+                }
+
+                return payload;
             };
 
             // Schema v2.0: Export unified file with organization
