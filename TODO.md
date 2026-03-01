@@ -9,6 +9,15 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔒 Priority 3: Pre-Launch Gate
 
+**0. Consider Amazon Prime**
+   - this is a rotating list of books
+   - books come off this list
+   - how can we make this automatic for the user?
+   - imports library with changes to Amazon Prime list
+   - Gets a dialog that X books were removed and shows the list?
+   - Can't put them in trash where user might try to recover them
+   - UNLESS we flag them as unrecoverable.
+
 **1. Button Consistency Audit** - LOW/LOW (2-4 hours)
    - Audit all button hover states across the app
    - Define 3 button styles: Primary/Secondary/Tertiary
@@ -34,7 +43,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
      - B. Bookmarklet relay integration (replace file-write output with relay upload; extend gap-fill to include reviews; wishlist-add toast feedback: "Already on wishlist" / "Already in library"; orphan detection: compare current vs previous fetch, include removedAsins in manifest)
      - C. App import via relay (polling, decrypt, merge, PUT /device-state, wishlist dedup Layer 1, handle orphan list — flag or auto-move to Trash)
    - **Milestone 2: Mobile Sync (F→G)** ~12-18 hours
-     - F. Settings page + QR pairing (relay setup wizard, credential management, backup/restore)
+     - F. Settings page + QR pairing (relay setup wizard, credential management, backup/restore, update install-bookmarklet.html to include relay credential generation or merge into app onboarding)
      - G. Mobile relay integration (GET /device-state, QR handler, remove file picker from mobile)
    - **Milestone 3: Delete & Cleanup (E→D)** ~12-17 hours
      - E. Wishlist duplicate detection Layers 2 & 3 (per-folder right-click, Tools menu global cleanup)
@@ -73,6 +82,24 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Partial documentation confuses users
    - Impact: Complete feature documentation
 
+**4. Update USER-GUIDE.md for v6.0.0** - MEDIUM/LOW (3-4 hours)
+   - USER-GUIDE.md is significantly out of date — predates relay, mobile sync, tag virtual folders, and other v5.5/v6 features
+   - Update FAQ answers that reference file picker workflow (now relay-based)
+   - Document relay setup and mobile pairing
+   - Update "Where is my data stored?" answer (now includes Cloudflare relay)
+   - Update "Can I use ReaderWrangler on mobile?" answer (now has mobile sync via QR pairing)
+   - Problem: Documentation describes a different product than what users experience
+   - Impact: Users can actually follow the guide
+
+**5. Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
+   - Prerequisites: Mobile sync (Milestone 2) complete
+   - Fill in USER-GUIDE.md FAQ disaster recovery placeholders
+   - Document: phone exposes relay credentials in settings (so user can recover them)
+   - Document: desktop Relay Setup "enter existing credentials" path (restore access to backend state)
+   - Document: backup files include relay credentials (File > Export)
+   - Problem: Users have no guidance for recovering from data loss
+   - Impact: Confidence that data is recoverable
+
 ---
 
 ### 🚀 Priority 5: Launch
@@ -86,7 +113,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 **1. 🏷️ Deferred Desktop Polish** - LOW/LOW (2-3 hours)
    - Left pane keyboard navigation: Up/Down arrow, Left/Right collapse/expand, Home/End
-   - Desktop Mode escape hatch: "Return to Mobile" button when mobile viewport has `desktopMode` flag
+   - Desktop Mode escape hatch: "Return to Mobile" button when mobile viewport has `desktopMode` flag. Required for PWA — no pull-to-refresh or browser menu available. Consider using sessionStorage instead of localStorage so flag auto-resets on app close.
    - Directional shadow consistency with mobile cover view
 
 **2. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
