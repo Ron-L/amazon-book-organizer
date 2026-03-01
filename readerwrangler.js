@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6974,7 +6974,7 @@
                                                                     const baseUrl = (isLocalhost || isDevRepo) ? 'https://ron-l.github.io/readerwranglerdev' : 'https://readerwrangler.com';
                                                                     const creds = btoa(JSON.stringify({ channelId: stored.channelId, passphrase: stored.passphrase }));
                                                                     const pairingUrl = `${baseUrl}/readerwrangler.html#pair=${creds}`;
-                                                                    new window.QRCode(el, { text: pairingUrl, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff' });
+                                                                    new window.QRCode(el, { text: pairingUrl, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.L });
                                                                 }
                                                             },
                                                             style: { display: 'inline-block' }
