@@ -5,7 +5,7 @@
         // Single source of truth - no duplication!
         console.log(`✅ APP_VERSION: ${APP_VERSION} (from readerwrangler.html)`);
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6938,6 +6938,7 @@
                                             // Already configured — use shared bookmarklet generator
                                             const bookmarklets = generateRelayBookmarklets(stored.channelId, stored.passphrase);
                                             const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                                            const isDevRepo = window.location.hostname === 'ron-l.github.io' && window.location.pathname.startsWith('/readerwranglerdev');
                                             return React.createElement(React.Fragment, null,
                                                 React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-success)', border: '1px solid var(--border-success, #86efac)' } },
                                                     React.createElement('p', { className: 'font-semibold' }, '✅ Relay is configured'),
@@ -6970,7 +6971,7 @@
                                                         React.createElement('div', {
                                                             ref: (el) => {
                                                                 if (el && !el.querySelector('canvas') && !el.querySelector('img') && window.QRCode) {
-                                                                    const baseUrl = (isLocalhost ? `http://${window.location.host}` : 'https://readerwrangler.com');
+                                                                    const baseUrl = (isLocalhost || isDevRepo) ? 'https://ron-l.github.io/readerwranglerdev' : 'https://readerwrangler.com';
                                                                     const creds = btoa(JSON.stringify({ channelId: stored.channelId, passphrase: stored.passphrase }));
                                                                     const pairingUrl = `${baseUrl}/readerwrangler.html#pair=${creds}`;
                                                                     new window.QRCode(el, { text: pairingUrl, width: 200, height: 200, colorDark: '#000000', colorLight: '#ffffff' });
