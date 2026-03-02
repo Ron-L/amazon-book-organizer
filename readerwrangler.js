@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.21";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.22";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3503,6 +3503,7 @@
                     setExplorerSort([{ column: 'dateAdded', direction: 'desc' }]);
                     setFolderSortSettings({}); // v5.0.0-alpha.100 - Clear per-folder sort settings
                     setTagRegistry({}); // v5.0.0-alpha.175.28 - Clear tag registry on reset
+                    setPinnedTagFolders([]); // v5.5.15 - Clear pinned tag virtual folders on reset
                     setExplorerView('list');
 
                     console.log('✅ Cleared library - app reset to initial state');
@@ -10484,137 +10485,35 @@
                                                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
                                                 <h2 style={{ fontSize: '22px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Welcome to ReaderWrangler</h2>
                                                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Organize your Kindle library your way.</p>
-                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>ReaderWrangler's bookmarklet uses a secure relay to transfer your library from Amazon to the app. Once set up, your library automatically syncs to your phone. Generate a connection below, install the bookmarklet, and fetch your books — no files to manage.</p>
+                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>Set up a secure relay connection, install the bookmarklet, and fetch your books from Amazon — all from one place.</p>
 
-                                                {(() => {
-                                                    const stored = (() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY)); } catch { return null; } })();
-                                                    const hasCredentials = stored && stored.channelId;
-                                                    const bookmarklets = hasCredentials ? generateRelayBookmarklets(stored.channelId, stored.passphrase) : [];
-                                                    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                                                {React.createElement(React.Fragment, null,
+                                                    React.createElement('button', {
+                                                        onClick: () => { setRelaySetupOpen(true); setRelaySetupSection(null); },
+                                                        style: {
+                                                            background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
+                                                            border: 'none', borderRadius: '8px', padding: '14px 28px',
+                                                            fontSize: '15px', fontWeight: '600', cursor: 'pointer', width: '100%',
+                                                            marginBottom: '16px'
+                                                        }
+                                                    }, 'Open Relay Setup'),
+                                                    React.createElement('p', { style: { fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' } }, 'Or use File \u203A Relay Setup from the menu bar anytime.'),
 
-                                                    return React.createElement(React.Fragment, null,
-                                                        // Step 1: Generate Connection
-                                                        React.createElement('div', {
-                                                            style: {
-                                                                background: hasCredentials ? 'var(--bg-success, #f0fdf4)' : 'var(--bg-selected)',
-                                                                border: `1px solid ${hasCredentials ? 'var(--border-success, #86efac)' : 'var(--border-accent)'}`,
-                                                                borderRadius: '8px', padding: '16px', marginBottom: '12px', textAlign: 'left'
-                                                            }
-                                                        },
-                                                            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' } },
-                                                                React.createElement('span', { style: { fontSize: '18px', fontWeight: '700', color: hasCredentials ? 'var(--text-success, #16a34a)' : 'var(--text-accent-strong)' } }, hasCredentials ? '✅' : '①'),
-                                                                React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' } }, 'Set Up Secure Relay')
-                                                            ),
-                                                            hasCredentials
-                                                                ? React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', margin: 0 } }, `Relay active (${stored.channelId.slice(0, 8)}…${stored.channelId.slice(-4)})`)
-                                                                : React.createElement(React.Fragment, null,
-                                                                    React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '12px' } }, 'Creates an encrypted channel between your Amazon bookmarklet and this app. One-time setup.'),
-                                                                    React.createElement('button', {
-                                                                        onClick: () => {
-                                                                            const channelId = crypto.randomUUID();
-                                                                            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-                                                                            let passphrase = '';
-                                                                            const arr = new Uint8Array(32);
-                                                                            crypto.getRandomValues(arr);
-                                                                            for (let i = 0; i < 32; i++) passphrase += chars[arr[i] % chars.length];
-                                                                            localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
-                                                                            if (window.RWRelay) { window.RWRelay.initFromStorage(); }
-                                                                            // Force re-render to show steps 2 & 3
-                                                                            setRelayManifest({ _credentialsGenerated: true });
-                                                                        },
-                                                                        style: {
-                                                                            background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
-                                                                            border: 'none', borderRadius: '6px', padding: '10px 20px',
-                                                                            fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%'
-                                                                        }
-                                                                    }, 'Generate Credentials')
-                                                                )
-                                                        ),
-
-                                                        // Step 2: Install Bookmarklet
-                                                        React.createElement('div', {
-                                                            style: {
-                                                                background: hasCredentials ? 'var(--bg-selected)' : 'var(--bg-surface-alt)',
-                                                                border: `1px solid ${hasCredentials ? 'var(--border-accent)' : 'var(--border-default)'}`,
-                                                                borderRadius: '8px', padding: '16px', marginBottom: '12px', textAlign: 'left',
-                                                                opacity: hasCredentials ? 1 : 0.5
-                                                            }
-                                                        },
-                                                            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: hasCredentials ? '10px' : '0' } },
-                                                                React.createElement('span', { style: { fontSize: '18px', fontWeight: '700', color: 'var(--text-accent-strong)' } }, '②'),
-                                                                React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' } }, 'Install Bookmarklet')
-                                                            ),
-                                                            hasCredentials && React.createElement(React.Fragment, null,
-                                                                React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '12px' } }, 'If you haven\u2019t already, drag to your bookmarks bar:'),
-                                                                React.createElement('div', {
-                                                                    style: {
-                                                                        display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center',
-                                                                        background: 'var(--bg-muted)', borderRadius: '6px', padding: '12px'
-                                                                    }
-                                                                },
-                                                                    ...bookmarklets.map((bm) =>
-                                                                        React.createElement('div', { key: bm.env, style: { textAlign: 'center' } },
-                                                                            React.createElement('a', {
-                                                                                href: bm.href,
-                                                                                onClick: (e) => { e.preventDefault(); alert("Don't click! Drag this button to your bookmarks bar instead."); },
-                                                                                style: {
-                                                                                    display: 'inline-block', padding: '8px 16px', background: bm.gradient,
-                                                                                    color: 'white', borderRadius: '8px', fontWeight: 'bold', fontSize: '13px',
-                                                                                    textDecoration: 'none', cursor: 'grab'
-                                                                                }
-                                                                            }, `${bm.emoji} ${bm.label}`),
-                                                                            React.createElement('div', { style: { fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' } }, bm.subtitle)
-                                                                        )
-                                                                    )
-                                                                ),
-                                                                isLocalhost && React.createElement('p', { style: { color: 'var(--text-muted)', fontSize: '11px', marginTop: '8px', fontStyle: 'italic' } }, 'Developer mode: showing all 3 environments.')
-                                                            )
-                                                        ),
-
-                                                        // Step 3: Fetch Your Library
-                                                        React.createElement('div', {
-                                                            style: {
-                                                                background: hasCredentials ? 'var(--bg-selected)' : 'var(--bg-surface-alt)',
-                                                                border: `1px solid ${hasCredentials ? 'var(--border-accent)' : 'var(--border-default)'}`,
-                                                                borderRadius: '8px', padding: '16px', marginBottom: '16px', textAlign: 'left',
-                                                                opacity: hasCredentials ? 1 : 0.5
-                                                            }
-                                                        },
-                                                            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: hasCredentials ? '8px' : '0' } },
-                                                                React.createElement('span', { style: { fontSize: '18px', fontWeight: '700', color: 'var(--text-accent-strong)' } }, '③'),
-                                                                React.createElement('span', { style: { fontWeight: '600', fontSize: '14px', color: 'var(--text-primary)' } }, 'Fetch Your Library')
-                                                            ),
-                                                            hasCredentials && React.createElement(React.Fragment, null,
-                                                                React.createElement('p', { style: { color: 'var(--text-secondary)', fontSize: '13px', margin: 0 } },
-                                                                    'Go to ', React.createElement('a', { href: 'https://www.amazon.com/yourbooks', target: '_blank', style: { color: 'var(--text-accent)', textDecoration: 'underline' } }, 'amazon.com'), ', click the bookmarklet in your toolbar, and follow the prompts. When it finishes, return here and use ', React.createElement('strong', null, 'File \u203A Import from Relay'), ' to load your library.'
-                                                                )
-                                                            )
-                                                        ),
-
-                                                        // Security note
-                                                        hasCredentials && React.createElement('div', {
-                                                            style: {
-                                                                background: 'var(--bg-info, #eff6ff)', border: '1px solid var(--border-info, #93c5fd)',
-                                                                borderRadius: '6px', padding: '10px 12px', marginBottom: '16px', textAlign: 'left', fontSize: '12px'
-                                                            }
-                                                        }, '🔒 Your data is encrypted in your browser before transit. The Cloudflare relay never sees plaintext.'),
-
-                                                        // Divider + backup import
-                                                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' } },
-                                                            React.createElement('div', { style: { flex: 1, borderTop: '1px solid var(--border-default)' } }),
-                                                            React.createElement('span', { style: { fontSize: '12px', color: 'var(--text-muted)' } }, 'or'),
-                                                            React.createElement('div', { style: { flex: 1, borderTop: '1px solid var(--border-default)' } })
-                                                        ),
-                                                        React.createElement('button', {
-                                                            onClick: () => importLibrary(),
-                                                            style: {
-                                                                background: 'var(--bg-surface)', color: 'var(--text-accent)',
-                                                                border: '2px solid var(--text-accent)', borderRadius: '6px', padding: '8px 20px',
-                                                                fontSize: '13px', fontWeight: '600', cursor: 'pointer', width: '100%'
-                                                            }
-                                                        }, 'Load Backup File')
-                                                    );
-                                                })()}
+                                                    // Divider + backup import
+                                                    React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' } },
+                                                        React.createElement('div', { style: { flex: 1, borderTop: '1px solid var(--border-default)' } }),
+                                                        React.createElement('span', { style: { fontSize: '12px', color: 'var(--text-muted)' } }, 'or'),
+                                                        React.createElement('div', { style: { flex: 1, borderTop: '1px solid var(--border-default)' } })
+                                                    ),
+                                                    React.createElement('button', {
+                                                        onClick: () => importLibrary(),
+                                                        style: {
+                                                            background: 'var(--bg-surface)', color: 'var(--text-accent)',
+                                                            border: '2px solid var(--text-accent)', borderRadius: '6px', padding: '8px 20px',
+                                                            fontSize: '13px', fontWeight: '600', cursor: 'pointer', width: '100%'
+                                                        }
+                                                    }, 'Load Backup File')
+                                                )}
                                             </div>
                                         </div>
                                     ) : explorerView === 'list' ? (
