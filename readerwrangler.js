@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.27";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.28";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5984,12 +5984,15 @@
                                 <div style={{ fontSize: '64px', marginBottom: '20px' }}>📚</div>
                                 <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
                                 <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Organize your Kindle library your way.</p>
-                                <ul style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '32px', lineHeight: '1.8', textAlign: 'left', paddingLeft: '20px', listStyleType: 'disc' }}>
+                                <ul style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', lineHeight: '1.8', textAlign: 'left', paddingLeft: '20px', listStyleType: 'disc' }}>
                                     <li>Set up a secure relay connection between ReaderWrangler pages</li>
                                     <li>Install the bookmarklet that navigates to those pages</li>
+                                    <li style={{ color: 'var(--text-secondary)' }}>Optionally pair with your phone</li>
                                     <li>Fetch your books and collections from Amazon</li>
                                     <li>Organize your library, your way</li>
                                 </ul>
+
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.5' }}>Start by setting up a secure relay connection and installing the bookmarklet.</p>
 
                                 <button
                                     onClick={() => { setRelaySetupOpen(true); setRelaySetupSection(null); }}
@@ -5998,7 +6001,7 @@
                                         border: 'none', borderRadius: '10px', padding: '16px 32px',
                                         fontSize: '16px', fontWeight: '600', cursor: 'pointer', width: '100%',
                                         boxShadow: '0 4px 14px rgba(102, 126, 234, 0.4)',
-                                        marginBottom: '12px'
+                                        marginBottom: '8px'
                                     }}>
                                     Open Relay Setup
                                 </button>
@@ -7182,126 +7185,124 @@
                                             // ─── Section 1: Credentials ───
                                             sectionHeader('credentials', '1', 'Encryption Keys', hasCreds, false),
                                             activeSection === 'credentials' && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                                // ── Status area ──
                                                 hasCreds
-                                                    ? React.createElement(React.Fragment, null,
-                                                        React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-success)', border: '1px solid var(--border-success, #86efac)', marginBottom: '12px' } },
-                                                            React.createElement('p', { className: 'font-semibold' }, '✅ Encryption keys are set up'),
-                                                            React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
-                                                        ),
+                                                    ? React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-success)', border: '1px solid var(--border-success, #86efac)', marginBottom: '12px' } },
+                                                        React.createElement('p', { className: 'font-semibold' }, '✅ Encryption keys are set up'),
+                                                        React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
+                                                    )
+                                                    : React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Encryption keys secure your data between ReaderWrangler pages via Cloudflare. They are NOT your Amazon password. Choose one of the methods below to generate or load them.'),
+
+                                                // ── Action buttons (unified for both states) ──
+                                                React.createElement('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: relayManualCreds ? '12px' : '0' } },
+                                                    // Generate / Regenerate
+                                                    React.createElement('button', {
+                                                        onClick: () => {
+                                                            if (hasCreds && !confirm('This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone. Continue?')) return;
+                                                            const channelId = crypto.randomUUID();
+                                                            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                                                            let passphrase = '';
+                                                            const arr = new Uint8Array(32);
+                                                            crypto.getRandomValues(arr);
+                                                            for (let i = 0; i < 32; i++) passphrase += chars[arr[i] % chars.length];
+                                                            localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
+                                                            if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                            setRelayManualCreds(false);
+                                                            // Stay in section 1 to show "set up" status, then auto-advance
+                                                            setRelaySetupOpen(false);
+                                                            setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('bookmarklet'); }, 100);
+                                                        },
+                                                        className: 'px-3 py-1.5 rounded text-sm',
+                                                        style: hasCreds
+                                                            ? { background: 'var(--bg-muted)', color: 'var(--text-danger)', border: '1px solid var(--border-default)', cursor: 'pointer' }
+                                                            : { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer' }
+                                                    }, hasCreds ? 'Regenerate Encryption Keys' : 'Generate Encryption Keys'),
+                                                    // Manually enter
+                                                    React.createElement('button', {
+                                                        onClick: () => setRelayManualCreds(!relayManualCreds),
+                                                        className: 'px-3 py-1.5 rounded text-sm',
+                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-accent, #667eea)', border: '1px solid var(--text-accent, #667eea)', cursor: 'pointer' }
+                                                    }, 'Manually enter encryption keys'),
+                                                    // Load from backup
+                                                    React.createElement('button', {
+                                                        onClick: () => {
+                                                            const input = document.createElement('input');
+                                                            input.type = 'file';
+                                                            input.accept = '.json';
+                                                            input.onchange = (e) => {
+                                                                const file = e.target.files[0];
+                                                                if (!file) return;
+                                                                const reader = new FileReader();
+                                                                reader.onload = (ev) => {
+                                                                    try {
+                                                                        const data = JSON.parse(ev.target.result);
+                                                                        if (data.relay && data.relay.channelId && data.relay.passphrase) {
+                                                                            localStorage.setItem(RELAY_KEY, JSON.stringify(data.relay));
+                                                                            if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                                            setRelayManualCreds(false);
+                                                                            // Close and reopen to refresh state
+                                                                            setRelaySetupOpen(false);
+                                                                            setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('bookmarklet'); }, 100);
+                                                                        } else {
+                                                                            alert('No encryption keys found in this backup file.');
+                                                                        }
+                                                                    } catch { alert('Could not read file. Make sure it is a ReaderWrangler backup (.json).'); }
+                                                                };
+                                                                reader.readAsText(file);
+                                                            };
+                                                            input.click();
+                                                        },
+                                                        className: 'px-3 py-1.5 rounded text-sm',
+                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
+                                                    }, 'Load from backup file'),
+                                                    // Backup button (only when keys exist)
+                                                    hasCreds && React.createElement('button', {
+                                                        onClick: () => exportLibrary(),
+                                                        className: 'px-3 py-1.5 rounded text-sm',
+                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
+                                                    }, 'Backup')
+                                                ),
+
+                                                // ── Manual entry fields (expanded/collapsed) ──
+                                                relayManualCreds && React.createElement('div', { className: 'space-y-2', style: { borderTop: '1px solid var(--border-default)', paddingTop: '12px' } },
+                                                    React.createElement('p', { className: 'text-sm font-semibold' }, 'Enter existing encryption keys:'),
+                                                    React.createElement('input', {
+                                                        id: 'relay-manual-channel',
+                                                        type: 'text',
+                                                        placeholder: 'Channel ID (e.g. 626a3744-6430-...)',
+                                                        className: 'w-full px-3 py-2 rounded text-sm',
+                                                        style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontFamily: 'monospace' }
+                                                    }),
+                                                    React.createElement('input', {
+                                                        id: 'relay-manual-passphrase',
+                                                        type: 'text',
+                                                        placeholder: 'Passphrase',
+                                                        className: 'w-full px-3 py-2 rounded text-sm',
+                                                        style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontFamily: 'monospace' }
+                                                    }),
+                                                    React.createElement('div', { className: 'flex gap-2 justify-end' },
+                                                        React.createElement('button', {
+                                                            onClick: () => setRelayManualCreds(false),
+                                                            className: 'px-3 py-1.5 rounded text-sm',
+                                                            style: { background: 'var(--bg-muted)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
+                                                        }, 'Cancel'),
                                                         React.createElement('button', {
                                                             onClick: () => {
-                                                                if (confirm('This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone. Continue?')) {
-                                                                    localStorage.removeItem(RELAY_KEY);
-                                                                    if (window.RWRelay) { window.RWRelay.initFromStorage(); }
-                                                                    setRelayManifest(null);
-                                                                    setRelaySetupSection('credentials');
-                                                                    setRelaySetupOpen(false);
-                                                                    setTimeout(() => setRelaySetupOpen(true), 100);
-                                                                }
+                                                                const ch = document.getElementById('relay-manual-channel')?.value?.trim();
+                                                                const pp = document.getElementById('relay-manual-passphrase')?.value?.trim();
+                                                                if (!ch || !pp) { alert('Both Channel ID and Passphrase are required.'); return; }
+                                                                localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId: ch, passphrase: pp }));
+                                                                if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                                setRelayManualCreds(false);
+                                                                // Close and reopen to refresh state, advance to bookmarklet
+                                                                setRelaySetupOpen(false);
+                                                                setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('bookmarklet'); }, 100);
                                                             },
                                                             className: 'px-3 py-1.5 rounded text-sm',
-                                                            style: { background: 'var(--bg-muted)', color: 'var(--text-danger)', border: '1px solid var(--border-default)', cursor: 'pointer' }
-                                                        }, 'Regenerate Encryption Keys')
+                                                            style: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer' }
+                                                        }, 'Save Encryption Keys')
                                                     )
-                                                    : React.createElement(React.Fragment, null,
-                                                        React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'These are your private encryption keys — they are NOT your Amazon password. ReaderWrangler uses them to securely encrypt your book data before transferring it between pages. Only you can decrypt it.'),
-                                                        React.createElement('div', { className: 'flex gap-3 mb-3' },
-                                                            React.createElement('button', {
-                                                                onClick: () => {
-                                                                    const channelId = crypto.randomUUID();
-                                                                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-                                                                    let passphrase = '';
-                                                                    const arr = new Uint8Array(32);
-                                                                    crypto.getRandomValues(arr);
-                                                                    for (let i = 0; i < 32; i++) passphrase += chars[arr[i] % chars.length];
-                                                                    localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
-                                                                    if (window.RWRelay) { window.RWRelay.initFromStorage(); }
-                                                                    setRelayManualCreds(false);
-                                                                    setRelaySetupSection('bookmarklet');
-                                                                },
-                                                                className: 'px-4 py-2 rounded-lg font-medium text-sm',
-                                                                style: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer' }
-                                                            }, 'Generate Encryption Keys')
-                                                        ),
-                                                        React.createElement('div', { style: { borderTop: '1px solid var(--border-default)', paddingTop: '12px' } },
-                                                            !relayManualCreds
-                                                                ? React.createElement('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-                                                                    React.createElement('button', {
-                                                                        onClick: () => setRelayManualCreds(true),
-                                                                        className: 'px-3 py-1.5 rounded text-sm',
-                                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-accent, #667eea)', border: '1px solid var(--text-accent, #667eea)', cursor: 'pointer' }
-                                                                    }, 'I have existing encryption keys'),
-                                                                    React.createElement('button', {
-                                                                        onClick: () => {
-                                                                            const input = document.createElement('input');
-                                                                            input.type = 'file';
-                                                                            input.accept = '.json';
-                                                                            input.onchange = (e) => {
-                                                                                const file = e.target.files[0];
-                                                                                if (!file) return;
-                                                                                const reader = new FileReader();
-                                                                                reader.onload = (ev) => {
-                                                                                    try {
-                                                                                        const data = JSON.parse(ev.target.result);
-                                                                                        if (data.relay && data.relay.channelId && data.relay.passphrase) {
-                                                                                            localStorage.setItem(RELAY_KEY, JSON.stringify(data.relay));
-                                                                                            if (window.RWRelay) { window.RWRelay.initFromStorage(); }
-                                                                                            setRelaySetupSection('bookmarklet');
-                                                                                            // Close and reopen to refresh state
-                                                                                            setRelaySetupOpen(false);
-                                                                                            setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('bookmarklet'); }, 100);
-                                                                                        } else {
-                                                                                            alert('No encryption keys found in this backup file.');
-                                                                                        }
-                                                                                    } catch { alert('Could not read file. Make sure it is a ReaderWrangler backup (.json).'); }
-                                                                                };
-                                                                                reader.readAsText(file);
-                                                                            };
-                                                                            input.click();
-                                                                        },
-                                                                        className: 'px-3 py-1.5 rounded text-sm',
-                                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
-                                                                    }, 'Load from backup file')
-                                                                )
-                                                                : React.createElement('div', { className: 'space-y-2' },
-                                                                    React.createElement('p', { className: 'text-sm font-semibold' }, 'Enter existing encryption keys:'),
-                                                                    React.createElement('input', {
-                                                                        id: 'relay-manual-channel',
-                                                                        type: 'text',
-                                                                        placeholder: 'Channel ID (e.g. 626a3744-6430-...)',
-                                                                        className: 'w-full px-3 py-2 rounded text-sm',
-                                                                        style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontFamily: 'monospace' }
-                                                                    }),
-                                                                    React.createElement('input', {
-                                                                        id: 'relay-manual-passphrase',
-                                                                        type: 'text',
-                                                                        placeholder: 'Passphrase',
-                                                                        className: 'w-full px-3 py-2 rounded text-sm',
-                                                                        style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontFamily: 'monospace' }
-                                                                    }),
-                                                                    React.createElement('div', { className: 'flex gap-2 justify-end' },
-                                                                        React.createElement('button', {
-                                                                            onClick: () => setRelayManualCreds(false),
-                                                                            className: 'px-3 py-1.5 rounded text-sm',
-                                                                            style: { background: 'var(--bg-muted)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
-                                                                        }, 'Cancel'),
-                                                                        React.createElement('button', {
-                                                                            onClick: () => {
-                                                                                const ch = document.getElementById('relay-manual-channel')?.value?.trim();
-                                                                                const pp = document.getElementById('relay-manual-passphrase')?.value?.trim();
-                                                                                if (!ch || !pp) { alert('Both Channel ID and Passphrase are required.'); return; }
-                                                                                localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId: ch, passphrase: pp }));
-                                                                                if (window.RWRelay) { window.RWRelay.initFromStorage(); }
-                                                                                setRelayManualCreds(false);
-                                                                                setRelaySetupSection('bookmarklet');
-                                                                            },
-                                                                            className: 'px-3 py-1.5 rounded text-sm',
-                                                                            style: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer' }
-                                                                        }, 'Save Encryption Keys')
-                                                                    )
-                                                                )
-                                                        )
-                                                    )
+                                                )
                                             ),
 
                                             // ─── Section 2: Install Bookmarklet ───
