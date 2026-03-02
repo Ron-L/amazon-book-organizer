@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.11';
+const MOBILE_VERSION = '1.1.0-alpha.12';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -1961,7 +1961,8 @@ function MobileApp() {
         return 'prompt'; // 'prompt' | 'scanning' | 'success' | 'error'
     });
     const [pairingError, setPairingError] = useState(null);
-    const [showManualEntry, setShowManualEntry] = useState(false);
+    const [pairChannel, setPairChannel] = useState('');
+    const [pairPassphrase, setPairPassphrase] = useState('');
     const qrScannerRef = useRef(null);
     const [importStatus, setImportStatus] = useState(null);
     const [error, setError] = useState(null);
@@ -2313,10 +2314,14 @@ function MobileApp() {
                         const b64 = hash.slice(6);
                         const creds = JSON.parse(atob(b64));
                         if (!creds.channelId || !creds.passphrase) throw new Error('Invalid credentials');
-                        // Stop scanner and complete pairing
+                        // Stop scanner and populate fields for user review
                         scanner.stop().catch(() => {});
                         qrScannerRef.current = null;
-                        completePairing(creds, 'via QR scan');
+                        setPairChannel(creds.channelId);
+                        setPairPassphrase(creds.passphrase);
+
+                        setPairingError(null);
+                        setPairingScreen('prompt');
                     } catch (e) {
                         console.error('❌ QR decode error:', e);
                         setPairingError('Not a valid ReaderWrangler pairing code. Try again.');
@@ -2340,13 +2345,13 @@ function MobileApp() {
 
     // v6.0.0 Phase 2 - Manual credential entry for pairing
     const handleManualPairing = () => {
-        const ch = document.getElementById('mobile-pair-channel')?.value?.trim();
-        const pp = document.getElementById('mobile-pair-passphrase')?.value?.trim();
+        const ch = pairChannel.trim();
+        const pp = pairPassphrase.trim();
         if (!ch || !pp) { setPairingError('Both Channel ID and Passphrase are required.'); return; }
         completePairing({ channelId: ch, passphrase: pp }, 'manually');
     };
 
-    // v6.0.0 Phase 2 - Import credentials from saved file
+    // v6.0.0 Phase 2 - Import credentials from saved file → populate fields
     const handleFileCredentials = () => {
         const input = document.createElement('input');
         input.type = 'file';
@@ -2358,7 +2363,10 @@ function MobileApp() {
                 const text = await file.text();
                 const creds = JSON.parse(text);
                 if (!creds.channelId || !creds.passphrase) throw new Error('Missing channelId or passphrase');
-                completePairing(creds, 'from file');
+                setPairChannel(creds.channelId);
+                setPairPassphrase(creds.passphrase);
+                setShowManualEntry(true);
+                setPairingError(null);
             } catch (err) {
                 setPairingError('Invalid credentials file. Expected JSON with channelId and passphrase.');
             }
@@ -2423,14 +2431,17 @@ function MobileApp() {
 
                         {/* Primary: Scan QR */}
                         <button onClick={startQRScanner} style={{
-                            display: 'block', width: '100%', padding: '16px', marginBottom: '10px',
+                            display: 'block', width: '100%', padding: '16px', marginBottom: '6px',
                             background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
                             border: 'none', borderRadius: '12px', fontSize: '1.05em', fontWeight: 600, cursor: 'pointer'
                         }}>Scan QR Code</button>
+                        <div style={{ textAlign: 'center', color: 'var(--text-muted, #64748b)', fontSize: '0.8em', lineHeight: 1.4, marginBottom: '16px' }}>
+                            On your computer, open <strong>File → Relay Setup</strong> to display the QR code.
+                        </div>
 
                         {/* Secondary: Import from file */}
                         <button onClick={handleFileCredentials} style={{
-                            display: 'block', width: '100%', padding: '14px', marginBottom: '10px',
+                            display: 'block', width: '100%', padding: '14px', marginBottom: '16px',
                             background: 'var(--bg-muted, #f1f5f9)', color: 'var(--text-primary, #1e293b)',
                             border: '1px solid var(--border-default, #e2e8f0)', borderRadius: '12px',
                             fontSize: '0.95em', cursor: 'pointer'
@@ -2440,23 +2451,23 @@ function MobileApp() {
                             <div style={{ color: '#dc2626', fontSize: '0.85em', textAlign: 'center', marginTop: '4px', marginBottom: '4px' }}>{pairingError}</div>
                         )}
 
-                        {/* Tertiary: Manual entry (collapsed by default) */}
-                        <button onClick={() => setShowManualEntry(prev => !prev)}
-                            style={{ display: 'block', width: '100%', padding: '10px', marginTop: '8px', background: 'none', border: 'none', color: 'var(--text-muted, #64748b)', fontSize: '0.85em', cursor: 'pointer', textAlign: 'center' }}>
-                            {showManualEntry ? 'Enter credentials manually ▾' : 'Enter credentials manually ▸'}
-                        </button>
-                        {showManualEntry && <div style={{ marginTop: '8px' }}>
-                            <input id="mobile-pair-channel" type="text" placeholder="Channel ID"
+                        {/* Credential fields — populated by scan, file import, or manual typing */}
+                        <div style={{ marginTop: '4px' }}>
+                            <input value={pairChannel} onChange={(e) => setPairChannel(e.target.value)} type="text" placeholder="Channel ID"
                                 style={{ width: '100%', padding: '12px', marginBottom: '8px', borderRadius: '8px', border: '1px solid var(--border-default, #e2e8f0)', background: 'var(--bg-surface, #fff)', color: 'var(--text-primary, #1e293b)', fontFamily: 'monospace', fontSize: '0.85em', boxSizing: 'border-box' }} />
-                            <input id="mobile-pair-passphrase" type="text" placeholder="Passphrase"
+                            <input value={pairPassphrase} onChange={(e) => setPairPassphrase(e.target.value)} type="text" placeholder="Passphrase"
                                 style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '8px', border: '1px solid var(--border-default, #e2e8f0)', background: 'var(--bg-surface, #fff)', color: 'var(--text-primary, #1e293b)', fontFamily: 'monospace', fontSize: '0.85em', boxSizing: 'border-box' }} />
-                            <button onClick={handleManualPairing} style={{
+                            <button onClick={handleManualPairing} disabled={!pairChannel.trim() || !pairPassphrase.trim()} style={{
                                 display: 'block', width: '100%', padding: '14px',
-                                background: 'var(--bg-muted, #f1f5f9)', color: 'var(--text-primary, #1e293b)',
-                                border: '1px solid var(--border-default, #e2e8f0)', borderRadius: '12px',
-                                fontSize: '1em', cursor: 'pointer'
+                                background: (!pairChannel.trim() || !pairPassphrase.trim()) ? 'var(--bg-muted, #e2e8f0)' : 'var(--bg-accent, #3b82f6)',
+                                color: (!pairChannel.trim() || !pairPassphrase.trim()) ? 'var(--text-muted, #94a3b8)' : '#ffffff',
+                                border: 'none', borderRadius: '12px',
+                                fontSize: '1em', fontWeight: 600, cursor: (!pairChannel.trim() || !pairPassphrase.trim()) ? 'default' : 'pointer'
                             }}>Pair using these credentials</button>
-                        </div>}
+                            <div style={{ textAlign: 'center', color: 'var(--text-muted, #64748b)', fontSize: '0.78em', lineHeight: 1.4, marginTop: '10px' }}>
+                                Save your credentials on your phone so you can re-pair without your computer if you ever need to reset the app.
+                            </div>
+                        </div>
 
                         {/* Skip */}
                         <div style={{ textAlign: 'center', marginTop: '24px' }}>
@@ -2464,11 +2475,6 @@ function MobileApp() {
                                 background: 'none', border: 'none', color: 'var(--text-muted, #64748b)',
                                 fontSize: '0.85em', cursor: 'pointer', textDecoration: 'underline'
                             }}>Skip — use local data only</button>
-                        </div>
-
-                        {/* How it works hint */}
-                        <div style={{ textAlign: 'center', marginTop: '20px', color: 'var(--text-muted, #64748b)', fontSize: '0.8em', lineHeight: 1.5 }}>
-                            On your computer: <strong>File → Relay Setup</strong> → scan the QR code, or save credentials to import here.
                         </div>
                     </div>
                 )}
