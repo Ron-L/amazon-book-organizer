@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.29";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.30";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7240,9 +7240,9 @@
                                                                             localStorage.setItem(RELAY_KEY, JSON.stringify(data.relay));
                                                                             if (window.RWRelay) { window.RWRelay.initFromStorage(); }
                                                                             setRelayManualCreds(false);
-                                                                            // Close and reopen to refresh state
+                                                                            // Close and reopen to refresh state, stay on section 1
                                                                             setRelaySetupOpen(false);
-                                                                            setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('bookmarklet'); }, 100);
+                                                                            setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                         } else {
                                                                             alert('No encryption keys found in this backup file.');
                                                                         }
@@ -7302,9 +7302,9 @@
                                                                 localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId: ch, passphrase: pp }));
                                                                 if (window.RWRelay) { window.RWRelay.initFromStorage(); }
                                                                 setRelayManualCreds(false);
-                                                                // Close and reopen to refresh state, advance to bookmarklet
+                                                                // Close and reopen to refresh state, stay on section 1
                                                                 setRelaySetupOpen(false);
-                                                                setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('bookmarklet'); }, 100);
+                                                                setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                             },
                                                             className: 'px-3 py-1.5 rounded text-sm',
                                                             style: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer' }
