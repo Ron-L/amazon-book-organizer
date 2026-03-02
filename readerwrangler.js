@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.23";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.24";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7063,6 +7063,7 @@
                             </button>
                         </div>
                     )}
+                    </>)}
 
                     {statusModalOpen && (() => {
                         // Schema v2.0: Simplified informational modal (no action buttons)
@@ -8990,7 +8991,8 @@
                         </div>
                     )}
 
-                    {/* v5.0.0 - Book Explorer view (always rendered) */}
+                    {/* v5.0.0 - Book Explorer view (hidden when no books - welcome screen shown instead) */}
+                    {!(books.length === 0 && syncStatus !== 'loading') && (
                     <div className="flex-1 min-h-0 flex mb-6">
                         {/* Left pane: Folder tree */}
                             {/* v5.0.0-alpha.49 - onDragOver prevents browser "split view" prompt */}
@@ -11892,7 +11894,7 @@
                                 </div>
                             </div>
                         </div>
-                    </>)}
+                    )}
 
                     {/* v4.16.0.n - Removed floating selection box, now shown in footer */}
 
