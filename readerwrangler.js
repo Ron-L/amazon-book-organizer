@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.24";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.25";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2978,7 +2978,7 @@
                     console.error('❌ Relay import failed:', err);
                     const isNoData = err.message && err.message.includes('No data available');
                     const msg = isNoData
-                        ? 'No library data found on the relay.\n\nIf you recently regenerated your credentials, your bookmarklet may be out of date. Open File → Relay Setup and drag the updated bookmarklet to your toolbar, then re-fetch from Amazon.'
+                        ? 'No library data found on the relay.\n\nIf you recently regenerated your encryption keys, your bookmarklet may be out of date. Open File → Relay Setup and drag the updated bookmarklet to your bookmarks bar, then re-fetch from Amazon.'
                         : `Failed to import from relay: ${err.message}`;
                     showInfoDialog('Relay Import', msg);
                 } finally {
@@ -4398,10 +4398,11 @@
                     if (lastCopyDialogData) { setLastCopyDialogData(null); return; }
                     if (resetConfirmOpen) { setResetConfirmOpen(false); return; }
                     if (statusModalOpen) { setStatusModalOpen(false); return; }
+                    if (relaySetupOpen) { setRelaySetupOpen(false); setRelaySetupSection(null); return; }
                 };
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
-            }, [modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+            }, [modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, relaySetupOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             // v5.4.6 - ENTER saves edit mode when no input is focused
             useEffect(() => {
@@ -5982,8 +5983,13 @@
                             <div style={{ textAlign: 'center', maxWidth: '480px', padding: '40px 20px' }}>
                                 <div style={{ fontSize: '64px', marginBottom: '20px' }}>📚</div>
                                 <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
-                                <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Organize your Kindle library your way.</p>
-                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '32px', lineHeight: '1.5' }}>Set up a secure relay connection, install the bookmarklet, and fetch your books from Amazon — all from one place.</p>
+                                <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Organize your Kindle library your way.</p>
+                                <ul style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '32px', lineHeight: '1.8', textAlign: 'left', paddingLeft: '20px' }}>
+                                    <li>Set up a secure relay connection between ReaderWrangler pages</li>
+                                    <li>Install the bookmarklet that navigates to those pages</li>
+                                    <li>Fetch your books and collections from Amazon</li>
+                                    <li>Organize your library, your way</li>
+                                </ul>
 
                                 <button
                                     onClick={() => { setRelaySetupOpen(true); setRelaySetupSection(null); }}
@@ -7170,21 +7176,21 @@
                                         return React.createElement(React.Fragment, null,
                                             // Security banner
                                             React.createElement('div', { className: 'text-xs', style: { padding: '8px 16px', background: 'var(--bg-info, #eff6ff)', borderBottom: '1px solid var(--border-info, #93c5fd)', color: 'var(--text-secondary)' } },
-                                                '🔒 Data is encrypted in your browser. The Cloudflare relay only ever sees ciphertext.'
+                                                '🔒 Your data is encrypted in your browser using your encryption keys. The Cloudflare relay only ever sees encrypted data that cannot be read without these keys.'
                                             ),
 
                                             // ─── Section 1: Credentials ───
-                                            sectionHeader('credentials', '1', 'Credentials', hasCreds, false),
+                                            sectionHeader('credentials', '1', 'Encryption Keys', hasCreds, false),
                                             activeSection === 'credentials' && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
                                                 hasCreds
                                                     ? React.createElement(React.Fragment, null,
                                                         React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-success)', border: '1px solid var(--border-success, #86efac)', marginBottom: '12px' } },
-                                                            React.createElement('p', { className: 'font-semibold' }, '✅ Relay is configured'),
+                                                            React.createElement('p', { className: 'font-semibold' }, '✅ Encryption keys are set up'),
                                                             React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
                                                         ),
                                                         React.createElement('button', {
                                                             onClick: () => {
-                                                                if (confirm('This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet and re-pair your phone. Continue?')) {
+                                                                if (confirm('This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone. Continue?')) {
                                                                     localStorage.removeItem(RELAY_KEY);
                                                                     if (window.RWRelay) { window.RWRelay.initFromStorage(); }
                                                                     setRelayManifest(null);
@@ -7195,10 +7201,10 @@
                                                             },
                                                             className: 'px-3 py-1.5 rounded text-sm',
                                                             style: { background: 'var(--bg-muted)', color: 'var(--text-danger)', border: '1px solid var(--border-default)', cursor: 'pointer' }
-                                                        }, 'Regenerate Credentials')
+                                                        }, 'Regenerate Encryption Keys')
                                                     )
                                                     : React.createElement(React.Fragment, null,
-                                                        React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'The relay transfers your library from Amazon to ReaderWrangler and syncs it to your phone — all via Cloudflare\'s encrypted infrastructure.'),
+                                                        React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'These are your private encryption keys — they are NOT your Amazon password. ReaderWrangler uses them to securely encrypt your book data before transferring it between pages. Only you can decrypt it.'),
                                                         React.createElement('div', { className: 'flex gap-3 mb-3' },
                                                             React.createElement('button', {
                                                                 onClick: () => {
@@ -7215,7 +7221,7 @@
                                                                 },
                                                                 className: 'px-4 py-2 rounded-lg font-medium text-sm',
                                                                 style: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer' }
-                                                            }, 'Generate Credentials')
+                                                            }, 'Generate Encryption Keys')
                                                         ),
                                                         React.createElement('div', { style: { borderTop: '1px solid var(--border-default)', paddingTop: '12px' } },
                                                             !relayManualCreds
@@ -7223,9 +7229,9 @@
                                                                     onClick: () => setRelayManualCreds(true),
                                                                     className: 'text-sm',
                                                                     style: { color: 'var(--text-accent, #667eea)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }
-                                                                }, 'I have existing credentials')
+                                                                }, 'I have existing encryption keys')
                                                                 : React.createElement('div', { className: 'space-y-2' },
-                                                                    React.createElement('p', { className: 'text-sm font-semibold' }, 'Enter existing credentials:'),
+                                                                    React.createElement('p', { className: 'text-sm font-semibold' }, 'Enter existing encryption keys:'),
                                                                     React.createElement('input', {
                                                                         id: 'relay-manual-channel',
                                                                         type: 'text',
@@ -7258,7 +7264,7 @@
                                                                             },
                                                                             className: 'px-3 py-1.5 rounded text-sm',
                                                                             style: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer' }
-                                                                        }, 'Save Credentials')
+                                                                        }, 'Save Encryption Keys')
                                                                     )
                                                                 )
                                                         )
@@ -7268,7 +7274,7 @@
                                             // ─── Section 2: Install Bookmarklet ───
                                             sectionHeader('bookmarklet', '2', 'Install Bookmarklet', false, !hasCreds),
                                             activeSection === 'bookmarklet' && hasCreds && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
-                                                React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Drag the bookmarklet to your bookmarks bar. It connects Amazon to ReaderWrangler with your relay credentials baked in.'),
+                                                React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Drag the bookmarklet to your bookmarks bar. It has your encryption keys baked in. It lets you fetch your books from Amazon and securely transfer them to ReaderWrangler.'),
                                                 React.createElement('div', { className: 'rounded p-3', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' } },
                                                     ...bookmarklets.map((bm) =>
                                                         React.createElement('div', { key: bm.env, style: { textAlign: 'center' } },
@@ -7281,15 +7287,18 @@
                                                         )
                                                     )
                                                 ),
-                                                React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)' } }, 'Credentials are baked into the bookmarklet. If you regenerate credentials, you must re-drag.'),
+                                                React.createElement('div', { style: { textAlign: 'center', margin: '12px 0' } },
+                                                    React.createElement('img', { src: 'images/bookmarklet-install.gif', alt: 'Drag bookmarklet to bookmarks bar', style: { maxWidth: '100%', height: 'auto', borderRadius: '6px', border: '1px solid var(--border-default)' } })
+                                                ),
+                                                React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)' } }, 'Your encryption keys are baked into the bookmarklet. If you regenerate keys, you must drag the new bookmarklet to your bookmarks bar to replace the old one.'),
                                                 isLocalhost && React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)', fontStyle: 'italic' } }, 'Developer mode: showing all 3 environments.'),
                                                 React.createElement('div', { className: 'mt-3 p-3 rounded text-sm', style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)' } },
                                                     React.createElement('p', { className: 'font-semibold text-xs mb-1' }, 'How to use:'),
                                                     React.createElement('ol', { className: 'text-xs', style: { color: 'var(--text-secondary)', paddingLeft: '16px', margin: 0, lineHeight: '1.6' } },
                                                         React.createElement('li', null, 'Show your bookmarks bar (Ctrl+Shift+B)'),
                                                         React.createElement('li', null, 'Drag the button above to your bookmarks bar'),
-                                                        React.createElement('li', null, 'Go to amazon.com and click the bookmarklet'),
-                                                        React.createElement('li', null, 'Follow the prompts to fetch your library')
+                                                        React.createElement('li', null, 'Use the bookmarklet to go to Amazon Library and Collections pages'),
+                                                        React.createElement('li', null, 'Follow the prompts to fetch your library and collections or add books to your wishlists. Then use the bookmarklet to launch the app and organize your books, your way.')
                                                     )
                                                 )
                                             ),
@@ -7297,6 +7306,7 @@
                                             // ─── Section 3: Mobile Pairing ───
                                             sectionHeader('mobile', '3', 'Mobile Pairing', false, !hasCreds),
                                             activeSection === 'mobile' && hasCreds && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                                React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Pair your phone with this app to browse your organized library on the go. See your folders, covers, and notes from anywhere — perfect for picking your next read at the bookstore or library.'),
                                                 React.createElement('div', { className: 'rounded p-4', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', textAlign: 'center' } },
                                                     React.createElement('div', {
                                                         ref: (el) => {
@@ -7309,7 +7319,7 @@
                                                         },
                                                         style: { display: 'inline-block' }
                                                     }),
-                                                    React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)' } }, 'Scan with your phone to pair')
+                                                    React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)' } }, 'Scan this QR code with your phone\'s camera to pair')
                                                 ),
                                                 React.createElement('div', { className: 'mt-3 rounded p-2', style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', textAlign: 'left' } },
                                                     React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)', marginBottom: '4px' } }, 'Or enter manually on your phone:'),
