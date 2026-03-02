@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.4';
+const MOBILE_VERSION = '1.1.0-alpha.5';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -578,7 +578,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, onSelectF
 
 // --- App Menu ---
 
-function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApplyTheme, onToggleViewMode, onToggleDeals, onToggleHidden, onDesktopMode, onImport, onUnpair, relayCreds, onClose }) {
+function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApplyTheme, onToggleViewMode, onToggleDeals, onToggleHidden, onDesktopMode, onImport, onUnpair, onPair, relayCreds, onClose }) {
     const themeLabels = { auto: 'Auto', light: 'Light', dark: 'Dark' };
     const nextTheme = { auto: 'light', light: 'dark', dark: 'auto' };
     const [showCreds, setShowCreds] = useState(false);
@@ -692,9 +692,17 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
                             </button>
                         </div>
                     ) : (
-                        <div style={{ color: 'var(--text-muted, #64748b)', fontSize: '0.85em' }}>
-                            Not paired. Scan QR code from desktop to sync.
+                        <div style={{ color: 'var(--text-muted, #64748b)', fontSize: '0.85em', marginBottom: '8px' }}>
+                            Not paired with desktop.
                         </div>
+                        <button onClick={() => { onClose(); onPair(); }}
+                            style={{
+                                width: '100%', padding: '8px', fontSize: '0.85em',
+                                background: 'var(--bg-accent, #3b82f6)', border: 'none', borderRadius: '6px',
+                                color: '#ffffff', cursor: 'pointer', touchAction: 'manipulation'
+                            }}>
+                            Pair with Desktop
+                        </button>
                     )}
                 </div>
 
@@ -2448,6 +2456,7 @@ function MobileApp() {
                     onDesktopMode={handleDesktopMode}
                     onImport={handleImport}
                     onUnpair={handleUnpair}
+                    onPair={() => setPairingScreen('prompt')}
                     relayCreds={(() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY)); } catch { return null; } })()}
                     onClose={closeOverlay}
                 />
