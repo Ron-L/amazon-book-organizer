@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.8';
+const MOBILE_VERSION = '1.1.0-alpha.9';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -682,6 +682,22 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
                                     }}>Copy</button>
                                 </div>
                             )}
+                            <button onClick={() => {
+                                const data = JSON.stringify({ channelId: relayCreds.channelId, passphrase: relayCreds.passphrase }, null, 2);
+                                const blob = new Blob([data], { type: 'application/json' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'readerwrangler-credentials.json';
+                                a.click();
+                                URL.revokeObjectURL(url);
+                            }} style={{
+                                width: '100%', padding: '8px', fontSize: '0.85em', marginBottom: '8px',
+                                background: 'var(--bg-muted, #f1f5f9)', border: '1px solid var(--border-default, #e2e8f0)', borderRadius: '6px',
+                                color: 'var(--text-primary, #1e293b)', cursor: 'pointer', touchAction: 'manipulation'
+                            }}>
+                                Save Credentials to File
+                            </button>
                             <button onClick={() => { onClose(); onUnpair(); }}
                                 style={{
                                     width: '100%', padding: '8px', fontSize: '0.85em',
@@ -2257,7 +2273,7 @@ function MobileApp() {
 
     // Reset App: clear all data and return to pairing screen
     const handleReset = () => {
-        if (!confirm('This will clear all ReaderWrangler data from this device.\n\nYou can re-pair with your desktop to restore everything.\n\nContinue?')) return;
+        if (!confirm('This will clear all ReaderWrangler data from this device, including your pairing credentials.\n\nYou will need to re-pair with your desktop (scan QR code or enter credentials manually) to restore your library.\n\nTip: Use Save Credentials in the Sync section before resetting.\n\nContinue?')) return;
         const keys = ['readerwrangler-state', 'readerwrangler-enriched-cache', 'readerwrangler-settings', 'readerwrangler-status', 'readerwrangler-filters', 'readerwrangler-explorer', 'readerwrangler-folders', 'readerwrangler-mobile-prefs', 'readerwrangler-theme', 'readerwrangler-relay', 'readerwrangler-mobile-nav'];
         keys.forEach(k => localStorage.removeItem(k));
         const req = indexedDB.deleteDatabase('ReaderWranglerDB');
