@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.28";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.29";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7208,9 +7208,9 @@
                                                             localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
                                                             if (window.RWRelay) { window.RWRelay.initFromStorage(); }
                                                             setRelayManualCreds(false);
-                                                            // Stay in section 1 to show "set up" status, then auto-advance
+                                                            // Close and reopen to refresh computed hasCreds, stay on section 1
                                                             setRelaySetupOpen(false);
-                                                            setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('bookmarklet'); }, 100);
+                                                            setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                         },
                                                         className: 'px-3 py-1.5 rounded text-sm',
                                                         style: hasCreds
@@ -7255,9 +7255,17 @@
                                                         className: 'px-3 py-1.5 rounded text-sm',
                                                         style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
                                                     }, 'Load from backup file'),
-                                                    // Backup button (only when keys exist)
+                                                    // Backup button (only when keys exist) - exports only relay keys
                                                     hasCreds && React.createElement('button', {
-                                                        onClick: () => exportLibrary(),
+                                                        onClick: () => {
+                                                            const blob = new Blob([JSON.stringify({ relay: stored }, null, 2)], { type: 'application/json' });
+                                                            const url = URL.createObjectURL(blob);
+                                                            const a = document.createElement('a');
+                                                            a.href = url;
+                                                            a.download = 'readerwrangler-credentials.json';
+                                                            a.click();
+                                                            URL.revokeObjectURL(url);
+                                                        },
                                                         className: 'px-3 py-1.5 rounded text-sm',
                                                         style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
                                                     }, 'Backup')
