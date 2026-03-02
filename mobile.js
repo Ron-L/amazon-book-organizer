@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.9';
+const MOBILE_VERSION = '1.1.0-alpha.10';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -1961,6 +1961,7 @@ function MobileApp() {
         return 'prompt'; // 'prompt' | 'scanning' | 'success' | 'error'
     });
     const [pairingError, setPairingError] = useState(null);
+    const [showManualEntry, setShowManualEntry] = useState(false);
     const qrScannerRef = useRef(null);
     const [importStatus, setImportStatus] = useState(null);
     const [error, setError] = useState(null);
@@ -2312,21 +2313,10 @@ function MobileApp() {
                         const b64 = hash.slice(6);
                         const creds = JSON.parse(atob(b64));
                         if (!creds.channelId || !creds.passphrase) throw new Error('Invalid credentials');
-                        // Store credentials
-                        localStorage.setItem(RELAY_KEY, JSON.stringify(creds));
-                        if (window.RWRelay) window.RWRelay.initFromStorage();
-                        console.log('✅ Paired via QR scan: channel ' + creds.channelId.slice(0, 8) + '...');
-                        // Stop scanner and show success briefly, then hand off to main loading screen
+                        // Stop scanner and complete pairing
                         scanner.stop().catch(() => {});
                         qrScannerRef.current = null;
-                        setPairingScreen('success');
-                        setLoading(true);
-                        setTimeout(() => {
-                            setPairingScreen(null); // dismiss pairing → main loading spinner shows
-                            loadAllData()
-                                .then(() => setLoading(false))
-                                .catch(err => { console.error('❌ Post-pair load failed:', err); setLoading(false); });
-                        }, 1000);
+                        completePairing(creds, 'via QR scan');
                     } catch (e) {
                         console.error('❌ QR decode error:', e);
                         setPairingError('Not a valid ReaderWrangler pairing code. Try again.');
@@ -2353,14 +2343,39 @@ function MobileApp() {
         const ch = document.getElementById('mobile-pair-channel')?.value?.trim();
         const pp = document.getElementById('mobile-pair-passphrase')?.value?.trim();
         if (!ch || !pp) { setPairingError('Both Channel ID and Passphrase are required.'); return; }
-        localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId: ch, passphrase: pp }));
+        completePairing({ channelId: ch, passphrase: pp }, 'manually');
+    };
+
+    // v6.0.0 Phase 2 - Import credentials from saved file
+    const handleFileCredentials = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try {
+                const text = await file.text();
+                const creds = JSON.parse(text);
+                if (!creds.channelId || !creds.passphrase) throw new Error('Missing channelId or passphrase');
+                completePairing(creds, 'from file');
+            } catch (err) {
+                setPairingError('Invalid credentials file. Expected JSON with channelId and passphrase.');
+            }
+        };
+        input.click();
+    };
+
+    // Shared pairing completion: store creds → success → load
+    const completePairing = (creds, method) => {
+        localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId: creds.channelId, passphrase: creds.passphrase }));
         if (window.RWRelay) window.RWRelay.initFromStorage();
-        console.log('✅ Paired manually: channel ' + ch.slice(0, 8) + '...');
+        console.log(`✅ Paired ${method}: channel ${creds.channelId.slice(0, 8)}...`);
+        setPairingError(null);
         setPairingScreen('success');
         setLoading(true);
-        // Show success briefly, then hand off to main loading screen
         setTimeout(() => {
-            setPairingScreen(null); // dismiss pairing → main loading spinner shows
+            setPairingScreen(null);
             loadAllData()
                 .then(() => setLoading(false))
                 .catch(err => { console.error('❌ Post-pair load failed:', err); setLoading(false); });
@@ -2403,37 +2418,57 @@ function MobileApp() {
                 {pairingScreen === 'prompt' && (
                     <div style={{ width: '100%', maxWidth: '360px', marginTop: '24px' }}>
                         <div style={{ textAlign: 'center', color: 'var(--text-secondary, #475569)', fontSize: '0.95em', lineHeight: 1.6, marginBottom: '24px' }}>
-                            Pair with your desktop to sync your library. Open ReaderWrangler on your computer, go to <strong>File → Relay Setup</strong>, and scan the QR code.
+                            Pair with your desktop to sync your library.
                         </div>
 
+                        {/* Primary: Scan QR */}
                         <button onClick={startQRScanner} style={{
-                            display: 'block', width: '100%', padding: '16px',
+                            display: 'block', width: '100%', padding: '16px', marginBottom: '10px',
                             background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
-                            border: 'none', borderRadius: '12px', fontSize: '1.1em', fontWeight: 600, cursor: 'pointer'
+                            border: 'none', borderRadius: '12px', fontSize: '1.05em', fontWeight: 600, cursor: 'pointer'
                         }}>Scan QR Code</button>
 
-                        {pairingError && (
-                            <div style={{ color: '#dc2626', fontSize: '0.85em', textAlign: 'center', marginTop: '12px' }}>{pairingError}</div>
-                        )}
-
-                        <div style={{ textAlign: 'center', margin: '20px 0 12px', color: 'var(--text-muted, #64748b)', fontSize: '0.85em' }}>— or enter credentials manually —</div>
-
-                        <input id="mobile-pair-channel" type="text" placeholder="Channel ID"
-                            style={{ width: '100%', padding: '12px', marginBottom: '8px', borderRadius: '8px', border: '1px solid var(--border-default, #e2e8f0)', background: 'var(--bg-surface, #fff)', color: 'var(--text-primary, #1e293b)', fontFamily: 'monospace', fontSize: '0.85em', boxSizing: 'border-box' }} />
-                        <input id="mobile-pair-passphrase" type="text" placeholder="Passphrase"
-                            style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '8px', border: '1px solid var(--border-default, #e2e8f0)', background: 'var(--bg-surface, #fff)', color: 'var(--text-primary, #1e293b)', fontFamily: 'monospace', fontSize: '0.85em', boxSizing: 'border-box' }} />
-                        <button onClick={handleManualPairing} style={{
-                            display: 'block', width: '100%', padding: '14px',
+                        {/* Secondary: Import from file */}
+                        <button onClick={handleFileCredentials} style={{
+                            display: 'block', width: '100%', padding: '14px', marginBottom: '10px',
                             background: 'var(--bg-muted, #f1f5f9)', color: 'var(--text-primary, #1e293b)',
                             border: '1px solid var(--border-default, #e2e8f0)', borderRadius: '12px',
-                            fontSize: '1em', cursor: 'pointer'
-                        }}>Save Credentials</button>
+                            fontSize: '0.95em', cursor: 'pointer'
+                        }}>Import Credentials from File</button>
 
+                        {pairingError && (
+                            <div style={{ color: '#dc2626', fontSize: '0.85em', textAlign: 'center', marginTop: '4px', marginBottom: '4px' }}>{pairingError}</div>
+                        )}
+
+                        {/* Tertiary: Manual entry (collapsed by default) */}
+                        <button onClick={() => setShowManualEntry(prev => !prev)}
+                            style={{ display: 'block', width: '100%', padding: '10px', marginTop: '8px', background: 'none', border: 'none', color: 'var(--text-muted, #64748b)', fontSize: '0.85em', cursor: 'pointer', textAlign: 'center' }}>
+                            {showManualEntry ? 'Enter credentials manually ▾' : 'Enter credentials manually ▸'}
+                        </button>
+                        {showManualEntry && <div style={{ marginTop: '8px' }}>
+                            <input id="mobile-pair-channel" type="text" placeholder="Channel ID"
+                                style={{ width: '100%', padding: '12px', marginBottom: '8px', borderRadius: '8px', border: '1px solid var(--border-default, #e2e8f0)', background: 'var(--bg-surface, #fff)', color: 'var(--text-primary, #1e293b)', fontFamily: 'monospace', fontSize: '0.85em', boxSizing: 'border-box' }} />
+                            <input id="mobile-pair-passphrase" type="text" placeholder="Passphrase"
+                                style={{ width: '100%', padding: '12px', marginBottom: '12px', borderRadius: '8px', border: '1px solid var(--border-default, #e2e8f0)', background: 'var(--bg-surface, #fff)', color: 'var(--text-primary, #1e293b)', fontFamily: 'monospace', fontSize: '0.85em', boxSizing: 'border-box' }} />
+                            <button onClick={handleManualPairing} style={{
+                                display: 'block', width: '100%', padding: '14px',
+                                background: 'var(--bg-muted, #f1f5f9)', color: 'var(--text-primary, #1e293b)',
+                                border: '1px solid var(--border-default, #e2e8f0)', borderRadius: '12px',
+                                fontSize: '1em', cursor: 'pointer'
+                            }}>Pair</button>
+                        </div>}
+
+                        {/* Skip */}
                         <div style={{ textAlign: 'center', marginTop: '24px' }}>
                             <button onClick={() => setPairingScreen(null)} style={{
                                 background: 'none', border: 'none', color: 'var(--text-muted, #64748b)',
                                 fontSize: '0.85em', cursor: 'pointer', textDecoration: 'underline'
                             }}>Skip — use local data only</button>
+                        </div>
+
+                        {/* How it works hint */}
+                        <div style={{ textAlign: 'center', marginTop: '20px', color: 'var(--text-muted, #64748b)', fontSize: '0.8em', lineHeight: 1.5 }}>
+                            On your computer: <strong>File → Relay Setup</strong> → scan the QR code, or save credentials to import here.
                         </div>
                     </div>
                 )}
