@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.26";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.27";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7225,11 +7225,44 @@
                                                         ),
                                                         React.createElement('div', { style: { borderTop: '1px solid var(--border-default)', paddingTop: '12px' } },
                                                             !relayManualCreds
-                                                                ? React.createElement('button', {
-                                                                    onClick: () => setRelayManualCreds(true),
-                                                                    className: 'text-sm',
-                                                                    style: { color: 'var(--text-accent, #667eea)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }
-                                                                }, 'I have existing encryption keys')
+                                                                ? React.createElement('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
+                                                                    React.createElement('button', {
+                                                                        onClick: () => setRelayManualCreds(true),
+                                                                        className: 'px-3 py-1.5 rounded text-sm',
+                                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-accent, #667eea)', border: '1px solid var(--text-accent, #667eea)', cursor: 'pointer' }
+                                                                    }, 'I have existing encryption keys'),
+                                                                    React.createElement('button', {
+                                                                        onClick: () => {
+                                                                            const input = document.createElement('input');
+                                                                            input.type = 'file';
+                                                                            input.accept = '.json';
+                                                                            input.onchange = (e) => {
+                                                                                const file = e.target.files[0];
+                                                                                if (!file) return;
+                                                                                const reader = new FileReader();
+                                                                                reader.onload = (ev) => {
+                                                                                    try {
+                                                                                        const data = JSON.parse(ev.target.result);
+                                                                                        if (data.relay && data.relay.channelId && data.relay.passphrase) {
+                                                                                            localStorage.setItem(RELAY_KEY, JSON.stringify(data.relay));
+                                                                                            if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                                                            setRelaySetupSection('bookmarklet');
+                                                                                            // Close and reopen to refresh state
+                                                                                            setRelaySetupOpen(false);
+                                                                                            setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('bookmarklet'); }, 100);
+                                                                                        } else {
+                                                                                            alert('No encryption keys found in this backup file.');
+                                                                                        }
+                                                                                    } catch { alert('Could not read file. Make sure it is a ReaderWrangler backup (.json).'); }
+                                                                                };
+                                                                                reader.readAsText(file);
+                                                                            };
+                                                                            input.click();
+                                                                        },
+                                                                        className: 'px-3 py-1.5 rounded text-sm',
+                                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
+                                                                    }, 'Load from backup file')
+                                                                )
                                                                 : React.createElement('div', { className: 'space-y-2' },
                                                                     React.createElement('p', { className: 'text-sm font-semibold' }, 'Enter existing encryption keys:'),
                                                                     React.createElement('input', {
