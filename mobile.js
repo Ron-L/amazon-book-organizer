@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.5';
+const MOBILE_VERSION = '1.1.0-alpha.6';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -2279,14 +2279,17 @@ function MobileApp() {
                         localStorage.setItem(RELAY_KEY, JSON.stringify(creds));
                         if (window.RWRelay) window.RWRelay.initFromStorage();
                         console.log('✅ Paired via QR scan: channel ' + creds.channelId.slice(0, 8) + '...');
-                        // Stop scanner and show success
+                        // Stop scanner and show success briefly, then hand off to main loading screen
                         scanner.stop().catch(() => {});
                         qrScannerRef.current = null;
                         setPairingScreen('success');
-                        // Pull device-state from relay, then dismiss pairing screen
-                        loadAllData()
-                            .then(() => { setPairingScreen(null); setLoading(false); })
-                            .catch(err => { console.error('❌ Post-pair load failed:', err); setPairingScreen(null); setLoading(false); });
+                        setLoading(true);
+                        setTimeout(() => {
+                            setPairingScreen(null); // dismiss pairing → main loading spinner shows
+                            loadAllData()
+                                .then(() => setLoading(false))
+                                .catch(err => { console.error('❌ Post-pair load failed:', err); setLoading(false); });
+                        }, 1000);
                     } catch (e) {
                         console.error('❌ QR decode error:', e);
                         setPairingError('Not a valid ReaderWrangler pairing code. Try again.');
@@ -2317,10 +2320,14 @@ function MobileApp() {
         if (window.RWRelay) window.RWRelay.initFromStorage();
         console.log('✅ Paired manually: channel ' + ch.slice(0, 8) + '...');
         setPairingScreen('success');
-        // Pull device-state from relay, then dismiss pairing screen
-        loadAllData()
-            .then(() => { setPairingScreen(null); setLoading(false); })
-            .catch(err => { console.error('❌ Post-pair load failed:', err); setPairingScreen(null); setLoading(false); });
+        setLoading(true);
+        // Show success briefly, then hand off to main loading screen
+        setTimeout(() => {
+            setPairingScreen(null); // dismiss pairing → main loading spinner shows
+            loadAllData()
+                .then(() => setLoading(false))
+                .catch(err => { console.error('❌ Post-pair load failed:', err); setLoading(false); });
+        }, 1000);
     };
 
     // v6.0.0 Phase 2 - Pairing screen (shown when no credentials)
