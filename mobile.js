@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.12';
+const MOBILE_VERSION = '1.1.0-alpha.13';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -2365,7 +2365,6 @@ function MobileApp() {
                 if (!creds.channelId || !creds.passphrase) throw new Error('Missing channelId or passphrase');
                 setPairChannel(creds.channelId);
                 setPairPassphrase(creds.passphrase);
-                setShowManualEntry(true);
                 setPairingError(null);
             } catch (err) {
                 setPairingError('Invalid credentials file. Expected JSON with channelId and passphrase.');
