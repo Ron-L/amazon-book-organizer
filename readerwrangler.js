@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.22";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.23";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5976,6 +5976,45 @@
                         </div>
                     )}
 
+                    {/* v6.0.0-alpha.23 - Full-width welcome screen when no books loaded */}
+                    {books.length === 0 && syncStatus !== 'loading' ? (
+                        <div className="flex-1 min-h-0 flex items-center justify-center" style={{ background: 'var(--bg-base)' }}>
+                            <div style={{ textAlign: 'center', maxWidth: '480px', padding: '40px 20px' }}>
+                                <div style={{ fontSize: '64px', marginBottom: '20px' }}>📚</div>
+                                <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
+                                <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Organize your Kindle library your way.</p>
+                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '32px', lineHeight: '1.5' }}>Set up a secure relay connection, install the bookmarklet, and fetch your books from Amazon — all from one place.</p>
+
+                                <button
+                                    onClick={() => { setRelaySetupOpen(true); setRelaySetupSection(null); }}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
+                                        border: 'none', borderRadius: '10px', padding: '16px 32px',
+                                        fontSize: '16px', fontWeight: '600', cursor: 'pointer', width: '100%',
+                                        boxShadow: '0 4px 14px rgba(102, 126, 234, 0.4)',
+                                        marginBottom: '12px'
+                                    }}>
+                                    Open Relay Setup
+                                </button>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '24px' }}>Or use File › Relay Setup from the menu bar anytime.</p>
+
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                                    <div style={{ flex: 1, borderTop: '1px solid var(--border-default)' }} />
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>or</span>
+                                    <div style={{ flex: 1, borderTop: '1px solid var(--border-default)' }} />
+                                </div>
+                                <button
+                                    onClick={() => importLibrary()}
+                                    style={{
+                                        background: 'var(--bg-surface)', color: 'var(--text-accent)',
+                                        border: '2px solid var(--text-accent)', borderRadius: '8px', padding: '10px 24px',
+                                        fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%'
+                                    }}>
+                                    Load Backup File
+                                </button>
+                            </div>
+                        </div>
+                    ) : (<>
                     {/* v5.0.0-alpha.175.3 - Toolbar (Phase 3 foundation) */}
                     <div style={{
                         height: '36px',
@@ -10478,45 +10517,7 @@
                                     </div>
                                 </div>
                                 <div ref={dragVirtScrollRef} className="flex-1 overflow-auto px-4 pb-4" style={{ contain: 'layout style paint' }}>
-                                    {/* v6.0.0 - Welcome state: relay onboarding flow */}
-                                    {books.length === 0 && syncStatus !== 'loading' ? (
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                                            <div style={{ textAlign: 'center', maxWidth: '480px' }}>
-                                                <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
-                                                <h2 style={{ fontSize: '22px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Welcome to ReaderWrangler</h2>
-                                                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Organize your Kindle library your way.</p>
-                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>Set up a secure relay connection, install the bookmarklet, and fetch your books from Amazon — all from one place.</p>
-
-                                                {React.createElement(React.Fragment, null,
-                                                    React.createElement('button', {
-                                                        onClick: () => { setRelaySetupOpen(true); setRelaySetupSection(null); },
-                                                        style: {
-                                                            background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
-                                                            border: 'none', borderRadius: '8px', padding: '14px 28px',
-                                                            fontSize: '15px', fontWeight: '600', cursor: 'pointer', width: '100%',
-                                                            marginBottom: '16px'
-                                                        }
-                                                    }, 'Open Relay Setup'),
-                                                    React.createElement('p', { style: { fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' } }, 'Or use File \u203A Relay Setup from the menu bar anytime.'),
-
-                                                    // Divider + backup import
-                                                    React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' } },
-                                                        React.createElement('div', { style: { flex: 1, borderTop: '1px solid var(--border-default)' } }),
-                                                        React.createElement('span', { style: { fontSize: '12px', color: 'var(--text-muted)' } }, 'or'),
-                                                        React.createElement('div', { style: { flex: 1, borderTop: '1px solid var(--border-default)' } })
-                                                    ),
-                                                    React.createElement('button', {
-                                                        onClick: () => importLibrary(),
-                                                        style: {
-                                                            background: 'var(--bg-surface)', color: 'var(--text-accent)',
-                                                            border: '2px solid var(--text-accent)', borderRadius: '6px', padding: '8px 20px',
-                                                            fontSize: '13px', fontWeight: '600', cursor: 'pointer', width: '100%'
-                                                        }
-                                                    }, 'Load Backup File')
-                                                )}
-                                            </div>
-                                        </div>
-                                    ) : explorerView === 'list' ? (
+                                    {explorerView === 'list' ? (
                                         (() => {
                                             // v5.0.0-alpha.172.1 - Drag handlers for column reordering (config moved to COLUMN_CONFIG)
                                             const handleColumnDragStart = (e, colKey) => {
@@ -11891,6 +11892,7 @@
                                 </div>
                             </div>
                         </div>
+                    </>)}
 
                     {/* v4.16.0.n - Removed floating selection box, now shown in footer */}
 
