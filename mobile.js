@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.10';
+const MOBILE_VERSION = '1.1.0-alpha.11';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -2455,7 +2455,7 @@ function MobileApp() {
                                 background: 'var(--bg-muted, #f1f5f9)', color: 'var(--text-primary, #1e293b)',
                                 border: '1px solid var(--border-default, #e2e8f0)', borderRadius: '12px',
                                 fontSize: '1em', cursor: 'pointer'
-                            }}>Pair</button>
+                            }}>Pair using these credentials</button>
                         </div>}
 
                         {/* Skip */}
