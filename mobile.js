@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.7';
+const MOBILE_VERSION = '1.1.0-alpha.8';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -578,7 +578,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, onSelectF
 
 // --- App Menu ---
 
-function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApplyTheme, onToggleViewMode, onToggleDeals, onToggleHidden, onDesktopMode, onImport, onUnpair, onPair, relayCreds, onClose }) {
+function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApplyTheme, onToggleViewMode, onToggleDeals, onToggleHidden, onDesktopMode, onImport, onUnpair, onPair, onReset, relayCreds, onClose }) {
     const themeLabels = { auto: 'Auto', light: 'Light', dark: 'Dark' };
     const nextTheme = { auto: 'light', light: 'dark', dark: 'auto' };
     const [showCreds, setShowCreds] = useState(false);
@@ -707,6 +707,16 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
                         </>
                     )}
                 </div>
+
+                {/* Separator */}
+                <div style={{ borderTop: '1px solid var(--border-default, #e2e8f0)', margin: '4px 12px' }} />
+
+                {/* Reset App */}
+                <button onClick={() => { onClose(); onReset(); }}
+                    className="w-full text-left py-3 px-4 text-sm"
+                    style={{ color: '#dc2626', touchAction: 'manipulation' }}>
+                    Reset App
+                </button>
 
                 {/* Separator */}
                 <div style={{ borderTop: '1px solid var(--border-default, #e2e8f0)', margin: '4px 12px' }} />
@@ -2244,6 +2254,15 @@ function MobileApp() {
         localStorage.removeItem(RELAY_KEY);
         setPairingScreen('prompt');
     };
+
+    // Reset App: clear all data and return to pairing screen
+    const handleReset = () => {
+        if (!confirm('This will clear all ReaderWrangler data from this device.\n\nYou can re-pair with your desktop to restore everything.\n\nContinue?')) return;
+        const keys = ['readerwrangler-state', 'readerwrangler-enriched-cache', 'readerwrangler-settings', 'readerwrangler-status', 'readerwrangler-filters', 'readerwrangler-explorer', 'readerwrangler-folders', 'readerwrangler-mobile-prefs', 'readerwrangler-theme', 'readerwrangler-relay', 'readerwrangler-mobile-nav'];
+        keys.forEach(k => localStorage.removeItem(k));
+        const req = indexedDB.deleteDatabase('ReaderWranglerDB');
+        req.onsuccess = req.onerror = req.onblocked = () => location.reload();
+    };
     const handleSelectFolder = (folderId) => {
         if (folderId === '__all__') {
             const resetStack = [{ view: 'dashboard', scrollY: 0 }];
@@ -2466,6 +2485,7 @@ function MobileApp() {
                     onImport={handleImport}
                     onUnpair={handleUnpair}
                     onPair={() => setPairingScreen('prompt')}
+                    onReset={handleReset}
                     relayCreds={(() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY)); } catch { return null; } })()}
                     onClose={closeOverlay}
                 />
