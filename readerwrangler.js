@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.20";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7187,7 +7187,7 @@
                                         } else {
                                             // Not yet configured
                                             return React.createElement(React.Fragment, null,
-                                                React.createElement('p', { style: { color: 'var(--text-secondary)' } }, 'The relay transfers your library from Amazon to ReaderWrangler via Cloudflare\'s encrypted infrastructure. Your data is encrypted end-to-end.'),
+                                                React.createElement('p', { style: { color: 'var(--text-secondary)' } }, 'The relay transfers your library from Amazon to ReaderWrangler and syncs it to your paired mobile devices — all via Cloudflare\'s encrypted infrastructure.'),
                                                 React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-info, #eff6ff)', border: '1px solid var(--border-info, #93c5fd)' } },
                                                     React.createElement('p', null, '🔒 Data is encrypted in your browser before it leaves. The Cloudflare relay only ever sees ciphertext.')
                                                 ),
@@ -10448,7 +10448,7 @@
                                                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>📚</div>
                                                 <h2 style={{ fontSize: '22px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '8px' }}>Welcome to ReaderWrangler</h2>
                                                 <p style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Organize your Kindle library your way.</p>
-                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>ReaderWrangler's bookmarklet uses a secure relay to transfer your library from Amazon to the app. Generate a bookmarklet connection below, install the bookmarklet, and fetch your books — no files to manage.</p>
+                                                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px' }}>ReaderWrangler's bookmarklet uses a secure relay to transfer your library from Amazon to the app. Once set up, your library automatically syncs to your phone. Generate a connection below, install the bookmarklet, and fetch your books — no files to manage.</p>
 
                                                 {(() => {
                                                     const stored = (() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY)); } catch { return null; } })();
@@ -10561,7 +10561,7 @@
                                                                 background: 'var(--bg-info, #eff6ff)', border: '1px solid var(--border-info, #93c5fd)',
                                                                 borderRadius: '6px', padding: '10px 12px', marginBottom: '16px', textAlign: 'left', fontSize: '12px'
                                                             }
-                                                        }, '🔒 Your data is encrypted in your browser before transit. The relay never sees plaintext.'),
+                                                        }, '🔒 Your data is encrypted in your browser before transit. The Cloudflare relay never sees plaintext.'),
 
                                                         // Divider + backup import
                                                         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' } },
