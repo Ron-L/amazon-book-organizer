@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.25";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.26";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5984,7 +5984,7 @@
                                 <div style={{ fontSize: '64px', marginBottom: '20px' }}>📚</div>
                                 <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
                                 <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Organize your Kindle library your way.</p>
-                                <ul style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '32px', lineHeight: '1.8', textAlign: 'left', paddingLeft: '20px' }}>
+                                <ul style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '32px', lineHeight: '1.8', textAlign: 'left', paddingLeft: '20px', listStyleType: 'disc' }}>
                                     <li>Set up a secure relay connection between ReaderWrangler pages</li>
                                     <li>Install the bookmarklet that navigates to those pages</li>
                                     <li>Fetch your books and collections from Amazon</li>
@@ -7294,7 +7294,7 @@
                                                 isLocalhost && React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)', fontStyle: 'italic' } }, 'Developer mode: showing all 3 environments.'),
                                                 React.createElement('div', { className: 'mt-3 p-3 rounded text-sm', style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)' } },
                                                     React.createElement('p', { className: 'font-semibold text-xs mb-1' }, 'How to use:'),
-                                                    React.createElement('ol', { className: 'text-xs', style: { color: 'var(--text-secondary)', paddingLeft: '16px', margin: 0, lineHeight: '1.6' } },
+                                                    React.createElement('ul', { className: 'text-xs', style: { color: 'var(--text-secondary)', paddingLeft: '16px', margin: 0, lineHeight: '1.6', listStyleType: 'disc' } },
                                                         React.createElement('li', null, 'Show your bookmarks bar (Ctrl+Shift+B)'),
                                                         React.createElement('li', null, 'Drag the button above to your bookmarks bar'),
                                                         React.createElement('li', null, 'Use the bookmarklet to go to Amazon Library and Collections pages'),
