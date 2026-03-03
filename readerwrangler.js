@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.31";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.32";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4398,11 +4398,12 @@
                     if (lastCopyDialogData) { setLastCopyDialogData(null); return; }
                     if (resetConfirmOpen) { setResetConfirmOpen(false); return; }
                     if (statusModalOpen) { setStatusModalOpen(false); return; }
+                    if (relaySetupOpen && relayManualCreds) { setRelayManualCreds(false); return; }
                     if (relaySetupOpen) { setRelaySetupOpen(false); setRelaySetupSection(null); return; }
                 };
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
-            }, [modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, relaySetupOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+            }, [modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, relaySetupOpen, relayManualCreds, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             // v5.4.6 - ENTER saves edit mode when no input is focused
             useEffect(() => {
