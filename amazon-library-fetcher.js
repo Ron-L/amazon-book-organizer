@@ -9,13 +9,9 @@
 //
 // Instructions:
 // 1. Go to https://www.amazon.com/yourbooks (must be logged in)
-// 2. Open DevTools Console (F12 → Console tab)
-// 3. Paste this ENTIRE script and press Enter
-// 4. If you have existing data, select amazon-library.json when prompted
-//    (If no existing file, just cancel the dialog - will fetch ALL books)
-// 5. Wait for completion
-// 6. Downloads amazon-library.json
-// 7. Upload library file to organizer!
+// 2. Click the bookmarklet and select "Import Library"
+// 3. Wait for completion — data uploads automatically through the encrypted relay
+// 4. Open ReaderWrangler to see your library
 //
 // Re-run: After pasting once, you can re-run with: fetchAmazonLibrary()
 
@@ -358,68 +354,42 @@ async function fetchAmazonLibrary() {
             `;
         }
 
-        // Show save button and return Promise that resolves with 'save' or 'cancel'.
-        // WHY THIS EXISTS: showSaveFilePicker() requires an active "user gesture" (click/keypress).
-        // After a 3+ minute fetch, the original gesture from pasting the script has expired.
-        // This button provides a fresh user gesture immediately before calling showSaveFilePicker.
-        // Without this, Chrome throws: "SecurityError: Must be handling a user gesture to show a file picker"
-        // See: https://developer.mozilla.org/en-US/docs/Web/API/Window/showSaveFilePicker
-        function showSaveButton(bookCount) {
+        function showRetryUpload(errorMessage) {
             return new Promise((resolve) => {
                 if (!overlay) create();
                 overlay.innerHTML = `
-                    <div style="font-size: 18px; font-weight: bold; color: #2e7d32; margin-bottom: 10px;">
-                        ✅ Download Complete!
+                    <div style="font-size: 18px; font-weight: bold; color: #d32f2f; margin-bottom: 10px;">
+                        ❌ Upload Failed
                     </div>
                     <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
-                        ${bookCount.toLocaleString()} books ready to save
+                        ${errorMessage}
                     </div>
-                    <button id="saveLibraryBtn" style="
+                    <button id="retryBtn" style="
                         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        color: white;
-                        border: none;
-                        padding: 12px 20px;
-                        border-radius: 8px;
-                        font-size: 16px;
-                        font-weight: bold;
-                        cursor: pointer;
-                        width: 100%;
-                        transition: transform 0.1s;
+                        color: white; border: none; padding: 12px 20px;
+                        border-radius: 8px; font-size: 16px; font-weight: bold;
+                        cursor: pointer; width: 100%; transition: transform 0.1s;
                     ">
-                        💾 Save Library File
+                        🔄 Retry Upload
                     </button>
-                    <div style="font-size: 12px; color: #999; margin-top: 10px; text-align: center;">
-                        Click to choose save location
-                    </div>
-                    <button id="cancelSaveBtn" title="Discard downloaded data" style="
-                        background: transparent;
-                        color: #999;
-                        border: 1px solid #ccc;
-                        padding: 6px 16px;
-                        border-radius: 4px;
-                        font-size: 12px;
-                        cursor: pointer;
-                        margin-top: 15px;
+                    <button id="cancelBtn" title="Discard data" style="
+                        background: transparent; color: #999;
+                        border: 1px solid #ccc; padding: 6px 16px;
+                        border-radius: 4px; font-size: 12px;
+                        cursor: pointer; margin-top: 15px;
                     ">
                         Cancel
                     </button>
                 `;
-                const saveBtn = overlay.querySelector('#saveLibraryBtn');
-                saveBtn.onmouseover = () => saveBtn.style.transform = 'scale(1.02)';
-                saveBtn.onmouseout = () => saveBtn.style.transform = 'scale(1)';
-                saveBtn.onclick = () => {
-                    resolve('save');
-                };
-                const cancelBtn = overlay.querySelector('#cancelSaveBtn');
-                cancelBtn.onmouseover = () => { cancelBtn.style.borderColor = '#999'; cancelBtn.style.color = '#666'; };
-                cancelBtn.onmouseout = () => { cancelBtn.style.borderColor = '#ccc'; cancelBtn.style.color = '#999'; };
-                cancelBtn.onclick = () => {
-                    resolve('cancel');
-                };
+                const retryBtn = overlay.querySelector('#retryBtn');
+                retryBtn.onmouseover = () => retryBtn.style.transform = 'scale(1.02)';
+                retryBtn.onmouseout = () => retryBtn.style.transform = 'scale(1)';
+                retryBtn.onclick = () => resolve('retry');
+                overlay.querySelector('#cancelBtn').onclick = () => resolve('cancel');
             });
         }
 
-        return { create, updatePhase, updateDetail, updateProgress, remove, showComplete, showError, isAborted, showSaveButton };
+        return { create, updatePhase, updateDetail, updateProgress, remove, showComplete, showError, isAborted, showRetryUpload };
     })();
 
     // Initialize progress UI
@@ -741,133 +711,66 @@ async function fetchAmazonLibrary() {
     // ============================================================================
 
     try {
-        // Step 1: Load existing data (if any)
-        console.log('[1/7] Checking for existing library data...');
-        progressUI.updatePhase('Checking Library Data', 'Select existing library file or cancel to download all books');
-        console.log('');
-        console.log('   📂 A file picker dialog will open...');
-        console.log('');
-        console.log('   • If you have amazon-library.json: SELECT IT');
-        console.log('   • If this is your first run: CLICK CANCEL');
-        console.log('');
-        console.log('   (Dialog may be hidden behind other windows - check taskbar!)\n');
+        // Step 1: Load existing data from relay (if any)
+        console.log('[1/7] Checking for existing library data on relay...');
+
+        if (!window.RWRelay || !window.RWRelay.isConfigured()) {
+            progressUI.showError('Relay not configured. Please reinstall the bookmarklet from Relay Setup in the app.');
+            return;
+        }
 
         let existingBooks = [];
         let existingCollections = null; // Preserve collections section if present
         let mostRecentDate = null;
-        let fileHandle = null; // File System Access API handle for writing back to same file
 
-        // Check if File System Access API is available (Chrome/Edge)
-        const hasFileSystemAccess = 'showOpenFilePicker' in window;
-
-        let file = null;
-        if (hasFileSystemAccess) {
-            // Use File System Access API - allows writing back to same file
-            try {
-                const [handle] = await window.showOpenFilePicker({
-                    types: [{ description: 'JSON files', accept: { 'application/json': ['.json'] } }]
+        progressUI.updatePhase('Checking Relay', 'Looking for existing library data...');
+        try {
+            const status = await window.RWRelay.checkStatus();
+            if (status) {
+                progressUI.updatePhase('Downloading', 'Loading existing library from relay...');
+                const existingJson = await window.RWRelay.download((phase, detail) => {
+                    progressUI.updatePhase('Downloading', detail);
                 });
-                fileHandle = handle;
-                file = await handle.getFile();
-            } catch (e) {
-                if (e.name === 'AbortError') {
-                    // User cancelled - first run, no existing file
-                    file = null;
-                } else {
-                    throw e;
-                }
-            }
-        } else {
-            // Fallback for Firefox/Safari - uses traditional file input
-            console.log('   ⚠️  Note: Your browser doesn\'t support File System Access API');
-            console.log('   File will be downloaded separately - you must manually replace the old file\n');
+                const parsedData = JSON.parse(existingJson);
 
-            const fileInput = document.createElement('input');
-            fileInput.type = 'file';
-            fileInput.accept = '.json';
-
-            file = await new Promise((resolve) => {
-                fileInput.onchange = (e) => {
-                    resolve(e.target.files[0]);
-                };
-                fileInput.oncancel = () => resolve(null);
-                fileInput.click();
-            });
-        }
-
-        if (file) {
-            const fileText = await file.text();
-            const parsedData = JSON.parse(fileText);
-
-            // Reject backup files - fetchers should only work with library files
-            if (parsedData.isBackup === true) {
-                console.error('   ❌ This is a backup file');
-                console.error('   Fetchers cannot update backup files');
-                console.error('   Please select a library file instead');
-                progressUI.showError('This is a backup file. Please select a library file instead.');
-                throw new Error('Backup file selected - fetchers require a library file');
-            }
-
-            // Schema v2.x format: { schemaVersion: "2.x", books: { items: [...] }, ... }
-            if (parsedData.schemaVersion?.startsWith('2.')) {
-                if (!parsedData.books || !parsedData.books.items) {
-                    console.error('   ❌ Invalid v2.x file - Missing books.items');
-                    console.error('   Received:', Object.keys(parsedData));
-                    throw new Error('Invalid v2.x file - Missing books.items');
-                }
-                existingBooks = parsedData.books.items;
-                console.log(`   📋 Loaded ${parsedData.schemaVersion} unified file (${existingBooks.length} books)`);
-                // Preserve collections section if present
-                if (parsedData.collections) {
-                    existingCollections = parsedData.collections;
-                    console.log(`   📋 Preserving existing collections data`);
-                }
-            }
-            // Legacy v1.x format: { type: "library", metadata: {...}, books: [...] }
-            else if (parsedData.type) {
-                // Validate type value
-                if (parsedData.type === "library") {
-                    // Verify library structure
-                    if (!parsedData.metadata || !parsedData.books) {
-                        console.error('   ❌ Invalid library file - Missing metadata or books array');
-                        console.error('   Received:', Object.keys(parsedData));
-                        throw new Error('Invalid library file - Missing metadata or books array');
+                if (parsedData.isBackup === true) {
+                    console.log('   ⚠️ Backup data found on relay - ignoring, will fetch complete library');
+                } else if (parsedData.schemaVersion?.startsWith('2.')) {
+                    if (parsedData.books && parsedData.books.items) {
+                        existingBooks = parsedData.books.items;
+                        console.log(`   📋 Loaded ${parsedData.schemaVersion} library (${existingBooks.length} books)`);
+                        if (parsedData.collections) {
+                            existingCollections = parsedData.collections;
+                            console.log(`   📋 Preserving existing collections data`);
+                        }
                     }
-                    existingBooks = parsedData.books;
-                    console.log(`   📋 Loaded legacy ${parsedData.type} file (${existingBooks.length} books)`);
-                    console.log(`   ⚠️  Note: Will upgrade to v2.0 format on save`);
-                } else if (parsedData.type === "collections") {
-                    console.error('   ❌ Wrong file type - This is a collections file');
-                    console.error('   Please select a library file instead');
-                    throw new Error('Wrong file type - This is a collections file. Please select a library file.');
                 } else {
-                    console.error(`   ❌ Unknown file type: "${parsedData.type}"`);
-                    console.error('   Expected: "library" or v2.0 unified format');
-                    throw new Error(`Unknown file type: "${parsedData.type}". Expected "library" or v2.0 unified format.`);
+                    console.log('   ⚠️ Unrecognized data on relay - will fetch complete library');
+                }
+
+                // Find most recent acquisition date for incremental fetching
+                for (const book of existingBooks) {
+                    if (book.acquisitionDate) {
+                        const bookDate = parseInt(book.acquisitionDate);
+                        if (!mostRecentDate || bookDate > mostRecentDate) {
+                            mostRecentDate = bookDate;
+                        }
+                    }
+                }
+
+                if (existingBooks.length > 0) {
+                    console.log(`✅ Loaded ${existingBooks.length} existing books from relay`);
+                    if (mostRecentDate) {
+                        const date = new Date(mostRecentDate);
+                        console.log(`   Most recent: ${date.toLocaleDateString()}`);
+                    }
                 }
             } else {
-                console.error('   ❌ Invalid file format - Missing schemaVersion or type field');
-                console.error('   Received:', Object.keys(parsedData));
-                throw new Error('Invalid file format - Missing schemaVersion or type field');
+                console.log('📂 No existing data on relay - will fetch ALL books');
             }
-
-            // Find most recent acquisition date
-            for (const book of existingBooks) {
-                if (book.acquisitionDate) {
-                    const bookDate = parseInt(book.acquisitionDate);
-                    if (!mostRecentDate || bookDate > mostRecentDate) {
-                        mostRecentDate = bookDate;
-                    }
-                }
-            }
-
-            console.log(`✅ Loaded ${existingBooks.length} existing books`);
-            if (mostRecentDate) {
-                const date = new Date(mostRecentDate);
-                console.log(`   Most recent: ${date.toLocaleDateString()}`);
-            }
-        } else {
-            console.log('📂 No existing file - will fetch ALL books');
+        } catch (e) {
+            console.log('   ⚠️ Could not load from relay - will fetch complete library');
+            console.log(`   (${e.message})`);
         }
         console.log('');
 
@@ -2178,100 +2081,26 @@ async function fetchAmazonLibrary() {
         }
         console.log('');
 
-        // Save: Relay upload (primary if configured), then file save as fallback
-        let saveSucceeded = false;
+        // Upload to relay with retry
+        progressUI.updatePhase('Uploading', 'Compressing and encrypting...');
+        console.log('[Relay] Uploading library to relay...');
 
-        // Path 0: Relay upload (if configured — auto-initialized by relay-client.js)
-        if (window.RWRelay && window.RWRelay.isConfigured()) {
+        let uploaded = false;
+        while (!uploaded) {
             try {
-                progressUI.updatePhase('Uploading', 'Compressing and encrypting...');
                 const manifest = await window.RWRelay.upload(jsonData, (phase, detail) => {
                     progressUI.updatePhase('Uploading', detail);
                 });
                 console.log(`✅ Uploaded to relay (${manifest.bookCount} books, ${(manifest.compressedBytes / 1024).toFixed(0)} KB compressed)`);
-                saveSucceeded = true;
+                uploaded = true;
             } catch (relayError) {
-                console.error('⚠️ Relay upload failed, falling back to file save:', relayError.message);
-            }
-        }
-
-        // File save (fallback if relay not configured or failed)
-        if (!saveSucceeded && fileHandle) {
-            // Re-run case: Show save button to get fresh user gesture before writing
-            // Chrome requires an active "user gesture" for createWritable() - the original
-            // gesture from file selection has expired after fetching library data
-            const userChoice = await progressUI.showSaveButton(finalBooks.length);
-            if (userChoice === 'cancel') {
-                console.error('   ❌ Save cancelled by user - data discarded');
-                progressUI.showError('Cancelled - your downloaded data was discarded');
-                return;
-            }
-
-            // Now we have a fresh user gesture from the button click
-            try {
-                console.log(`   💾 Saving to original file location...`);
-                const writable = await fileHandle.createWritable();
-                await writable.write(jsonData);
-                await writable.close();
-                console.log(`✅ Updated library file in place`);
-                saveSucceeded = true;
-            } catch (e) {
-                console.error('   ❌ Failed to save file:', e.message);
-                progressUI.showError(`Failed to save: ${e.message}`);
-                return;
-            }
-        } else if (!saveSucceeded && hasFileSystemAccess) {
-            // Full fetch case: Need user click for fresh gesture before showSaveFilePicker
-            // Show save button and wait for user choice (provides fresh user gesture)
-            const userChoice = await progressUI.showSaveButton(finalBooks.length);
-            if (userChoice === 'cancel') {
-                console.error('   ❌ Save cancelled by user - data discarded');
-                progressUI.showError('Cancelled - your downloaded data was discarded');
-                return;
-            }
-
-            try {
-                const saveHandle = await window.showSaveFilePicker({
-                    suggestedName: LIBRARY_FILENAME,
-                    types: [{ description: 'JSON files', accept: { 'application/json': ['.json'] } }]
-                });
-                const writable = await saveHandle.createWritable();
-                await writable.write(jsonData);
-                await writable.close();
-                console.log(`✅ Saved library file: ${LIBRARY_FILENAME}`);
-                saveSucceeded = true;
-            } catch (e) {
-                if (e.name === 'AbortError') {
-                    console.error('   ❌ Save cancelled by user');
-                    progressUI.showError('Save cancelled - your data was not saved!');
+                console.error('❌ Relay upload failed:', relayError.message);
+                const choice = await progressUI.showRetryUpload(relayError.message);
+                if (choice === 'cancel') {
+                    progressUI.showError('Upload cancelled — your fetched data was not saved.');
                     return;
                 }
-                throw e;
             }
-        } else if (!saveSucceeded) {
-            // Fallback for Firefox/Safari - traditional download
-            console.log(`   ⚠️  IMPORTANT: Save this file as "${LIBRARY_FILENAME}", replacing your existing file!`);
-            console.log(`   (Your browser may save it as "${LIBRARY_FILENAME.replace('.json', '')}(1).json" - rename it manually)\n`);
-
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = LIBRARY_FILENAME;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            console.log(`✅ Downloaded library file: ${LIBRARY_FILENAME}`);
-            saveSucceeded = true;
-        }
-
-        // Only show completion summary if file was actually saved
-        if (!saveSucceeded) {
-            console.error('   ❌ File was not saved');
-            progressUI.showError('File was not saved - please try again');
-            return;
         }
 
         const totalFetched = newBooks.length + stats.nonBooksFiltered.length;
