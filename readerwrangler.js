@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.37";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.38";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3034,7 +3034,7 @@
                 return bookmarklets;
             };
 
-            const importLibrary = async () => {
+            const importBackup = async () => {
                 // Close the dialog immediately when file picker opens
                 setStatusModalOpen(false);
 
@@ -3048,36 +3048,36 @@
                             const text = await file.text();
                             const parsedData = JSON.parse(text);
 
-                            // v4.0.0.b: Detect backup vs library file
+                            // v6.0.0: Only accept backup files — library data syncs via relay
+                            if (parsedData.isBackup !== true) {
+                                showInfoDialog('Not a Backup File', 'This is not a backup file. Library data now syncs automatically through the relay.');
+                                return;
+                            }
+
                             let organizationFromFile = null;
-                            if (parsedData.isBackup === true) {
-                                // Backup file - skip warning if system is empty (e.g. after reset or first-time user)
-                                if (books.length > 0) {
-                                    const confirmed = await showConfirmDialog(
-                                        'Restore backup?',
-                                        'This will replace your current organization with the organization from the backup file.'
-                                    );
-                                    if (!confirmed) {
-                                        console.log('📋 Backup restore cancelled by user');
-                                        return;
-                                    }
+                            // Backup file - skip warning if system is empty (e.g. after reset or first-time user)
+                            if (books.length > 0) {
+                                const confirmed = await showConfirmDialog(
+                                    'Restore backup?',
+                                    'This will replace your current organization with the organization from the backup file.'
+                                );
+                                if (!confirmed) {
+                                    console.log('📋 Backup restore cancelled by user');
+                                    return;
                                 }
-                                // Extract organization from backup file
-                                if (parsedData.organization) {
-                                    organizationFromFile = parsedData.organization;
-                                    console.log('📋 Restoring organization from backup file');
-                                } else {
-                                    console.log('⚠️ Backup file has no organization section - will start fresh');
-                                }
-                                // v6.0.0 - Restore relay credentials from backup
-                                if (parsedData.relay && parsedData.relay.channelId) {
-                                    localStorage.setItem(RELAY_KEY, JSON.stringify(parsedData.relay));
-                                    if (window.RWRelay) { window.RWRelay.initFromStorage(); }
-                                    console.log('📡 Restored relay credentials from backup');
-                                }
+                            }
+                            // Extract organization from backup file
+                            if (parsedData.organization) {
+                                organizationFromFile = parsedData.organization;
+                                console.log('📋 Restoring organization from backup file');
                             } else {
-                                // Library file - keep current organization, ignore any org in file
-                                console.log('📋 Loading library file - keeping current organization');
+                                console.log('⚠️ Backup file has no organization section - will start fresh');
+                            }
+                            // v6.0.0 - Restore relay credentials from backup
+                            if (parsedData.relay && parsedData.relay.channelId) {
+                                localStorage.setItem(RELAY_KEY, JSON.stringify(parsedData.relay));
+                                if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                console.log('📡 Restored relay credentials from backup');
                             }
 
                             const syncTime = Date.now();
@@ -3111,10 +3111,10 @@
                             setSyncStatus('none'); // Clear loading spinner (v3.9.0.l)
                             if (error && error.message) {
                                 console.error('Error details:', error.message, error.stack);
-                                showInfoDialog('Import Error', `Failed to load library file: ${error.message}`);
+                                showInfoDialog('Import Error', `Failed to load backup file: ${error.message}`);
                             } else {
                                 console.error('Error details: Unknown error (null or no message)');
-                                showInfoDialog('Import Error', 'Failed to load library file: Unknown error');
+                                showInfoDialog('Import Error', 'Failed to load backup file: Unknown error');
                             }
                         }
                     }
@@ -3215,7 +3215,7 @@
                 );
             };
 
-            // v6.0.0 Phase 2 - Build device-state payload (shared with exportLibrary and device-state push)
+            // v6.0.0 Phase 2 - Build device-state payload (shared with exportBackup and device-state push)
             // Returns the same backup-format object but without relay credentials (mobile already has them from QR pairing)
             const buildDeviceStatePayload = async () => {
                 const allBooks = await loadBooksFromIndexedDB();
@@ -3319,7 +3319,7 @@
             };
 
             // Schema v2.0: Export unified file with organization
-            const exportLibrary = async () => {
+            const exportBackup = async () => {
                 try {
                     const allBooks = await loadBooksFromIndexedDB();
 
@@ -5754,20 +5754,20 @@
                                                     {getStatusBall()} Data Status: {getUrgencyInfo().text}
                                                 </button>
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
-                                                <button onClick={() => { importLibrary(); setOpenMenuBar(null); }} style={{
+                                                <button onClick={() => { importBackup(); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                     border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
                                                     transition: 'background 0.1s', color: 'var(--text-primary)'
                                                 }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                    Import Library…
+                                                    Import Backup…
                                                 </button>
-                                                <button onClick={() => { exportLibrary(); setOpenMenuBar(null); }} disabled={books.length === 0} style={{
+                                                <button onClick={() => { exportBackup(); setOpenMenuBar(null); }} disabled={books.length === 0} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                     border: 'none', background: 'var(--bg-surface)', cursor: books.length === 0 ? 'not-allowed' : 'pointer',
                                                     transition: 'background 0.1s', color: books.length === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
                                                     opacity: books.length === 0 ? 0.5 : 1
                                                 }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                    Export Library…
+                                                    Export Backup…
                                                 </button>
                                                 {/* v6.0.0 - Relay import (only shown when relay is configured) */}
                                                 {window.RWRelay && window.RWRelay.isConfigured() && (
@@ -7118,7 +7118,7 @@
                                     {/* Help text */}
                                     {books.length === 0 && (
                                         <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
-                                            <p>Use the <strong>Import</strong> button to load your library file.</p>
+                                            <p>Use the bookmarklet to import your library through the relay.</p>
                                         </div>
                                     )}
                                 </div>
@@ -7512,7 +7512,7 @@
                                     <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-gray-700">
                                         <p className="font-semibold mb-2">Getting Started:</p>
                                         <ol className="list-decimal list-inside space-y-1 ml-2">
-                                            <li>Use File → Import Library to load your Kindle library from Amazon</li>
+                                            <li>Use the bookmarklet to import your Kindle library through the relay</li>
                                             <li>Organize books into folders and collections</li>
                                             <li>Use filters to find books by status, tags, type, rating, etc.</li>
                                             <li>Export your organization back to Amazon to sync with devices</li>
