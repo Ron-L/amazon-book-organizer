@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.35";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.36";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5900,8 +5900,8 @@
                                         )}
                                         {menuName === 'Help' && (
                                             <>
-                                                {/* v5.5.2 - Getting Started link to install page */}
-                                                <button onClick={() => { window.open('install-bookmarklet.html', '_blank'); setOpenMenuBar(null); }} style={{
+                                                {/* v6.0.0 - Getting Started opens Relay Setup */}
+                                                <button onClick={() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                     border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
                                                     transition: 'background 0.1s', color: 'var(--text-primary)'

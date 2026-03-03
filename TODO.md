@@ -35,22 +35,22 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Impact: Broader user base support with minimal effort
 
 
-**3. 🔗 Cloudflare Relay + Delete Books** - HIGH/HIGH (65-85 hours)
+**3. 🔗 Cloudflare Relay + Delete Books — Remaining Items**
    - See [docs/design/DELETE-BOOKS-PROBLEM-STATEMENT.md](docs/design/DELETE-BOOKS-PROBLEM-STATEMENT.md) and [docs/design/DELETE-BOOKS-DESIGN.md](docs/design/DELETE-BOOKS-DESIGN.md)
-   - Cloudflare relay replaces file picker as sole transfer path. Trash Bin enables permanent book deletion. Mobile sync via QR pairing replaces Dropbox workaround.
-   - **Milestone 1: Relay Pipeline (A→B→C)** ~28-39 hours
-     - A. Cloudflare Worker + Crypto foundation (8 endpoints, AES-256-GCM, compression, chunking)
-     - B. Bookmarklet relay integration (replace file-write output with relay upload; extend gap-fill to include reviews; wishlist-add toast feedback: "Already on wishlist" / "Already in library"; orphan detection: compare current vs previous fetch, include removedAsins in manifest)
-     - C. App import via relay (polling, decrypt, merge, PUT /device-state, wishlist dedup Layer 1, handle orphan list — flag or auto-move to Trash)
-   - **Milestone 2: Mobile Sync (F→G)** ~12-18 hours
-     - F. Settings page + QR pairing (relay setup wizard, credential management, backup/restore, update install-bookmarklet.html to include relay credential generation or merge into app onboarding)
-     - G. Mobile relay integration (GET /device-state, QR handler, remove file picker from mobile)
-   - **Milestone 3: Delete & Cleanup (E→D)** ~12-17 hours
-     - E. Wishlist duplicate detection Layers 2 & 3 (per-folder right-click, Tools menu global cleanup)
-     - D. Trash Bin (two-stage delete lifecycle, exclusion list, auto-purge, left pane fixed bottom)
-   - Absorbs: P6-T1 (Gap-Fill Reviews → Phase B), P6-T2 (Wishlist Dedup → Layers 1-3 + Phase B toasts), P6-T3 (Orphan Detection → Phase B/C + Trash Bin), P6-T4 (Cross-Domain Transfer → fully superseded)
-   - Problem: No permanent delete (books return on next import); file picker friction; manual mobile sync via Dropbox
-   - Impact: Frictionless import, permanent deletes, automatic mobile sync, orphan detection, gap-fill reviews, wishlist-add feedback
+   - ~~Milestone 1A (Worker + Crypto)~~ ✅ v6.0.0-alpha.7
+   - ~~Milestone 1B/C (Fetcher relay integration + App import)~~ ✅ v6.0.0-alpha.7
+   - ~~Milestone 2 (Mobile Sync + QR Pairing)~~ ✅ v6.0.0-alpha.20 / mobile v1.1.0-alpha.13
+   - **Remaining Bookmarklet/Fetcher Items:**
+     - ~~Update install-bookmarklet.html to generate relay-enabled bookmarklets (or merge into app onboarding)~~ ✅ Merged into in-app Relay Setup; install-bookmarklet.html deleted
+     - Extend gap-fill to include reviews (library fetcher)
+     - Wishlist-add toast feedback: "Already on wishlist" / "Already in library"
+     - Orphan detection: compare current vs previous fetch, include `removedAsins` in manifest — handle orphan list in app (flag or auto-move to Trash)
+   - **Milestone 3: Delete & Cleanup** ~12-17 hours
+     - Wishlist duplicate detection Layers 2 & 3 (per-folder right-click, Tools menu global cleanup)
+     - Trash Bin (two-stage delete lifecycle, exclusion list, auto-purge, left pane fixed bottom)
+   - Absorbs: P6-T1 (Gap-Fill Reviews), P6-T2 (Wishlist Dedup Layers 1-3 + toasts), P6-T3 (Orphan Detection + Trash Bin), P6-T4 (Cross-Domain Transfer — fully superseded)
+   - Problem: No permanent delete (books return on next import); public bookmarklet install page doesn't include relay credentials
+   - Impact: Permanent deletes, orphan detection, gap-fill reviews, wishlist-add feedback, streamlined onboarding
 
 **4. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
@@ -113,7 +113,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 **1. 🏷️ Deferred Desktop Polish** - LOW/LOW (2-3 hours)
    - Left pane keyboard navigation: Up/Down arrow, Left/Right collapse/expand, Home/End
-   - Desktop Mode escape hatch: "Return to Mobile" button when mobile viewport has `desktopMode` flag. Required for PWA — no pull-to-refresh or browser menu available. Consider using sessionStorage instead of localStorage so flag auto-resets on app close.
+   - ~~Desktop Mode escape hatch~~ ✅ v6.0.0-alpha.18 — Interstitial in readerwrangler.html shows "Return to Mobile Mode" / "Continue in Desktop Mode" before loading any app code. Uses sessionStorage to lock mode per tab session.
    - Directional shadow consistency with mobile cover view
 
 **2. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)

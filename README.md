@@ -8,7 +8,7 @@
 
 **The solution:** ReaderWrangler imports your Amazon Kindle library and lets you organize it with drag-and-drop folders—like a file manager for your reading list. Then browse your curated library on your phone.
 
-**[Get Started](https://readerwrangler.com/install-bookmarklet.html)** | **[Launch App](https://readerwrangler.com/readerwrangler.html)** | **[Watch Demo](https://readerwrangler.com/images/walk-through.mp4)**
+**[Get Started](https://readerwrangler.com/readerwrangler.html)** | **[Launch App](https://readerwrangler.com/readerwrangler.html)** | **[Watch Demo](https://readerwrangler.com/images/walk-through.mp4)**
 
 ---
 
@@ -28,7 +28,7 @@ Just drag the button to your bookmarks bar, and you're ready to go.
 
 ### 1. Install the Bookmarklet (One Time)
 
-A. **Visit the [Get Started](https://readerwrangler.com/install-bookmarklet.html) page**
+A. **Visit the [Get Started](https://readerwrangler.com/readerwrangler.html) page**
 
 B. **Drag the button to your bookmarks bar**
 
@@ -48,7 +48,7 @@ D. **Click the bookmarklet again** and select "Import Collections"
 
 A. **Click the bookmarklet** and select "Launch App"
 
-B. **Load your library**: Click "Load Library File" on first launch, or use File / Import on return visits
+B. **Your library arrives automatically through the relay**
 
 **🔒 Your Privacy:** All processing happens in your browser—your data never leaves your computer.
 
@@ -82,7 +82,7 @@ From chaos to control - slide to compare Amazon's view vs. ReaderWrangler
 | **Works With Your Amazon Library** | **Library Management** |
 | • See all your Kindle books in one visual dashboard<br>• Covers, ratings, reviews, and descriptions all in one place<br>• No manual CSV exports or local ebook files required<br>• Works with your Amazon library page | • View your entire ebook library with titles, authors, covers, descriptions, and ratings<br>• Advanced filtering by author, series, genre, and reading status<br>• Smart search across titles and authors<br>• **Wishlist** - Add books from Amazon to track what you want to buy |
 | **Organization (Desktop)** | **Data & Privacy** |
-| • Drag-and-drop interface for organizing books into folders<br>• Multi-select with Ctrl/Shift for bulk operations<br>• Nested folder hierarchy with Auto-Organize<br>• **Tags & Tag Views** - Label books across folders; pin tags as virtual folders<br>• **Hide books** - Soft-delete books you don't want to see<br>• **Context menu** - Right-click for quick actions (Open in Amazon, Copy Title) | • Your data stays in your browser<br>• IndexedDB storage for persistent local storage<br>• Export your organization to JSON for backup |
+| • Drag-and-drop interface for organizing books into folders<br>• Multi-select with Ctrl/Shift for bulk operations<br>• Nested folder hierarchy with Auto-Organize<br>• **Tags & Tag Views** - Label books across folders; pin tags as virtual folders<br>• **Hide books** - Soft-delete books you don't want to see<br>• **Context menu** - Right-click for quick actions (Open in Amazon, Copy Title) | • End-to-end encrypted relay keeps your data secure<br>• IndexedDB storage for persistent local storage<br>• Export your organization to JSON for backup |
 | **Mobile Viewer** | |
 | • Browse your organized library on any phone<br>• Dashboard shelves, folder navigation, tag views<br>• Search, sort, and view full book details<br>• Add to home screen for app-like experience | |
 
@@ -96,23 +96,23 @@ Rediscover forgotten treasures, prioritize your reading stack, and organize the 
 
 **1. Import Your Kindle Library**
 
-Your Amazon Kindle library already has your complete collection. Install the bookmarklet, visit your Amazon library page, and import your books and collections—covers, descriptions, ratings, and reviews—into a local file on your computer.
+Your Amazon Kindle library already has your complete collection. Install the bookmarklet, visit your Amazon library page, and import your books and collections—covers, descriptions, ratings, and reviews—securely through an encrypted relay to your ReaderWrangler app.
 
 ⏱️ The initial import may take a while depending on your library size, but you only need to do it once
 
-📥 Saved to your Downloads folder (or browser's default location)
+🔒 Transferred through an encrypted relay—no files to manage
 
 **2. Organize Your Collection**
 
-Once your library file is saved, launch ReaderWrangler and click "Load Library File" on first launch, or use File / Import on return visits. Instantly see all your books in a visual grid. Now the fun begins—run Auto-Organize to build an Author / Series / Books hierarchy, drag books between folders, tag them however you like, and finally take control of your reading chaos.
+Launch ReaderWrangler and your imported library is already there—delivered securely through the relay. Instantly see all your books in a visual grid. Now the fun begins—run Auto-Organize to build an Author / Series / Books hierarchy, drag books between folders, tag them however you like, and finally take control of your reading chaos.
 
 **3. Keep It Fresh**
 
-Bought new books on Amazon? Just run the bookmarklet again to refresh your library file, then re-import it—ReaderWrangler will merge the new additions while preserving your organization. Your folders, tags, and sort order stay intact while your library stays current.
+Bought new books on Amazon? Just run the bookmarklet again—your updated library syncs automatically through the encrypted relay. ReaderWrangler merges the new additions while preserving your organization. Your folders, tags, and sort order stay intact while your library stays current.
 
 **4. Browse on Mobile**
 
-Export a backup from ReaderWrangler, transfer it to your phone (cloud storage, email, AirDrop), and import it in your phone's browser. Your folders, tags, and organization are all there—browse your curated library from anywhere.
+Pair your phone by scanning a QR code in the app. Your folders, tags, and organization sync automatically—browse your curated library from anywhere.
 
 📱 Add to your home screen for an app-like experience
 
@@ -138,8 +138,8 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 |---|---|
 | **The Only Tool for Amazon Kindle Libraries** | **Zero Installation Required** |
 | All other ebook organizers require local files. ReaderWrangler works with your Amazon library directly—no files to download, no exports to manage. | While competitors require Docker, Python, CLI tools, or desktop applications, ReaderWrangler is just a bookmarklet and a webpage. Visit, drag, click, organize. That's it. |
-| **Your Data Stays Local** | **No Technical Knowledge Needed** |
-| ReaderWrangler works entirely in your browser—your data never leaves your computer. | No command line. No configuration files. No server setup. If you can drag a bookmark and click a button, you can use ReaderWrangler. |
+| **Your Data Stays Secure** | **No Technical Knowledge Needed** |
+| Your library is encrypted end-to-end and transferred through a secure relay. Your encryption keys never leave your devices—no accounts, no cloud storage, no tracking. | No command line. No configuration files. No server setup. If you can drag a bookmark and click a button, you can use ReaderWrangler. |
 | **Complementary, Not Competitive** | |
 | ReaderWrangler doesn't replace file-based ebook managers—it complements them. Use tools like Calibre or organize-ebooks for your local files, and use ReaderWrangler for your Amazon Kindle library. | |
 
