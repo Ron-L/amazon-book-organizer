@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.40";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.41";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2874,18 +2874,21 @@
                 setRelayImporting(true);
                 setSyncStatus('loading'); // Guard: prevents Inbox useEffect from firing during import
                 try {
+                    // Always check relay status first (manifest may have been dismissed or never fetched)
+                    const manifest = await window.RWRelay.checkStatus();
+                    if (!manifest) {
+                        showInfoDialog('Relay Import', 'No library data found on the relay.\n\nIf you recently regenerated your encryption keys, your bookmarklet may be out of date. Open File → Relay Setup and drag the updated bookmarklet to your bookmarks bar, then re-fetch from Amazon.');
+                        return;
+                    }
                     const jsonString = await window.RWRelay.download((phase, detail) => {
                         console.log(`📡 Relay import: ${detail}`);
                     });
                     await loadLibrary(jsonString);
+                    setRelayManifest(null); // Clear banner after successful import
                     console.log('✅ Relay import complete (data remains on relay until next fetch or 24h TTL)');
                 } catch (err) {
                     console.error('❌ Relay import failed:', err);
-                    const isNoData = err.message && err.message.includes('No data available');
-                    const msg = isNoData
-                        ? 'No library data found on the relay.\n\nIf you recently regenerated your encryption keys, your bookmarklet may be out of date. Open File → Relay Setup and drag the updated bookmarklet to your bookmarks bar, then re-fetch from Amazon.'
-                        : `Failed to import from relay: ${err.message}`;
-                    showInfoDialog('Relay Import', msg);
+                    showInfoDialog('Relay Import', `Failed to import from relay: ${err.message}`);
                 } finally {
                     setRelayImporting(false);
                 }
@@ -5601,14 +5604,14 @@
                                                 </button>
                                                 {/* v6.0.0 - Relay import (only shown when relay is configured) */}
                                                 {window.RWRelay && window.RWRelay.isConfigured() && (
-                                                    <button onClick={() => { importFromRelay(); setOpenMenuBar(null); }} disabled={!relayManifest || relayImporting} style={{
+                                                    <button onClick={() => { importFromRelay(); setOpenMenuBar(null); }} disabled={relayImporting} style={{
                                                         width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                         border: 'none', background: 'var(--bg-surface)',
-                                                        cursor: (!relayManifest || relayImporting) ? 'not-allowed' : 'pointer',
+                                                        cursor: relayImporting ? 'not-allowed' : 'pointer',
                                                         transition: 'background 0.1s',
-                                                        color: (!relayManifest || relayImporting) ? 'var(--text-muted)' : 'var(--text-primary)',
-                                                        opacity: (!relayManifest || relayImporting) ? 0.5 : 1
-                                                    }} onMouseEnter={e => relayManifest && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
+                                                        color: relayImporting ? 'var(--text-muted)' : 'var(--text-primary)',
+                                                        opacity: relayImporting ? 0.5 : 1
+                                                    }} onMouseEnter={e => !relayImporting && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                         📡 Import from Relay{relayManifest ? ` (${relayManifest.bookCount} books)` : ''}
                                                     </button>
                                                 )}
