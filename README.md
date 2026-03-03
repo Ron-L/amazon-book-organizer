@@ -8,19 +8,13 @@
 
 **The solution:** ReaderWrangler imports your Amazon Kindle library and lets you organize it with drag-and-drop folders—like a file manager for your reading list. Then browse your curated library on your phone.
 
-**[Get Started](https://readerwrangler.com/readerwrangler.html)** | **[Launch App](https://readerwrangler.com/readerwrangler.html)** | **[Watch Demo](https://readerwrangler.com/images/walk-through.mp4)**
+**[Launch App](https://readerwrangler.com/readerwrangler.html)** | **[Watch Demo](https://readerwrangler.com/images/walk-through.mp4)**
 
 ---
 
 ## Your Books, Your Order
 
 See all your [Kindle books](https://www.amazon.com/yourbooks) in one dashboard—covers, ratings, descriptions, and reviews. Organize with nested folders like Author / Series / Books (think Artist / Album / Song), tag books as "Next to Read" or "Time Travel," and double-click any cover to see full details. An All Books view lets you browse, filter, and sort your entire library at any time—your organization never hides anything.
-
-<p align="center">
-  <img src="images/bookmarklet-install.gif" alt="Drag bookmarklet to bookmarks bar" width="50%">
-</p>
-
-Just drag the button to your bookmarks bar, and you're ready to go.
 
 ---
 
