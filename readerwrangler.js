@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.39";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.40";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -138,101 +138,6 @@
 
         // v5.0.9 - Custom dialog for backup restore completion
         // v5.5.7-alpha.13: CSS variables for dark mode support
-        function showBackupRestoredDialog(bookCount) {
-            return new Promise((resolve) => {
-                const overlay = document.createElement('div');
-                overlay.style.cssText = `
-                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-                    background: rgba(0, 0, 0, 0.5);
-                    display: flex; align-items: center; justify-content: center;
-                    z-index: 10000;
-                `;
-
-                const dialog = document.createElement('div');
-                dialog.style.cssText = `
-                    background: var(--bg-surface); border-radius: 8px; padding: 24px;
-                    max-width: 500px; width: 90%;
-                    box-shadow: var(--shadow-modal);
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                `;
-
-                dialog.innerHTML = `
-                    <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: var(--color-success);">
-                        ✓ Backup Restored (${bookCount} books)
-                    </h2>
-                    <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: var(--text-primary);">
-                        Next: Update your library file
-                    </h3>
-                    <div style="margin-bottom: 16px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);">
-                        <p style="margin: 0 0 8px 0; font-weight: 500;">When the save dialog appears:</p>
-                        <div style="margin-left: 8px;">
-                            <div style="margin: 4px 0;">✓ Keep filename: <strong>amazon-library.json</strong></div>
-                            <div style="margin: 4px 0;">✓ Replace existing file</div>
-                            <div style="margin: 4px 0;">✗ Don't save as <strong>amazon-library(1).json</strong></div>
-                        </div>
-                    </div>
-                    <div style="margin-bottom: 20px; padding: 12px; background: var(--bg-selected); border-left: 3px solid var(--bg-accent); font-size: 13px; color: var(--text-secondary);">
-                        💡 This keeps your bookmarklet in sync
-                    </div>
-                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                        <button id="whyReplaceBtn" style="background: transparent; color: var(--text-accent); border: 1px solid var(--bg-accent); border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;">
-                            ? Why replace?
-                        </button>
-                        <button id="cancelBtn" style="background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;">
-                            Cancel
-                        </button>
-                        <button id="saveBtn" style="background: var(--color-success); color: white; border: none; border-radius: 4px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer;">
-                            Save File
-                        </button>
-                    </div>
-                `;
-
-                const whyBtn = dialog.querySelector('#whyReplaceBtn');
-                const cancelBtn = dialog.querySelector('#cancelBtn');
-                const saveBtn = dialog.querySelector('#saveBtn');
-
-                whyBtn.onmouseover = () => whyBtn.style.background = 'var(--bg-selected)';
-                whyBtn.onmouseout = () => whyBtn.style.background = 'transparent';
-
-                cancelBtn.onmouseover = () => cancelBtn.style.background = 'var(--bg-hover)';
-                cancelBtn.onmouseout = () => cancelBtn.style.background = 'var(--bg-elevated)';
-
-                saveBtn.onmouseover = () => saveBtn.style.background = 'var(--color-success)'; // slightly darken would need a variable; keep same for now
-                saveBtn.onmouseout = () => saveBtn.style.background = 'var(--color-success)';
-
-                // Why replace? button - show help popup
-                whyBtn.onclick = () => {
-                    showInfoDialog(
-                        'Why replace the file?',
-                        `Your backup contains:\n` +
-                        `• Library data (books from a prior amazon-library.json)\n` +
-                        `• Your organization (order, folders, tags, notes, price goals)\n\n` +
-                        `When restored:\n` +
-                        `1. ✓ Organization loaded into app\n` +
-                        `2. → amazon-library.json needs updating\n\n` +
-                        `If you skip this or save as (1):\n` +
-                        `• Next bookmarklet use will load prior data\n` +
-                        `• May import books from different account or time period`
-                    );
-                };
-
-                // Cancel button - close without saving
-                cancelBtn.onclick = () => {
-                    document.body.removeChild(overlay);
-                    resolve(false);
-                };
-
-                // Save File button - proceed with download
-                saveBtn.onclick = () => {
-                    document.body.removeChild(overlay);
-                    resolve(true);
-                };
-
-                // Assemble and show
-                overlay.appendChild(dialog);
-                document.body.appendChild(overlay);
-            });
-        }
 
         // v5.5.4 - Isolated search input component (prevents 10K-row re-render on every keystroke)
         function SearchInput({ value, onSearch, searchHistory, addToSearchHistory, removeFromSearchHistory, clearSearchHistory }) {
@@ -3887,94 +3792,19 @@
                 const mergedBooks = await saveBooksToIndexedDB(processedBooks, true);
                 setBooks(mergedBooks);
 
-                // v5.0.0-alpha.126: When restoring backup, trigger download of amazon-library.json
-                // This ensures future fetcher runs can update all books (fixes orphaned wishlist data hole)
-                if (organizationFromFile !== null) {
-                    // Build amazon-library.json format from restored books
-                    const libraryData = {
-                        schemaVersion: "2.3",
-                        books: {
-                            fetchDate: metadata.fetchDate || new Date().toISOString(),
-                            fetcherVersion: metadata.fetcherVersion || "backup-restore",
-                            totalBooks: mergedBooks.length,
-                            items: mergedBooks.map(book => ({
-                                asin: book.asin,
-                                onWishlist: book.onWishlist || false,
-                                ownershipType: book.ownershipType || 'purchased',
-                                isHidden: book.isHidden || false,
-                                addedToWishlist: book.addedToWishlist || '',
-                                title: book.title,
-                                authors: book.author,
-                                coverUrl: book.coverUrl,
-                                rating: book.rating,
-                                reviewCount: book.ratingCount,
-                                series: book.series,
-                                seriesPosition: book.seriesPosition,
-                                acquisitionDate: book.acquired,
-                                description: book.description,
-                                topReviews: book.topReviews,
-                                binding: book.binding,
-                                currentPrice: book.currentPrice,
-                                listPrice: book.listPrice,
-                                priceFetchedAt: book.priceFetchedAt,
-                                targetPrice: book.targetPrice,
-                                priceTrigger: book.priceTrigger,
-                                genres: book.genres
-                            }))
-                        }
-                    };
-
-                    // Add collections if available
-                    if (collections && collections.size > 0) {
-                        const collectionItems = mergedBooks
-                            .filter(book => book.collections || book.readStatus)
-                            .map(book => ({
-                                asin: book.asin,
-                                readStatus: book.readStatus || 'UNKNOWN',
-                                collections: book.collections || []
-                            }));
-
-                        libraryData.collections = {
-                            fetchDate: parsedData.collections?.fetchDate || new Date().toISOString(),
-                            fetcherVersion: parsedData.collections?.fetcherVersion || "backup-restore",
-                            totalBooksScanned: collectionItems.length,
-                            booksWithCollections: collectionItems.filter(b => b.collections.length > 0).length,
-                            items: collectionItems
-                        };
+                // v6.0.0 - Upload restored library to relay so fetchers can find it
+                if (organizationFromFile !== null && window.RWRelay && window.RWRelay.isConfigured()) {
+                    try {
+                        const payload = await buildDeviceStatePayload();
+                        const jsonString = JSON.stringify(payload);
+                        await window.RWRelay.putDeviceState(jsonString);
+                        console.log(`✅ Backup restored and synced to relay (${mergedBooks.length} books)`);
+                    } catch (err) {
+                        console.warn('⚠️ Backup restored locally but relay sync failed:', err.message);
                     }
-
-                    // v5.0.9 - Show custom restore completion dialog
-                    const shouldSave = await showBackupRestoredDialog(mergedBooks.length);
-
-                    // Only trigger download if user clicked "Save File"
-                    if (shouldSave) {
-                        const blob = new Blob([JSON.stringify(libraryData, null, 2)], { type: 'application/json' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'amazon-library.json';
-                        a.click();
-                        URL.revokeObjectURL(url);
-                    } else {
-                        console.log('⚠️ User cancelled library file download');
-                    }
-
-                    // Show helpful guidance (console backup)
-                    console.log('\n========================================');
-                    console.log('📥 LIBRARY FILE REGENERATED');
-                    console.log('========================================');
-                    console.log(`   ✅ amazon-library.json (${mergedBooks.length} books)`);
-                    console.log('');
-                    console.log('👉 Next steps:');
-                    console.log('   1. Find amazon-library.json in your Downloads folder');
-                    console.log('   2. Keep it somewhere you can find it (Desktop, Documents, etc.)');
-                    console.log('   3. Use this file for future Library Fetcher runs');
-                    console.log('');
-                    console.log('💡 Why this file matters:');
-                    console.log('   - Ensures future fetcher runs update ALL your books');
-                    console.log('   - Includes wishlist books that may not be in fresh fetches');
-                    console.log('   - Prevents stale price data for orphaned wishlist items');
-                    console.log('========================================\n');
+                    showInfoDialog('Backup Restored', `${mergedBooks.length} books restored and synced to the relay.`);
+                } else if (organizationFromFile !== null) {
+                    showInfoDialog('Backup Restored', `${mergedBooks.length} books restored.\n\nSet up the relay (File → Relay Setup) to keep your library in sync.`);
                 }
 
                 // Reset all filters when loading new library (v3.8.0.g, updated v3.8.0.k)
