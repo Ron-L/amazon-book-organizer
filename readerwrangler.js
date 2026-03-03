@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.38";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.39";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6008,7 +6008,15 @@
                                     </button>
                                     {/* Remaining steps */}
                                     <ul style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.8', paddingLeft: '20px', listStyleType: 'disc', margin: '0' }}>
-                                        <li>Fetch your books and collections from Amazon using the bookmarklet</li>
+                                        <li>Fetch your books and collections from Amazon:
+                                            <ul style={{ paddingLeft: '18px', listStyleType: 'circle', marginTop: '2px', marginBottom: '4px' }}>
+                                                <li>Click the bookmarklet and select "Go to Library Page"</li>
+                                                <li>Click the bookmarklet again and select "Import Library"</li>
+                                                <li>Click the bookmarklet and select "Go to Collections Page"</li>
+                                                <li>Click the bookmarklet again and select "Import Collections"</li>
+                                            </ul>
+                                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Repeat occasionally to add newly purchased books.</span>
+                                        </li>
                                         <li>Organize your library, your way, right here</li>
                                     </ul>
                                 </div>

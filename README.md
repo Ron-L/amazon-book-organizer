@@ -26,11 +26,11 @@ Just drag the button to your bookmarks bar, and you're ready to go.
 
 ## Quick Start
 
-### 1. Install the Bookmarklet (One Time)
+### 1. Set Up the Relay (One Time)
 
-A. **Visit the [Get Started](https://readerwrangler.com/readerwrangler.html) page**
+A. **[Launch ReaderWrangler](https://readerwrangler.com/readerwrangler.html)**
 
-B. **Drag the button to your bookmarks bar**
+B. **Open File → Relay Setup** to generate your encryption keys and install the bookmarklet
 
 ### 2. Import Your Library from Amazon
 
