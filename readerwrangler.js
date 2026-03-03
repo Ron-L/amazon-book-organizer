@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.42";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.43";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5783,7 +5783,7 @@
                             fontSize: '13px'
                         }}>
                             <span style={{ color: 'var(--text-primary)' }}>
-                                📡 New library data available ({relayManifest.bookCount} books, uploaded {new Date(relayManifest.timestamp).toLocaleString()})
+                                📡 New library data available (uploaded {new Date(relayManifest.timestamp).toLocaleString()})
                             </span>
                             <div style={{ display: 'flex', gap: '8px' }}>
                                 <button onClick={importFromRelay} style={{
@@ -7353,10 +7353,10 @@
                                     <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-gray-700">
                                         <p className="font-semibold mb-2">Getting Started:</p>
                                         <ol className="list-decimal list-inside space-y-1 ml-2">
-                                            <li>Set up the relay (File → Relay Setup) to get your encryption keys and bookmarklet</li>
+                                            <li><a href="#" onClick={(e) => { e.preventDefault(); setHowToDialogOpen(false); setRelaySetupOpen(true); setRelaySetupSection('credentials'); }} style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}>Set up the relay</a> to get your encryption keys and bookmarklet</li>
                                             <li>Use the bookmarklet to import your Kindle library from Amazon</li>
-                                            <li>Organize books into folders, tags, and collections</li>
-                                            <li>Pair your phone (File → Relay Setup → Mobile) to browse on the go</li>
+                                            <li>Organize books into folders, tags, and collections — your way, right here</li>
+                                            <li>Open readerwrangler.com on your phone to pair and browse on the go</li>
                                         </ol>
                                     </div>
                                     <div className="text-sm text-gray-600">
