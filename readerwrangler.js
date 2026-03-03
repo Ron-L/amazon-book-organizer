@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.41";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.42";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5592,7 +5592,7 @@
                                                     border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
                                                     transition: 'background 0.1s', color: 'var(--text-primary)'
                                                 }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                    Import Backup…
+                                                    📂 Restore Backup…
                                                 </button>
                                                 <button onClick={() => { exportBackup(); setOpenMenuBar(null); }} disabled={books.length === 0} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
@@ -5600,7 +5600,7 @@
                                                     transition: 'background 0.1s', color: books.length === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
                                                     opacity: books.length === 0 ? 0.5 : 1
                                                 }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                    Export Backup…
+                                                    💾 Save Backup…
                                                 </button>
                                                 {/* v6.0.0 - Relay import (only shown when relay is configured) */}
                                                 {window.RWRelay && window.RWRelay.isConfigured() && (
@@ -5612,7 +5612,7 @@
                                                         color: relayImporting ? 'var(--text-muted)' : 'var(--text-primary)',
                                                         opacity: relayImporting ? 0.5 : 1
                                                     }} onMouseEnter={e => !relayImporting && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                        📡 Import from Relay{relayManifest ? ` (${relayManifest.bookCount} books)` : ''}
+                                                        📡 Import from Relay
                                                     </button>
                                                 )}
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
