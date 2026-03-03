@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.33";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.34";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5985,47 +5985,33 @@
                                 <div style={{ fontSize: '64px', marginBottom: '20px' }}>📚</div>
                                 <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
                                 <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Organize your Kindle library your way.</p>
-                                <ul style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', lineHeight: '1.8', textAlign: 'left', paddingLeft: '20px', listStyleType: 'disc' }}>
-                                    <li>Set up Relay:
-                                        <ul style={{ paddingLeft: '18px', listStyleType: 'circle', marginTop: '2px' }}>
+                                <div style={{ textAlign: 'left', marginBottom: '16px' }}>
+                                    {/* Set up Relay — clickable bullet that opens Relay Setup */}
+                                    <button
+                                        onClick={() => { setRelaySetupOpen(true); setRelaySetupSection(null); }}
+                                        title="Also available from File › Relay Setup"
+                                        style={{
+                                            display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
+                                            background: 'rgba(0,0,0,0.03)', border: '1px solid var(--border-default)',
+                                            borderRadius: '8px', padding: '8px 12px 8px 20px', marginBottom: '4px',
+                                            fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.8',
+                                            transition: 'background 0.15s, border-color 0.15s'
+                                        }}
+                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(102,126,234,0.08)'; e.currentTarget.style.borderColor = 'rgba(102,126,234,0.3)'; }}
+                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.03)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}>
+                                        <span style={{ listStyleType: 'disc' }}>• Set up Relay:</span>
+                                        <ul style={{ paddingLeft: '18px', listStyleType: 'circle', marginTop: '2px', marginBottom: '0' }}>
                                             <li>Set up a secure relay connection between ReaderWrangler pages</li>
                                             <li>Install the bookmarklet that navigates to those pages</li>
                                             <li style={{ color: 'var(--text-secondary)' }}>Optionally pair with your phone</li>
                                         </ul>
-                                    </li>
-                                    <li>Fetch your books and collections from Amazon</li>
-                                    <li>Organize your library, your way</li>
-                                </ul>
-
-                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.5' }}>Start by opening Relay Setup and optionally pairing your phone.</p>
-
-                                <button
-                                    onClick={() => { setRelaySetupOpen(true); setRelaySetupSection(null); }}
-                                    style={{
-                                        background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
-                                        border: 'none', borderRadius: '10px', padding: '16px 32px',
-                                        fontSize: '16px', fontWeight: '600', cursor: 'pointer', width: '100%',
-                                        boxShadow: '0 4px 14px rgba(102, 126, 234, 0.4)',
-                                        marginBottom: '8px'
-                                    }}>
-                                    Open Relay Setup
-                                </button>
-                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '24px' }}>Or use File › Relay Setup from the menu bar anytime.</p>
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                                    <div style={{ flex: 1, borderTop: '1px solid var(--border-default)' }} />
-                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>or</span>
-                                    <div style={{ flex: 1, borderTop: '1px solid var(--border-default)' }} />
+                                    </button>
+                                    {/* Remaining steps */}
+                                    <ul style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.8', paddingLeft: '20px', listStyleType: 'disc', margin: '0' }}>
+                                        <li>Fetch your books and collections from Amazon</li>
+                                        <li>Organize your library, your way</li>
+                                    </ul>
                                 </div>
-                                <button
-                                    onClick={() => importLibrary()}
-                                    style={{
-                                        background: 'var(--bg-surface)', color: 'var(--text-accent)',
-                                        border: '2px solid var(--text-accent)', borderRadius: '8px', padding: '10px 24px',
-                                        fontSize: '14px', fontWeight: '600', cursor: 'pointer', width: '100%'
-                                    }}>
-                                    Load Backup File
-                                </button>
                             </div>
                         </div>
                     ) : (<>
