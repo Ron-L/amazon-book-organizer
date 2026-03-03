@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0-alpha.13';
+const MOBILE_VERSION = '1.1.0-alpha.14';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -568,7 +568,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, onSelectF
                     topLevel.map(f => renderFolder(f))
                 ) : (
                     <p className="px-3 py-4 text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>
-                        No folders yet. Import a backup to see your folder tree.
+                        No folders yet. Pair with desktop to sync your library.
                     </p>
                 )}
             </div>
@@ -578,7 +578,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, onSelectF
 
 // --- App Menu ---
 
-function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApplyTheme, onToggleViewMode, onToggleDeals, onToggleHidden, onDesktopMode, onImport, onUnpair, onPair, onReset, relayCreds, onClose }) {
+function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApplyTheme, onToggleViewMode, onToggleDeals, onToggleHidden, onDesktopMode, onUnpair, onPair, onReset, relayCreds, onClose }) {
     const themeLabels = { auto: 'Auto', light: 'Light', dark: 'Dark' };
     const nextTheme = { auto: 'light', light: 'dark', dark: 'auto' };
     const [showCreds, setShowCreds] = useState(false);
@@ -599,16 +599,6 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
             </div>
 
             <div className="py-1">
-                {/* Import Backup */}
-                <button onClick={() => { onClose(); onImport(); }}
-                    className="w-full text-left py-3 px-4 text-sm"
-                    style={{ touchAction: 'manipulation' }}>
-                    Import Backup
-                </button>
-
-                {/* Separator */}
-                <div style={{ borderTop: '1px solid var(--border-default, #e2e8f0)', margin: '4px 12px' }} />
-
                 <button onClick={onToggleViewMode}
                     className="w-full text-left py-3 px-4 text-sm flex items-center justify-between"
                     style={{ touchAction: 'manipulation' }}>
@@ -1964,8 +1954,6 @@ function MobileApp() {
     const [pairChannel, setPairChannel] = useState('');
     const [pairPassphrase, setPairPassphrase] = useState('');
     const qrScannerRef = useRef(null);
-    const [importStatus, setImportStatus] = useState(null);
-    const [error, setError] = useState(null);
     const [activeOverlay, setActiveOverlay] = useState(null);
     // iOS "Add to Home Screen" hint banner
     const [showA2HS, setShowA2HS] = useState(() => {
@@ -2116,54 +2104,6 @@ function MobileApp() {
             .catch(err => console.error('❌ Mobile data load failed:', err))
             .finally(() => setLoading(false));
     }, []);
-
-    const handleImport = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        input.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            setError(null);
-            setImportStatus('Reading backup...');
-
-            try {
-                const text = await file.text();
-                let data;
-                try {
-                    data = JSON.parse(text);
-                } catch {
-                    throw new Error('File is not valid JSON.');
-                }
-
-                if (data.isBackup !== true || !data.books?.items?.length) {
-                    throw new Error('Not a valid ReaderWrangler backup file.');
-                }
-
-                const bookCount = data.books.items.length;
-                setImportStatus(`Importing ${bookCount.toLocaleString()} books...`);
-                // Yield to let React render the status update
-                await new Promise(r => setTimeout(r, 50));
-
-                const mappedBooks = data.books.items.map(mapBackupBook);
-                await saveBooksToIndexedDB(mappedBooks, false);
-                restoreOrganization(data.organization, mappedBooks.map(b => b.id));
-
-                setImportStatus('Loading library...');
-                await new Promise(r => setTimeout(r, 50));
-
-                await loadAllData();
-                console.log(`✅ Import complete: ${mappedBooks.length} books`);
-            } catch (err) {
-                console.error('❌ Import failed:', err);
-                setError(err.message || 'Import failed.');
-            } finally {
-                setImportStatus(null);
-            }
-        };
-        input.click();
-    };
 
     // Navigation
     const currentNav = navStack[navStack.length - 1];
@@ -2538,7 +2478,6 @@ function MobileApp() {
                     onToggleDeals={handleToggleDeals}
                     onToggleHidden={handleToggleHidden}
                     onDesktopMode={handleDesktopMode}
-                    onImport={handleImport}
                     onUnpair={handleUnpair}
                     onPair={() => setPairingScreen('prompt')}
                     onReset={handleReset}
@@ -2560,32 +2499,18 @@ function MobileApp() {
                         </p>
 
                         <div className="text-sm text-left mb-6 space-y-2 max-w-sm">
-                            <p><span className="font-semibold">1.</span> Export a backup from desktop<br />
-                                <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>(File &gt; Export Backup)</span>
-                            </p>
-                            <p><span className="font-semibold">2.</span> Transfer the file to your phone<br />
-                                <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>(email, cloud drive, AirDrop)</span>
-                            </p>
-                            <p><span className="font-semibold">3.</span> Tap Import below</p>
+                            <p><span className="font-semibold">1.</span> Open ReaderWrangler on your computer</p>
+                            <p><span className="font-semibold">2.</span> Go to <strong>File &rarr; Relay Setup</strong></p>
+                            <p><span className="font-semibold">3.</span> Scan the QR code to pair</p>
                         </div>
 
                         <button
-                            onClick={handleImport}
-                            disabled={!!importStatus}
+                            onClick={() => setPairingScreen('prompt')}
                             className="w-full max-w-sm py-3 px-4 rounded-lg text-white font-semibold text-base"
-                            style={{
-                                background: importStatus ? 'var(--text-muted, #94a3b8)' : 'var(--bg-accent, #3b82f6)',
-                                opacity: importStatus ? 0.7 : 1
-                            }}
+                            style={{ background: 'var(--bg-accent, #3b82f6)' }}
                         >
-                            {importStatus || 'Import Backup'}
+                            Pair with Desktop
                         </button>
-
-                        {error && (
-                            <p className="mt-3 text-sm" style={{ color: '#ef4444' }}>
-                                {error}
-                            </p>
-                        )}
                     </div>
                 ) : currentNav.view === 'folder' ? (
                     <FolderView
@@ -2633,24 +2558,6 @@ function MobileApp() {
                     />
                 )}
             </div>
-
-            {/* Import progress overlay */}
-            {importStatus && (
-                <div style={{
-                    position: 'fixed', inset: 0, zIndex: 9999,
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    background: 'var(--bg-page, #ffffff)'
-                }}>
-                    <img src="icons/logo-transparent.png" alt="" style={{ width: '80px', height: '80px', marginBottom: '20px' }} />
-                    <div style={{ fontFamily: "'Libre Baskerville',Georgia,serif", fontSize: '1.8em', fontWeight: 700, color: 'var(--text-primary, #1e293b)', marginBottom: '8px' }}>
-                        ReaderWrangler™
-                    </div>
-                    <div style={{ color: 'var(--text-muted, #64748b)', fontSize: '0.9em', marginBottom: '24px' }}>
-                        {importStatus}
-                    </div>
-                    <div className="splash-spinner" />
-                </div>
-            )}
 
             {/* iOS "Add to Home Screen" hint banner */}
             {showA2HS && (
