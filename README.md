@@ -18,33 +18,13 @@ See all your [Kindle books](https://www.amazon.com/yourbooks) in one dashboard�
 
 ---
 
-## Quick Start
+## Get Started
 
-### 1. Set Up the Relay (One Time)
+Launch the app to set up your relay, install the bookmarklet, and import your Kindle library.
 
-A. **[Launch ReaderWrangler](https://readerwrangler.com/readerwrangler.html)**
+**[Launch ReaderWrangler](https://readerwrangler.com/readerwrangler.html)**
 
-B. **Open File → Relay Setup** to generate your encryption keys and install the bookmarklet
-
-### 2. Import Your Library from Amazon
-
-A. **Click the bookmarklet** and select "Go to Library Page"
-
-B. **Click the bookmarklet again** and select "Import Library"
-
-C. **Click the bookmarklet** and select "Go to Collections Page"
-
-D. **Click the bookmarklet again** and select "Import Collections"
-
-**💡 Keeping Your Library Current:** Do this once to get your complete library, then repeat occasionally to add newly purchased books and refresh your collections. ReaderWrangler merges new books while preserving your organization.
-
-### 3. Start Organizing!
-
-A. **Click the bookmarklet** and select "Launch App"
-
-B. **Your library arrives automatically through the relay**
-
-**🔒 Your Privacy:** All processing happens in your browser—your data never leaves your computer.
+Already set up? The app opens right to your library.
 
 ---
 
