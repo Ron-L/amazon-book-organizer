@@ -5642,7 +5642,7 @@
                                                     border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
                                                     transition: 'background 0.1s', color: 'var(--text-danger)'
                                                 }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-danger-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                    Reset App
+                                                    ⚠️ Reset App
                                                 </button>
                                             </>
                                         )}
