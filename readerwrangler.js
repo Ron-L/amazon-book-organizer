@@ -7353,10 +7353,10 @@
                                     <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-gray-700">
                                         <p className="font-semibold mb-2">Getting Started:</p>
                                         <ol className="list-decimal list-inside space-y-1 ml-2">
-                                            <li>Use the bookmarklet to import your Kindle library through the relay</li>
-                                            <li>Organize books into folders and collections</li>
-                                            <li>Use filters to find books by status, tags, type, rating, etc.</li>
-                                            <li>Export your organization back to Amazon to sync with devices</li>
+                                            <li>Set up the relay (File → Relay Setup) to get your encryption keys and bookmarklet</li>
+                                            <li>Use the bookmarklet to import your Kindle library from Amazon</li>
+                                            <li>Organize books into folders, tags, and collections</li>
+                                            <li>Pair your phone (File → Relay Setup → Mobile) to browse on the go</li>
                                         </ol>
                                     </div>
                                     <div className="text-sm text-gray-600">
