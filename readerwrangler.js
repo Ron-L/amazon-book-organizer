@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.34";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.35";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6000,16 +6000,16 @@
                                         onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(102,126,234,0.08)'; e.currentTarget.style.borderColor = 'rgba(102,126,234,0.3)'; }}
                                         onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.03)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}>
                                         <span style={{ listStyleType: 'disc' }}>• Set up Relay:</span>
-                                        <ul style={{ paddingLeft: '18px', listStyleType: 'circle', marginTop: '2px', marginBottom: '0' }}>
+                                        <ul style={{ paddingLeft: '18px', listStyleType: 'circle', marginTop: '2px', marginBottom: '0', color: 'var(--text-secondary)' }}>
                                             <li>Set up a secure relay connection between ReaderWrangler pages</li>
                                             <li>Install the bookmarklet that navigates to those pages</li>
-                                            <li style={{ color: 'var(--text-secondary)' }}>Optionally pair with your phone</li>
+                                            <li>Optionally pair with your phone</li>
                                         </ul>
                                     </button>
                                     {/* Remaining steps */}
-                                    <ul style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.8', paddingLeft: '20px', listStyleType: 'disc', margin: '0' }}>
-                                        <li>Fetch your books and collections from Amazon</li>
-                                        <li>Organize your library, your way</li>
+                                    <ul style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.8', paddingLeft: '20px', listStyleType: 'disc', margin: '0' }}>
+                                        <li>Fetch your books and collections from Amazon using the bookmarklet</li>
+                                        <li>Organize your library, your way, right here</li>
                                     </ul>
                                 </div>
                             </div>
