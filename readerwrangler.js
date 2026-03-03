@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.32";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.33";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5986,14 +5986,18 @@
                                 <h2 style={{ fontSize: '26px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '10px' }}>Welcome to ReaderWrangler</h2>
                                 <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '16px' }}>Organize your Kindle library your way.</p>
                                 <ul style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', lineHeight: '1.8', textAlign: 'left', paddingLeft: '20px', listStyleType: 'disc' }}>
-                                    <li>Set up a secure relay connection between ReaderWrangler pages</li>
-                                    <li>Install the bookmarklet that navigates to those pages</li>
-                                    <li style={{ color: 'var(--text-secondary)' }}>Optionally pair with your phone</li>
+                                    <li>Set up Relay:
+                                        <ul style={{ paddingLeft: '18px', listStyleType: 'circle', marginTop: '2px' }}>
+                                            <li>Set up a secure relay connection between ReaderWrangler pages</li>
+                                            <li>Install the bookmarklet that navigates to those pages</li>
+                                            <li style={{ color: 'var(--text-secondary)' }}>Optionally pair with your phone</li>
+                                        </ul>
+                                    </li>
                                     <li>Fetch your books and collections from Amazon</li>
                                     <li>Organize your library, your way</li>
                                 </ul>
 
-                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.5' }}>Start by setting up a secure relay connection and installing the bookmarklet.</p>
+                                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '24px', lineHeight: '1.5' }}>Start by opening Relay Setup and optionally pairing your phone.</p>
 
                                 <button
                                     onClick={() => { setRelaySetupOpen(true); setRelaySetupSection(null); }}
@@ -7349,7 +7353,7 @@
                                             ),
 
                                             // ─── Section 3: Mobile Pairing ───
-                                            sectionHeader('mobile', '3', 'Mobile Pairing', false, !hasCreds),
+                                            sectionHeader('mobile', '3', 'Mobile Pairing (Optional)', false, !hasCreds),
                                             activeSection === 'mobile' && hasCreds && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
                                                 React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Pair your phone with this app to browse your organized library on the go. See your folders, covers, and notes from anywhere — perfect for picking your next read at the bookstore or library.'),
                                                 React.createElement('div', { className: 'rounded p-4', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', textAlign: 'center' } },
@@ -7364,7 +7368,7 @@
                                                         },
                                                         style: { display: 'inline-block' }
                                                     }),
-                                                    React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)' } }, 'Scan this QR code with your phone\'s camera to pair')
+                                                    React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)', lineHeight: '1.5' } }, 'On your phone, browse to readerwrangler.com. Tap "Scan QR Code" and point your camera at this code.')
                                                 ),
                                                 React.createElement('div', { className: 'mt-3 rounded p-2', style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)', textAlign: 'left' } },
                                                     React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)', marginBottom: '4px' } }, 'Or enter manually on your phone:'),
