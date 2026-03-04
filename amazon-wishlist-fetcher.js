@@ -25,7 +25,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.5.0-alpha.1';
+    const FETCHER_VERSION = 'v1.5.0-alpha.2';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -246,7 +246,45 @@ async function addToWishlist() {
             });
         }
 
-        return { create, updatePhase, showProgressBar, updateProgress, remove, showComplete, showError, showRetryUpload };
+        function showInfo(message, autoCloseMs = 10000) {
+            if (!overlay) create();
+            overlay.innerHTML = `
+                <button style="
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    background: none;
+                    border: none;
+                    font-size: 20px;
+                    color: #999;
+                    cursor: pointer;
+                    padding: 4px 8px;
+                    line-height: 1;
+                " onmouseover="this.style.color='#333'" onmouseout="this.style.color='#999'" onclick="this.parentElement.remove()">✕</button>
+                <div style="font-size: 18px; font-weight: bold; color: #1565c0; margin-bottom: 10px;">
+                    ℹ️ Already Exists
+                </div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 15px;">
+                    ${message}
+                </div>
+                <button style="
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    padding: 10px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    width: 100%;
+                " onclick="this.parentElement.remove()">
+                    Close
+                </button>
+            `;
+            setTimeout(remove, autoCloseMs);
+        }
+
+        return { create, updatePhase, showProgressBar, updateProgress, remove, showComplete, showInfo, showError, showRetryUpload };
     })();
 
     // Initialize progress UI
@@ -697,15 +735,49 @@ async function addToWishlist() {
             console.log('[3] Loading library from relay...');
             const existingData = await loadLibraryFromRelay();
 
-            // Add books to library
-            progressUI.updatePhase('Adding to Wishlist', `Adding ${books.length} books...`);
-            console.log(`[4] Adding ${books.length} books to library...`);
+            // Dedup: filter out books already in library
+            const existingAsins = new Set(existingData.books.items.map(b => b.asin));
+            const newBooks = [];
+            let skippedDuplicate = 0;
 
             for (const book of books) {
+                if (existingAsins.has(book.asin)) {
+                    skippedDuplicate++;
+                    console.log(`   ⏭️ Skipped (already in library): "${book.title}" (${book.asin})`);
+                } else {
+                    newBooks.push(book);
+                }
+            }
+
+            if (newBooks.length === 0) {
+                // All books already exist
+                const parts = [];
+                if (skippedOwned > 0) parts.push(`${skippedOwned} owned`);
+                if (skippedDuplicate > 0) parts.push(`${skippedDuplicate} already on wishlist`);
+                const reason = parts.length > 0 ? parts.join(', ') : 'already in library';
+
+                progressUI.showInfo(
+                    `<strong>${seriesName}</strong><br>` +
+                    `All ${skippedOwned + skippedDuplicate} books ${reason}`,
+                    15000
+                );
+                new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/wishlist-fetcher-completed';
+                console.log('========================================');
+                console.log('ℹ️ NO NEW BOOKS TO ADD');
+                console.log(`   All books already in library (${reason})`);
+                console.log('========================================\n');
+                return;
+            }
+
+            // Add new books to library
+            progressUI.updatePhase('Adding to Wishlist', `Adding ${newBooks.length} books...`);
+            console.log(`[4] Adding ${newBooks.length} books to library...`);
+
+            for (const book of newBooks) {
                 existingData.books.items.unshift(book);
                 new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/wishlist-item-added';
             }
-            console.log(`   ✅ Added ${books.length} books\n`);
+            console.log(`   ✅ Added ${newBooks.length} books\n`);
 
             // Upload to relay
             console.log('[5] Uploading to relay...');
@@ -716,15 +788,24 @@ async function addToWishlist() {
             console.log('✅ SERIES WISHLIST ADD COMPLETE!');
             console.log('========================================');
             console.log(`   Series: "${seriesName}"`);
-            console.log(`   Added: ${books.length} books`);
+            console.log(`   Added: ${newBooks.length} books`);
             console.log(`   Skipped (owned): ${skippedOwned} books`);
+            if (skippedDuplicate > 0) console.log(`   Skipped (already in library): ${skippedDuplicate} books`);
             console.log(`   Total books in library: ${existingData.books.items.length}`);
             console.log('========================================\n');
 
+            // Build skip summary
+            const skipParts = [];
+            if (skippedOwned > 0) skipParts.push(`${skippedOwned} owned`);
+            if (skippedDuplicate > 0) skipParts.push(`${skippedDuplicate} already on wishlist`);
+            const skipSummary = skipParts.length > 0
+                ? `<br><span style="color: #888; font-size: 12px;">Skipped: ${skipParts.join(', ')}</span>`
+                : '';
+
             progressUI.showComplete(
                 `<strong>${seriesName}</strong><br>` +
-                `Added ${books.length} books to wishlist<br>` +
-                `<span style="color: #888; font-size: 12px;">Skipped ${skippedOwned} owned books</span>`,
+                `Added ${newBooks.length} books to wishlist` +
+                skipSummary,
                 15000
             );
             new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/wishlist-fetcher-completed';
@@ -750,18 +831,19 @@ async function addToWishlist() {
             const existingBook = existingData.books.items.find(b => b.asin === book.asin);
 
             if (existingBook) {
-                // Book already in library
-                console.log(`   ⚠️ Book already in library: "${book.title}" (ASIN: ${book.asin})\n`);
+                const isWishlist = existingBook.onWishlist && (!existingBook.ownershipType || existingBook.ownershipType === 'wishlist');
+                const label = isWishlist ? 'Already on your wishlist' : 'Already in your library';
+                console.log(`   ⚠️ ${label}: "${book.title}" (ASIN: ${book.asin})\n`);
 
                 console.log('========================================');
-                console.log('⚠️ ALREADY IN LIBRARY');
+                console.log(`⚠️ ${label.toUpperCase()}`);
                 console.log('========================================');
                 console.log(`   "${book.title}"`);
                 console.log(`   By: ${book.authors}`);
                 console.log(`   ASIN: ${book.asin}`);
                 console.log('========================================\n');
 
-                progressUI.showError(`<strong>${book.title}</strong><br>is already in your library`);
+                progressUI.showInfo(`<strong>${book.title}</strong><br>${label}`);
                 new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/wishlist-duplicate-skipped';
                 return;
             }
