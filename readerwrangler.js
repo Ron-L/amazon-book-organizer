@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.43";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.44";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2869,8 +2869,10 @@
             // v5.0.0-alpha.175.48 - Removed saveSettings function (dead code)
 
             // v6.0.0 - Import library data from Cloudflare relay
+            // v6.0.0-alpha.44 - Relay import with success dialog (replaces status bar)
             const importFromRelay = async () => {
                 if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
+                const booksBefore = books.length;
                 setRelayImporting(true);
                 setSyncStatus('loading'); // Guard: prevents Inbox useEffect from firing during import
                 try {
@@ -2886,6 +2888,16 @@
                     await loadLibrary(jsonString);
                     setRelayManifest(null); // Clear banner after successful import
                     console.log('✅ Relay import complete (data remains on relay until next fetch or 24h TTL)');
+                    // Show success dialog with book count
+                    const parsed = JSON.parse(jsonString);
+                    const importedCount = parsed.books?.items?.length || 0;
+                    const newBooks = importedCount - booksBefore;
+                    const message = booksBefore === 0
+                        ? `${importedCount} books imported.`
+                        : newBooks > 0
+                            ? `${importedCount} books imported (${newBooks} new).`
+                            : `${importedCount} books imported (library up to date).`;
+                    showInfoDialog('Relay Import', message);
                 } catch (err) {
                     console.error('❌ Relay import failed:', err);
                     showInfoDialog('Relay Import', `Failed to import from relay: ${err.message}`);
@@ -5586,6 +5598,19 @@
                                                 }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     {getStatusBall()} Data Status: {getUrgencyInfo().text}
                                                 </button>
+                                                {/* v6.0.0-alpha.44 - Relay import first (primary action), then backups */}
+                                                {window.RWRelay && window.RWRelay.isConfigured() && (
+                                                    <button onClick={() => { importFromRelay(); setOpenMenuBar(null); }} disabled={relayImporting} style={{
+                                                        width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                        border: 'none', background: 'var(--bg-surface)',
+                                                        cursor: relayImporting ? 'not-allowed' : 'pointer',
+                                                        transition: 'background 0.1s',
+                                                        color: relayImporting ? 'var(--text-muted)' : 'var(--text-primary)',
+                                                        opacity: relayImporting ? 0.5 : 1
+                                                    }} onMouseEnter={e => !relayImporting && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
+                                                        📡 Import from Relay
+                                                    </button>
+                                                )}
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 <button onClick={() => { importBackup(); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
@@ -5602,19 +5627,6 @@
                                                 }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     💾 Save Backup…
                                                 </button>
-                                                {/* v6.0.0 - Relay import (only shown when relay is configured) */}
-                                                {window.RWRelay && window.RWRelay.isConfigured() && (
-                                                    <button onClick={() => { importFromRelay(); setOpenMenuBar(null); }} disabled={relayImporting} style={{
-                                                        width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                        border: 'none', background: 'var(--bg-surface)',
-                                                        cursor: relayImporting ? 'not-allowed' : 'pointer',
-                                                        transition: 'background 0.1s',
-                                                        color: relayImporting ? 'var(--text-muted)' : 'var(--text-primary)',
-                                                        opacity: relayImporting ? 0.5 : 1
-                                                    }} onMouseEnter={e => !relayImporting && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                        📡 Import from Relay
-                                                    </button>
-                                                )}
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 {/* v5.1.0-alpha.2 - Auto-Organize wizard */}
                                                 <button onClick={() => { setWizardModalOpen(true); setOpenMenuBar(null); }} disabled={books.length === 0} style={{
@@ -5799,17 +5811,7 @@
                             </div>
                         </div>
                     )}
-                    {relayImporting && (
-                        <div style={{
-                            background: 'linear-gradient(135deg, #dbeafe, #ede9fe)',
-                            borderBottom: '1px solid var(--border-default)',
-                            padding: '8px 16px',
-                            fontSize: '13px',
-                            color: 'var(--text-primary)'
-                        }}>
-                            📡 Importing from relay...
-                        </div>
-                    )}
+                    {/* v6.0.0-alpha.44 - Removed relay importing status bar; now uses showInfoDialog on completion */}
 
                     {/* v6.0.0-alpha.23 - Full-width welcome screen when no books loaded */}
                     {books.length === 0 && syncStatus !== 'loading' ? (
