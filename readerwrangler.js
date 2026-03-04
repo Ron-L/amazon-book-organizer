@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.46";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.47";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -447,6 +447,7 @@
             const [lastSyncTime, setLastSyncTime] = useState(null);
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
             const [statusModalOpen, setStatusModalOpen] = useState(false);
+            const [dupReviewOpen, setDupReviewOpen] = useState(false);
             const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
             const [collectionsData, setCollectionsData] = useState(null); // Map of ASIN -> {readStatus, collections[]}
             const [collectionFilter, setCollectionFilter] = useState(''); // Filter by collection name or special values
@@ -6995,6 +6996,12 @@
                         // Schema v2.0: Simplified informational modal (no action buttons)
                         const booksWithCollections = books.filter(b => b.collections && b.collections.length > 0).length;
 
+                        // Duplicate detection: find ASINs with multiple book objects
+                        const asinCounts = {};
+                        books.forEach(b => { asinCounts[b.asin] = (asinCounts[b.asin] || 0) + 1; });
+                        const duplicateAsins = Object.keys(asinCounts).filter(a => asinCounts[a] > 1);
+                        const duplicateCount = duplicateAsins.length;
+
                         return (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setStatusModalOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
@@ -7035,9 +7042,20 @@
                                     </div>
 
                                     {/* Organization stats */}
-                                    <div>
+                                    <div className="border-b border-gray-200 pb-3">
                                         <p className="text-sm text-gray-700">
                                             📊 <strong>Organization:</strong> {folders.length} folder{folders.length !== 1 ? 's' : ''}
+                                        </p>
+                                    </div>
+
+                                    {/* Duplicate detection */}
+                                    <div>
+                                        <p className="text-sm text-gray-700">
+                                            {duplicateCount > 0
+                                                ? <>{'\uD83D\uDD04'} <strong>Duplicates:</strong> {duplicateCount} duplicate book{duplicateCount !== 1 ? 's' : ''} found
+                                                    <button onClick={() => setDupReviewOpen(true)} className="ml-2 text-xs text-blue-600 hover:text-blue-800 underline">Review</button>
+                                                </>
+                                                : <><span>✅</span> <strong>Duplicates:</strong> None</>}
                                         </p>
                                     </div>
 
@@ -7047,6 +7065,147 @@
                                             <p>Use the bookmarklet to import your library through the relay.</p>
                                         </div>
                                     )}
+                                </div>
+                            </div>
+                        </div>
+                        );
+                    })()}
+
+                    {/* Duplicate Review Modal */}
+                    {dupReviewOpen && (() => {
+                        // Build duplicate groups
+                        const asinMap = {};
+                        books.forEach(b => {
+                            if (!asinMap[b.asin]) asinMap[b.asin] = [];
+                            asinMap[b.asin].push(b);
+                        });
+                        const dupGroups = Object.entries(asinMap).filter(([, copies]) => copies.length > 1);
+
+                        // Find folders for a book by its id
+                        const getFolderNames = (bookId) => {
+                            return folders.filter(f => (f.bookIds || []).includes(bookId)).map(f => f.name);
+                        };
+
+                        // Ownership label
+                        const ownershipLabel = (b) => {
+                            if (b.onWishlist && (!b.ownershipType || b.ownershipType === 'wishlist')) return 'Wishlist';
+                            const type = b.ownershipType || 'purchased';
+                            return type.charAt(0).toUpperCase() + type.slice(1);
+                        };
+
+                        // Resolve: keep selected copy, merge folders, remove others
+                        const resolveDuplicates = (selections) => {
+                            // selections: { asin: bookId to keep }
+                            const removedIds = new Set();
+                            const folderMerges = {}; // keepId -> Set of folder ids to add
+
+                            dupGroups.forEach(([asin, copies]) => {
+                                const keepId = selections[asin] || copies[0].id;
+                                copies.forEach(copy => {
+                                    if (copy.id !== keepId) {
+                                        // Gather folders of the removed copy
+                                        folders.forEach(f => {
+                                            if ((f.bookIds || []).includes(copy.id)) {
+                                                if (!folderMerges[keepId]) folderMerges[keepId] = new Set();
+                                                folderMerges[keepId].add(f.id);
+                                            }
+                                        });
+                                        removedIds.add(copy.id);
+                                    }
+                                });
+                            });
+
+                            // Update folders: add kept book to merged folders, remove old refs
+                            const updatedFolders = folders.map(f => {
+                                let newBookIds = (f.bookIds || []).filter(id => !removedIds.has(id));
+                                // Add kept books to folders they weren't already in
+                                Object.entries(folderMerges).forEach(([keepId, folderIdSet]) => {
+                                    if (folderIdSet.has(f.id) && !newBookIds.includes(keepId)) {
+                                        newBookIds.push(keepId);
+                                    }
+                                });
+                                return { ...f, bookIds: newBookIds };
+                            });
+                            setFolders(updatedFolders);
+
+                            // Remove duplicate books
+                            const updatedBooks = books.filter(b => !removedIds.has(b.id));
+                            setBooks(updatedBooks);
+                            saveBooksToIndexedDB(updatedBooks);
+
+                            setDupReviewOpen(false);
+                        };
+
+                        // Track selections in a ref-like closure (simple object)
+                        const defaultSelections = {};
+                        dupGroups.forEach(([asin, copies]) => {
+                            // Default: prefer purchased over wishlist
+                            const purchased = copies.find(c => c.ownershipType && c.ownershipType !== 'wishlist' && !c.onWishlist);
+                            defaultSelections[asin] = purchased ? purchased.id : copies[0].id;
+                        });
+
+                        return (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setDupReviewOpen(false); backdropMouseDownRef.current = null; }}>
+                            <div className="bg-white rounded-lg shadow-2xl w-full" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+                                {/* Header */}
+                                <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
+                                    <h2 className="text-xl font-bold text-gray-900">Review Duplicates</h2>
+                                    <button onClick={() => setDupReviewOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
+                                </div>
+
+                                {/* Scrollable content */}
+                                <div className="p-4 overflow-y-auto" style={{ flex: 1 }}>
+                                    <p className="text-sm text-gray-600 mb-4">
+                                        {dupGroups.length} book{dupGroups.length !== 1 ? 's' : ''} with duplicate entries.
+                                        The highlighted copy will be kept. Click a copy to change the selection.
+                                    </p>
+
+                                    {dupGroups.map(([asin, copies]) => (
+                                        <div key={asin} className="border border-gray-200 rounded-lg mb-3 p-3">
+                                            <p className="text-sm font-semibold text-gray-800 mb-2">{copies[0].title}</p>
+                                            <p className="text-xs text-gray-500 mb-2">by {copies[0].authors} · ASIN: {asin}</p>
+                                            <div className="space-y-2">
+                                                {copies.map((copy, idx) => {
+                                                    const folderNames = getFolderNames(copy.id);
+                                                    const isDefault = copy.id === defaultSelections[asin];
+                                                    return (
+                                                        <div key={copy.id || idx}
+                                                            className={`flex items-start gap-3 p-2 rounded cursor-pointer border-2 transition-colors ${isDefault ? 'border-blue-400 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}
+                                                            onClick={() => { defaultSelections[asin] = copy.id; setDupReviewOpen(false); setTimeout(() => setDupReviewOpen(true), 0); }}
+                                                        >
+                                                            {copy.coverUrl && (
+                                                                <img src={copy.coverUrl} alt="" style={{ width: '40px', height: '60px', objectFit: 'cover', borderRadius: '3px', opacity: copy.onWishlist ? 0.5 : 1 }} />
+                                                            )}
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${copy.onWishlist && (!copy.ownershipType || copy.ownershipType === 'wishlist') ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
+                                                                        {ownershipLabel(copy)}
+                                                                    </span>
+                                                                    {isDefault && <span className="text-xs text-blue-600 font-medium">← Keep</span>}
+                                                                </div>
+                                                                <p className="text-xs text-gray-500 mt-1">
+                                                                    {folderNames.length > 0 ? `In: ${folderNames.join(', ')}` : 'Not in any folder'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Footer */}
+                                <div className="p-4 border-t border-gray-200 flex justify-between items-center">
+                                    <p className="text-xs text-gray-500">
+                                        Kept copies inherit folder placements from removed copies.
+                                    </p>
+                                    <button
+                                        onClick={() => resolveDuplicates(defaultSelections)}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                                    >
+                                        Resolve {dupGroups.length} duplicate{dupGroups.length !== 1 ? 's' : ''}
+                                    </button>
                                 </div>
                             </div>
                         </div>
