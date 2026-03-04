@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.10.0-alpha.2';
+    const FETCHER_VERSION = 'v4.10.0-alpha.3';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -2326,12 +2326,13 @@ async function fetchAmazonLibrary() {
             let orphanCursor = "";
             let orphanPage = 0;
             let orphanHasMore = true;
-            // Estimate total pages from finalBooks count
-            const estimatedTotalPages = Math.ceil(finalBooks.length / PAGE_SIZE);
+            let orphanTotalPages = 0; // Set from first API response
 
             while (orphanHasMore) {
                 orphanPage++;
-                progressUI.updateOrphanProgress(orphanPage, estimatedTotalPages);
+                if (orphanTotalPages > 0) {
+                    progressUI.updateOrphanProgress(orphanPage, orphanTotalPages);
+                }
 
                 // Minimal query - just ASINs and binding (to filter non-books)
                 const orphanQuery = `query ccGetCustomerLibraryBooks {
@@ -2340,6 +2341,9 @@ async function fetchAmazonLibrary() {
                             pageInfo {
                                 hasNextPage
                                 endCursor
+                            }
+                            totalCount {
+                                number
                             }
                             edges {
                                 node {
@@ -2392,6 +2396,14 @@ async function fetchAmazonLibrary() {
                 }, `Orphan scan page ${orphanPage}`);
 
                 const library = result.library;
+
+                // On first page, get totalCount from API for accurate progress estimate
+                if (orphanPage === 1 && library.totalCount?.number) {
+                    orphanTotalPages = Math.ceil(library.totalCount.number / PAGE_SIZE);
+                    console.log(`   📊 Amazon reports ${library.totalCount.number} total items (~${orphanTotalPages} pages)`);
+                    progressUI.updateOrphanProgress(orphanPage, orphanTotalPages);
+                }
+
                 for (const edge of library.edges) {
                     const product = edge.node?.product;
                     if (!product) continue;
@@ -2400,7 +2412,7 @@ async function fetchAmazonLibrary() {
                     amazonAsins.add(product.asin);
                 }
 
-                console.log(`   📖 Orphan scan page ${orphanPage}: ${library.edges.length} items (${amazonAsins.size} book ASINs total)`);
+                console.log(`   📖 Orphan scan page ${orphanPage}${orphanTotalPages ? '/' + orphanTotalPages : ''}: ${library.edges.length} items (${amazonAsins.size} book ASINs total)`);
 
                 orphanHasMore = library.pageInfo?.hasNextPage || false;
                 orphanCursor = library.pageInfo?.endCursor || "";
