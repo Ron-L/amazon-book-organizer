@@ -7359,9 +7359,6 @@
                                             <li>Open readerwrangler.com on your phone to pair and browse on the go</li>
                                         </ol>
                                     </div>
-                                    <div className="text-sm text-gray-600">
-                                        <p>For detailed instructions, see the User Guide documentation.</p>
-                                    </div>
                                 </div>
                             </div>
                         </div>

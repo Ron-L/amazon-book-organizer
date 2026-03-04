@@ -76,20 +76,15 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Users get stuck, have questions, can't find answers
    - Impact: Reduces support burden, improves user confidence
 
-**3. Fill in Missing Sections in USER-GUIDE.md** - MEDIUM/LOW (2-3 hours)
-   - Complete placeholder sections
-   - Add screenshots/examples
-   - Problem: Partial documentation confuses users
-   - Impact: Complete feature documentation
-
-**4. Update USER-GUIDE.md for v6.0.0** - MEDIUM/LOW (3-4 hours)
+**3. User Guide: consolidate or make accessible from app** - MEDIUM/MEDIUM (4-6 hours)
+   - USER-GUIDE.md exists on GitHub but is not accessible from the app
+   - Help > How To Use references "User Guide documentation" that users can't reach
+   - Decision needed: (a) add Help > User Guide as in-app HTML (2 sources of truth), or (b) delete USER-GUIDE.md and put all guidance in-app, or (c) serve USER-GUIDE.md as a linked page from the app
    - USER-GUIDE.md is significantly out of date — predates relay, mobile sync, tag virtual folders, and other v5.5/v6 features
    - Update FAQ answers that reference file picker workflow (now relay-based)
    - Document relay setup and mobile pairing
-   - Update "Where is my data stored?" answer (now includes Cloudflare relay)
-   - Update "Can I use ReaderWrangler on mobile?" answer (now has mobile sync via QR pairing)
-   - Problem: Documentation describes a different product than what users experience
-   - Impact: Users can actually follow the guide
+   - Problem: Documentation describes a different product than what users experience and is inaccessible from the app
+   - Impact: Users can actually find and follow the guide
 
 **5. Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
    - Prerequisites: Mobile sync (Milestone 2) complete
