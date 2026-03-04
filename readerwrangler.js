@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.44";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.45";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -74,6 +74,69 @@
                 overlay.appendChild(dialog);
                 document.body.appendChild(overlay);
             });
+        }
+
+        // v6.0.0-alpha.45: Progress dialog for relay import (mutable content, no button initially)
+        // Returns controller: { update(msg), finish(title, msg), close() }
+        function showProgressDialog(title, message) {
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex; align-items: center; justify-content: center;
+                z-index: 10000;
+            `;
+
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                background: var(--bg-surface); border-radius: 8px; padding: 24px;
+                max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+                box-shadow: var(--shadow-modal);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            `;
+
+            const titleEl = document.createElement('h2');
+            titleEl.textContent = title;
+            titleEl.style.cssText = `margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: var(--text-primary);`;
+
+            const messageEl = document.createElement('div');
+            messageEl.style.cssText = `margin-bottom: 24px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); white-space: pre-line;`;
+            messageEl.textContent = message;
+
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = `text-align: right;`;
+
+            dialog.appendChild(titleEl);
+            dialog.appendChild(messageEl);
+            dialog.appendChild(buttonContainer);
+            overlay.appendChild(dialog);
+            document.body.appendChild(overlay);
+
+            return {
+                update(msg) {
+                    messageEl.textContent = msg;
+                },
+                finish(newTitle, msg) {
+                    return new Promise((resolve) => {
+                        titleEl.textContent = newTitle;
+                        messageEl.textContent = msg;
+                        const button = document.createElement('button');
+                        button.textContent = 'OK';
+                        button.style.cssText = `
+                            background: var(--bg-accent); color: var(--text-on-accent); border: none;
+                            border-radius: 4px; padding: 10px 24px; font-size: 14px; font-weight: 500; cursor: pointer;
+                        `;
+                        button.onmouseover = () => button.style.background = 'var(--bg-accent-hover)';
+                        button.onmouseout = () => button.style.background = 'var(--bg-accent)';
+                        button.onclick = () => { document.body.removeChild(overlay); resolve(); };
+                        buttonContainer.appendChild(button);
+                        button.focus();
+                    });
+                },
+                close() {
+                    if (overlay.parentNode) document.body.removeChild(overlay);
+                }
+            };
         }
 
         // v5.5.7-alpha.13: Themed confirm dialog (replaces window.confirm to avoid "localhost says")
@@ -2869,38 +2932,53 @@
             // v5.0.0-alpha.175.48 - Removed saveSettings function (dead code)
 
             // v6.0.0 - Import library data from Cloudflare relay
-            // v6.0.0-alpha.44 - Relay import with success dialog (replaces status bar)
+            // v6.0.0-alpha.45 - Progress dialog with delta count and 30s timeout
+            const RELAY_IMPORT_TIMEOUT = 30000; // 30 seconds
             const importFromRelay = async () => {
                 if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
                 const booksBefore = books.length;
                 setRelayImporting(true);
                 setSyncStatus('loading'); // Guard: prevents Inbox useEffect from firing during import
+                const progress = showProgressDialog('Relay Import', 'Importing from relay…');
                 try {
-                    // Always check relay status first (manifest may have been dismissed or never fetched)
-                    const manifest = await window.RWRelay.checkStatus();
-                    if (!manifest) {
-                        showInfoDialog('Relay Import', 'No library data found on the relay.\n\nIf you recently regenerated your encryption keys, your bookmarklet may be out of date. Open File → Relay Setup and drag the updated bookmarklet to your bookmarks bar, then re-fetch from Amazon.');
+                    const importWork = async () => {
+                        // Always check relay status first (manifest may have been dismissed or never fetched)
+                        const manifest = await window.RWRelay.checkStatus();
+                        if (!manifest) {
+                            return { empty: true };
+                        }
+                        const jsonString = await window.RWRelay.download((phase, detail) => {
+                            console.log(`📡 Relay import: ${detail}`);
+                        });
+                        const totalBooks = await loadLibrary(jsonString);
+                        return { totalBooks };
+                    };
+
+                    const timeout = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('Import timed out after 30 seconds. Check your internet connection and try again.')), RELAY_IMPORT_TIMEOUT)
+                    );
+
+                    const result = await Promise.race([importWork(), timeout]);
+
+                    if (result.empty) {
+                        await progress.finish('Relay Import', 'No library data found on the relay.\n\nIf you recently regenerated your encryption keys, your bookmarklet may be out of date. Open File → Relay Setup and drag the updated bookmarklet to your bookmarks bar, then re-fetch from Amazon.');
                         return;
                     }
-                    const jsonString = await window.RWRelay.download((phase, detail) => {
-                        console.log(`📡 Relay import: ${detail}`);
-                    });
-                    await loadLibrary(jsonString);
+
                     setRelayManifest(null); // Clear banner after successful import
                     console.log('✅ Relay import complete (data remains on relay until next fetch or 24h TTL)');
-                    // Show success dialog with book count
-                    const parsed = JSON.parse(jsonString);
-                    const importedCount = parsed.books?.items?.length || 0;
-                    const newBooks = importedCount - booksBefore;
+
+                    const totalBooks = result.totalBooks;
+                    const newBooks = totalBooks - booksBefore;
                     const message = booksBefore === 0
-                        ? `${importedCount} books imported.`
+                        ? `${totalBooks} books imported.`
                         : newBooks > 0
-                            ? `${importedCount} books imported (${newBooks} new).`
-                            : `${importedCount} books imported (library up to date).`;
-                    showInfoDialog('Relay Import', message);
+                            ? `Library updated: ${totalBooks} books (${newBooks} new).`
+                            : `Library up to date (${totalBooks} books).`;
+                    await progress.finish('Relay Import', message);
                 } catch (err) {
                     console.error('❌ Relay import failed:', err);
-                    showInfoDialog('Relay Import', `Failed to import from relay: ${err.message}`);
+                    await progress.finish('Import Failed', err.message);
                 } finally {
                     setRelayImporting(false);
                 }
@@ -3974,7 +4052,7 @@
                     setLastSyncTime(Date.now());
                     setSyncStatus('fresh');
                     if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
-                    return;
+                    return mergedBooks.length;
                 }
 
                 // No organization found, start fresh
@@ -3982,6 +4060,7 @@
                 setLastSyncTime(Date.now());
                 setSyncStatus('fresh');
                 if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
+                return mergedBooks.length;
             };
 
             const checkIfBlankImage = (img, bookId) => {
