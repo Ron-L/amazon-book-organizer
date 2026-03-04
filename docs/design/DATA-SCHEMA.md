@@ -2,7 +2,7 @@
 
 **Purpose:** Document all field mappings across transformation boundaries to prevent field-name-mismatch bugs.
 
-**Last Updated:** 2026-02-16 (v5.5.8)
+**Last Updated:** 2026-03-04 (v6.0.0-alpha.43)
 
 ---
 
@@ -12,8 +12,8 @@ Data flows through multiple transformations in ReaderWrangler:
 
 ```
 Primary:  Amazon Data → Compress → Encrypt → Cloudflare KV → Decrypt → Decompress → Memory → IndexedDB
-Fallback: Amazon Data → JSON File → File Picker → Memory → IndexedDB
-Backup:   Memory → Backup Export (JSON file) → Import → Memory
+Backup:   Memory → Backup Export (JSON file) → Restore → Memory
+Mobile:   Desktop Import → putDeviceState() → Cloudflare KV → Mobile App
 ```
 
 Field names change at certain boundaries. This document maps those transformations to ensure data integrity.
@@ -135,7 +135,7 @@ await tx.objectStore('books').put({
 
 ---
 
-### 3. Memory → Backup Export
+### 3. Memory → Save Backup
 
 **Location:** `readerwrangler.js` ~line 2633 (exportBackup)
 **Mapping:** Field name changes for user metadata
@@ -174,7 +174,7 @@ const bookItems = books.map(book => ({
 
 ---
 
-### 4. Backup Import → Memory
+### 4. Restore Backup → Memory
 
 **Location:** `readerwrangler.js` ~line 3027 (importBackup)
 **Mapping:** Reverse transformation (note → userNote)
@@ -303,14 +303,16 @@ const COLUMN_CONFIG = {
 
 ## Data Flow Diagrams
 
-### Complete Import Cycle
+### Complete Import Cycle (Relay)
 
 ```
-User: File → Import Library (amazon-library.json)
+Bookmarklet fetches from Amazon
   ↓
-Amazon JSON file (no userEdited field)
+Compress + encrypt → upload chunks + manifest to Cloudflare KV (TTL: 24h)
   ↓
-Parse JSON → processedBooks
+App: File → Import from Relay (or banner notification)
+  ↓
+Download chunks → decrypt → decompress → JSON
   ↓
 Merge with IndexedDB (preserveUserData=true):
   - Always preserve: userNote, tags, priceTrigger, myRating, hidden
@@ -318,27 +320,28 @@ Merge with IndexedDB (preserveUserData=true):
   ↓
 Update books[] state (in memory)
   ↓
-Save to IndexedDB
+Save to IndexedDB + auto-save organization to localStorage
   ↓
-Auto-save organization to localStorage
+putDeviceState() → encrypt + compress → upload to KV (TTL: 90 days)
+  (makes library available to mobile)
 ```
 
 ### Complete Backup/Restore Cycle
 
 ```
-User: File → Export Backup
+User: File → Save Backup
   ↓
 Read books[] from memory
   ↓
 Transform: userNote → note, include userEdited flags
   ↓
-Create backup JSON
+Create backup JSON (includes relay credentials if configured)
   ↓
 Download backup.json
 
 ─────────────────────────
 
-User: File → Import Backup
+User: File → Restore Backup
   ↓
 Read backup.json (has userEdited field on edited books)
   ↓
@@ -350,9 +353,9 @@ Restore books[] state (with userEdited flags for future Amazon imports)
   ↓
 Restore tagRegistry state
   ↓
-Save to IndexedDB
+Save to IndexedDB + auto-save organization to localStorage
   ↓
-Auto-save organization to localStorage
+If relay configured: putDeviceState() → sync to relay
 ```
 
 ---
@@ -463,6 +466,17 @@ organization: {
 
 ## Relay Data Schemas (v6.0.0)
 
+### KV Storage Summary
+
+| KV Key | Content | Encrypted | TTL | Written By | Read By |
+|--------|---------|-----------|-----|------------|---------|
+| `relay:{cid}:manifest` | Upload metadata (timestamp, chunk count) | No | 24 hours | Fetcher | App (checkStatus) |
+| `relay:{cid}:chunk:{n}` | Fetched library data (chunked) | Yes (AES-256-GCM) | 24 hours | Fetcher | App (download/import) |
+| `relay:{cid}:exclusions` | Exclusion list (deleted ASINs) | Yes (AES-256-GCM) | 90 days | App | Fetcher |
+| `relay:{cid}:device-state` | Full library + organization snapshot | Yes (AES-256-GCM) | 90 days | App | Mobile |
+
+**TTL behavior:** TTL resets on every write. Active users never expire. Abandoned channels auto-clean after 90 days.
+
 ### Relay Credentials (localStorage)
 
 **Key:** `readerwrangler-relay`
@@ -513,7 +527,7 @@ Reverse pipeline: download chunks → reassemble → verify SHA-256 checksum →
 
 ### Exclusion List (Cloudflare KV, Phase 3)
 
-**KV key:** `relay:{channelId}:exclusions` (no TTL — persistent)
+**KV key:** `relay:{channelId}:exclusions` (TTL: 90 days, resets on write)
 **Format:** Encrypted JSON
 
 ```json
@@ -528,7 +542,7 @@ Reverse pipeline: download chunks → reassemble → verify SHA-256 checksum →
 
 ### Device State (Cloudflare KV, Phase 2)
 
-**KV key:** `relay:{channelId}:device-state` (no TTL — persistent)
+**KV key:** `relay:{channelId}:device-state` (TTL: 90 days, resets on write)
 **Format:** Encrypted + compressed (same pipeline as library chunks)
 
 Contains the full library snapshot pushed by desktop after each successful import, consumed by mobile on app open.
@@ -558,6 +572,7 @@ On backup import, relay credentials are restored to localStorage and the user is
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 6.0.0-alpha.43 | 2026-03-04 | Added KV storage summary table with TTLs; device-state and exclusions changed from persistent to 90-day TTL; updated data flow diagrams for relay-only (removed file picker fallback); renamed Import/Export to Save/Restore Backup; added putDeviceState to import and restore flows |
 | 6.0.0 | 2026-02-28 | Added relay data schemas (credentials, manifest, chunks, encryption, exclusion list, device state); added relay key to localStorage keys table; backup export includes relay credentials |
 | 5.5.8 | 2026-02-16 | Added localStorage keys documentation; theme preference key; removed outdated columns references (v5.4.0); added explorerCoverCols migration note (px width) |
 | 5.4.7 | 2026-02-12 | Added userEdited field for per-field edit tracking; Amazon imports respect flags; backup export/import preserves flags |

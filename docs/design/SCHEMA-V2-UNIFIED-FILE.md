@@ -1,19 +1,20 @@
 # Schema v2.x: Unified File Format
 
 **Date:** 2025-12-24
-**Updated:** 2026-01-20 (v4.19.0 data model changes, v2.1 schema)
+**Updated:** 2026-03-04 (v6.0.0 relay-only, v2.3 schema with backup relay credentials)
 **Status:** Implemented
 
 ## Summary
 
-Replace the current two-file system (`amazon-library.json` + `amazon-collections.json`) with a single unified file. Also adds wishlist support with ownership tracking.
+Unified data format for ReaderWrangler library data. Originally replaced the two-file system (`amazon-library.json` + `amazon-collections.json`). Now used as the schema for relay transfers (fetcher → Cloudflare KV → app), device-state (desktop → mobile), and backup files. Also includes wishlist support with ownership tracking.
 
 ## Schema Versioning
 
 | Version | Changes | Compatibility |
 |---------|---------|---------------|
 | v2.0 | Initial unified format with `isOwned` field | Loader accepts, normalizes to v2.1 fields |
-| v2.1 | New data model: `onWishlist`, `ownershipType` | Current version |
+| v2.1 | New data model: `onWishlist`, `ownershipType` | — |
+| v2.3 | Backup files include `relay` credentials and `isBackup` flag | Current version |
 
 **Version check:** Loaders accept any `schemaVersion` starting with `"2."`. Breaking changes would require v3.x.
 
@@ -21,18 +22,7 @@ Replace the current two-file system (`amazon-library.json` + `amazon-collections
 
 ## Motivation
 
-### Current Pain Points
-
-1. **Two files to manage** - Users must load library JSON, then separately load collections JSON
-2. **Easy to mismatch** - Loading wrong collections file against a library
-3. **UX burden** - "Which file do I pick?" confusion
-4. **Orphaned data** - Fresh library import doesn't carry forward wishlist items
-
-### Why Merge Now?
-
-- N=1 user currently (developer only)
-- Breaking changes are cheap now, expensive later
-- Wishlist feature requires schema changes anyway - good time to consolidate
+The original two-file system required users to manage separate library and collections files. The unified format consolidated these into a single schema, which is now used across all data paths: relay transfers, device-state sync, and backup files.
 
 ---
 
@@ -42,22 +32,20 @@ Replace the current two-file system (`amazon-library.json` + `amazon-collections
 
 | Question | Decision | Rationale |
 |----------|----------|-----------|
-| File structure | Merge library + collections into single file | Simpler UX, prevents mismatch |
-| Wishlist storage | In `books.items` with `isOwned: false` | Same array, visual distinction only |
-| Field naming | `isOwned` (boolean) | Follows `is*` naming convention |
-| Fetcher naming | "Wish Fetcher" | Consistent with Library/Collections Fetcher |
+| File structure | Merge library + collections into single schema | Simpler data flow, prevents mismatch |
+| Data transfer | Relay-only (Cloudflare KV) | No file picker needed; cross-domain encryption |
+| Wishlist storage | In `books.items` with `onWishlist` flag | Same array, visual distinction only |
 | Duplicate handling | ASIN-merge (update existing, preserve location) | Wishlist→Owned transition is seamless |
-| Default column for wishlist | Unorganized column | No special column needed |
-| Fresh import behavior | In-app option with warning dialog | Don't offload to file system navigation |
+| Default folder for wishlist | Inbox | No special folder needed |
 | Fetcher order | Order independent - all are additive | No "Library must be first" constraint |
 
 ---
 
-## Schema v2.0 Structure
+## Schema v2.x Structure
 
 ```json
 {
-  "schemaVersion": "2.1",
+  "schemaVersion": "2.3",
   "books": {
     "fetchDate": "2025-12-24T10:30:00Z",
     "fetcherVersion": "1.2.0",
@@ -96,14 +84,15 @@ Replace the current two-file system (`amazon-library.json` + `amazon-collections
     }
   },
   "organization": {
-    "columns": [
+    "folders": [
       {
-        "id": "col-1",
+        "id": "folder-1",
         "name": "To Read",
-        "items": ["B08XYZ1234", "div-1", "B09ABC5678"]
+        "items": ["B08XYZ1234", "B09ABC5678"],
+        "children": []
       }
     ],
-    "columnOrder": ["col-1", "col-2"]
+    "tagRegistry": {}
   }
 }
 ```
@@ -114,7 +103,7 @@ Replace the current two-file system (`amazon-library.json` + `amazon-collections
 |---------|---------|----------|
 | `books` | All book items (owned + wishlist) | `fetchDate`, `fetcherVersion` |
 | `collections` | Amazon's collection assignments | `fetchDate`, `fetcherVersion` |
-| `organization` | User's column layout and order | None (user-managed) |
+| `organization` | User's folder tree and tag registry | None (user-managed) |
 
 ### Book Item Fields
 
@@ -156,28 +145,26 @@ Legacy fields are supported for backward compatibility until 2026-07-20.
 
 ## Fetcher Behavior
 
-### Three Fetchers
+### Five Fetchers
 
-1. **Library Fetcher** - Imports owned books from Amazon library page
-2. **Collections Fetcher** - Imports Amazon collection assignments
-3. **Wish Fetcher** - Imports from current book page (single book) or wishlist page
+1. **Library Fetcher** — Imports owned books from Amazon library page (incremental: stops at overlap with existing data)
+2. **Collections Fetcher** — Imports Amazon collection assignments (full scan every run)
+3. **Wishlist Fetcher** — Adds current product page book to library as wishlist item
+4. **Series Page Fetcher** — Adds unowned books from a series page
+5. **Author Bibliography Fetcher** — Adds Kindle books from an author page
+
+All fetchers use relay-only data flow: download existing library from relay → merge new data → upload back to relay.
 
 ### Order Independence
 
 Any fetcher can run first. All fetchers are **additive**:
 
 ```
-User has: Empty file
-Runs: Wish Fetcher → adds 1 wishlist book
+User has: Empty relay
+Runs: Wishlist Fetcher → adds 1 wishlist book
 Runs: Library Fetcher → adds 100 owned books
 Runs: Collections Fetcher → adds collection mappings
 Result: 101 books with collections
-```
-
-```
-User has: 100 owned books
-Runs: Wish Fetcher on a book they already own
-Result: No change (duplicate detected by ASIN, silent no-op)
 ```
 
 ### ASIN-Based Merge Logic
@@ -187,7 +174,7 @@ When adding a book:
 ```
 if (books.items.find(b => b.asin === newBook.asin)) {
   // Book exists - update fields but preserve location
-  // If wishlist book becomes owned: set isOwned = true, add acquiredDate
+  // If wishlist book becomes owned: update ownershipType, add acquiredDate
 } else {
   // New book - add to items array
 }
@@ -201,7 +188,7 @@ When user purchases a wishlist book and re-imports library:
 2. Updates `ownershipType: 'wishlist'` → `ownershipType: 'owned'`
 3. `onWishlist` remains `true` (user can clear if desired)
 4. Adds `acquiredDate` field
-5. Book **stays in current column** (doesn't move to Unorganized)
+5. Book **stays in current folder** (doesn't move to Inbox)
 6. Visual effect: "ungrays" in place
 
 ---
@@ -210,38 +197,28 @@ When user purchases a wishlist book and re-imports library:
 
 ### Storage Model
 
-- **IndexedDB** - Auto-saves working state (invisible to user)
-- **File Export** - User-triggered download of unified file
+- **IndexedDB** — Auto-saves book data (invisible to user)
+- **localStorage** — Organization state (folders, tags, explorer settings, relay credentials)
+- **Cloudflare KV** — Relay transfer (fetcher → app), device-state (desktop → mobile)
+- **Backup file** — User-triggered Save/Restore for portability and disaster recovery
 
-Work is never lost - IndexedDB auto-saves. Export/Import are for moving data in/out.
+Work is never lost — IndexedDB + localStorage auto-save. Relay keeps mobile in sync.
 
-### UI Changes
+### File Menu
 
-**Button bar:** `[📥 Import] [💾 Export] [🗑️ Reset App]`
-
-| Button | Action | Tooltip |
-|--------|--------|---------|
-| Import | File picker → load unified file | "Load library file" |
-| Export | Download unified file (with organization) | "Download library with organization" |
-| Reset App | Confirmation dialog → clear IndexedDB | (existing behavior) |
-
-**Data Status dialog:** Purely informational (no action buttons)
-- Shows books count + fetchDate
-- Shows collections count + fetchDate
-- Shows organization stats (columns, dividers)
-
-### File Loading (Import)
-
-1. User clicks "Import" button
-2. File picker opens
-3. App reads file, checks `schemaVersion`
-4. If v2.0: Load directly into IndexedDB
-5. Freshness dates display in Data Status (old file shows old dates)
+| Menu Item | Action |
+|-----------|--------|
+| 📊 Data Status | Shows books count, fetchDate, collections count |
+| 📂 Restore Backup… | File picker → load backup JSON |
+| 💾 Save Backup… | Download backup JSON (books + organization + relay credentials) |
+| 📡 Import from Relay | Download latest library data from Cloudflare KV |
+| 🔧 Relay Setup… | Configure relay credentials, generate bookmarklet |
+| ⚠️ Reset App | Confirmation dialog → clear all local data |
 
 ### Wishlist Display
 
-- Wishlist books (`ownershipType: 'wishlist'`) appear in Unorganized column initially
-- User can drag to any column
+- Wishlist books (`ownershipType: 'wishlist'`) appear in Inbox initially
+- User can drag to any folder
 - Visual distinction:
   - Gray-out effect on cover/title
   - "Wishlist" badge overlay
@@ -249,86 +226,56 @@ Work is never lost - IndexedDB auto-saves. Export/Import are for moving data in/
 
 ---
 
-## Migration Path
-
-**Note:** With N=1 user, v1.x migration is not implemented. User will re-run fetchers to generate v2.0 files.
-
----
-
 ## File Naming
 
 | Scenario | Filename |
 |----------|----------|
-| Fetcher output | `amazon-library.json` |
-| App export | `readerwrangler-backup-{date}.json` |
-
-Note: `amazon-collections.json` becomes obsolete. Collections data is now embedded in the unified file.
+| Fetcher output | Uploaded to relay (no file saved) |
+| App backup | `readerwrangler-backup-{date}.json` |
 
 ---
 
-## File Types: Library vs Backup
+## Data Types: Library vs Backup
 
-Two distinct file types serve different purposes:
+Two distinct data shapes use the same v2.x schema:
 
-| File | Created by | Filename | Contains | Purpose |
+| Type | Created by | Delivery | Contains | Purpose |
 |------|------------|----------|----------|---------|
-| Library | Fetcher | `amazon-library.json` | books, collections | Transport data into app |
-| Backup | App Export | `readerwrangler-backup-{date}.json` | books, collections, organization, `isBackup: true` | Save/restore app state |
+| Library | Fetcher | Relay (encrypted KV) | books, collections | Transport fetched data into app |
+| Backup | App (Save Backup) | JSON file download | books, collections, organization, relay credentials, `isBackup: true` | Save/restore app state |
 
 ### Detection Logic
 
 - `isBackup: true` at root level → Backup file
-- No `isBackup` field (or `false`) → Library file
+- No `isBackup` field (or `false`) → Library data
 
-### Fetcher Behavior
+### App Behavior
 
-Fetchers **reject** backup files:
-- Check for `isBackup === true` before processing
-- Display error: "This is a backup file. Please select amazon-library.json instead."
-- Rationale: Fetchers should update library data, not overwrite backup state
-
-### App Import Behavior
-
-| File Type | Behavior |
+| Data Type | Behavior |
 |-----------|----------|
-| Backup (`isBackup: true`) | Prompt: "Restore backup? This will replace your current organization." → Full replace |
-| Library (no `isBackup`) | Merge books into existing library, keep current organization, ignore any `organization` in file |
+| Backup (`isBackup: true`) | Prompt: "Restore backup? This will replace your current organization." → Full replace → sync to relay |
+| Library (from relay) | Merge books into existing library, keep current organization → sync to relay (device-state) |
 
 ---
 
-## Implementation Phases
+## Implementation History
 
-### Phase 1: Fetchers (v2.0 output) ✅ Complete
-- [x] Update Library Fetcher → output v2.0 format
-- [x] Update Collections Fetcher → merge into existing unified file
-
-### Phase 2: App (v2.0 support) ✅ Complete
-- [x] Update app to read v2.0 format (`books.items`, `collections.items`)
-- [x] Update app to export v2.0 format (with `organization` section)
-- [x] Update Data Status to read from `books.fetchDate`, `collections.fetchDate`
-- [x] Rename buttons: Backup→Export, Restore→Import
-- [x] Remove Load buttons from Data Status dialog
-
-### Phase 3: Wishlist Feature ✅ Complete (v4.19.0)
-- [x] Create Wishlist Fetcher bookmarklet
-- [x] Add `onWishlist` / `ownershipType` field handling
-- [x] Add wishlist visual styling (gray-out, badge)
-- [x] Add Amazon purchase link behavior
-- [x] Implement ASIN-merge logic for wishlist→owned transitions
-- [x] Import preserves existing wishlist items
-- [x] Gap-fill enrichment includes wishlist books
+- **Phase 1** ✅ Fetchers output v2.0 format
+- **Phase 2** ✅ App reads/writes v2.0 format
+- **Phase 3** ✅ Wishlist feature (v4.19.0) — onWishlist/ownershipType, visual styling, ASIN-merge
+- **Phase 4** ✅ Relay-only data flow (v6.0.0) — all fetchers use encrypted relay, file picker removed
+- **Phase 5** ✅ v2.3 schema — backup files include relay credentials, device-state for mobile sync
 
 ---
 
-## Open Questions (Resolved)
+## Design Decisions (Resolved)
 
 | Question | Resolution |
 |----------|------------|
-| Separate wishlist array vs. flag in items? | Flag in items (`isOwned: false`) |
-| Special wishlist column? | No, use Unorganized column |
-| What happens to wishlist on fresh import? | Lost (with warning), user's choice |
-| Order of fetcher execution? | Order independent |
-| User navigation to file system? | Never required - all in-app |
+| Separate wishlist array vs. flag in items? | Flag in items (`onWishlist: true`) |
+| Special wishlist folder? | No, goes to Inbox like all new books |
+| Order of fetcher execution? | Order independent — all additive |
+| Data transfer mechanism? | Relay-only (encrypted Cloudflare KV) — no file picker |
 
 ---
 

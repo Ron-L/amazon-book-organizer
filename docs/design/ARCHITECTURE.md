@@ -51,11 +51,10 @@ amazon.com (bookmarklet)     Cloudflare KV        readerwrangler.com
     |                              merge into IndexedDB   |
 ```
 
-### Fallback Path (File Picker)
+### Backup Path (Save/Restore)
 
-- Bookmarklet fetches library → saves JSON file via File System Access API
-- User opens file in app → parsed → stored in IndexedDB
-- Retained as backup/restore utility in Settings
+- User can save a backup file (File → Save Backup) containing books + organization + relay credentials
+- Restore from backup (File → Restore Backup) merges data and syncs to relay
 
 ## Cloudflare Relay Architecture
 
@@ -72,8 +71,8 @@ A Cloudflare Worker serves as the cross-domain relay between the bookmarklet (am
 ```
 relay:{channelId}:manifest       → upload manifest (TTL: 24h, plaintext JSON)
 relay:{channelId}:chunk:{n}      → encrypted compressed library data (TTL: 24h)
-relay:{channelId}:exclusions     → encrypted exclusion list (persistent, Phase 3)
-relay:{channelId}:device-state   → encrypted full library snapshot (persistent, Phase 2)
+relay:{channelId}:exclusions     → encrypted exclusion list (TTL: 90 days)
+relay:{channelId}:device-state   → encrypted full library snapshot (TTL: 90 days)
 ```
 
 ### Security Model
@@ -101,7 +100,7 @@ window._RW_RELAY_CHANNEL = '<channelId>';
 window._RW_RELAY_PASSPHRASE = '<passphrase>';
 ```
 
-The nav-hub detects these globals and chains relay module loading before the fetcher script. Graceful degradation: if relay modules fail to load, the fetcher falls through to file save.
+The nav-hub detects these globals and chains relay module loading before the fetcher script. Relay is required — fetchers will not function without valid relay credentials.
 
 ## Mobile Viewer
 
@@ -119,20 +118,23 @@ The nav-hub detects these globals and chains relay module loading before the fet
 | Book data | IndexedDB | Large datasets, auto-save on every action |
 | Organization (folders, tags, explorer settings) | localStorage | Instant load, no user interaction |
 | Relay credentials (channelId, passphrase) | localStorage | Persistent across sessions |
-| Library transfer (cross-domain) | Cloudflare KV | Encrypted relay between amazon.com and readerwrangler.com |
-| Backup/restore | JSON file export/import | Portability, disaster recovery |
+| Library transfer (cross-domain) | Cloudflare KV (24h TTL) | Encrypted relay between amazon.com and readerwrangler.com |
+| Mobile sync (device-state) | Cloudflare KV (90-day TTL) | Full library snapshot for mobile viewer |
+| Exclusion list | Cloudflare KV (90-day TTL) | Deleted ASINs for fetcher filtering |
+| Backup/restore | JSON file save/restore | Portability, disaster recovery |
 
 ### The Cross-Domain Problem
 
 The bookmarklet runs on Amazon.com while the app runs on readerwrangler.com. Browser security (Same-Origin Policy) prevents direct storage sharing.
 
-**Solution:** Cloudflare Workers + KV relay. The bookmarklet encrypts and uploads library data to KV; the app downloads, decrypts, and stores in IndexedDB. The file picker is retained as a fallback/backup utility.
+**Solution:** Cloudflare Workers + KV relay. The bookmarklet encrypts and uploads library data to KV; the app downloads, decrypts, and stores in IndexedDB.
 
 ### Backup/Restore
 
 - **IndexedDB + localStorage**: Runtime persistence (automatic, seamless)
-- **JSON Backup/Restore**: Explicit export/import for portability, disaster recovery
-- **Relay credentials** are included in backup exports so they survive a full app reset
+- **JSON Save/Restore**: Explicit save/restore for portability, disaster recovery (File → Save Backup / Restore Backup)
+- **Relay credentials** are included in backup files so they survive a full app reset
+- **Restore syncs to relay**: After restoring a backup, the app automatically pushes device-state to relay if configured
 
 ## Version Management
 
@@ -192,12 +194,6 @@ const cacheBuster = IS_DEV_MODE ? '?v=' + Date.now() : '';  // Line 214
 - DEV: `Date.now()` cache busting (GitHub Pages testing)
 - PROD: No cache busting (stable, cached for users)
 
-## Terminology
-
-- Use "load" not "sync" (user loads files, not syncing with service)
-- "Library loaded" not "Last synced"
-- "Load Updated Library" not "Sync Now"
-
 ## Three-Environment Testing
 
 **Environments:**
@@ -207,16 +203,10 @@ const cacheBuster = IS_DEV_MODE ? '?v=' + Date.now() : '';  // Line 214
 | DEV | ron-l.github.io/readerwranglerdev | 🔧 DEV (blue) | Test GitHub Pages deployment |
 | PROD | readerwrangler.com | 📚 ReaderWrangler (purple) | Production users |
 
-**Bookmarklet Behavior:**
-- LOCAL bookmarklet → loads from localhost:8000
-- DEV bookmarklet → loads from readerwranglerdev repo
-- PROD bookmarklet → loads from readerwrangler.com (or github.io fallback)
-
-**Why three bookmarklets?**
-Bookmarklets run on Amazon.com, not our servers. They can't detect if you're a developer. Solution: Install all three from localhost installer, then choose which environment to test.
+**Bookmarklet generation:**
+Bookmarklets are generated in-app via **File → Relay Setup**. Relay credentials (channelId + passphrase) are baked into the bookmarklet code as string literals. Each environment's bookmarklet loads scripts from its respective origin.
 
 **Testing workflow:**
 1. Start local server: `python -m http.server 8000`
-2. Visit localhost:8000/install-bookmarklet.html (shows all 3)
-3. Drag bookmarklets to toolbar
-4. On Amazon, click appropriate bookmarklet to test that environment
+2. Open the app, go to File → Relay Setup to generate bookmarklet
+3. On Amazon, click bookmarklet to test fetcher → relay → app flow
