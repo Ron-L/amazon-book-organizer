@@ -25,7 +25,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.5.0-alpha.2';
+    const FETCHER_VERSION = 'v1.5.0-alpha.3';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -42,6 +42,10 @@ async function addToWishlist() {
     // ============================================================================
     const progressUI = (() => {
         let overlay = null;
+
+        function ensureAttached() {
+            if (!overlay || !overlay.parentElement) create();
+        }
 
         function create() {
             overlay = doc.createElement('div');
@@ -102,7 +106,7 @@ async function addToWishlist() {
         }
 
         function updatePhase(phase, detail = '') {
-            if (!overlay) create();
+            ensureAttached();
             const phaseElement = overlay.querySelector('#progressPhase');
             const detailElement = overlay.querySelector('#progressDetail');
             if (phaseElement) phaseElement.textContent = phase;
@@ -110,7 +114,7 @@ async function addToWishlist() {
         }
 
         function showProgressBar() {
-            if (!overlay) create();
+            ensureAttached();
             const container = overlay.querySelector('#progressBarContainer');
             if (container) container.style.display = 'block';
         }
@@ -133,7 +137,7 @@ async function addToWishlist() {
         }
 
         function showComplete(message, autoCloseMs = 10000) {
-            if (!overlay) create();
+            ensureAttached();
             overlay.innerHTML = `
                 <button style="
                     position: absolute;
@@ -171,7 +175,7 @@ async function addToWishlist() {
         }
 
         function showError(message) {
-            if (!overlay) create();
+            ensureAttached();
             overlay.innerHTML = `
                 <button style="
                     position: absolute;
@@ -213,7 +217,7 @@ async function addToWishlist() {
 
         function showRetryUpload(errorMessage) {
             return new Promise((resolve) => {
-                if (!overlay) create();
+                ensureAttached();
                 overlay.innerHTML = `
                     <div style="font-size: 18px; font-weight: bold; color: #d32f2f; margin-bottom: 10px;">
                         ❌ Upload Failed
@@ -247,7 +251,7 @@ async function addToWishlist() {
         }
 
         function showInfo(message, autoCloseMs = 10000) {
-            if (!overlay) create();
+            ensureAttached();
             overlay.innerHTML = `
                 <button style="
                     position: absolute;
