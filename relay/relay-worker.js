@@ -8,11 +8,12 @@
  * Key layout:
  *   relay:{channelId}:manifest       → upload manifest (TTL: 24h)
  *   relay:{channelId}:chunk:{n}      → encrypted library chunk (TTL: 24h)
- *   relay:{channelId}:exclusions     → encrypted exclusion list (persistent)
- *   relay:{channelId}:device-state   → encrypted device state (persistent)
+ *   relay:{channelId}:exclusions     → encrypted exclusion list (TTL: 90 days)
+ *   relay:{channelId}:device-state   → encrypted device state (TTL: 90 days)
  */
 
-const EPHEMERAL_TTL = 86400; // 24 hours in seconds
+const EPHEMERAL_TTL = 86400;   // 24 hours in seconds
+const PERSISTENT_TTL = 7776000; // 90 days in seconds
 const MAX_CHUNK_SIZE = 25 * 1024 * 1024; // 25 MB (KV value limit)
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -190,8 +191,9 @@ async function handlePutExclusions(request, env, channelId) {
   const body = await request.arrayBuffer();
   if (body.byteLength > MAX_CHUNK_SIZE) return badRequest('Exclusion list too large');
 
-  // Persistent — no TTL
-  await env.RELAY_KV.put(`relay:${channelId}:exclusions`, body);
+  await env.RELAY_KV.put(`relay:${channelId}:exclusions`, body,
+    { expirationTtl: PERSISTENT_TTL }
+  );
   return jsonResponse({ ok: true });
 }
 
@@ -211,8 +213,9 @@ async function handlePutDeviceState(request, env, channelId) {
   const body = await request.arrayBuffer();
   if (body.byteLength > MAX_CHUNK_SIZE) return badRequest('Device state too large');
 
-  // Persistent — no TTL
-  await env.RELAY_KV.put(`relay:${channelId}:device-state`, body);
+  await env.RELAY_KV.put(`relay:${channelId}:device-state`, body,
+    { expirationTtl: PERSISTENT_TTL }
+  );
   return jsonResponse({ ok: true });
 }
 
