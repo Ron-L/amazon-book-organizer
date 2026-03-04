@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.45";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.46";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -819,10 +819,13 @@
                 const matchesRating = !ratingFilter || (book.rating >= parseFloat(ratingFilter));
 
                 // Ownership type filter (v5.0.4 - wishlist checks both fields for backward compatibility)
+                // v6.0.0-alpha.46 - Added orphan filter for books flagged by orphan scan
                 const matchesOwnership = !ownershipFilter ||
                     (ownershipFilter === 'wishlist'
                         ? (book.onWishlist || book.ownershipType === 'wishlist')
-                        : (book.ownershipType || 'purchased') === ownershipFilter);
+                        : ownershipFilter === 'orphan'
+                            ? book.orphanStatus === 'orphan'
+                            : (book.ownershipType || 'purchased') === ownershipFilter);
 
                 // Hidden filter (book-level for Explorer)
                 const matchesHidden = showHidden || !book.isHidden;
@@ -6237,7 +6240,8 @@
                                         { value: 'prime', label: 'Prime' },
                                         { value: 'kindleUnlimited', label: 'Kindle Unlimited' },
                                         { value: 'koll', label: 'KOLL' },
-                                        { value: 'comixology', label: 'Comixology' }
+                                        { value: 'comixology', label: 'Comixology' },
+                                        { value: 'orphan', label: '🔍 Orphan (removed from Amazon)' }
                                     ].map(type => (
                                         <div
                                             key={type.value}

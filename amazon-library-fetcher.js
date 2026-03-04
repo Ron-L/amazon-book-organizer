@@ -6,6 +6,7 @@
 // - Phase 2: Enrich with descriptions & reviews (new books + gap-fill)
 // - Phase 3: Fetch tags/genres (incremental - 10 books per run)
 // - Phase 4: Fetch prices for wishlist books (all wishlist every run)
+// - Phase 5: Background orphan scan (full library scan, flags removed books)
 //
 // Instructions:
 // 1. Go to https://www.amazon.com/yourbooks (must be logged in)
@@ -17,13 +18,13 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.10.0-alpha.1';
+    const FETCHER_VERSION = 'v4.10.0-alpha.2';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
     console.log(`Amazon Library Fetcher ${FETCHER_VERSION}`);
     console.log(`📄 Page: ${PAGE_TITLE}`);
-    console.log('Phase 1 (titles) + Phase 2 (enrichment) + Phase 3 (tags) + Phase 4 (prices)');
+    console.log('Phase 1 (titles) + Phase 2 (enrichment) + Phase 3 (tags) + Phase 4 (prices) + Phase 5 (orphan scan)');
     console.log('========================================\n');
 
     // Verify we're on the right page
@@ -274,6 +275,76 @@ async function fetchAmazonLibrary() {
             }
         }
 
+        // v4.10.0-alpha.2 - Multi-state completion dialog for fetch + orphan scan
+        // State 2: fetch done, orphan scan in progress (no close button)
+        // State 3a/3b/3c: everything done (close button appears)
+        function showFetchComplete(message) {
+            if (!overlay) return;
+            // Build the multi-state dialog — fetch result at top, orphan area below
+            overlay.innerHTML = `
+                <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
+                    📚 Library Download ${FETCHER_VERSION}
+                </div>
+                <div style="font-size: 14px; color: #2e7d32; margin-bottom: 12px; font-weight: 500;">
+                    ✅ ${message}
+                </div>
+                <div id="orphanSection" style="border-top: 1px solid #eee; padding-top: 12px;">
+                    <div id="orphanStatus" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
+                        Scanning for orphans...
+                    </div>
+                    <div id="orphanDetail" style="font-size: 13px; color: #666; margin-bottom: 8px;">
+                        Checking which books are still in your Amazon library
+                    </div>
+                    <div id="orphanBarContainer" style="margin-bottom: 8px;">
+                        <div style="background: #e0e0e0; border-radius: 4px; height: 8px; overflow: hidden;">
+                            <div id="orphanBarFill" style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                        </div>
+                        <div id="orphanBarText" style="font-size: 12px; color: #666; margin-top: 4px; text-align: center;"></div>
+                    </div>
+                    <div style="font-size: 12px; color: #999;">
+                        Leave this tab open to complete the scan.
+                    </div>
+                </div>
+                <div id="closeSection" style="display: none; margin-top: 15px;">
+                    <button id="closeBtn2" style="
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 8px;
+                        font-size: 14px;
+                        font-weight: bold;
+                        cursor: pointer;
+                        width: 100%;
+                    ">
+                        Close
+                    </button>
+                </div>
+            `;
+            overlay.querySelector('#closeBtn2')?.addEventListener('click', () => overlay.remove());
+        }
+
+        function updateOrphanProgress(currentPage, estimatedTotalPages) {
+            if (!overlay) return;
+            const fill = overlay.querySelector('#orphanBarFill');
+            const text = overlay.querySelector('#orphanBarText');
+            if (fill && estimatedTotalPages > 0) {
+                const percent = Math.round((currentPage / estimatedTotalPages) * 100);
+                fill.style.width = `${Math.min(percent, 100)}%`;
+            }
+            if (text) text.textContent = `Page ${currentPage} of ~${estimatedTotalPages}`;
+        }
+
+        function showOrphanResult(resultHtml) {
+            if (!overlay) return;
+            const orphanSection = overlay.querySelector('#orphanSection');
+            if (orphanSection) {
+                orphanSection.innerHTML = `<div style="font-size: 14px; color: #666; line-height: 1.6;">${resultHtml}</div>`;
+            }
+            const closeSection = overlay.querySelector('#closeSection');
+            if (closeSection) closeSection.style.display = 'block';
+        }
+
         function showComplete(message) {
             if (!overlay) return;
             overlay.innerHTML = `
@@ -389,7 +460,7 @@ async function fetchAmazonLibrary() {
             });
         }
 
-        return { create, updatePhase, updateDetail, updateProgress, remove, showComplete, showError, isAborted, showRetryUpload };
+        return { create, updatePhase, updateDetail, updateProgress, remove, showComplete, showFetchComplete, updateOrphanProgress, showOrphanResult, showError, isAborted, showRetryUpload };
     })();
 
     // Initialize progress UI
@@ -1453,7 +1524,10 @@ async function fetchAmazonLibrary() {
         stats.timing.pass2Start = Date.now();
 
         // Find existing books needing enrichment (gap-fill for past glitches)
-        const existingBooksNeedingEnrichment = existingBooks.filter(b => !b.description);
+        // v4.10.0-alpha.2 - Extended to gap-fill missing reviews (same API call, zero extra requests)
+        const existingBooksNeedingEnrichment = existingBooks.filter(b =>
+            !b.description || !b.topReviews || b.topReviews.length === 0
+        );
         const booksToEnrich = [...newBooks, ...existingBooksNeedingEnrichment];
 
         // Track Phase 2 results (declared outside else block for use in output file)
@@ -1468,7 +1542,7 @@ async function fetchAmazonLibrary() {
             const newCount = newBooks.length;
             const gapFillCount = existingBooksNeedingEnrichment.length;
             console.log(`[4/7] Enriching books with descriptions & reviews...`);
-            console.log(`   ${newCount} new books + ${gapFillCount} existing books needing gap-fill`);
+            console.log(`   ${newCount} new books + ${gapFillCount} existing books needing gap-fill (descriptions + reviews)`);
         progressUI.updatePhase('Enriching Data', `Downloading descriptions & reviews for ${booksToEnrich.length} books`);
 
         const totalBatches = Math.ceil(booksToEnrich.length / ENRICH_BATCH_SIZE);
@@ -2233,9 +2307,253 @@ async function fetchAmazonLibrary() {
         console.log('   - Status bar will reflect the new fetch');
         console.log('========================================\n');
 
-        // Show completion UI with delta info
-        progressUI.showComplete(`Added ${newBooks.length} new book${newBooks.length === 1 ? '' : 's'} (${finalBooks.length} total)`);
+        // Show fetch-complete UI and begin orphan scan
+        const fetchCompleteMessage = `Library updated: ${finalBooks.length} books (${newBooks.length} new)`;
+        progressUI.showFetchComplete(fetchCompleteMessage);
         new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/library-fetcher-completed';
+
+        // ============================================================================
+        // Phase 5: Background Orphan Scan
+        // ============================================================================
+        // Full-library scan to identify books no longer in Amazon account.
+        // Runs after main fetch + upload. User can close tab to skip.
+        console.log('\n========================================');
+        console.log('🔍 ORPHAN SCAN - Checking for removed books');
+        console.log('========================================\n');
+
+        try {
+            const amazonAsins = new Set();
+            let orphanCursor = "";
+            let orphanPage = 0;
+            let orphanHasMore = true;
+            // Estimate total pages from finalBooks count
+            const estimatedTotalPages = Math.ceil(finalBooks.length / PAGE_SIZE);
+
+            while (orphanHasMore) {
+                orphanPage++;
+                progressUI.updateOrphanProgress(orphanPage, estimatedTotalPages);
+
+                // Minimal query - just ASINs and binding (to filter non-books)
+                const orphanQuery = `query ccGetCustomerLibraryBooks {
+                    getCustomerLibrary {
+                        books(after: "${orphanCursor}", first: ${PAGE_SIZE}, sortBy: {sortField: ACQUISITION_DATE, sortOrder: DESCENDING}, selectionCriteria: {tags: [], query: "NOT (222711ade9d0f22714af93d1c8afec60 OR 858f501de8e2d7ece33f768936463ac8)"}, groupBySeries: false) {
+                            pageInfo {
+                                hasNextPage
+                                endCursor
+                            }
+                            edges {
+                                node {
+                                    asin
+                                    product {
+                                        asin
+                                        bindingInformation {
+                                            binding {
+                                                displayString
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }`;
+
+                const result = await fetchWithRetry(async () => {
+                    const response = await fetch('https://www.amazon.com/kindle-reader-api', {
+                        method: 'POST',
+                        headers: {
+                            'accept': 'application/json, text/plain, */*',
+                            'content-type': 'application/json',
+                            'anti-csrftoken-a2z': csrfToken,
+                            'x-client-id': 'your-books'
+                        },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            query: orphanQuery,
+                            operationName: 'ccGetCustomerLibraryBooks'
+                        })
+                    });
+
+                    if (!response.ok) {
+                        return { httpError: true, httpStatus: response.status };
+                    }
+
+                    const data = await response.json();
+                    if (data.errors) {
+                        return { apiError: true, errors: data.errors };
+                    }
+
+                    const library = data?.data?.getCustomerLibrary?.books;
+                    if (!library || !library.edges) {
+                        return { noData: true };
+                    }
+
+                    return { library };
+                }, `Orphan scan page ${orphanPage}`);
+
+                const library = result.library;
+                for (const edge of library.edges) {
+                    const product = edge.node?.product;
+                    if (!product) continue;
+                    const binding = product.bindingInformation?.binding?.displayString || null;
+                    if (binding && !BOOK_BINDINGS.includes(binding)) continue; // Skip non-books
+                    amazonAsins.add(product.asin);
+                }
+
+                console.log(`   📖 Orphan scan page ${orphanPage}: ${library.edges.length} items (${amazonAsins.size} book ASINs total)`);
+
+                orphanHasMore = library.pageInfo?.hasNextPage || false;
+                orphanCursor = library.pageInfo?.endCursor || "";
+
+                if (orphanHasMore) {
+                    await new Promise(resolve => setTimeout(resolve, FETCH_DELAY_MS));
+                }
+            }
+
+            console.log(`\n✅ Orphan scan complete: ${amazonAsins.size} books found in Amazon library`);
+
+            // Compare against our library — find orphans
+            // Skip wishlist-only books (they wouldn't be in the Amazon library scan)
+            const orphanedBooks = finalBooks.filter(b =>
+                !amazonAsins.has(b.asin) && !b.onWishlist
+            );
+
+            const orphanScanDate = new Date().toISOString();
+
+            // Mark all books with orphan status
+            for (const book of finalBooks) {
+                if (book.onWishlist) {
+                    // Wishlist books are not in the library scan — don't mark them
+                    continue;
+                }
+                if (amazonAsins.has(book.asin)) {
+                    book.orphanStatus = 'verified';
+                    book.orphanCheckedDate = orphanScanDate;
+                } else {
+                    book.orphanStatus = 'orphan';
+                    book.orphanCheckedDate = orphanScanDate;
+                }
+            }
+
+            console.log(`   📊 Orphans found: ${orphanedBooks.length}`);
+
+            // Build ownership breakdown for orphans
+            if (orphanedBooks.length > 0) {
+                const orphanByType = {};
+                for (const book of orphanedBooks) {
+                    const type = book.ownershipType || 'unknown';
+                    orphanByType[type] = (orphanByType[type] || 0) + 1;
+                    console.log(`   🔍 Orphan: ${book.title} (${type})`);
+                }
+
+                const typeSummary = Object.entries(orphanByType)
+                    .map(([type, count]) => `${count} ${type}`)
+                    .join(', ');
+
+                // Re-upload with orphan flags
+                const updatedOutputData = {
+                    schemaVersion: SCHEMA_VERSION,
+                    books: {
+                        fetchDate: outputData.books.fetchDate,
+                        fetcherVersion: FETCHER_VERSION,
+                        totalBooks: finalBooks.length,
+                        orphanScanComplete: true,
+                        orphanScanProgress: `${orphanPage}/${orphanPage}`,
+                        orphanScanDate,
+                        orphanCount: orphanedBooks.length,
+                        items: finalBooks
+                    }
+                };
+                if (existingCollections) {
+                    updatedOutputData.collections = existingCollections;
+                }
+
+                const updatedJsonData = JSON.stringify(updatedOutputData, null, 2);
+                progressUI.updateOrphanProgress(orphanPage, orphanPage); // Show 100%
+
+                console.log('[Relay] Re-uploading library with orphan flags...');
+                await window.RWRelay.upload(updatedJsonData, (phase, detail) => {
+                    console.log(`   📡 Orphan re-upload: ${detail}`);
+                });
+                console.log('✅ Library re-uploaded with orphan data');
+
+                progressUI.showOrphanResult(
+                    `✅ Orphan scan: <strong>${orphanedBooks.length}</strong> book${orphanedBooks.length === 1 ? '' : 's'} no longer in your Amazon library (${typeSummary}).<br><br>Import from Relay in the app to review.`
+                );
+            } else {
+                // No orphans — update metadata and re-upload
+                const updatedOutputData = {
+                    schemaVersion: SCHEMA_VERSION,
+                    books: {
+                        fetchDate: outputData.books.fetchDate,
+                        fetcherVersion: FETCHER_VERSION,
+                        totalBooks: finalBooks.length,
+                        orphanScanComplete: true,
+                        orphanScanProgress: `${orphanPage}/${orphanPage}`,
+                        orphanScanDate,
+                        orphanCount: 0,
+                        items: finalBooks
+                    }
+                };
+                if (existingCollections) {
+                    updatedOutputData.collections = existingCollections;
+                }
+
+                const updatedJsonData = JSON.stringify(updatedOutputData, null, 2);
+                console.log('[Relay] Re-uploading library with verified status...');
+                await window.RWRelay.upload(updatedJsonData, (phase, detail) => {
+                    console.log(`   📡 Orphan re-upload: ${detail}`);
+                });
+                console.log('✅ Library re-uploaded - all books verified');
+
+                progressUI.showOrphanResult('✅ All books verified — no orphans.');
+            }
+
+        } catch (orphanError) {
+            console.error('⚠️ Orphan scan failed:', orphanError.message);
+
+            // Try to upload partial results if we have any orphan data
+            const partialOrphans = finalBooks.filter(b => b.orphanStatus === 'orphan');
+            const partialVerified = finalBooks.filter(b => b.orphanStatus === 'verified');
+
+            if (partialVerified.length > 0 || partialOrphans.length > 0) {
+                // We have partial data — upload what we have
+                const partialOutputData = {
+                    schemaVersion: SCHEMA_VERSION,
+                    books: {
+                        fetchDate: outputData.books.fetchDate,
+                        fetcherVersion: FETCHER_VERSION,
+                        totalBooks: finalBooks.length,
+                        orphanScanComplete: false,
+                        orphanScanDate: new Date().toISOString(),
+                        orphanCount: partialOrphans.length,
+                        items: finalBooks
+                    }
+                };
+                if (existingCollections) {
+                    partialOutputData.collections = existingCollections;
+                }
+
+                try {
+                    const partialJsonData = JSON.stringify(partialOutputData, null, 2);
+                    await window.RWRelay.upload(partialJsonData, () => {});
+                    console.log(`✅ Partial orphan data uploaded (${partialVerified.length} verified, ${partialOrphans.length} orphans)`);
+
+                    progressUI.showOrphanResult(
+                        `⚠️ Orphan scan incomplete. Partial results uploaded.<br>Import from Relay to review what was found so far.`
+                    );
+                } catch (uploadErr) {
+                    console.error('❌ Partial orphan upload also failed:', uploadErr.message);
+                    progressUI.showOrphanResult(
+                        `⚠️ Orphan scan failed: ${orphanError.message}<br>Your library data was saved successfully before the scan.`
+                    );
+                }
+            } else {
+                progressUI.showOrphanResult(
+                    `⚠️ Orphan scan failed: ${orphanError.message}<br>Your library data was saved successfully before the scan.`
+                );
+            }
+        }
 
     } catch (error) {
         console.error('\n========================================');

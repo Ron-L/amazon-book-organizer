@@ -3,6 +3,7 @@
 **Feature**: Detect books no longer in Amazon library, with soft-delete and restore capability
 **Status**: Planned
 **Created**: 2026-01-07
+**Updated**: 2026-03-04 — Orphan detection approach superseded by [SMART-FETCH-DESIGN.md](SMART-FETCH-DESIGN.md) (fetcher-side background scan replaces loadId approach). Recycle Bin design below remains valid.
 
 ---
 
