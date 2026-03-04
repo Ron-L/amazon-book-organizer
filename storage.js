@@ -155,7 +155,11 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         note: book.note ?? previousBook.note,
                         hidden: book.hidden ?? previousBook.hidden,
                         myRating: book.myRating ?? previousBook.myRating,  // v5.0.0-alpha.175.31 - Personal rating
-                        userEdited: isBackupData ? book.userEdited : ue  // Backup: restore its flags; Amazon: preserve existing flags
+                        userEdited: isBackupData ? book.userEdited : ue,  // Backup: restore its flags; Amazon: preserve existing flags
+                        // v6.0.0-alpha.48 - Preserve Trash state (user-initiated, survives relay imports)
+                        isDeleted: previousBook.isDeleted || book.isDeleted || false,
+                        deletedAt: previousBook.deletedAt || book.deletedAt || null,
+                        deletedFromFolderIds: previousBook.deletedFromFolderIds || book.deletedFromFolderIds || null
                     });
                 } else {
                     // React saves: just save as-is, no merge

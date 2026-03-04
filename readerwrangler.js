@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.47";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.48";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -695,6 +695,7 @@
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
             const FOLDER_LIBRARY = { id: '__library__', name: 'My Library', virtual: true, icon: '📚' }; // v5.0.0-alpha.63
             const FOLDER_INBOX = { id: '__inbox__', name: 'Inbox', virtual: false, icon: '📥', isInbox: true };
+            const FOLDER_TRASH = { id: '__trash__', name: 'Trash', virtual: true, icon: '🗑️' };
 
             // v5.0.0 - Book Explorer folder helpers
             // Get all book IDs that are in any user folder (not Inbox)
@@ -743,7 +744,8 @@
 
             // Get books for a folder (handles All Books and My Library virtual folders)
             const getFolderBookIds = (folderId) => {
-                if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first
+                if (folderId === '__all__') return [...books.filter(b => !b.isDeleted).map(b => b.id)].reverse(); // Newest first, exclude trash
+                if (folderId === '__trash__') return books.filter(b => b.isDeleted).sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0)).map(b => b.id);
                 if (folderId === '__library__') return []; // v5.0.0-alpha.63 - My Library shows folders, not books
                 // v5.5.15-alpha.21 - Tag virtual folder: return books with this tag
                 // v5.5.15-alpha.31 - Respect bookOrder for manual ordering
@@ -766,6 +768,10 @@
             // Filter a single book for Explorer view (applies all active filters)
             const filterBookForExplorer = (book) => {
                 if (!book) return false;
+
+                // Trash view: show only deleted books; all other views: hide deleted
+                if (selectedFolderId === '__trash__') return book.isDeleted === true;
+                if (book.isDeleted) return false;
 
                 // Text search filter
                 const matchesSearch = !searchTerm ||
@@ -899,6 +905,8 @@
                 for (const b of books) m.set(b.id, b);
                 return m;
             }, [books]);
+
+            const trashCount = useMemo(() => books.filter(b => b.isDeleted).length, [books]);
 
             const explorerDisplayItems = useMemo(() => {
                 const sortedBooks = getFolderBookIds(selectedFolderId)
@@ -1069,6 +1077,156 @@
                         }, 10000);
                     }, 1000); // Animation duration
                 }, 1500); // Wait before animating
+            };
+
+            // v6.0.0-alpha.48 - Trash Bin: soft delete, restore, permanent delete
+            const softDeleteBooks = (bookIds) => {
+                const bookIdsSet = new Set(bookIds);
+
+                // Capture current folder membership for each book (for restore)
+                const folderMembership = {};
+                folders.forEach(folder => {
+                    (folder.bookIds || []).forEach(bookId => {
+                        if (bookIdsSet.has(bookId)) {
+                            if (!folderMembership[bookId]) folderMembership[bookId] = [];
+                            folderMembership[bookId].push(folder.id);
+                        }
+                    });
+                });
+
+                // Remove books from current folder's bookIds
+                const currentFolderId = selectedFolderId;
+                const isAllBooks = currentFolderId === '__all__' || currentFolderId === '__inbox__';
+
+                // Determine which folders to remove from
+                const foldersToRemoveFrom = isAllBooks
+                    ? new Set(folders.map(f => f.id)) // Remove from ALL folders
+                    : new Set([currentFolderId]);      // Remove from current folder only
+
+                // Update folders: remove book references
+                const updatedFolders = folders.map(f => {
+                    if (foldersToRemoveFrom.has(f.id)) {
+                        return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIdsSet.has(id)) };
+                    }
+                    return f;
+                });
+
+                // Check which books are still in some folder after removal
+                const remainingFolderBooks = new Set();
+                updatedFolders.forEach(f => {
+                    (f.bookIds || []).forEach(id => {
+                        if (bookIdsSet.has(id)) remainingFolderBooks.add(id);
+                    });
+                });
+
+                // Books not in any folder → move to Trash
+                const booksToTrash = bookIds.filter(id => !remainingFolderBooks.has(id));
+                const booksToTrashSet = new Set(booksToTrash);
+
+                setBooks(prev => {
+                    const updated = prev.map(b => {
+                        if (booksToTrashSet.has(b.id)) {
+                            return {
+                                ...b,
+                                isDeleted: true,
+                                deletedAt: Date.now(),
+                                deletedFromFolderIds: folderMembership[b.id] || []
+                            };
+                        }
+                        return b;
+                    });
+                    saveBooksToIndexedDB(updated);
+                    return updated;
+                });
+
+                setFolders(updatedFolders);
+
+                recordAction({
+                    type: 'SOFT_DELETE_BOOKS',
+                    bookIds: Array.from(bookIds),
+                    booksToTrash,
+                    folderMembership,
+                    fromFolderId: currentFolderId
+                });
+
+                setExplorerSelectedBooks(new Set());
+                const trashMsg = booksToTrash.length > 0 ? `Moved ${booksToTrash.length} to Trash` : '';
+                const removeMsg = bookIds.length - booksToTrash.length > 0
+                    ? `Removed ${bookIds.length - booksToTrash.length} from folder` : '';
+                const msg = [trashMsg, removeMsg].filter(Boolean).join(', ');
+                if (msg) showToast(msg);
+            };
+
+            const restoreBooks = (bookIds) => {
+                const bookIdsSet = new Set(bookIds);
+                let restoredBooks = [];
+
+                setBooks(prev => {
+                    const updated = prev.map(b => {
+                        if (bookIdsSet.has(b.id) && b.isDeleted) {
+                            restoredBooks.push({ id: b.id, deletedFromFolderIds: b.deletedFromFolderIds });
+                            return {
+                                ...b,
+                                isDeleted: false,
+                                deletedAt: null,
+                                deletedFromFolderIds: null
+                            };
+                        }
+                        return b;
+                    });
+                    saveBooksToIndexedDB(updated);
+                    return updated;
+                });
+
+                // Restore to original folders (or Inbox if folder gone)
+                setFolders(prev => {
+                    const folderIds = new Set(prev.map(f => f.id));
+                    let updated = prev.map(f => ({ ...f }));
+                    restoredBooks.forEach(({ id, deletedFromFolderIds }) => {
+                        let targetFolders = (deletedFromFolderIds || []).filter(fid => folderIds.has(fid));
+                        if (targetFolders.length === 0) targetFolders = ['__inbox__'];
+                        targetFolders.forEach(folderId => {
+                            updated = updated.map(f => {
+                                if (f.id === folderId && !(f.bookIds || []).includes(id)) {
+                                    return { ...f, bookIds: [id, ...(f.bookIds || [])] };
+                                }
+                                return f;
+                            });
+                        });
+                    });
+                    return updated;
+                });
+
+                recordAction({
+                    type: 'RESTORE_BOOKS',
+                    bookIds: Array.from(bookIds),
+                    restoredBooks
+                });
+
+                setExplorerSelectedBooks(new Set());
+                const count = bookIds.length;
+                showToast(`Restored ${count} book${count !== 1 ? 's' : ''}`);
+            };
+
+            const permanentlyDeleteBooks = (bookIds) => {
+                const bookIdsSet = new Set(bookIds);
+
+                setBooks(prev => {
+                    const updated = prev.filter(b => !bookIdsSet.has(b.id));
+                    saveBooksToIndexedDB(updated);
+                    return updated;
+                });
+
+                // Also remove from any folder bookIds (safety)
+                setFolders(prev => prev.map(f => ({
+                    ...f,
+                    bookIds: (f.bookIds || []).filter(id => !bookIdsSet.has(id))
+                })));
+
+                setExplorerSelectedBooks(new Set());
+                const count = bookIds.length;
+                showToast(`Permanently deleted ${count} book${count !== 1 ? 's' : ''}`);
+                // Relay sync handled by 15-second device-state debounce
             };
 
             // Get child folders of a parent (null = root level)
@@ -3249,7 +3407,11 @@
                     note: book.userNote,
                     priceTrigger: book.priceTrigger,
                     myRating: book.myRating || 0,
-                    userEdited: book.userEdited || undefined
+                    userEdited: book.userEdited || undefined,
+                    // v6.0.0-alpha.48 - Trash Bin state
+                    isDeleted: book.isDeleted || false,
+                    deletedAt: book.deletedAt || null,
+                    deletedFromFolderIds: book.deletedFromFolderIds || null
                 }));
 
                 const collectionItems = allBooks
@@ -3765,7 +3927,11 @@
                             tags: item.tags,
                             userNote: item.note,
                             myRating: item.myRating || 0,  // v5.0.0-alpha.175.31 - Personal rating
-                            userEdited: item.userEdited || undefined  // v5.4.7 - Restore user-edited flags
+                            userEdited: item.userEdited || undefined,  // v5.4.7 - Restore user-edited flags
+                            // v6.0.0-alpha.48 - Trash Bin state (preserved for backup restore)
+                            isDeleted: item.isDeleted || false,
+                            deletedAt: item.deletedAt || null,
+                            deletedFromFolderIds: item.deletedFromFolderIds || null
                         };
                     } else {
                         // Legacy format with amazonData (v1.x format)
