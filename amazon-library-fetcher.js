@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.10.0-alpha.3';
+    const FETCHER_VERSION = 'v4.10.0-alpha.4';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -285,8 +285,11 @@ async function fetchAmazonLibrary() {
                 <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
                     📚 Library Download ${FETCHER_VERSION}
                 </div>
-                <div style="font-size: 14px; color: #2e7d32; margin-bottom: 12px; font-weight: 500;">
+                <div style="font-size: 14px; color: #2e7d32; margin-bottom: 4px; font-weight: 500;">
                     ✅ ${message}
+                </div>
+                <div id="importHint" style="font-size: 13px; color: #666; margin-bottom: 12px;">
+                    Import from Relay in the app to load your updated library.
                 </div>
                 <div id="orphanSection" style="border-top: 1px solid #eee; padding-top: 12px;">
                     <div id="orphanStatus" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
@@ -337,6 +340,9 @@ async function fetchAmazonLibrary() {
 
         function showOrphanResult(resultHtml) {
             if (!overlay) return;
+            // Remove the top import hint — the orphan result section now has the CTA
+            const importHint = overlay.querySelector('#importHint');
+            if (importHint) importHint.remove();
             const orphanSection = overlay.querySelector('#orphanSection');
             if (orphanSection) {
                 orphanSection.innerHTML = `<div style="font-size: 14px; color: #666; line-height: 1.6;">${resultHtml}</div>`;
@@ -2518,7 +2524,7 @@ async function fetchAmazonLibrary() {
                 });
                 console.log('✅ Library re-uploaded - all books verified');
 
-                progressUI.showOrphanResult('✅ All books verified — no orphans.');
+                progressUI.showOrphanResult('✅ All books verified — no orphans.<br><br>Import from Relay in the app to load your updated library.');
             }
 
         } catch (orphanError) {
@@ -2557,12 +2563,12 @@ async function fetchAmazonLibrary() {
                 } catch (uploadErr) {
                     console.error('❌ Partial orphan upload also failed:', uploadErr.message);
                     progressUI.showOrphanResult(
-                        `⚠️ Orphan scan failed: ${orphanError.message}<br>Your library data was saved successfully before the scan.`
+                        `⚠️ Orphan scan failed: ${orphanError.message}<br>Your library data was saved successfully before the scan.<br><br>Import from Relay in the app to load your updated library.`
                     );
                 }
             } else {
                 progressUI.showOrphanResult(
-                    `⚠️ Orphan scan failed: ${orphanError.message}<br>Your library data was saved successfully before the scan.`
+                    `⚠️ Orphan scan failed: ${orphanError.message}<br>Your library data was saved successfully before the scan.<br><br>Import from Relay in the app to load your updated library.`
                 );
             }
         }
