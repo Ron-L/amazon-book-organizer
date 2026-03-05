@@ -9537,6 +9537,26 @@
                                                 setExplorerSelectedBooks(new Set());
                                                 return;
                                             }
+                                            // v6.0.0-alpha.53 - Drag from Trash to Inbox = Restore to Inbox
+                                            if (sourceFolder === '__trash__') {
+                                                restoreBooks(bookIds);
+                                                setFolders(prev => prev.map(f => {
+                                                    if (f.id !== '__inbox__') return f;
+                                                    const existingSet = new Set(f.bookIds || []);
+                                                    const toAdd = bookIds.filter(id => !existingSet.has(id));
+                                                    if (toAdd.length > 0) {
+                                                        return { ...f, bookIds: [...toAdd, ...(f.bookIds || [])] };
+                                                    }
+                                                    return f;
+                                                }));
+                                                showToast(`Restored ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to Inbox`);
+                                                setFolderDropHighlight(null);
+                                                setExplorerSelectedBooks(new Set());
+                                                stopDragVirtualization();
+                                                setExplorerDragBookId(null);
+                                                setExplorerDragData(null);
+                                                return;
+                                            }
 
                                             // Remove these books from all user folders
                                             setFolders(prev => prev.map(folder => ({
