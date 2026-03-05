@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.48";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.49";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2730,21 +2730,26 @@
 
 
                     // v5.0.0-alpha.46 - DEL key in Explorer: Remove selected books from current folder
+                    // v6.0.0-alpha.49 - DEL key: Trash view = permanent delete, Tag view = remove tag, else = soft delete
                     if (e.key === 'Delete' && explorerSelectedBooks.size > 0) {
                         e.preventDefault();
-                        // Can't remove from All Books (view-only) or Inbox
-                        if (selectedFolderId === '__all__' || selectedFolderId === '__inbox__') {
-                            console.log('🚫 Cannot remove books from All Books or Inbox');
+                        const bookIdsToDelete = [...explorerSelectedBooks];
+
+                        // Trash view: permanently delete with confirmation
+                        if (selectedFolderId === '__trash__') {
+                            const count = bookIdsToDelete.length;
+                            if (confirm(`Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
+                                permanentlyDeleteBooks(bookIdsToDelete);
+                            }
                             return;
                         }
-                        const bookIdsToRemove = [...explorerSelectedBooks];
 
-                        // v5.5.15-alpha.35 - 1J: Delete key removes tag from books in tag view
+                        // Tag view: remove tag (existing behavior)
                         if (selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__')) {
                             const tagId = selectedFolderId.slice(6, -2);
                             setBooks(prev => {
                                 const updated = prev.map(b => {
-                                    if (bookIdsToRemove.includes(b.id) && (b.tags || []).includes(tagId)) {
+                                    if (bookIdsToDelete.includes(b.id) && (b.tags || []).includes(tagId)) {
                                         return { ...b, tags: b.tags.filter(t => t !== tagId) };
                                     }
                                     return b;
@@ -2754,40 +2759,19 @@
                             });
                             recordAction({
                                 type: 'TAG_BOOKS_DRAG',
-                                bookIds: bookIdsToRemove,
+                                bookIds: bookIdsToDelete,
                                 destTagId: null,
                                 sourceTagId: tagId,
                                 addedDest: [],
-                                removedSource: bookIdsToRemove
+                                removedSource: bookIdsToDelete
                             });
                             setExplorerSelectedBooks(new Set());
                             return;
                         }
 
-                        const folder = folders.find(f => f.id === selectedFolderId);
-                        if (!folder) return;
-
-                        const fromIndices = bookIdsToRemove.map(id => (folder.bookIds || []).indexOf(id));
-
-                        // Remove books from folder
-                        setFolders(prev => prev.map(f => {
-                            if (f.id === selectedFolderId) {
-                                return { ...f, bookIds: (f.bookIds || []).filter(id => !explorerSelectedBooks.has(id)) };
-                            }
-                            return f;
-                        }));
-
-                        // Record for undo
-                        recordAction({
-                            type: 'REMOVE_BOOKS_FOLDER',
-                            folderId: selectedFolderId,
-                            bookIds: bookIdsToRemove,
-                            fromIndices: fromIndices
-                        });
-
-                        console.log(`🗑️ Removed ${bookIdsToRemove.length} book(s) from "${folder.name}"`);
-                        setExplorerSelectedBooks(new Set());
-                        return; // Don't fall through to column delete
+                        // All other views: soft delete to Trash
+                        softDeleteBooks(bookIdsToDelete);
+                        return; // Don't fall through to folder delete
                     }
 
                 };
@@ -13242,6 +13226,7 @@
 
                         // v5.0.0-alpha.166.1 - Check if current folder is special (can't move books from virtual folders)
                         const isSpecialFolder = ['__all__', '__library__', '__inbox__'].includes(selectedFolderId);
+                        const isTrashView = selectedFolderId === '__trash__';
                         // v5.5.15-alpha.35 - 1J: Detect tag view for "Remove from [tag]" context menu
                         const isTagViewCtx = selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__');
                         const tagViewCtxId = isTagViewCtx ? selectedFolderId.slice(6, -2) : null;
@@ -13392,6 +13377,8 @@
                                     {explorerSelectedBooks.size} book{explorerSelectedBooks.size !== 1 ? 's' : ''} selected
                                 </div>
 
+                                {/* Move to, Copy to, Cut/Copy/Paste — hidden in Trash view */}
+                                {!isTrashView && (<>
                                 {/* Move to - v5.0.0-alpha.166 Phase 2 */}
                                 {/* v5.0.0-alpha.166.1 - Disabled in special folders (can't move from virtual folders) */}
                                 {isSpecialFolder ? (
@@ -13594,6 +13581,7 @@
                                 )}
 
                                 <div className="border-t border-gray-200 my-1"></div>
+                                </>)}
 
                                 {/* v5.0.0-alpha.167 - Phase 3: Other menu items */}
 
@@ -13645,6 +13633,8 @@
                                                 <span>Copy Title{count !== 1 ? 's' : ''}</span>
                                             </div>
 
+                                            {/* Edit, Note, Tags, Price Goal, Hide — hidden in Trash view */}
+                                            {!isTrashView && (<>
                                             {/* v5.4.7 - Bulk Edit submenu */}
                                             <div
                                                 className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
@@ -14087,9 +14077,6 @@
                                                 )}
                                             </div>
 
-                                            {/* v5.0.0-alpha.168.3 - Hide/Unhide and Remove section */}
-                                            <div className="border-t border-gray-200 my-1"></div>
-
                                             {/* Hide Book */}
                                             {(() => {
                                                 const allHidden = selectedBooksArray.every(b => b.isHidden);
@@ -14129,9 +14116,40 @@
                                                     </div>
                                                 );
                                             })()}
+                                            </>)}
 
-                                            {/* Remove from Folder / Tag View */}
-                                            {isTagViewCtx ? (
+                                            {/* Separator before Delete/Restore */}
+                                            <div className="border-t border-gray-200 my-1"></div>
+
+                                            {/* v6.0.0-alpha.49 - Delete / Trash actions */}
+                                            {selectedFolderId === '__trash__' ? (
+                                                <>
+                                                    <div
+                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                                        onClick={() => {
+                                                            restoreBooks(Array.from(explorerSelectedBooks));
+                                                            setExplorerBookContextMenu(null);
+                                                            setContextSubmenu(null);
+                                                        }}>
+                                                        <span>↩️</span>
+                                                        <span>Restore{count !== 1 ? ` ${count} Books` : ''}</span>
+                                                    </div>
+                                                    <div className="border-t border-gray-200 my-1"></div>
+                                                    <div
+                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
+                                                        onClick={() => {
+                                                            if (confirm(`Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
+                                                                permanentlyDeleteBooks(Array.from(explorerSelectedBooks));
+                                                            }
+                                                            setExplorerBookContextMenu(null);
+                                                            setContextSubmenu(null);
+                                                        }}>
+                                                        <span>🗑️</span>
+                                                        <span>Delete Permanently</span>
+                                                        <span className="ml-auto text-xs text-gray-400">Del</span>
+                                                    </div>
+                                                </>
+                                            ) : isTagViewCtx ? (
                                                 <div
                                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
                                                     onClick={() => {
@@ -14164,45 +14182,16 @@
                                                     <span>Remove from "{tagViewCtxLabel}"</span>
                                                     <span className="ml-auto text-xs text-gray-400">Del</span>
                                                 </div>
-                                            ) : isSpecialFolder ? (
-                                                <div
-                                                    className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
-                                                    title="Cannot remove books from virtual folders">
-                                                    <span>🗑️</span>
-                                                    <span>Remove from Folder</span>
-                                                    <span className="ml-auto text-xs">Del</span>
-                                                </div>
                                             ) : (
                                                 <div
                                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
                                                     onClick={() => {
-                                                        const folder = folders.find(f => f.id === selectedFolderId);
-                                                        if (!folder) return;
-
-                                                        const bookIdsToRemove = Array.from(explorerSelectedBooks);
-                                                        const fromIndices = bookIdsToRemove.map(id => (folder.bookIds || []).indexOf(id));
-
-                                                        setFolders(prev => prev.map(f => {
-                                                            if (f.id === selectedFolderId) {
-                                                                return { ...f, bookIds: (f.bookIds || []).filter(id => !explorerSelectedBooks.has(id)) };
-                                                            }
-                                                            return f;
-                                                        }));
-
-                                                        recordAction({
-                                                            type: 'REMOVE_BOOKS_FOLDER',
-                                                            folderId: selectedFolderId,
-                                                            bookIds: bookIdsToRemove,
-                                                            fromIndices: fromIndices
-                                                        });
-
-                                                        console.log(`🗑️ Removed ${bookIdsToRemove.length} book(s) from "${folder.name}"`);
-                                                        setExplorerSelectedBooks(new Set());
+                                                        softDeleteBooks(Array.from(explorerSelectedBooks));
                                                         setExplorerBookContextMenu(null);
                                                         setContextSubmenu(null);
                                                     }}>
                                                     <span>🗑️</span>
-                                                    <span>Remove from Folder</span>
+                                                    <span>Delete{count !== 1 ? ` ${count} Books` : ''}</span>
                                                     <span className="ml-auto text-xs text-gray-400">Del</span>
                                                 </div>
                                             )}
