@@ -1,6 +1,10 @@
 # ReaderWrangler User Guide
 
-Complete guide to getting the most out of ReaderWrangler.
+*Wrangle your reader chaos — Your books, your order.*
+
+You have hundreds (maybe thousands) of Kindle books, and great reads are buried in the pile. ReaderWrangler imports your Amazon library and gives you a visual book explorer to organize, rediscover forgotten favorites, and never lose track of what to read next.
+
+This guide covers everything from first setup to power-user workflows.
 
 ---
 
