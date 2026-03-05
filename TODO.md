@@ -9,15 +9,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔒 Priority 3: Pre-Launch Gate
 
-**0. Consider Amazon Prime**
-   - this is a rotating list of books
-   - books come off this list
-   - how can we make this automatic for the user?
-   - imports library with changes to Amazon Prime list
-   - Gets a dialog that X books were removed and shows the list?
-   - Can't put them in trash where user might try to recover them
-   - UNLESS we flag them as unrecoverable.
-
 **1. Button Consistency Audit** - LOW/LOW (2-4 hours)
    - Audit all button hover states across the app
    - Define 3 button styles: Primary/Secondary/Tertiary
@@ -35,24 +26,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Impact: Broader user base support with minimal effort
 
 
-**3. 🔗 Cloudflare Relay + Delete Books — Remaining Items**
-   - See [docs/design/DELETE-BOOKS-PROBLEM-STATEMENT.md](docs/design/DELETE-BOOKS-PROBLEM-STATEMENT.md) and [docs/design/DELETE-BOOKS-DESIGN.md](docs/design/DELETE-BOOKS-DESIGN.md)
-   - ~~Milestone 1A (Worker + Crypto)~~ ✅ v6.0.0-alpha.7
-   - ~~Milestone 1B/C (Fetcher relay integration + App import)~~ ✅ v6.0.0-alpha.7
-   - ~~Milestone 2 (Mobile Sync + QR Pairing)~~ ✅ v6.0.0-alpha.20 / mobile v1.1.0-alpha.13
-   - **Remaining Bookmarklet/Fetcher Items:**
-     - ~~Update install-bookmarklet.html to generate relay-enabled bookmarklets (or merge into app onboarding)~~ ✅ Merged into in-app Relay Setup; install-bookmarklet.html deleted
-     - Extend gap-fill to include reviews (library fetcher)
-     - Wishlist-add toast feedback: "Already on wishlist" / "Already in library"
-     - Orphan detection: compare current vs previous fetch, include `removedAsins` in manifest — handle orphan list in app (flag or auto-move to Trash)
-   - **Milestone 3: Delete & Cleanup** ~12-17 hours
-     - Wishlist duplicate detection Layers 2 & 3 (per-folder right-click, Tools menu global cleanup)
-     - Trash Bin (two-stage delete lifecycle, exclusion list, auto-purge, left pane fixed bottom)
-   - Absorbs: P6-T1 (Gap-Fill Reviews), P6-T2 (Wishlist Dedup Layers 1-3 + toasts), P6-T3 (Orphan Detection + Trash Bin), P6-T4 (Cross-Domain Transfer — fully superseded)
-   - Problem: No permanent delete (books return on next import); public bookmarklet install page doesn't include relay credentials
-   - Impact: Permanent deletes, orphan detection, gap-fill reviews, wishlist-add feedback, streamlined onboarding
-
-**4. Quality Attribute Validation** - LOW/LOW (2-3 hours)
+**3. Quality Attribute Validation** - LOW/LOW (2-3 hours)
    - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
    - ~~**Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second~~ ✅ v5.5.4
    - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
@@ -111,7 +85,17 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - ~~Desktop Mode escape hatch~~ ✅ v6.0.0-alpha.18 — Interstitial in readerwrangler.html shows "Return to Mobile Mode" / "Continue in Desktop Mode" before loading any app code. Uses sessionStorage to lock mode per tab session.
    - Directional shadow consistency with mobile cover view
 
-**2. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
+**2. ☁️ Cloudflare Free Tier Monitoring** - LOW/LOW (1 hour)
+   - Free tier limits: 100K requests/day, 1K KV writes/day, 1K KV deletes/day, 1GB KV storage
+   - **KV writes (1,000/day) is the tightest limit** — each putDeviceState() or fetcher upload is a write
+   - Cloudflare does NOT warn before limits are hit — requests just start failing (HTTP 1015)
+   - Set up: Dashboard → Account → Notifications → Workers usage threshold alerts
+   - Monitor: Workers & Pages → worker → Metrics; KV → namespace → Metrics
+   - If approaching limits: $5/month paid plan gives 10M requests, 1M KV writes (essentially unlimited)
+   - Problem: No visibility into relay usage; no warning before free tier exhaustion
+   - Impact: Prevents surprise outages for users
+
+**3. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
    - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
    - Step 1 (Babel): `npm install --save-dev @babel/cli @babel/core @babel/preset-react`, add `build.bat` that runs `npx babel readerwrangler.js --presets=@babel/preset-react -o dist/readerwrangler.js`. Update HTML to load `dist/readerwrangler.js` as regular `<script>` instead of `type="text/babel"`. Remove Babel CDN.
    - Step 2 (optional, Tailwind): `npx tailwindcss -i input.css -o dist/styles.css --content "readerwrangler.js,readerwrangler.html"`. Swap Tailwind CDN `<script>` for `<link>` to generated CSS.
@@ -225,13 +209,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Users unaware of missing enrichment data
    - Impact: Transparency about data quality
 
-**2. 🔄 Replace Inbox useEffect Collector with Explicit Import Logic** - LOW/LOW (1-2 hours)
-   - Current: Reactive useEffect watches `[books, folders, syncStatus]` and sweeps any unplaced books into Inbox
-   - Problem: Acts as a garbage collector rather than explicit logic. All book moves between folders are explicit actions (drag-drop, wizard organize, remove from folder), but the initial import of new books is the only case that legitimately needs Inbox placement. The reactive approach caused a subtle bug (v5.2.0-alpha.13/14) where a global keyboard handler accidentally removed a book from its folder, and the collector silently swept it into Inbox — masking the real bug.
-   - Fix: Replace with explicit Inbox placement in the import/load path only. When books are loaded from amazon-library.json, explicitly place new books (not already in any folder) into Inbox at that point.
-   - Impact: Eliminates a class of silent data-movement bugs; makes all book placement explicit and traceable
-
-**3. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
+**2. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
    - Current state: 3,862-line monolithic file with 50+ state variables, 80+ functions
    - **Recommended: Minimal Split (4 modules)**
 

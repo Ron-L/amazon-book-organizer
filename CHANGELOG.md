@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Trash Bin** - Two-stage delete: soft delete moves books to Trash, permanent delete removes from library and relay. Trash Bin appears at bottom of folder tree with count badge. Right-click for Restore or Delete Permanently. DEL key support. Drag from Trash to any folder to restore. Undo/redo for delete and restore actions.
+- **Collapse All button** - Replaced confusing expand/collapse chevron pair with single Collapse All button in folder tree. Appears when any folder is expanded, disappears when all collapsed.
+
+### Changed
+- **All Books filters include trashed books** - Search, tags, and all filters now match trashed books in All Books view (with Trash tooltip). Other views still exclude deleted books.
+- **Tag counts exclude deleted books** - Sidebar tag counts and Data Status modal counts no longer include trashed books.
+- **Inbox is a real folder** - Inbox now supports Cut, Move, and Paste for books, same as any user folder.
+
+### Fixed
+- **Permanent delete relay sync** - Emptying Trash now re-uploads the full library to relay in fetcher-compatible format, preventing deleted books from returning on next import.
+- **Inbox useEffect collector removed** - Replaced reactive background sweep with explicit Inbox placement during import. Fixes bug where soft-deleted books reappeared in Inbox.
+
+### Removed
+- **Exclusion list endpoints** - Removed unused `getExclusions`/`putExclusions` from relay client and `/exclusions` endpoints from relay worker. Permanent delete uses library re-upload instead.
+
 ## [5.6.8] - 2026-02-28
 
 ### Changed
