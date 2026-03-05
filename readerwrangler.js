@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.54";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.55";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -773,7 +773,10 @@
                 // All Books: show everything including trashed (tooltip shows Trash location)
                 // Other views: hide deleted books
                 if (selectedFolderId === '__trash__') return book.isDeleted === true;
-                if (book.isDeleted && selectedFolderId !== '__all__') return false;
+                if (book.isDeleted && selectedFolderId !== '__all__') {
+                    console.log(`🚫 filterBookForExplorer excluding deleted book "${book.title}" from ${selectedFolderId}`);
+                    return false;
+                }
 
                 // Text search filter
                 const matchesSearch = !searchTerm ||
@@ -14808,7 +14811,7 @@
                             As an Amazon Associate, I earn from qualifying purchases. | <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank" rel="noopener noreferrer" className="hover:text-gray-700" title="Report issues or request features">Feedback</a> | <a href="security.html" className="hover:text-gray-700" title="Security & Privacy information">Security</a>
                         </div>
                         {/* Right: Sync indicator + Build version */}
-                        <div className="text-right flex items-center gap-2 justify-end">
+                        <div className="text-right flex items-center gap-2 justify-end pr-2">
                             {window.RWRelay && window.RWRelay.isConfigured() && (
                                 <div
                                     className={`sync-indicator ${deviceStateSynced ? 'sync-indicator-synced' : 'sync-indicator-unsynced'}`}
