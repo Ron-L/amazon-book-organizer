@@ -1096,6 +1096,18 @@
                     });
                 });
 
+                // DEBUG: Log folder membership for each book being deleted
+                console.log('🗑️ softDeleteBooks DEBUG:', {
+                    bookIds,
+                    currentFolder: selectedFolderId,
+                    folderMembership: Object.fromEntries(
+                        Object.entries(folderMembership).map(([id, fids]) => [
+                            books.find(b => b.id === id)?.title || id,
+                            fids.map(fid => folders.find(f => f.id === fid)?.name || fid)
+                        ])
+                    )
+                });
+
                 // Remove books from current folder's bookIds
                 const currentFolderId = selectedFolderId;
                 const isAllBooks = currentFolderId === '__all__' || currentFolderId === '__inbox__';
@@ -1166,7 +1178,16 @@
                 // (can't rely on setBooks updater — React 18 batching defers it)
                 const restoredBooks = books
                     .filter(b => bookIdsSet.has(b.id) && b.isDeleted)
-                    .map(b => ({ id: b.id, deletedFromFolderIds: b.deletedFromFolderIds }));
+                    .map(b => ({ id: b.id, title: b.title, deletedFromFolderIds: b.deletedFromFolderIds }));
+
+                // DEBUG: Log what we're restoring and where
+                console.log('↩️ restoreBooks DEBUG:', restoredBooks.map(rb => ({
+                    title: rb.title,
+                    deletedFromFolderIds: (rb.deletedFromFolderIds || []).map(fid =>
+                        folders.find(f => f.id === fid)?.name || fid
+                    ),
+                    fallbackToInbox: (rb.deletedFromFolderIds || []).length === 0
+                })));
 
                 setBooks(prev => {
                     const updated = prev.map(b => {
