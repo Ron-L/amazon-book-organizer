@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.52";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.53";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2015,6 +2015,21 @@
                         const savedFolders = localStorage.getItem(FOLDERS_KEY);
                         let loadedFolders = savedFolders ? JSON.parse(savedFolders) : [];
 
+                        // v6.0.0-alpha.53 - Ensure Inbox exists for fresh installs
+                        if (loadedFolders.length === 0) {
+                            loadedFolders = [{
+                                id: '__inbox__',
+                                name: 'Inbox',
+                                parentId: null,
+                                bookIds: [],
+                                childFolderIds: [],
+                                collapsed: false,
+                                isInbox: true
+                            }];
+                            localStorage.setItem(FOLDERS_KEY, JSON.stringify(loadedFolders));
+                            console.log('📥 Created default Inbox folder for fresh install');
+                        }
+
                         // Load books from IndexedDB
                         let loadedBooks = await loadBooksFromIndexedDB();
 
@@ -2321,40 +2336,10 @@
                 };
             }, [tagRegistry, books, folders]);
 
-            // v5.0.0 - Sync Inbox folder: add books not in ANY folder to Inbox
-            // Note: Only adds, doesn't remove (removal happens via move drop handler)
-            useEffect(() => {
-                if (syncStatus === 'loading' || books.length === 0) return;
-
-                const inbox = getInboxFolder();
-                // Get all book IDs in ANY folder (including Inbox)
-                const booksInAnyFolder = new Set();
-                folders.forEach(folder => {
-                    (folder.bookIds || []).forEach(id => booksInAnyFolder.add(id));
-                });
-                const booksNotInAnyFolder = books.map(b => b.id).filter(id => !booksInAnyFolder.has(id));
-
-                if (!inbox) {
-                    // Create Inbox with all books not in any folder (newest first)
-                    console.log('📥 Creating Inbox folder with', booksNotInAnyFolder.length, 'books');
-                    setFolders(prev => [{
-                        id: '__inbox__',
-                        name: 'Inbox',
-                        parentId: null,
-                        bookIds: [...booksNotInAnyFolder].reverse(),
-                        childFolderIds: [],
-                        collapsed: false,
-                        isInbox: true
-                    }, ...prev]);
-                } else if (booksNotInAnyFolder.length > 0) {
-                    // Add new books to Inbox (books imported that aren't in any folder yet)
-                    console.log('📥 Adding', booksNotInAnyFolder.length, 'new books to Inbox');
-                    setFolders(prev => prev.map(f => {
-                        if (f.id !== '__inbox__') return f;
-                        return { ...f, bookIds: [...booksNotInAnyFolder.reverse(), ...(f.bookIds || [])] };
-                    }));
-                }
-            }, [books, folders, syncStatus]);
+            // v6.0.0-alpha.53 - Removed Inbox useEffect collector (P10-T2)
+            // Books are now added to Inbox explicitly during import, not by background effect.
+            // This fixes the bug where softDeleteBooks removing a book from all folders
+            // would cause the collector to re-add it to Inbox on the next render.
 
             // v5.0.0-alpha.175.49.1 - Removed settings save useEffect (dead code, settings state removed in v175.48)
 
@@ -3149,9 +3134,9 @@
             const RELAY_IMPORT_TIMEOUT = 30000; // 30 seconds
             const importFromRelay = async () => {
                 if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
+                const bookIdsBefore = new Set(books.map(b => b.id)); // v6.0.0-alpha.53 - Track IDs for Inbox placement
                 const booksBefore = books.length;
                 setRelayImporting(true);
-                setSyncStatus('loading'); // Guard: prevents Inbox useEffect from firing during import
                 const progress = showProgressDialog('Relay Import', 'Importing from relay…');
                 try {
                     const importWork = async () => {
@@ -3176,6 +3161,21 @@
                     if (result.empty) {
                         await progress.finish('Relay Import', 'No library data found on the relay.\n\nIf you recently regenerated your encryption keys, your bookmarklet may be out of date. Open File → Relay Setup and drag the updated bookmarklet to your bookmarks bar, then re-fetch from Amazon.');
                         return;
+                    }
+
+                    // v6.0.0-alpha.53 - Add new books to Inbox explicitly (replaces useEffect collector)
+                    // loadLibrary() has already called setBooks() — read current books from IndexedDB
+                    // to get the merged result (setBooks is async/batched, can't read state immediately)
+                    const mergedBooks = await loadBooksFromIndexedDB();
+                    const newBookIds = mergedBooks
+                        .filter(b => !bookIdsBefore.has(b.id) && !b.isDeleted)
+                        .map(b => b.id);
+                    if (newBookIds.length > 0) {
+                        console.log(`📥 Adding ${newBookIds.length} new books to Inbox`);
+                        setFolders(prev => prev.map(f => {
+                            if (f.id !== '__inbox__') return f;
+                            return { ...f, bookIds: [...newBookIds.reverse(), ...(f.bookIds || [])] };
+                        }));
                     }
 
                     setRelayManifest(null); // Clear banner after successful import
