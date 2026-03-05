@@ -9537,9 +9537,16 @@
                                                 setExplorerSelectedBooks(new Set());
                                                 return;
                                             }
-                                            // v6.0.0-alpha.53 - Drag from Trash to Inbox = Restore to Inbox
+                                            // v6.0.0-alpha.53 - Drag from Trash to Inbox = undelete + place in Inbox only
                                             if (sourceFolder === '__trash__') {
-                                                restoreBooks(bookIds);
+                                                const bookIdsSet = new Set(bookIds);
+                                                setBooks(prev => {
+                                                    const updated = prev.map(b => bookIdsSet.has(b.id) && b.isDeleted
+                                                        ? { ...b, isDeleted: false, deletedAt: null, deletedFromFolderIds: null }
+                                                        : b);
+                                                    saveBooksToIndexedDB(updated);
+                                                    return updated;
+                                                });
                                                 setFolders(prev => prev.map(f => {
                                                     if (f.id !== '__inbox__') return f;
                                                     const existingSet = new Set(f.bookIds || []);
@@ -9848,10 +9855,16 @@
                                                                 setExplorerSelectedBooks(new Set());
                                                                 return;
                                                             }
-                                                            // v6.0.0-alpha.50 - Drag from Trash = Restore to target folder
+                                                            // v6.0.0-alpha.53 - Drag from Trash = undelete + place in target folder only
                                                             if (sourceFolder === '__trash__') {
-                                                                restoreBooks(bookIds);
-                                                                // Also add to target folder if not already there
+                                                                const bookIdsSet = new Set(bookIds);
+                                                                setBooks(prev => {
+                                                                    const updated = prev.map(b => bookIdsSet.has(b.id) && b.isDeleted
+                                                                        ? { ...b, isDeleted: false, deletedAt: null, deletedFromFolderIds: null }
+                                                                        : b);
+                                                                    saveBooksToIndexedDB(updated);
+                                                                    return updated;
+                                                                });
                                                                 setFolders(prev => prev.map(f => {
                                                                     if (f.id === folder.id) {
                                                                         const existingSet = new Set(f.bookIds || []);
