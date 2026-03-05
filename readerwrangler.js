@@ -1272,14 +1272,13 @@
                 showToast(`Restored ${count} book${count !== 1 ? 's' : ''}`);
             };
 
-            const permanentlyDeleteBooks = (bookIds) => {
+            const permanentlyDeleteBooks = async (bookIds) => {
                 const bookIdsSet = new Set(bookIds);
 
-                setBooks(prev => {
-                    const updated = prev.filter(b => !bookIdsSet.has(b.id));
-                    saveBooksToIndexedDB(updated);
-                    return updated;
-                });
+                // Remove from books state and IndexedDB
+                const updatedBooks = books.filter(b => !bookIdsSet.has(b.id));
+                await saveBooksToIndexedDB(updatedBooks);
+                setBooks(updatedBooks);
 
                 // Also remove from any folder bookIds (safety)
                 setFolders(prev => prev.map(f => ({
@@ -1290,7 +1289,18 @@
                 setExplorerSelectedBooks(new Set());
                 const count = bookIds.length;
                 showToast(`Permanently deleted ${count} book${count !== 1 ? 's' : ''}`);
-                // Relay sync handled by 15-second device-state debounce
+
+                // v6.0.0-alpha.53 - Re-upload full library to relay so deleted books don't return on Import
+                if (window.RWRelay && window.RWRelay.isConfigured()) {
+                    try {
+                        const payload = await buildDeviceStatePayload();
+                        const jsonString = JSON.stringify(payload);
+                        await window.RWRelay.upload(jsonString, () => {});
+                        console.log(`🗑️ Relay updated after permanent delete (${updatedBooks.length} books)`);
+                    } catch (err) {
+                        console.warn('⚠️ Permanent delete succeeded locally but relay sync failed:', err.message);
+                    }
+                }
             };
 
             // Get child folders of a parent (null = root level)
