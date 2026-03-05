@@ -744,7 +744,7 @@
 
             // Get books for a folder (handles All Books and My Library virtual folders)
             const getFolderBookIds = (folderId) => {
-                if (folderId === '__all__') return [...books.filter(b => !b.isDeleted).map(b => b.id)].reverse(); // Newest first, exclude trash
+                if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first, includes trashed books
                 if (folderId === '__trash__') return books.filter(b => b.isDeleted).sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0)).map(b => b.id);
                 if (folderId === '__library__') return []; // v5.0.0-alpha.63 - My Library shows folders, not books
                 // v5.5.15-alpha.21 - Tag virtual folder: return books with this tag
@@ -769,9 +769,11 @@
             const filterBookForExplorer = (book) => {
                 if (!book) return false;
 
-                // Trash view: show only deleted books; all other views: hide deleted
+                // Trash view: show only deleted books
+                // All Books: show everything including trashed (tooltip shows Trash location)
+                // Other views: hide deleted books
                 if (selectedFolderId === '__trash__') return book.isDeleted === true;
-                if (book.isDeleted) return false;
+                if (book.isDeleted && selectedFolderId !== '__all__') return false;
 
                 // Text search filter
                 const matchesSearch = !searchTerm ||
@@ -1046,12 +1048,18 @@
 
             // v5.0.0-alpha.98 - Get all folders containing a book (for All Books tooltip)
             const getFoldersContainingBook = (bookId) => {
-                return folders.filter(f => {
+                const result = folders.filter(f => {
                     // Skip virtual folders
                     if (f.id === '__all__' || f.id === '__library__') return false;
                     // Check if folder's bookIds includes this book
                     return (f.bookIds || []).includes(bookId);
                 });
+                // v6.0.0-alpha.52 - Include Trash as a location for deleted books
+                const book = books.find(b => b.id === bookId);
+                if (book?.isDeleted) {
+                    result.push(FOLDER_TRASH);
+                }
+                return result;
             };
 
             // v5.5.15 - Toast notification helper (reusable for all feedback messages)
@@ -12631,7 +12639,7 @@
                                                 setBookTooltip(null);
                                             }}
                                             className="text-left text-blue-600 hover:text-blue-800 hover:underline">
-                                            {folder.id === '__inbox__' ? '📥 ' : '📁 '}{folder.name}
+                                            {folder.id === '__trash__' ? '🗑️ ' : folder.id === '__inbox__' ? '📥 ' : '📁 '}{folder.name}
                                         </button>
                                     ))}
                                 </div>
