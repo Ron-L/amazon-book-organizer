@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.56";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.57";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9594,27 +9594,18 @@
                                         }}>
                                         <span className="pointer-events-none">{FOLDER_LIBRARY.icon}</span>
                                         <span className="flex-1 pointer-events-none">{FOLDER_LIBRARY.name}</span>
-                                        {/* v5.1.0-alpha.14 - Collapse/Expand all — v5.5.15-alpha.29 moved before count for alignment */}
-                                        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                                        {/* v6.0.0-alpha.57 - Single Collapse All button (replaces expand/collapse pair) */}
+                                        {folders.some(f => !f.collapsed) && (
                                             <button
-                                                onClick={() => {
-                                                    // Collapse all folders
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
                                                     setFolders(prev => prev.map(f => ({ ...f, collapsed: true })));
                                                 }}
                                                 className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
                                                 title="Collapse all folders">
-                                                ▼
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    // Expand all folders
-                                                    setFolders(prev => prev.map(f => ({ ...f, collapsed: false })));
-                                                }}
-                                                className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
-                                                title="Expand all folders">
                                                 ▲
                                             </button>
-                                        </div>
+                                        )}
                                         <span className="text-xs text-gray-500 pointer-events-none">
                                             ({getChildFolders(null).length} folders)
                                         </span>
