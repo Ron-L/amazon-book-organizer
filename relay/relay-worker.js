@@ -8,7 +8,6 @@
  * Key layout:
  *   relay:{channelId}:manifest       → upload manifest (TTL: 24h)
  *   relay:{channelId}:chunk:{n}      → encrypted library chunk (TTL: 24h)
- *   relay:{channelId}:exclusions     → encrypted exclusion list (TTL: 90 days)
  *   relay:{channelId}:device-state   → encrypted device state (TTL: 90 days)
  */
 
@@ -76,18 +75,6 @@ async function route(request, path, env) {
   match = path.match(/^\/cleanup\/([^/]+)$/);
   if (match && request.method === 'DELETE') {
     return handleCleanup(env, match[1]);
-  }
-
-  // PUT /exclusions/{channelId}
-  match = path.match(/^\/exclusions\/([^/]+)$/);
-  if (match && request.method === 'PUT') {
-    return handlePutExclusions(request, env, match[1]);
-  }
-
-  // GET /exclusions/{channelId}
-  match = path.match(/^\/exclusions\/([^/]+)$/);
-  if (match && request.method === 'GET') {
-    return handleGetExclusions(env, match[1]);
   }
 
   // PUT /device-state/{channelId}
@@ -184,28 +171,6 @@ async function handleCleanup(env, channelId) {
 
   await Promise.all(deletes);
   return jsonResponse({ ok: true });
-}
-
-async function handlePutExclusions(request, env, channelId) {
-  if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
-  const body = await request.arrayBuffer();
-  if (body.byteLength > MAX_CHUNK_SIZE) return badRequest('Exclusion list too large');
-
-  await env.RELAY_KV.put(`relay:${channelId}:exclusions`, body,
-    { expirationTtl: PERSISTENT_TTL }
-  );
-  return jsonResponse({ ok: true });
-}
-
-async function handleGetExclusions(env, channelId) {
-  if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
-
-  const data = await env.RELAY_KV.get(`relay:${channelId}:exclusions`, 'arrayBuffer');
-  if (!data) return new Response('No exclusions', { status: 404 });
-
-  return new Response(data, {
-    headers: { 'Content-Type': 'application/octet-stream' }
-  });
 }
 
 async function handlePutDeviceState(request, env, channelId) {

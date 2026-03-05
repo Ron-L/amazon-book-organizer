@@ -90,21 +90,9 @@ If the scan fails partway through (API error, network issue, tab closed):
 - The app can show "Partial orphan scan (42 of ~77 pages)" so the user knows the data is incomplete
 - Next fetch run will re-scan from scratch (orphan status is transient per scan)
 
-#### Exclusion List Integration
+#### Trash Bin Integration
 
-Books on the exclusion list (future Trash Bin feature) should be excluded from orphan detection. They're intentionally removed — flagging them as orphans would be confusing.
-
-```javascript
-const exclusions = await RWRelay.getExclusions(); // may be empty/null today
-const excludedAsins = new Set(exclusions || []);
-
-// During orphan comparison:
-const orphans = existingBooks.filter(b =>
-    !amazonAsins.has(b.asin) &&
-    !excludedAsins.has(b.asin) &&
-    !b.onWishlist  // Wishlist-only books aren't in Amazon library scan
-);
-```
+Books in Trash (`isDeleted: true`) are excluded from orphan detection — they're intentionally removed, so flagging them as orphans would be confusing. Permanent delete re-uploads the full library to relay via `RWRelay.upload()`, so deleted books are removed from the relay data and won't reappear on import.
 
 ### 3. Unified Progress Dialog
 
@@ -238,7 +226,7 @@ After Import from Relay, the app can:
 ## Fetch Lifecycle (Updated)
 
 ```
-Step 0: Download existing library from relay + exclusion list
+Step 0: Download existing library from relay
 Step 1: CSRF token
 Step 2: API validation
 Step 3: Phase 1 — Fetch new books (paginated, stop at overlap)
@@ -282,11 +270,9 @@ Step 9: Flag orphans + re-upload to relay
    - Recognize `orphanStatus` field from imported data
    - Display ownership type context for orphaned books
 
-### Phase 3: Exclusion List Wiring (~1 hour, after Trash Bin)
+### ~~Phase 3: Exclusion List Wiring~~ (Superseded)
 
-- Fetcher calls `getExclusions()` in Step 0
-- Excluded ASINs skipped during fetch and orphan scan
-- Depends on Trash Bin feature to populate the exclusion list
+Exclusion list approach was replaced by the Trash Bin feature. Permanent delete re-uploads the full library to relay, so deleted books are removed at the source. No exclusion list needed.
 
 ---
 
@@ -298,7 +284,7 @@ These remain separate work items:
 |------|----------|-------|
 | Wishlist-add toast feedback | `amazon-wishlist-fetcher.js` | "Already on wishlist" / "Already in library" — see WISHLIST-DEDUP.md |
 | Wishlist dedup Layers 2 & 3 | `readerwrangler.js` (app) | Per-folder right-click, Tools menu global cleanup — see WISHLIST-DEDUP.md |
-| Trash Bin | `readerwrangler.js` (app) | Two-stage delete lifecycle, exclusion list push — see ORPHAN-DETECTION-RECYCLE-BIN.md (Recycle Bin sections still valid) |
+| ~~Trash Bin~~ | `readerwrangler.js` (app) | ✅ Implemented in v6.0.0-alpha.48–56. Soft delete + permanent delete with relay sync. No exclusion list needed. |
 
 ---
 

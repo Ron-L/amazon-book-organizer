@@ -257,43 +257,6 @@
   }
 
   /**
-   * Get the exclusion list from relay (used by fetcher before import).
-   * @returns {object|null} Decrypted exclusion list or null if none exists
-   */
-  async function getExclusions() {
-    if (!isConfigured()) return null;
-
-    const response = await fetch(`${WORKER_URL}/exclusions/${_channelId}`);
-    if (response.status === 404) return null;
-    if (!response.ok) throw new Error('Failed to get exclusions');
-
-    const encrypted = await response.arrayBuffer();
-    const key = await getKey();
-    const decrypted = await window.RWCrypto.decryptPacked(key, encrypted);
-    const json = new TextDecoder().decode(decrypted);
-    return JSON.parse(json);
-  }
-
-  /**
-   * Update the exclusion list on relay (used by app after purge from Trash).
-   * @param {object} exclusions - The exclusion list object
-   */
-  async function putExclusions(exclusions) {
-    if (!isConfigured()) throw new Error('Relay not configured');
-
-    const json = JSON.stringify(exclusions);
-    const key = await getKey();
-    const encrypted = await window.RWCrypto.encryptPacked(key, new TextEncoder().encode(json));
-
-    const response = await fetch(`${WORKER_URL}/exclusions/${_channelId}`, {
-      method: 'PUT',
-      body: encrypted
-    });
-
-    if (!response.ok) throw new Error('Failed to update exclusions');
-  }
-
-  /**
    * Get device state from relay (used by mobile on open).
    * @returns {string|null} Decrypted JSON string or null if none exists
    */
@@ -344,8 +307,6 @@
     checkStatus: checkStatus,
     download: download,
     cleanup: cleanup,
-    getExclusions: getExclusions,
-    putExclusions: putExclusions,
     getDeviceState: getDeviceState,
     putDeviceState: putDeviceState
   };
