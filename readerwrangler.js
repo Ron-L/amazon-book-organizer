@@ -2586,7 +2586,7 @@
 
             // ESC key to clear selection, Ctrl+A to select all in active column
             useEffect(() => {
-                const handleKeyDown = (e) => {
+                const handleKeyDown = async (e) => {
                     if (e.key === 'Escape') {
                         clearSelection();
                         setContextMenu(null);
@@ -2798,7 +2798,7 @@
                         if (selectedFolderId === '__trash__') {
                             const count = bookIdsToDelete.length;
                             if (confirm(`Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
-                                permanentlyDeleteBooks(bookIdsToDelete);
+                                await permanentlyDeleteBooks(bookIdsToDelete);
                             }
                             return;
                         }
@@ -12726,10 +12726,11 @@
                                         onClick={(e) => e.stopPropagation()}>
                                         <div
                                             className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
-                                            onClick={() => {
+                                            onClick={async () => {
                                                 const deletedBooks = books.filter(b => b.isDeleted);
                                                 if (deletedBooks.length > 0 && confirm(`Permanently delete ${deletedBooks.length} book${deletedBooks.length !== 1 ? 's' : ''} from Trash? This cannot be undone.`)) {
-                                                    permanentlyDeleteBooks(deletedBooks.map(b => b.id));
+                                                    setFolderContextMenu(null);
+                                                    await permanentlyDeleteBooks(deletedBooks.map(b => b.id));
                                                 }
                                                 setFolderContextMenu(null);
                                             }}>
@@ -14317,9 +14318,11 @@
                                                     <div className="border-t border-gray-200 my-1"></div>
                                                     <div
                                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
-                                                        onClick={() => {
+                                                        onClick={async () => {
                                                             if (confirm(`Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
-                                                                permanentlyDeleteBooks(Array.from(explorerSelectedBooks));
+                                                                setExplorerBookContextMenu(null);
+                                                                setContextSubmenu(null);
+                                                                await permanentlyDeleteBooks(Array.from(explorerSelectedBooks));
                                                             }
                                                             setExplorerBookContextMenu(null);
                                                             setContextSubmenu(null);
