@@ -1048,18 +1048,17 @@
 
             // v5.0.0-alpha.98 - Get all folders containing a book (for All Books tooltip)
             const getFoldersContainingBook = (bookId) => {
-                const result = folders.filter(f => {
+                // v6.0.0-alpha.52 - Deleted books: only show Trash (folder bookIds may be stale)
+                const book = books.find(b => b.id === bookId);
+                if (book?.isDeleted) {
+                    return [FOLDER_TRASH];
+                }
+                return folders.filter(f => {
                     // Skip virtual folders
                     if (f.id === '__all__' || f.id === '__library__') return false;
                     // Check if folder's bookIds includes this book
                     return (f.bookIds || []).includes(bookId);
                 });
-                // v6.0.0-alpha.52 - Include Trash as a location for deleted books
-                const book = books.find(b => b.id === bookId);
-                if (book?.isDeleted) {
-                    result.push(FOLDER_TRASH);
-                }
-                return result;
             };
 
             // v5.5.15 - Toast notification helper (reusable for all feedback messages)
@@ -1143,13 +1142,17 @@
                 const booksToTrash = bookIds.filter(id => !remainingFolderBooks.has(id));
                 const booksToTrashSet = new Set(booksToTrash);
 
-                // For restore: only store folders we actually removed from (not all membership)
-                // Other folders still have the book — no need to re-add on restore
-                const removedFromFolders = {};
-                bookIds.forEach(bookId => {
-                    removedFromFolders[bookId] = (folderMembership[bookId] || [])
-                        .filter(fid => foldersToRemoveFrom.has(fid));
-                });
+                // For trashed books: store ALL folder membership (for restore)
+                // and clean up bookIds from ALL folders (not just current)
+                if (booksToTrash.length > 0) {
+                    // Remove trashed books from every folder's bookIds
+                    for (let i = 0; i < updatedFolders.length; i++) {
+                        const f = updatedFolders[i];
+                        if ((f.bookIds || []).some(id => booksToTrashSet.has(id))) {
+                            updatedFolders[i] = { ...f, bookIds: f.bookIds.filter(id => !booksToTrashSet.has(id)) };
+                        }
+                    }
+                }
 
                 setBooks(prev => {
                     const updated = prev.map(b => {
@@ -1158,7 +1161,7 @@
                                 ...b,
                                 isDeleted: true,
                                 deletedAt: Date.now(),
-                                deletedFromFolderIds: removedFromFolders[b.id] || []
+                                deletedFromFolderIds: folderMembership[b.id] || []
                             };
                         }
                         return b;
