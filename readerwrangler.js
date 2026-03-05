@@ -2673,8 +2673,8 @@
                     // v5.0.0-alpha.168 - Ctrl+X in Explorer view: Cut selected books
                     if ((e.ctrlKey || e.metaKey) && e.key === 'x' && explorerSelectedBooks.size > 0) {
                         e.preventDefault();
-                        // Can't cut from special folders
-                        if (['__all__', '__library__', '__inbox__'].includes(selectedFolderId)) {
+                        // Can't cut from virtual folders (Inbox is a real folder, allow cut)
+                        if (['__all__', '__library__'].includes(selectedFolderId)) {
                             console.log('⚠️ Cannot cut books from virtual folders');
                             return;
                         }
