@@ -5,23 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [6.0.0] - 2026-03-05
 
 ### Added
+- **Relay-only data flow** - All data transfer now goes through an encrypted Cloudflare relay. No more file downloads or uploads — bookmarklet fetchers push data to the relay, and the app pulls it with one click. End-to-end encrypted with credentials baked into the bookmarklet.
+- **Import from Relay** - One-click import with progress dialog, 30-second timeout, and delta count showing how many new books were added.
+- **Orphan detection** - Library fetcher now runs a background scan after each fetch to identify books removed from Amazon (e.g., Prime rotation, refunds). Orphaned books are flagged and filterable via an "Orphan (removed from Amazon)" ownership filter.
+- **Review gap-fill** - Library fetcher enrichment now backfills missing reviews on existing books, not just new ones.
+- **Wishlist deduplication** - Wishlist fetcher prevents duplicate entries on save. Info dialog shows skip counts for already-owned and already-wishlisted books.
+- **Duplicate review in Data Status** - Data Status modal detects and displays duplicate ASINs with a cleanup option.
 - **Trash Bin** - Two-stage delete: soft delete moves books to Trash, permanent delete removes from library and relay. Trash Bin appears at bottom of folder tree with count badge. Right-click for Restore or Delete Permanently. DEL key support. Drag from Trash to any folder to restore. Undo/redo for delete and restore actions.
-- **Collapse All button** - Replaced confusing expand/collapse chevron pair with single Collapse All button in folder tree. Appears when any folder is expanded, disappears when all collapsed.
+- **Collapse All button** - Replaced expand/collapse chevron pair with single Collapse All button in folder tree. Appears when any folder is expanded, disappears when all collapsed.
 
 ### Changed
+- **File menu redesign** - Import from Relay is now the primary action. Import/Export renamed to Restore/Save Backup. Menu reordered for relay-first workflow.
 - **All Books filters include trashed books** - Search, tags, and all filters now match trashed books in All Books view (with Trash tooltip). Other views still exclude deleted books.
 - **Tag counts exclude deleted books** - Sidebar tag counts and Data Status modal counts no longer include trashed books.
 - **Inbox is a real folder** - Inbox now supports Cut, Move, and Paste for books, same as any user folder.
 
 ### Fixed
-- **Permanent delete relay sync** - Emptying Trash now re-uploads the full library to relay in fetcher-compatible format, preventing deleted books from returning on next import.
-- **Inbox useEffect collector removed** - Replaced reactive background sweep with explicit Inbox placement during import. Fixes bug where soft-deleted books reappeared in Inbox.
+- **Permanent delete relay sync** - Emptying Trash re-uploads the full library to relay in fetcher-compatible format, preventing deleted books from returning on next import.
+- **Inbox useEffect collector removed** - Replaced reactive background sweep with explicit Inbox placement during import.
 
 ### Removed
-- **Exclusion list endpoints** - Removed unused `getExclusions`/`putExclusions` from relay client and `/exclusions` endpoints from relay worker. Permanent delete uses library re-upload instead.
+- **File-based data transfer** - Removed file picker import/export for library data. Backup save/restore retained for disaster recovery.
+- **Exclusion list endpoints** - Removed unused relay exclusion list infrastructure. Permanent delete uses library re-upload instead.
 
 ## [5.6.8] - 2026-02-28
 

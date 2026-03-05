@@ -19,7 +19,7 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v2.2.0-alpha.1';
+    const FETCHER_VERSION = 'v2.2.0';
     const SCHEMA_VERSION = '2.1';
     const PAGE_TITLE = document.title;
 

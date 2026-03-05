@@ -121,6 +121,12 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v6.0 - Cloud Relay + Trash Bin** (March 2026)
+- Encrypted cloud relay replaces file-based transfer — one-click import, no downloads needed
+- Trash Bin with two-stage delete: soft delete to Trash, permanent delete from library and relay
+- Orphan detection flags books removed from Amazon (Prime rotation, refunds)
+- Wishlist deduplication and duplicate review in Data Status
+
 **v5.5 - Mobile Viewer** (February 2026)
 - Browse your organized library on your phone — dashboard shelves, folder navigation, tag views, search & sort
 
@@ -139,15 +145,6 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 - Complete redesign: two-pane Windows Explorer-style interface with folder tree + content view
 - Nested folders, list and cover grid views, drag-and-drop, context menus, Cut/Copy/Paste
 - Menu bar + compact toolbar — 32% more screen space for books
-
-**v4.17 - Wishlist Price Goals** (January 2026)
-- Set price triggers on wishlist books and filter to "Deals" when prices drop to your target
-
-**v4.21/v4.23 - Series & Author Bulk Import** (January 2026)
-- One-click import of entire book series or author bibliographies to your wishlist
-
-**v4.8/v4.16 - Cut/Copy/Paste + Undo/Redo** (January 2026)
-- Full clipboard operations (Ctrl+X/C/V) and unlimited undo/redo (Ctrl+Z/Y) for all actions
 
 See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
