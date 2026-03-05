@@ -1090,21 +1090,22 @@
             };
 
             // TEMP DEBUG: expose state for console inspection
-            window._rwDebug = () => {
-                const inbox = folders.find(f => f.id === '__inbox__');
-                console.log('Inbox bookIds count:', inbox?.bookIds?.length);
-                const destroyerIds = (inbox?.bookIds || []).filter(id => {
-                    const b = books.find(b2 => b2.id === id);
-                    return b?.title?.includes('Destroyer');
+            // Usage: _rwDebug('B0CHRKTWWL') or _rwDebug('Created, The Destroyer')
+            window._rwDebug = (search) => {
+                const matchBooks = books.filter(b =>
+                    b.id === search || b.asin === search || b.title?.includes(search)
+                );
+                matchBooks.forEach(b => {
+                    const inFolders = folders.filter(f => (f.bookIds || []).includes(b.id))
+                        .map(f => f.name || f.id);
+                    console.log(`📖 "${b.title}" (${b.id})`, {
+                        isDeleted: b.isDeleted,
+                        deletedFromFolderIds: b.deletedFromFolderIds,
+                        inFolderBookIds: inFolders,
+                        onWishlist: b.onWishlist
+                    });
                 });
-                if (destroyerIds.length > 0) {
-                    console.log('Destroyer books in Inbox bookIds:', destroyerIds.map(id => {
-                        const b = books.find(b2 => b2.id === id);
-                        return { id, title: b?.title, isDeleted: b?.isDeleted };
-                    }));
-                } else {
-                    console.log('No Destroyer books in Inbox bookIds');
-                }
+                if (matchBooks.length === 0) console.log('No books found for:', search);
             };
 
             // v6.0.0-alpha.48 - Trash Bin: soft delete, restore, permanent delete
