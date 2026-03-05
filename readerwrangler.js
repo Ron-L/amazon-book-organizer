@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.51";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.52";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1110,12 +1110,10 @@
 
                 // Remove books from current folder's bookIds
                 const currentFolderId = selectedFolderId;
-                const isAllBooks = currentFolderId === '__all__' || currentFolderId === '__inbox__';
 
                 // Determine which folders to remove from
-                const foldersToRemoveFrom = isAllBooks
-                    ? new Set(folders.map(f => f.id)) // Remove from ALL folders
-                    : new Set([currentFolderId]);      // Remove from current folder only
+                // All Books is an aggregate view — delete is disabled there
+                const foldersToRemoveFrom = new Set([currentFolderId]);
 
                 // Update folders: remove book references
                 const updatedFolders = folders.map(f => {
@@ -2803,6 +2801,9 @@
                             setExplorerSelectedBooks(new Set());
                             return;
                         }
+
+                        // All Books: delete disabled (aggregate view)
+                        if (selectedFolderId === '__all__') return;
 
                         // All other views: soft delete to Trash
                         softDeleteBooks(bookIdsToDelete);
@@ -14285,6 +14286,14 @@
                                                     <span>🗑️</span>
                                                     <span>Remove from "{tagViewCtxLabel}"</span>
                                                     <span className="ml-auto text-xs text-gray-400">Del</span>
+                                                </div>
+                                            ) : selectedFolderId === '__all__' ? (
+                                                <div
+                                                    className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
+                                                    title="Delete books from their folder">
+                                                    <span>🗑️</span>
+                                                    <span>Delete</span>
+                                                    <span className="ml-auto text-xs">Del</span>
                                                 </div>
                                             ) : (
                                                 <div
