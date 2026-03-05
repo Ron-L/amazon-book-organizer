@@ -1048,17 +1048,18 @@
 
             // v5.0.0-alpha.98 - Get all folders containing a book (for All Books tooltip)
             const getFoldersContainingBook = (bookId) => {
-                // v6.0.0-alpha.52 - Deleted books: only show Trash (folder bookIds may be stale)
-                const book = books.find(b => b.id === bookId);
-                if (book?.isDeleted) {
-                    return [FOLDER_TRASH];
-                }
-                return folders.filter(f => {
+                const result = folders.filter(f => {
                     // Skip virtual folders
                     if (f.id === '__all__' || f.id === '__library__') return false;
                     // Check if folder's bookIds includes this book
                     return (f.bookIds || []).includes(bookId);
                 });
+                // v6.0.0-alpha.52 - Also show Trash for deleted books
+                const book = books.find(b => b.id === bookId);
+                if (book?.isDeleted) {
+                    result.push(FOLDER_TRASH);
+                }
+                return result;
             };
 
             // v5.5.15 - Toast notification helper (reusable for all feedback messages)
@@ -1086,6 +1087,24 @@
                         }, 10000);
                     }, 1000); // Animation duration
                 }, 1500); // Wait before animating
+            };
+
+            // TEMP DEBUG: expose state for console inspection
+            window._rwDebug = () => {
+                const inbox = folders.find(f => f.id === '__inbox__');
+                console.log('Inbox bookIds count:', inbox?.bookIds?.length);
+                const destroyerIds = (inbox?.bookIds || []).filter(id => {
+                    const b = books.find(b2 => b2.id === id);
+                    return b?.title?.includes('Destroyer');
+                });
+                if (destroyerIds.length > 0) {
+                    console.log('Destroyer books in Inbox bookIds:', destroyerIds.map(id => {
+                        const b = books.find(b2 => b2.id === id);
+                        return { id, title: b?.title, isDeleted: b?.isDeleted };
+                    }));
+                } else {
+                    console.log('No Destroyer books in Inbox bookIds');
+                }
             };
 
             // v6.0.0-alpha.48 - Trash Bin: soft delete, restore, permanent delete
