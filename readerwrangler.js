@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.50";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.51";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1161,12 +1161,16 @@
 
             const restoreBooks = (bookIds) => {
                 const bookIdsSet = new Set(bookIds);
-                let restoredBooks = [];
+
+                // Compute restore targets synchronously from current books state
+                // (can't rely on setBooks updater — React 18 batching defers it)
+                const restoredBooks = books
+                    .filter(b => bookIdsSet.has(b.id) && b.isDeleted)
+                    .map(b => ({ id: b.id, deletedFromFolderIds: b.deletedFromFolderIds }));
 
                 setBooks(prev => {
                     const updated = prev.map(b => {
                         if (bookIdsSet.has(b.id) && b.isDeleted) {
-                            restoredBooks.push({ id: b.id, deletedFromFolderIds: b.deletedFromFolderIds });
                             return {
                                 ...b,
                                 isDeleted: false,
@@ -9761,6 +9765,28 @@
                                                                 showToast('Can\'t move from tag view to folder. Use folders to organize.', e.clientX, e.clientY);
                                                                 setFolderDropHighlight(null);
                                                                 setExplorerSelectedBooks(new Set());
+                                                                return;
+                                                            }
+                                                            // v6.0.0-alpha.50 - Drag from Trash = Restore to target folder
+                                                            if (sourceFolder === '__trash__') {
+                                                                restoreBooks(bookIds);
+                                                                // Also add to target folder if not already there
+                                                                setFolders(prev => prev.map(f => {
+                                                                    if (f.id === folder.id) {
+                                                                        const existingSet = new Set(f.bookIds || []);
+                                                                        const toAdd = bookIds.filter(id => !existingSet.has(id));
+                                                                        if (toAdd.length > 0) {
+                                                                            return { ...f, bookIds: [...toAdd, ...(f.bookIds || [])] };
+                                                                        }
+                                                                    }
+                                                                    return f;
+                                                                }));
+                                                                showToast(`Restored ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to "${folder.name}"`);
+                                                                setFolderDropHighlight(null);
+                                                                setExplorerSelectedBooks(new Set());
+                                                                stopDragVirtualization();
+                                                                setExplorerDragBookId(null);
+                                                                setExplorerDragData(null);
                                                                 return;
                                                             }
 
