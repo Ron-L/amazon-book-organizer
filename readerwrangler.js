@@ -1137,6 +1137,14 @@
                 const booksToTrash = bookIds.filter(id => !remainingFolderBooks.has(id));
                 const booksToTrashSet = new Set(booksToTrash);
 
+                // For restore: only store folders we actually removed from (not all membership)
+                // Other folders still have the book — no need to re-add on restore
+                const removedFromFolders = {};
+                bookIds.forEach(bookId => {
+                    removedFromFolders[bookId] = (folderMembership[bookId] || [])
+                        .filter(fid => foldersToRemoveFrom.has(fid));
+                });
+
                 setBooks(prev => {
                     const updated = prev.map(b => {
                         if (booksToTrashSet.has(b.id)) {
@@ -1144,7 +1152,7 @@
                                 ...b,
                                 isDeleted: true,
                                 deletedAt: Date.now(),
-                                deletedFromFolderIds: folderMembership[b.id] || []
+                                deletedFromFolderIds: removedFromFolders[b.id] || []
                             };
                         }
                         return b;
