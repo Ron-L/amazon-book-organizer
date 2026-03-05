@@ -13380,8 +13380,9 @@
 
                         // v5.0.0-alpha.166 - Phase 2: Helper functions for Move to / Copy to
 
-                        // v5.0.0-alpha.166.1 - Check if current folder is special (can't move books from virtual folders)
-                        const isSpecialFolder = ['__all__', '__library__', '__inbox__'].includes(selectedFolderId);
+                        // v5.0.0-alpha.166.1 - Check if current folder is virtual (can't move books from virtual folders)
+                        // v6.0.0-alpha.53 - Inbox is a real folder, allow Cut/Move/Paste for books
+                        const isSpecialFolder = ['__all__', '__library__'].includes(selectedFolderId);
                         const isTrashView = selectedFolderId === '__trash__';
                         // v5.5.15-alpha.35 - 1J: Detect tag view for "Remove from [tag]" context menu
                         const isTagViewCtx = selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__');
