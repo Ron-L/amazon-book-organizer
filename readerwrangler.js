@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.53";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.54";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -714,7 +714,7 @@
 
             // v5.0.0-alpha.175.9 - Compute tag count on-the-fly (replaces stored counts)
             const getTagCount = (tagId) => {
-                return books.filter(b => b.tags?.includes(tagId)).length;
+                return books.filter(b => b.tags?.includes(tagId) && !b.isDeleted).length;
             };
 
             // v5.4.5 - Get group label for a book based on current sort column
@@ -1089,25 +1089,6 @@
                 }, 1500); // Wait before animating
             };
 
-            // TEMP DEBUG: expose state for console inspection
-            // Usage: _rwDebug('B0CHRKTWWL') or _rwDebug('Created, The Destroyer')
-            window._rwDebug = (search) => {
-                const matchBooks = books.filter(b =>
-                    b.id === search || b.asin === search || b.title?.includes(search)
-                );
-                matchBooks.forEach(b => {
-                    const inFolders = folders.filter(f => (f.bookIds || []).includes(b.id))
-                        .map(f => f.name || f.id);
-                    console.log(`📖 "${b.title}" (${b.id})`, {
-                        isDeleted: b.isDeleted,
-                        deletedFromFolderIds: b.deletedFromFolderIds,
-                        inFolderBookIds: inFolders,
-                        onWishlist: b.onWishlist
-                    });
-                });
-                if (matchBooks.length === 0) console.log('No books found for:', search);
-            };
-
             // v6.0.0-alpha.48 - Trash Bin: soft delete, restore, permanent delete
             const softDeleteBooks = (bookIds) => {
                 const bookIdsSet = new Set(bookIds);
@@ -1121,18 +1102,6 @@
                             folderMembership[bookId].push(folder.id);
                         }
                     });
-                });
-
-                // DEBUG: Log folder membership for each book being deleted
-                console.log('🗑️ softDeleteBooks DEBUG:', {
-                    bookIds,
-                    currentFolder: selectedFolderId,
-                    folderMembership: Object.fromEntries(
-                        Object.entries(folderMembership).map(([id, fids]) => [
-                            books.find(b => b.id === id)?.title || id,
-                            fids.map(fid => folders.find(f => f.id === fid)?.name || fid)
-                        ])
-                    )
                 });
 
                 // Remove books from current folder's bookIds
@@ -1216,15 +1185,6 @@
                 const restoredBooks = books
                     .filter(b => bookIdsSet.has(b.id) && b.isDeleted)
                     .map(b => ({ id: b.id, title: b.title, deletedFromFolderIds: b.deletedFromFolderIds }));
-
-                // DEBUG: Log what we're restoring and where
-                console.log('↩️ restoreBooks DEBUG:', restoredBooks.map(rb => ({
-                    title: rb.title,
-                    deletedFromFolderIds: (rb.deletedFromFolderIds || []).map(fid =>
-                        folders.find(f => f.id === fid)?.name || fid
-                    ),
-                    fallbackToInbox: (rb.deletedFromFolderIds || []).length === 0
-                })));
 
                 setBooks(prev => {
                     const updated = prev.map(b => {
@@ -4920,6 +4880,83 @@
                         });
                         break;
                     }
+                    // v6.0.0-alpha.54 - Undo soft delete (restore books + re-add to folders)
+                    case 'SOFT_DELETE_BOOKS': {
+                        const booksToTrashSet = new Set(action.booksToTrash);
+                        // Un-trash books that were moved to Trash
+                        if (action.booksToTrash.length > 0) {
+                            setBooks(prev => {
+                                const updated = prev.map(b => {
+                                    if (booksToTrashSet.has(b.id)) {
+                                        return { ...b, isDeleted: false, deletedAt: null, deletedFromFolderIds: null };
+                                    }
+                                    return b;
+                                });
+                                saveBooksToIndexedDB(updated);
+                                return updated;
+                            });
+                        }
+                        // Restore folder membership for ALL affected books
+                        setFolders(prev => {
+                            let updated = prev.map(f => ({ ...f }));
+                            action.bookIds.forEach(bookId => {
+                                const originalFolders = action.folderMembership[bookId] || [];
+                                originalFolders.forEach(folderId => {
+                                    updated = updated.map(f => {
+                                        if (f.id === folderId && !(f.bookIds || []).includes(bookId)) {
+                                            return { ...f, bookIds: [bookId, ...(f.bookIds || [])] };
+                                        }
+                                        return f;
+                                    });
+                                });
+                            });
+                            return updated;
+                        });
+                        showToast('Undo: Delete');
+                        break;
+                    }
+                    // v6.0.0-alpha.54 - Undo restore (re-trash books + remove from folders)
+                    case 'RESTORE_BOOKS': {
+                        const restoreBookIds = new Set(action.bookIds);
+                        // Re-trash the books with original deletedFromFolderIds
+                        setBooks(prev => {
+                            const updated = prev.map(b => {
+                                if (restoreBookIds.has(b.id)) {
+                                    const info = action.restoredBooks.find(rb => rb.id === b.id);
+                                    return {
+                                        ...b,
+                                        isDeleted: true,
+                                        deletedAt: Date.now(),
+                                        deletedFromFolderIds: info?.deletedFromFolderIds || []
+                                    };
+                                }
+                                return b;
+                            });
+                            saveBooksToIndexedDB(updated);
+                            return updated;
+                        });
+                        // Remove from folders they were restored to
+                        setFolders(prev => {
+                            let updated = prev.map(f => ({ ...f }));
+                            action.restoredBooks.forEach(({ id, deletedFromFolderIds }) => {
+                                const targetFolders = (deletedFromFolderIds || []).filter(fid =>
+                                    updated.some(f => f.id === fid)
+                                );
+                                const foldersToRemoveFrom = targetFolders.length > 0 ? targetFolders : ['__inbox__'];
+                                foldersToRemoveFrom.forEach(folderId => {
+                                    updated = updated.map(f => {
+                                        if (f.id === folderId) {
+                                            return { ...f, bookIds: (f.bookIds || []).filter(bid => bid !== id) };
+                                        }
+                                        return f;
+                                    });
+                                });
+                            });
+                            return updated;
+                        });
+                        showToast('Undo: Restore');
+                        break;
+                    }
                     default:
                         console.warn('Unknown action type for undo:', action.type);
                 }
@@ -5242,6 +5279,68 @@
                                 return { ...b, tags };
                             });
                             saveBooksToIndexedDB(updated);
+                            return updated;
+                        });
+                        break;
+                    }
+                    // v6.0.0-alpha.54 - Redo soft delete (re-delete the books)
+                    case 'SOFT_DELETE_BOOKS': {
+                        const booksToTrashSet = new Set(action.booksToTrash);
+                        const allBookIds = new Set(action.bookIds);
+                        // Re-trash books that should be in Trash
+                        if (action.booksToTrash.length > 0) {
+                            setBooks(prev => {
+                                const updated = prev.map(b => {
+                                    if (booksToTrashSet.has(b.id)) {
+                                        return {
+                                            ...b,
+                                            isDeleted: true,
+                                            deletedAt: Date.now(),
+                                            deletedFromFolderIds: action.folderMembership[b.id] || []
+                                        };
+                                    }
+                                    return b;
+                                });
+                                saveBooksToIndexedDB(updated);
+                                return updated;
+                            });
+                        }
+                        // Remove from folders again
+                        setFolders(prev => prev.map(f => {
+                            const bookIds = (f.bookIds || []).filter(id => !allBookIds.has(id));
+                            return bookIds.length !== (f.bookIds || []).length ? { ...f, bookIds } : f;
+                        }));
+                        break;
+                    }
+                    // v6.0.0-alpha.54 - Redo restore (un-trash the books again)
+                    case 'RESTORE_BOOKS': {
+                        const restoreIds = new Set(action.bookIds);
+                        setBooks(prev => {
+                            const updated = prev.map(b => {
+                                if (restoreIds.has(b.id)) {
+                                    return { ...b, isDeleted: false, deletedAt: null, deletedFromFolderIds: null };
+                                }
+                                return b;
+                            });
+                            saveBooksToIndexedDB(updated);
+                            return updated;
+                        });
+                        // Re-add to original folders (or Inbox)
+                        setFolders(prev => {
+                            const folderIds = new Set(prev.map(f => f.id));
+                            let updated = prev.map(f => ({ ...f }));
+                            action.restoredBooks.forEach(({ id, deletedFromFolderIds }) => {
+                                let targetFolders = (deletedFromFolderIds || []).filter(fid => folderIds.has(fid));
+                                if (targetFolders.length === 0) targetFolders = ['__inbox__'];
+                                targetFolders.forEach(folderId => {
+                                    updated = updated.map(f => {
+                                        if (f.id === folderId && !(f.bookIds || []).includes(id)) {
+                                            return { ...f, bookIds: [id, ...(f.bookIds || [])] };
+                                        }
+                                        return f;
+                                    });
+                                });
+                            });
                             return updated;
                         });
                         break;
@@ -7221,11 +7320,13 @@
 
                     {statusModalOpen && (() => {
                         // Schema v2.0: Simplified informational modal (no action buttons)
-                        const booksWithCollections = books.filter(b => b.collections && b.collections.length > 0).length;
+                        // v6.0.0-alpha.54 - Exclude deleted books from all Data Status counts
+                        const activeBooks = books.filter(b => !b.isDeleted);
+                        const booksWithCollections = activeBooks.filter(b => b.collections && b.collections.length > 0).length;
 
                         // Duplicate detection: find ASINs with multiple book objects
                         const asinCounts = {};
-                        books.forEach(b => { asinCounts[b.asin] = (asinCounts[b.asin] || 0) + 1; });
+                        activeBooks.forEach(b => { asinCounts[b.asin] = (asinCounts[b.asin] || 0) + 1; });
                         const duplicateAsins = Object.keys(asinCounts).filter(a => asinCounts[a] > 1);
                         const duplicateCount = duplicateAsins.length;
 
@@ -7243,8 +7344,8 @@
                                     {/* Library info - v4.15.1.c: Red text for non-fresh status */}
                                     <div className="border-b border-gray-200 pb-3">
                                         <p className="text-sm text-gray-700">
-                                            📚 <strong>Library:</strong> {books.length > 0
-                                                ? `${books.length} books`
+                                            📚 <strong>Library:</strong> {activeBooks.length > 0
+                                                ? `${activeBooks.length} books`
                                                 : <span className="text-red-600 font-medium">Not loaded</span>}
                                         </p>
                                         {libraryStatus.loadDate && (
@@ -7287,7 +7388,7 @@
                                     </div>
 
                                     {/* Help text */}
-                                    {books.length === 0 && (
+                                    {activeBooks.length === 0 && (
                                         <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-gray-700">
                                             <p>Use the bookmarklet to import your library through the relay.</p>
                                         </div>
