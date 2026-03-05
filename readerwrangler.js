@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.57";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.58";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1250,13 +1250,57 @@
                 const count = bookIds.length;
                 showToast(`Permanently deleted ${count} book${count !== 1 ? 's' : ''}`);
 
-                // v6.0.0-alpha.53 - Re-upload full library to relay so deleted books don't return on Import
+                // v6.0.0-alpha.58 - Re-upload library to relay in fetcher format (not backup format)
+                // Fetchers reject isBackup:true, so we build a fetcher-compatible payload
                 if (window.RWRelay && window.RWRelay.isConfigured()) {
                     try {
-                        const payload = await buildDeviceStatePayload();
-                        const jsonString = JSON.stringify(payload);
-                        await window.RWRelay.upload(jsonString, () => {});
-                        console.log(`🗑️ Relay updated after permanent delete (${updatedBooks.length} books)`);
+                        const allBooks = await loadBooksFromIndexedDB();
+                        const bookItems = allBooks.map(book => ({
+                            asin: book.asin, onWishlist: book.onWishlist || false,
+                            ownershipType: book.ownershipType || 'purchased',
+                            isHidden: book.isHidden || false, addedToWishlist: book.addedToWishlist || '',
+                            title: book.title, authors: book.author, coverUrl: book.coverUrl,
+                            rating: book.rating, reviewCount: book.ratingCount,
+                            series: book.series, seriesPosition: book.seriesPosition,
+                            acquisitionDate: book.acquired, description: book.description,
+                            topReviews: book.topReviews, binding: book.binding,
+                            currentPrice: book.currentPrice, listPrice: book.listPrice,
+                            priceAsOf: book.priceAsOf, targetPrice: book.targetPrice,
+                            genres: book.genres, genresAsOf: book.genresAsOf,
+                            tags: book.tags, note: book.userNote,
+                            priceTrigger: book.priceTrigger, myRating: book.myRating || 0,
+                            userEdited: book.userEdited || undefined,
+                            isDeleted: book.isDeleted || false,
+                            deletedAt: book.deletedAt || null,
+                            deletedFromFolderIds: book.deletedFromFolderIds || null,
+                            orphanStatus: book.orphanStatus || null,
+                            orphanCheckedDate: book.orphanCheckedDate || null
+                        }));
+                        const collectionItems = allBooks
+                            .filter(book => book.collections || book.readStatus)
+                            .map(book => ({
+                                asin: book.asin,
+                                readStatus: book.readStatus || 'UNKNOWN',
+                                collections: book.collections || []
+                            }));
+                        const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
+                        const libraryPayload = {
+                            schemaVersion: "2.3",
+                            books: {
+                                fetchDate: libraryStatus.loadDate || new Date().toISOString(),
+                                fetcherVersion: "app-permanent-delete",
+                                totalBooks: bookItems.length,
+                                items: bookItems
+                            }
+                        };
+                        if (hasRealCollections && collectionItems.length > 0) {
+                            libraryPayload.collections = {
+                                fetchDate: collectionsStatus.loadDate || new Date().toISOString(),
+                                items: collectionItems
+                            };
+                        }
+                        await window.RWRelay.upload(JSON.stringify(libraryPayload), () => {});
+                        console.log(`🗑️ Relay updated after permanent delete (${allBooks.length} books)`);
                     } catch (err) {
                         console.warn('⚠️ Permanent delete succeeded locally but relay sync failed:', err.message);
                     }
