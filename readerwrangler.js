@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0-alpha.49";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.0-alpha.50";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1012,6 +1012,7 @@
             const getFolderById = (folderId) => {
                 if (folderId === '__all__') return FOLDER_ALL_BOOKS;
                 if (folderId === '__library__') return FOLDER_LIBRARY; // v5.0.0-alpha.63
+                if (folderId === '__trash__') return FOLDER_TRASH; // v6.0.0-alpha.50
                 const folder = folders.find(f => f.id === folderId);
                 if (folder?.id === '__inbox__') return { ...folder, ...FOLDER_INBOX };
                 return folder;
@@ -1021,6 +1022,7 @@
             const getFolderPath = (folderId) => {
                 if (folderId === '__all__') return [FOLDER_ALL_BOOKS];
                 if (folderId === '__library__') return [FOLDER_LIBRARY];
+                if (folderId === '__trash__') return [FOLDER_TRASH]; // v6.0.0-alpha.50
                 // v5.5.15-alpha.21 - Tag virtual folder breadcrumb
                 if (folderId?.startsWith('__tag_') && folderId?.endsWith('__')) {
                     const tagId = folderId.slice(6, -2);
@@ -10301,6 +10303,27 @@
                                         return elements;
                                     })()}
                                     {/* v5.0.0-alpha.52 - Removed bottom "New Folder" button; use "+" on All Books or folder rows instead */}
+
+                                    {/* v6.0.0-alpha.50 - Trash Bin */}
+                                    <div className="border-t border-gray-200 mt-2 pt-1">
+                                        <div
+                                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${
+                                                selectedFolderId === '__trash__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
+                                            } ${trashCount === 0 ? 'text-gray-400' : ''}`}
+                                            onClick={() => navigateToFolder('__trash__')}
+                                            onContextMenu={(e) => {
+                                                e.preventDefault();
+                                                if (trashCount > 0) {
+                                                    setFolderContextMenu({ folderId: '__trash__', x: e.clientX, y: e.clientY, source: 'left' });
+                                                }
+                                            }}>
+                                            <span className="pointer-events-none">🗑️</span>
+                                            <span className="flex-1 pointer-events-none">Trash</span>
+                                            {trashCount > 0 && (
+                                                <span className="text-xs text-gray-500 pointer-events-none">({trashCount})</span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -12562,6 +12585,32 @@
 
                     {/* v5.0.0-alpha.133 - Folder context menu (left panel) */}
                     {folderContextMenu && (() => {
+                        // v6.0.0-alpha.50 - Trash Bin context menu (Empty Trash)
+                        if (folderContextMenu.folderId === '__trash__') {
+                            return (
+                                <>
+                                    <div className="fixed inset-0 z-50" onClick={() => setFolderContextMenu(null)} />
+                                    <div
+                                        className="fixed bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[180px] z-50"
+                                        style={{ left: `${folderContextMenu.x}px`, top: `${folderContextMenu.y}px` }}
+                                        onClick={(e) => e.stopPropagation()}>
+                                        <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
+                                            onClick={() => {
+                                                const deletedBooks = books.filter(b => b.isDeleted);
+                                                if (deletedBooks.length > 0 && confirm(`Permanently delete ${deletedBooks.length} book${deletedBooks.length !== 1 ? 's' : ''} from Trash? This cannot be undone.`)) {
+                                                    permanentlyDeleteBooks(deletedBooks.map(b => b.id));
+                                                }
+                                                setFolderContextMenu(null);
+                                            }}>
+                                            <span>🗑️</span>
+                                            <span>Empty Trash</span>
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        }
+
                         const folder = folders.find(f => f.id === folderContextMenu.folderId);
                         if (!folder) return null;
 
