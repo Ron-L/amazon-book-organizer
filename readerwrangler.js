@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.1-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7272,7 +7272,7 @@
                                                     }}>
                                                         <button
                                                             onClick={() => setDateDropdownOpen(false)}
-                                                            className="flex-1 px-3 py-1.5 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                            className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700"
                                                             style={{ fontSize: '12px' }}>
                                                             Apply
                                                         </button>
@@ -7283,7 +7283,7 @@
                                                                 setDateTo('');
                                                                 setDateDropdownOpen(false);
                                                             }}
-                                                            className="px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-50"
+                                                            className="px-3 py-1.5 border border-gray-300 rounded hover:bg-gray-100"
                                                             style={{ fontSize: '12px' }}>
                                                             Clear
                                                         </button>
@@ -14629,12 +14629,12 @@
                                                 </button>
                                                 <div className="flex-1"></div>
                                                 <button
-                                                    className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                                                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
                                                     onClick={() => setFolderPropertiesDialog(null)}>
                                                     Cancel
                                                 </button>
                                                 <button
-                                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                                                     onClick={handleSave}>
                                                     Save
                                                 </button>
@@ -14779,13 +14779,13 @@
                                         {/* Buttons */}
                                         <div className="flex gap-2 justify-end">
                                             <button
-                                                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+                                                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
                                                 onClick={() => setFolderPropertiesDialog(null)}>
                                                 Cancel
                                             </button>
                                             {!isSpecialFolder && (
                                                 <button
-                                                    className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                                                     onClick={handleSave}>
                                                     Save
                                                 </button>
