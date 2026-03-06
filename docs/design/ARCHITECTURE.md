@@ -32,29 +32,49 @@
 
 ## Data Flow
 
-### Primary Path (Relay)
+### System Overview
 
 ```
-amazon.com (bookmarklet)     Cloudflare KV        readerwrangler.com
-    |                                                     |
-    | Fetch library from Amazon                          |
-    | Compress + encrypt                                 |
-    | POST chunks to relay ──────────────>               |
-    |                                                     |
-    |                        <── GET /status ──────────── |
-    |                        ──── manifest ──────────────>|
-    |                        <── GET /download/chunk ──── |
-    |                        ──── chunk data ────────────>|
-    |                        <── DELETE /cleanup ──────── |
-    |                                                     |
-    |                              Decrypt, decompress,   |
-    |                              merge into IndexedDB   |
+┌───────────────────┐        ┌──────────────────────────────────┐        ┌───────────────┐
+│     Fetchers      │        │        Cloudflare Relay (KV)     │        │  App (Desktop) │
+│                   │        │                                  │        │                │
+│  Library Fetcher  ├─push──▶│  library-data    (24h TTL)       │──pull──▶│  Import from   │
+│  Collections      │        │    manifest + encrypted chunks   │        │  Relay         │
+│  Wishlist         │        │                                  │        │                │
+│  Series Page      │        │  device-state    (90-day TTL)    │◀─push──┤  After import  │
+│  Author Bib       │        │    full library + organization   │        │  + backup      │
+│                   │        │    snapshot for mobile sync      │        │  restore       │
+└───────────────────┘        │                                  │        │                │
+                             └──────────────┬───────────────────┘        └───────┬────────┘
+                                            │                                    │
+                                       pull │                               save │ restore
+                                            │                                    │
+                                     ┌──────▼──────┐                     ┌───────▼────────┐
+                                     │   Mobile    │                     │  Backup File   │
+                                     │  (read-only │                     │  (JSON)        │
+                                     │   viewer)   │                     │                │
+                                     └─────────────┘                     └────────────────┘
 ```
 
-### Backup Path (Save/Restore)
+### Data Flow Summary
 
-- User can save a backup file (File → Save Backup) containing books + organization + relay credentials
-- Restore from backup (File → Restore Backup) merges data and syncs to relay
+| Path | From | To | Mechanism | Data |
+|------|------|----|-----------|------|
+| Fetch | Fetchers | Relay | push (encrypted chunks) | Library, collections, wishlist |
+| Import | Relay | App | pull + delete | Library data → merge into IndexedDB |
+| Permanent delete | App | Relay | push (full re-upload) | Entire library minus deleted books, in fetcher format |
+| Mobile sync | App → Relay | Mobile | push, then pull | Full library + organization snapshot |
+| Backup save | App | File | JSON download | Books + organization + relay credentials |
+| Backup restore | File | App | JSON upload | Merge into IndexedDB + push device-state to relay |
+
+### Key Design Points
+
+- **Fetchers only push.** They upload encrypted chunks and a plaintext manifest, then exit.
+- **App pulls library data on demand** (File → Import from Relay), then deletes chunks from KV.
+- **App pushes device-state** after every import and backup restore, keeping mobile in sync.
+- **Mobile only pulls.** It reads device-state from relay. It never writes back.
+- **Backup is the only file-based path.** All routine data transfer goes through the relay.
+- **Relay credentials are included in backup files** so they survive a full app reset.
 
 ## Cloudflare Relay Architecture
 
@@ -71,9 +91,12 @@ A Cloudflare Worker serves as the cross-domain relay between the bookmarklet (am
 ```
 relay:{channelId}:manifest       → upload manifest (TTL: 24h, plaintext JSON)
 relay:{channelId}:chunk:{n}      → encrypted compressed library data (TTL: 24h)
-relay:{channelId}:exclusions     → encrypted exclusion list (TTL: 90 days)
 relay:{channelId}:device-state   → encrypted full library snapshot (TTL: 90 days)
 ```
+
+### Permanent Delete → Relay Sync
+
+When books are permanently deleted, the app re-uploads the entire library to the relay in fetcher format. This overwrites the relay data with the library minus the deleted books. Next time a fetcher runs, it downloads this as the baseline — deleted books won't reappear because they're no longer in the relay data. No exclusion list needed; the relay itself is the two-way conduit.
 
 ### Security Model
 

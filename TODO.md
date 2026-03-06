@@ -25,9 +25,18 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 📖 Priority 4: Launch Documentation
 
-**1. 📖 Quick Start Video & Written Guide** - HIGH/LOW (2-4 hours) - See [docs/design/VIDEO-PRODUCTION-PLAN.md](docs/design/VIDEO-PRODUCTION-PLAN.md)
+**1. 📦 Demo Backup File** - HIGH/LOW (30 min)
+   - Create a curated backup JSON with classic/public-domain books for new users to try the app instantly
+   - Steps: Back up real library → delete down to classics → save demo backup → restore real backup
+   - Include: varied authors, series with positions, tags, ratings, read statuses, a few notes, books in folders + Inbox
+   - Strip: `"relay"` credentials block from the JSON before publishing
+   - Host on GitHub repo or landing page with simple instructions: "Download → File > Restore Backup → Explore"
+   - Problem: New users must run the full fetcher pipeline before they can evaluate the app
+   - Impact: Dramatically lowers trial friction — try the app in 30 seconds
 
-**2. 📚 Comprehensive Documentation Hub** - HIGH/MEDIUM (8-12 hours)
+**2. 📖 Quick Start Video & Written Guide** - HIGH/LOW (2-4 hours) - See [docs/design/VIDEO-PRODUCTION-PLAN.md](docs/design/VIDEO-PRODUCTION-PLAN.md)
+
+**3. 📚 Comprehensive Documentation Hub** - HIGH/MEDIUM (8-12 hours)
    - Troubleshooting guide (What if scrape fails partway? How to recover?)
    - FAQ (Multiple Amazon accounts? Kindle Unlimited books? Mobile support?)
    - Keyboard shortcuts reference
@@ -36,7 +45,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Users get stuck, have questions, can't find answers
    - Impact: Reduces support burden, improves user confidence
 
-**3. User Guide: consolidate or make accessible from app** - MEDIUM/MEDIUM (4-6 hours)
+**4. User Guide: consolidate or make accessible from app** - MEDIUM/MEDIUM (4-6 hours)
    - USER-GUIDE.md exists on GitHub but is not accessible from the app
    - Help > How To Use references "User Guide documentation" that users can't reach
    - Decision needed: (a) add Help > User Guide as in-app HTML (2 sources of truth), or (b) delete USER-GUIDE.md and put all guidance in-app, or (c) serve USER-GUIDE.md as a linked page from the app
@@ -46,7 +55,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Documentation describes a different product than what users experience and is inaccessible from the app
    - Impact: Users can actually find and follow the guide
 
-**5. Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
+**5. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
    - Prerequisites: Mobile sync (Milestone 2) complete
    - Fill in USER-GUIDE.md FAQ disaster recovery placeholders
    - Document: phone exposes relay credentials in settings (so user can recover them)
@@ -147,8 +156,18 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Only works with Amazon
    - Impact: Support for other ebook platforms
 
-**7. Series Manager**
-   - see [docs/design/EDITABLE-SERIES.md](docs/design/EDITABLE-SERIES.md) for full spec
+**7. 📚 Series Manager** - MEDIUM/MEDIUM (6-8 hours)
+   - See [docs/design/EDITABLE-SERIES.md](docs/design/EDITABLE-SERIES.md) for full spec
+   - Phase 1 (edit series/position in book modal) ✅ shipped v5.4.6
+   - Phase 3 (remove "Group Series Books" button) ✅ removed in Explorer redesign
+   - **Remaining: Phase 2 — Series Manager dialog**
+     - "Manage Series" menu item (like Manage Tags)
+     - Table view: series name, book count, rename/merge actions
+     - Bulk rename across all books in a series
+     - Merge duplicate series ("Destroyer" + "The Destroyer" → one)
+     - Delete orphaned series entries
+   - Problem: Inconsistent series names from Amazon create fragmentation
+   - Impact: Clean series organization, especially for large libraries
 
 ---
 
