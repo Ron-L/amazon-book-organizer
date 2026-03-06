@@ -118,7 +118,11 @@
                 var el = document.getElementById('splashMsg');
                 if (!el) return;
                 var idx = 0, useBlurb = true;
+                // Show first message immediately
+                el.textContent = blurbs[0];
+                useBlurb = false; idx = 0;
                 window._splashTimer = setInterval(function() {
+                    if (!document.getElementById('splashMsg')) { clearInterval(window._splashTimer); return; }
                     var pool = useBlurb ? blurbs : banter;
                     var msg = pool[idx % pool.length];
                     el.style.opacity = '0';
@@ -126,9 +130,8 @@
                         el.textContent = msg;
                         el.style.opacity = '1';
                     }, 300);
+                    if (useBlurb) idx++;
                     useBlurb = !useBlurb;
-                    if (!useBlurb) idx++;
-                    if (!document.getElementById('splashMsg')) clearInterval(window._splashTimer);
                 }, 2500);
             })();
         </script>
