@@ -9,15 +9,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔒 Priority 3: Pre-Launch Gate
 
-~~**1. Button Consistency Audit**~~ ✅ v6.0.1 — Theme-aware filled button overrides (Dark, HC-Light, HC-Dark). HC-Dark text legibility fix. Button variant normalization.
-
-**2. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
-   - Semantic HTML audit (use `<button>` not `<div onclick>`)
-   - ARIA labels for key interactions (context menus, drag operations)
-   - Keyboard-only navigation validation (tab order, focus indicators)
-   - Note: Full accessibility audit deferred (personal-use project)
-   - Problem: Potential public users may need accessibility features
-   - Impact: Broader user base support with minimal effort
+~~**2. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)~~ ✅ v6.1.0 — ARIA attributes on modals, context menus, filter dropdowns, icon-only buttons. Keyboard operability deferred to Priority 7.
 
 
 **3. Quality Attribute Validation** - LOW/LOW (2-3 hours)
@@ -101,6 +93,17 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 ---
 
 ### 🚀 Priority 7: Post-Launch Enhancements
+
+**1. ♿ Keyboard Accessibility Completion** - MEDIUM/MEDIUM (8-12 hours)
+   - Builds on v6.1.0 ARIA foundation (screen readers can identify elements)
+   - Focus trapping in modals (Tab cycles within modal, not behind it)
+   - `:focus-visible` styling (visible focus rings for keyboard users)
+   - Keyboard navigation in context menus (Arrow Up/Down, Enter to activate, Escape to close)
+   - Submenu keyboard activation (Arrow Right to open, Arrow Left to close)
+   - Consider converting `role="menuitem"` divs to `<button>` for native keyboard support
+   - Drag-and-drop ARIA descriptions deferred (complex, keyboard users can use context menu Move/Copy)
+   - Problem: Screen readers can identify UI elements but keyboard-only users can't operate them
+   - Impact: Full keyboard/screen-reader operability for visually impaired bibliophiles
 
 **2. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
    - Show reading progress percentage/position for each book in dialog and a column in explorer

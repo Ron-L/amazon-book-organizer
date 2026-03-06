@@ -153,6 +153,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 ## Coming Soon!
 
 - **Public launch** — Share ReaderWrangler with the world
+- **Full keyboard accessibility** — Focus trapping, keyboard menu navigation, focus indicators
 
 Have a feature request? [Let us know on GitHub!](https://github.com/Ron-L/ReaderWrangler/issues)
 

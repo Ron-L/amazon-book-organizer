@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.1.0] - 2026-03-06
+
+### Added
+- **Basic accessibility (ARIA)** — `role="dialog"`, `aria-modal`, `aria-labelledby` on 17 modals. `role="menu"`, `role="menuitem"`, `role="separator"` on all context menus (folder, book, tag, trash). `aria-expanded` and `aria-haspopup` on 9 filter dropdown buttons. `aria-label` on icon-only buttons (collapse, view toggles, column chooser). `aria-disabled` on disabled menu items.
+
+### Fixed
+- **About dialog logo missing** — Referenced non-existent icon file; corrected to `icons/logo-transparent.png`.
+- **security.html favicon broken** — Referenced non-existent path `images/icons/favicon.png`; corrected to `icons/favicon.ico`.
+
 ## [6.0.1] - 2026-03-05
 
 ### Fixed
