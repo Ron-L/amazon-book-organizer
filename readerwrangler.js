@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.2-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6338,6 +6338,7 @@
                             <button
                                 onClick={() => { setStatusDropdownOpen(!statusDropdownOpen); setTagsDropdownOpen(false); setTypesDropdownOpen(false); setMorePanelOpen(false); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                 title="Filter by read status"
+                                aria-expanded={statusDropdownOpen} aria-haspopup="listbox"
                                 style={{
                                     height: '28px',
                                     padding: '0 10px',
@@ -6430,6 +6431,7 @@
                             <button
                                 onClick={() => { setTagsDropdownOpen(!tagsDropdownOpen); setStatusDropdownOpen(false); setTypesDropdownOpen(false); setMorePanelOpen(false); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                 title="Filter by tags"
+                                aria-expanded={tagsDropdownOpen} aria-haspopup="listbox"
                                 style={{
                                     height: '28px',
                                     padding: '0 10px',
@@ -6547,6 +6549,7 @@
                             <button
                                 onClick={() => { setTypesDropdownOpen(!typesDropdownOpen); setStatusDropdownOpen(false); setTagsDropdownOpen(false); setMorePanelOpen(false); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                 title="Filter by ownership type"
+                                aria-expanded={typesDropdownOpen} aria-haspopup="listbox"
                                 style={{
                                     height: '28px',
                                     padding: '0 10px',
@@ -6638,6 +6641,7 @@
                             data-morepanel="true"
                             onClick={() => { setMorePanelOpen(!morePanelOpen); setStatusDropdownOpen(false); setTagsDropdownOpen(false); setTypesDropdownOpen(false); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                             title={morePanelOpen ? 'Hide additional filters' : 'Show additional filters'}
+                            aria-expanded={morePanelOpen}
                             className={`px-3 py-1.5 rounded border ${morePanelOpen
                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
                                 : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}`}
@@ -6859,6 +6863,7 @@
                                 <div style={{ position: 'relative' }} data-collections-dropdown="">
                                     <button
                                         onClick={() => { setCollectionsDropdownOpen(!collectionsDropdownOpen); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
+                                        aria-expanded={collectionsDropdownOpen} aria-haspopup="listbox"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             selectedCollections.length > 0
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -6957,6 +6962,7 @@
                                     <button
                                         onClick={() => { setAmazonRatingDropdownOpen(!amazonRatingDropdownOpen); setCollectionsDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                         title="Filter by Amazon rating"
+                                        aria-expanded={amazonRatingDropdownOpen} aria-haspopup="listbox"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             minAmazonRating
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -7005,6 +7011,7 @@
                                     <button
                                         onClick={() => { setMyRatingDropdownOpen(!myRatingDropdownOpen); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                         title="Filter by your rating"
+                                        aria-expanded={myRatingDropdownOpen} aria-haspopup="listbox"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             minMyRating
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -7071,6 +7078,7 @@
                                     <button
                                         onClick={() => { setSeriesDropdownOpen(!seriesDropdownOpen); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setDateDropdownOpen(false); }}
                                         title="Filter by series"
+                                        aria-expanded={seriesDropdownOpen} aria-haspopup="listbox"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             selectedSeries.length > 0
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -7167,6 +7175,7 @@
                                 <div style={{ position: 'relative', gridColumn: '2 / 4' }} data-date-dropdown="">
                                     <button
                                         onClick={() => { setDateDropdownOpen(!dateDropdownOpen); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); }}
+                                        aria-expanded={dateDropdownOpen} aria-haspopup="listbox"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             datePreset
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -7376,11 +7385,11 @@
 
                         return (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setStatusModalOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="modal-data-status" onClick={(e) => e.stopPropagation()}>
                                 {/* Header */}
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">Data Status</h2>
-                                    <button onClick={() => setStatusModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
+                                    <h2 id="modal-data-status" className="text-xl font-bold text-gray-900">Data Status</h2>
+                                    <button onClick={() => setStatusModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
 
                                 {/* Content - informational only */}
@@ -7518,11 +7527,11 @@
 
                         return (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setDupReviewOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl w-full" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+                            <div className="bg-white rounded-lg shadow-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-duplicate-review" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
                                 {/* Header */}
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">Review Duplicates</h2>
-                                    <button onClick={() => setDupReviewOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
+                                    <h2 id="modal-duplicate-review" className="text-xl font-bold text-gray-900">Review Duplicates</h2>
+                                    <button onClick={() => setDupReviewOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
 
                                 {/* Scrollable content */}
@@ -7587,10 +7596,10 @@
                     {/* v6.0.0 - Relay Setup Modal */}
                     {relaySetupOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setRelaySetupOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" role="dialog" aria-modal="true" aria-labelledby="modal-relay-setup" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                                 <div className="flex justify-between items-start p-4 rounded-t-lg border-b" style={{ background: 'var(--bg-chrome)', borderColor: 'var(--border-default)', flexShrink: 0 }}>
-                                    <h2 className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src={`icons/sync-tower-${window.RWRelay && window.RWRelay.isConfigured() ? 'green' : 'red'}.svg`} alt="" style={{ width: '14px', height: '22px' }} /> Relay Setup</h2>
-                                    <button onClick={() => setRelaySetupOpen(false)} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close">×</button>
+                                    <h2 id="modal-relay-setup" className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src={`icons/sync-tower-${window.RWRelay && window.RWRelay.isConfigured() ? 'green' : 'red'}.svg`} alt="" style={{ width: '14px', height: '22px' }} /> Relay Setup</h2>
+                                    <button onClick={() => setRelaySetupOpen(false)} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div style={{ overflowY: 'auto', flex: 1 }}>
                                     {(() => {
@@ -7851,10 +7860,10 @@
 
                     {resetConfirmOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setResetConfirmOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="modal-reset-confirm" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">Reset App Confirmation</h2>
-                                    <button onClick={() => setResetConfirmOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl font-bold" title="Close">×</button>
+                                    <h2 id="modal-reset-confirm" className="text-xl font-bold text-gray-900">Reset App Confirmation</h2>
+                                    <button onClick={() => setResetConfirmOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl font-bold" title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <p className="text-gray-800 font-semibold">This will completely reset the app to its initial unused state.</p>
@@ -7892,10 +7901,10 @@
                     {/* v5.0.0-alpha.175.2 - About Dialog */}
                     {aboutDialogOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setAboutDialogOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="modal-about" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">About ReaderWrangler™</h2>
-                                    <button onClick={() => setAboutDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
+                                    <h2 id="modal-about" className="text-xl font-bold text-gray-900">About ReaderWrangler™</h2>
+                                    <button onClick={() => setAboutDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-4 text-center">
                                     <img src="icons/ReaderWranglerXparent.png" alt="ReaderWrangler" className="about-logo" style={{ width: '200px', height: '200px', margin: '0 auto' }} />
@@ -7915,10 +7924,10 @@
                     {/* v5.0.0-alpha.175.2 - Keyboard Shortcuts Dialog */}
                     {shortcutsDialogOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setShortcutsDialogOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" role="dialog" aria-modal="true" aria-labelledby="modal-shortcuts" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">Keyboard Shortcuts</h2>
-                                    <button onClick={() => setShortcutsDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
+                                    <h2 id="modal-shortcuts" className="text-xl font-bold text-gray-900">Keyboard Shortcuts</h2>
+                                    <button onClick={() => setShortcutsDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-3">
                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -7960,10 +7969,10 @@
                     {/* v5.0.0-alpha.175.2 - How To Use Dialog */}
                     {howToDialogOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setHowToDialogOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="modal-how-to" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">How To Use ReaderWrangler</h2>
-                                    <button onClick={() => setHowToDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
+                                    <h2 id="modal-how-to" className="text-xl font-bold text-gray-900">How To Use ReaderWrangler</h2>
+                                    <button onClick={() => setHowToDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-gray-700">
@@ -7983,18 +7992,18 @@
                     {/* v5.1.0-alpha.3 - Auto-Organize Wizard Modal */}
                     {wizardModalOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardModalOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-wizard" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">✨ Auto-Organize by Author</h2>
+                                    <h2 id="modal-wizard" className="text-xl font-bold text-gray-900">✨ Auto-Organize by Author</h2>
                                     <div className="flex items-center gap-2">
                                         {/* v5.1.0-alpha.10 - Help icon */}
                                         <button
                                             onClick={() => setWizardHelpOpen(true)}
                                             className="text-blue-600 hover:text-blue-800 text-xl font-bold w-6 h-6 flex items-center justify-center rounded-full hover:bg-blue-100 transition-colors"
-                                            title="Show tips">
+                                            title="Show tips" aria-label="Show tips">
                                             ?
                                         </button>
-                                        <button onClick={() => setWizardModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
+                                        <button onClick={() => setWizardModalOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                     </div>
                                 </div>
                                 <div className="p-6 space-y-4">
@@ -8213,10 +8222,10 @@
                     {/* v5.1.0-alpha.10 - Wizard Help Dialog */}
                     {wizardHelpOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardHelpOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" role="dialog" aria-modal="true" aria-labelledby="modal-wizard-help" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-start p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">📖 Auto-Organize Tips</h2>
-                                    <button onClick={() => setWizardHelpOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
+                                    <h2 id="modal-wizard-help" className="text-xl font-bold text-gray-900">📖 Auto-Organize Tips</h2>
+                                    <button onClick={() => setWizardHelpOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-4">
                                     <div className="space-y-4 text-sm text-gray-700">
@@ -8272,10 +8281,10 @@
                     {/* v5.1.0-alpha.28 - Phase 3.1: Wizard Preview Dialog */}
                     {wizardPreviewMode && wizardPreviewData && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardPreviewMode(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col" role="dialog" aria-modal="true" aria-labelledby="modal-wizard-preview" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 className="text-xl font-bold text-gray-900">✨ Preview - Folders to Create</h2>
-                                    <button onClick={() => setWizardPreviewMode(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
+                                    <h2 id="modal-wizard-preview" className="text-xl font-bold text-gray-900">✨ Preview - Folders to Create</h2>
+                                    <button onClick={() => setWizardPreviewMode(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
 
                                 {/* Scrollable preview content */}
@@ -8348,10 +8357,10 @@
                     {/* v5.1.0-alpha.29 - Phase 3.3: Wizard Results Summary Dialog */}
                     {wizardResultsOpen && wizardResultsData && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardResultsOpen(false); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="modal-wizard-results" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-green-100 rounded-t-lg border-b border-green-300">
-                                    <h2 className="text-xl font-bold text-gray-900">✨ Organization Complete</h2>
-                                    <button onClick={() => setWizardResultsOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close">×</button>
+                                    <h2 id="modal-wizard-results" className="text-xl font-bold text-gray-900">✨ Organization Complete</h2>
+                                    <button onClick={() => setWizardResultsOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
 
                                 <div className="p-6">
@@ -8427,8 +8436,8 @@
                     {showBulkPriceModal && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
                              onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setShowBulkPriceModal(false); setBulkPriceInput(''); setBulkPriceBookIds([]); } backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm" onClick={(e) => e.stopPropagation()}>
-                                <h2 className="text-lg font-bold text-gray-900 mb-4">Set Custom Price Goal</h2>
+                            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm" role="dialog" aria-modal="true" aria-labelledby="modal-bulk-price" onClick={(e) => e.stopPropagation()}>
+                                <h2 id="modal-bulk-price" className="text-lg font-bold text-gray-900 mb-4">Set Custom Price Goal</h2>
                                 <p className="text-sm text-gray-600 mb-4">
                                     Set price goal for {bulkPriceBookIds.length} selected book{bulkPriceBookIds.length !== 1 ? 's' : ''}
                                 </p>
@@ -8512,8 +8521,8 @@
                             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
                                  onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }}
                                  onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setShowBulkEditModal(false); setBulkEditSeriesDropdownOpen(false); } backdropMouseDownRef.current = null; }}>
-                                <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-80" onClick={(e) => e.stopPropagation()}>
-                                    <h2 className="text-lg font-bold text-gray-900 mb-2">{config.title}</h2>
+                                <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-80" role="dialog" aria-modal="true" aria-labelledby="modal-bulk-edit" onClick={(e) => e.stopPropagation()}>
+                                    <h2 id="modal-bulk-edit" className="text-lg font-bold text-gray-900 mb-2">{config.title}</h2>
                                     <p className="text-sm text-gray-600 mb-4">
                                         Apply to {bookCount} selected book{bookCount !== 1 ? 's' : ''}
                                     </p>
@@ -8651,8 +8660,8 @@
 
                         return (
                             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                                <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md" onClick={(e) => e.stopPropagation()}>
-                                    <h2 className="text-xl font-bold text-gray-900 mb-4">Cannot Delete</h2>
+                                <div className="bg-white rounded-lg shadow-2xl p-6 max-w-md" role="dialog" aria-modal="true" aria-labelledby="modal-cannot-delete" onClick={(e) => e.stopPropagation()}>
+                                    <h2 id="modal-cannot-delete" className="text-xl font-bold text-gray-900 mb-4">Cannot Delete</h2>
                                     <p className="text-sm text-gray-700 mb-4">
                                         {totalLastCopy === 1 ? (
                                             <>
@@ -8742,7 +8751,7 @@
 
                     {modalBook && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeBookModal(); backdropMouseDownRef.current = null; }}>
-                            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => { e.stopPropagation(); if (contextSubmenu === 'addTagModal') { setContextSubmenu(null); setTagInputValue(''); } }}>
+                            <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-label="Book details" onClick={(e) => { e.stopPropagation(); if (contextSubmenu === 'addTagModal') { setContextSubmenu(null); setTagInputValue(''); } }}>
                                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-end gap-2">
                                     {isEditingBook ? (
                                         <>
@@ -8754,11 +8763,11 @@
                                             </button>
                                         </>
                                     ) : (
-                                        <button onClick={enterEditMode} className="text-gray-400 hover:text-gray-600 text-lg transition-colors" title="Edit book fields">
+                                        <button onClick={enterEditMode} className="text-gray-400 hover:text-gray-600 text-lg transition-colors" title="Edit book fields" aria-label="Edit book fields">
                                             ✏️
                                         </button>
                                     )}
-                                    <button onClick={closeBookModal} className="text-gray-500 hover:text-gray-700 text-2xl" title="Close">×</button>
+                                    <button onClick={closeBookModal} className="text-gray-500 hover:text-gray-700 text-2xl" title="Close" aria-label="Close">×</button>
                                 </div>
 
                                 <div className="p-6">
@@ -9646,7 +9655,7 @@
                                                     setFolders(prev => prev.map(f => ({ ...f, collapsed: true })));
                                                 }}
                                                 className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
-                                                title="Collapse all folders">
+                                                title="Collapse all folders" aria-label="Collapse all folders">
                                                 ▲
                                             </button>
                                         )}
@@ -10749,7 +10758,7 @@
                                         <div className="inline-flex rounded border border-gray-300 overflow-hidden">
                                             <button
                                                 onClick={() => setExplorerView('list')}
-                                                title="List View"
+                                                title="List View" aria-label="List view"
                                                 className={`px-3 py-1.5 border-r border-gray-300 ${explorerView === 'list'
                                                     ? 'bg-blue-500 text-white'
                                                     : 'bg-white hover:bg-gray-50 text-gray-600'}`}>
@@ -10784,7 +10793,7 @@
                                             </button>
                                             <button
                                                 onClick={() => setExplorerView('covers')}
-                                                title="Grid View"
+                                                title="Grid View" aria-label="Grid view"
                                                 className={`px-3 py-1.5 flex items-center justify-center ${explorerView === 'covers'
                                                     ? 'bg-blue-500 text-white'
                                                     : 'bg-white hover:bg-gray-50 text-gray-600'}`}>
@@ -10979,7 +10988,7 @@
                                                             onClick={() => setCollapsedGroups(new Set())}
                                                             className="text-gray-400 hover:text-blue-600 cursor-pointer px-1 py-0.5 rounded hover:bg-gray-100"
                                                             style={{ fontSize: '16px', lineHeight: 1 }}
-                                                            title="Expand All Groups">
+                                                            title="Expand All Groups" aria-label="Expand all groups">
                                                             ▾
                                                         </button>
                                                         <button
@@ -10990,7 +10999,7 @@
                                                             }}
                                                             className="text-gray-400 hover:text-blue-600 cursor-pointer px-1 py-0.5 rounded hover:bg-gray-100"
                                                             style={{ fontSize: '16px', lineHeight: 1 }}
-                                                            title="Collapse All Groups">
+                                                            title="Collapse All Groups" aria-label="Collapse all groups">
                                                             ▸
                                                         </button>
                                                     </span>
@@ -11006,7 +11015,7 @@
                                                         setExplorerColumnMenuPos(null); // v5.0.0-alpha.107 - Clear context menu position when using gear
                                                     }}
                                                     className="column-chooser-button text-gray-500 hover:text-gray-700 text-lg"
-                                                    title="Choose columns">
+                                                    title="Choose columns" aria-label="Choose columns">
                                                     ⚙️
                                                 </button>
                                                 {/* Column chooser dropdown */}
@@ -12858,10 +12867,12 @@
                                     <div className="fixed inset-0 z-50" onClick={() => setFolderContextMenu(null)} />
                                     <div
                                         className="fixed bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[180px] z-50"
+                                        role="menu" aria-label="Trash options"
                                         style={{ left: `${folderContextMenu.x}px`, top: `${folderContextMenu.y}px` }}
                                         onClick={(e) => e.stopPropagation()}>
                                         <div
                                             className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
+                                            role="menuitem"
                                             onClick={async () => {
                                                 const deletedBooks = books.filter(b => b.isDeleted);
                                                 if (deletedBooks.length > 0 && confirm(`Permanently delete ${deletedBooks.length} book${deletedBooks.length !== 1 ? 's' : ''} from Trash? This cannot be undone.`)) {
@@ -12972,6 +12983,7 @@
                         return (
                             <div
                                 className="fixed bg-white border border-gray-300 shadow-lg rounded z-50 py-1 min-w-[200px]"
+                                role="menu" aria-label="Folder options"
                                 style={{
                                     left: `${menuX}px`,
                                     top: `${menuY}px`
@@ -12981,6 +12993,7 @@
                                 {/* Open */}
                                 <div
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
                                     onClick={() => {
                                         navigateToFolder(folder.id);
                                         setFolderContextMenu(null);
@@ -12993,6 +13006,7 @@
                                 {!isSpecialFolder && (
                                     <div
                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        role="menuitem"
                                         onClick={() => {
                                             // v5.0.0-alpha.156 - Use separate state based on which panel triggered context menu
                                             if (folderContextMenu.source === 'right') {
@@ -13014,7 +13028,7 @@
                                     </div>
                                 )}
 
-                                <div className="border-t border-gray-200 my-1"></div>
+                                <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                 {/* Move to - v5.0.0-alpha.137 */}
                                 {/* v5.0.0-alpha.166.2 - Disabled when viewing special folders in right panel */}
@@ -13022,6 +13036,7 @@
                                     isInSpecialFolderView ? (
                                         <div
                                             className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3 relative"
+                                            role="menuitem" aria-disabled="true"
                                             title="Cannot move folders from virtual folder views">
                                             <span>➡️</span>
                                             <span>Move to</span>
@@ -13030,6 +13045,7 @@
                                     ) : (
                                         <div
                                             className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                            role="menuitem" aria-haspopup="true"
                                             onMouseEnter={() => setContextSubmenu('move-to')}
                                             onMouseLeave={(e) => {
                                                 // v5.0.0-alpha.140 - Increased timeout to 600ms for slower mouse movement
@@ -13106,6 +13122,7 @@
                                             return (
                                                 <div
                                                     className="context-submenu absolute left-full top-0 ml-1 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto"
+                                                    role="menu" aria-label="Move to folder"
                                                     onMouseEnter={() => setContextSubmenu('move-to')}
                                                     onMouseLeave={() => setContextSubmenu(null)}
                                                     onClick={(e) => e.stopPropagation()}>
@@ -13134,6 +13151,7 @@
                                 {/* Create Subfolder */}
                                 <div
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
                                     onClick={() => {
                                         const newFolder = {
                                             id: `folder-${Date.now()}`,
@@ -13163,12 +13181,13 @@
                                     <span>Create Subfolder</span>
                                 </div>
 
-                                <div className="border-t border-gray-200 my-1"></div>
+                                <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                 {/* Cut - v5.0.0-alpha.141 */}
                                 {!isSpecialFolder && (
                                     <div
                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        role="menuitem"
                                         onClick={() => {
                                             setFolderClipboard({ items: [folder.id], operation: 'cut' });
                                             setFolderContextMenu(null);
@@ -13184,6 +13203,7 @@
                                 {!isSpecialFolder && (
                                     <div
                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        role="menuitem"
                                         onClick={() => {
                                             setFolderClipboard({ items: [folder.id], operation: 'copy' });
                                             setFolderContextMenu(null);
@@ -13203,6 +13223,7 @@
                                                 ? 'hover:bg-gray-100 cursor-pointer'
                                                 : 'text-gray-400 cursor-not-allowed'
                                         }`}
+                                        role="menuitem" aria-disabled={folderClipboard.items.length === 0}
                                         onClick={() => {
                                             if (folderClipboard.items.length === 0) return;
 
@@ -13294,12 +13315,13 @@
                                     </div>
                                 )}
 
-                                <div className="border-t border-gray-200 my-1"></div>
+                                <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                 {/* Delete Folder */}
                                 {!isSpecialFolder && (
                                     <div
                                         className="px-4 py-2 hover:bg-red-50 cursor-pointer flex items-center gap-3 text-red-600"
+                                        role="menuitem"
                                         onClick={async () => {
                                             setFolderContextMenu(null);
                                             if (await showConfirmDialog('Delete Folder', `Delete folder "${folder.name}"?`)) {
@@ -13359,11 +13381,12 @@
                                     </div>
                                 )}
 
-                                <div className="border-t border-gray-200 my-1"></div>
+                                <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                 {/* Folder Properties - v5.0.0-alpha.142 */}
                                 <div
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
                                     onClick={() => {
                                         setFolderPropertiesEditedName(folder.name); // v5.0.0-alpha.143 - Initialize edited name
                                         setFolderPropertiesDialog({ folderId: folder.id });
@@ -13401,12 +13424,14 @@
                         return (
                             <div
                                 className="fixed bg-white border border-gray-300 shadow-lg rounded z-50 py-1 min-w-[200px]"
+                                role="menu" aria-label="Tag options"
                                 style={{ left: `${menuX}px`, top: `${menuY}px` }}
                                 onClick={(e) => e.stopPropagation()}>
 
                                 {/* Open */}
                                 <div
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
                                     onClick={() => {
                                         navigateToFolder(folderContextMenu.folderId);
                                         setFolderContextMenu(null);
@@ -13418,6 +13443,7 @@
                                 {/* Rename */}
                                 <div
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
                                     onClick={() => {
                                         setEditingFolderId(folderContextMenu.folderId);
                                         setEditingFolderName(tagLabel);
@@ -13428,11 +13454,12 @@
                                     <span className="ml-auto text-gray-400 text-xs">F2</span>
                                 </div>
 
-                                <div className="border-t border-gray-200 my-1"></div>
+                                <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                 {/* Unpin */}
                                 <div
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
                                     onClick={() => {
                                         setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
                                         if (selectedFolderId === folderContextMenu.folderId) {
@@ -13447,6 +13474,7 @@
                                 {/* Delete Tag */}
                                 <div
                                     className="px-4 py-2 hover:bg-red-50 cursor-pointer flex items-center gap-3 text-red-600"
+                                    role="menuitem"
                                     onClick={async () => {
                                         setFolderContextMenu(null);
                                         const msg = bookCount > 0
@@ -13479,11 +13507,12 @@
                                     <span>Delete Tag</span>
                                 </div>
 
-                                <div className="border-t border-gray-200 my-1"></div>
+                                <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                 {/* Properties */}
                                 <div
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
                                     onClick={() => {
                                         setFolderPropertiesEditedName(tagLabel);
                                         setFolderPropertiesDialog({ folderId: folderContextMenu.folderId });
@@ -13684,6 +13713,7 @@
                         return (
                             <div
                                 className="fixed bg-white border border-gray-300 rounded-lg shadow-xl z-[60] py-1 min-w-[200px]"
+                                role="menu" aria-label="Book options"
                                 style={{
                                     left: `${left}px`,
                                     top: `${top}px`
@@ -13701,6 +13731,7 @@
                                 {isSpecialFolder ? (
                                     <div
                                         className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3 relative"
+                                        role="menuitem" aria-disabled="true"
                                         title="Cannot move books from virtual folders">
                                         <span>📁</span>
                                         <span>Move to</span>
@@ -13709,6 +13740,7 @@
                                 ) : (
                                     <div
                                         className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                        role="menuitem" aria-haspopup="true"
                                         onMouseEnter={() => setContextSubmenu('move-to')}
                                         onMouseLeave={(e) => {
                                             setTimeout(() => {
@@ -13727,6 +13759,7 @@
                                         {contextSubmenu === 'move-to' && (
                                             <div
                                                 className="context-submenu absolute top-0 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto z-[70]"
+                                                role="menu" aria-label="Move to folder"
                                                 style={{ [submenuOnLeft ? 'right' : 'left']: '100%' }}
                                                 onMouseEnter={() => setContextSubmenu('move-to')}
                                                 onMouseLeave={() => setContextSubmenu(null)}
@@ -13741,6 +13774,7 @@
                                 {/* Copy to - v5.0.0-alpha.166 Phase 2 */}
                                 <div
                                     className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                    role="menuitem" aria-haspopup="true"
                                     onMouseEnter={() => setContextSubmenu('copy-to')}
                                     onMouseLeave={(e) => {
                                         setTimeout(() => {
@@ -13759,6 +13793,7 @@
                                     {contextSubmenu === 'copy-to' && (
                                         <div
                                             className="context-submenu absolute top-0 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto z-[70]"
+                                            role="menu" aria-label="Copy to folder"
                                             style={{ [submenuOnLeft ? 'right' : 'left']: '100%' }}
                                             onMouseEnter={() => setContextSubmenu('copy-to')}
                                             onMouseLeave={() => setContextSubmenu(null)}
@@ -13770,12 +13805,13 @@
                                 </div>
 
                                 {/* v5.0.0-alpha.168.4 - Cut/Copy/Paste right after Move to/Copy to */}
-                                <div className="border-t border-gray-200 my-1"></div>
+                                <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                 {/* Cut - disabled in special folders */}
                                 {isSpecialFolder ? (
                                     <div
                                         className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
+                                        role="menuitem" aria-disabled="true"
                                         title="Cannot cut books from virtual folders">
                                         <span>✂️</span>
                                         <span>Cut</span>
@@ -13784,6 +13820,7 @@
                                 ) : (
                                     <div
                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        role="menuitem"
                                         onClick={() => {
                                             const bookIds = Array.from(explorerSelectedBooks);
                                             const sourcePositions = bookIds.map(bookId => ({
@@ -13804,6 +13841,7 @@
                                 {/* Copy */}
                                 <div
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
                                     onClick={() => {
                                         const bookIds = Array.from(explorerSelectedBooks);
                                         const sourcePositions = bookIds.map(bookId => ({
@@ -13897,7 +13935,7 @@
                                     </div>
                                 )}
 
-                                <div className="border-t border-gray-200 my-1"></div>
+                                <div className="border-t border-gray-200 my-1" role="separator"></div>
                                 </>)}
 
                                 {/* v5.0.0-alpha.167 - Phase 3: Other menu items */}
@@ -13918,6 +13956,7 @@
                                             {count === 1 ? (
                                                 <div
                                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                                    role="menuitem"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         const book = selectedBooksArray[0];
@@ -13931,6 +13970,7 @@
                                             ) : (
                                                 <div
                                                     className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
+                                                    role="menuitem" aria-disabled="true"
                                                     title="Use Amazon column in List View for multiple books">
                                                     <span>🔗</span>
                                                     <span>Open in Amazon</span>
@@ -13940,6 +13980,7 @@
                                             {/* Copy Title(s) */}
                                             <div
                                                 className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                                role="menuitem"
                                                 onClick={() => {
                                                     const titles = selectedBooksArray.map(book => book.title).join('\n');
                                                     navigator.clipboard.writeText(titles);
@@ -13955,6 +13996,7 @@
                                             {/* v5.4.7 - Bulk Edit submenu */}
                                             <div
                                                 className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                                role="menuitem" aria-haspopup="true"
                                                 onMouseEnter={() => setContextSubmenu('bulk-edit')}
                                                 onMouseLeave={(e) => {
                                                     setTimeout(() => {
@@ -13972,6 +14014,7 @@
                                                 {contextSubmenu === 'bulk-edit' && (
                                                     <div
                                                         className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[160px] z-[70]"
+                                                        role="menu" aria-label="Edit options"
                                                         style={{
                                                             [submenuOnLeft ? 'right' : 'left']: '100%',
                                                             [editSubmenuOverflows ? 'bottom' : 'top']: '0'
@@ -13979,20 +14022,20 @@
                                                         onMouseEnter={() => setContextSubmenu('bulk-edit')}
                                                         onMouseLeave={() => setContextSubmenu(null)}
                                                         onClick={(e) => e.stopPropagation()}>
-                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
                                                             onClick={() => openBulkEditModal('author')}>
                                                             Author...
                                                         </div>
-                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
                                                             onClick={() => openBulkEditModal('series')}>
                                                             Series...
                                                         </div>
-                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
                                                             onClick={() => openBulkEditModal('position')}>
                                                             Position...
                                                         </div>
-                                                        <div className="border-t border-gray-200 my-1"></div>
-                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                        <div className="border-t border-gray-200 my-1" role="separator"></div>
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
                                                             onClick={() => openBulkEditModal('ownership')}>
                                                             Ownership...
                                                         </div>
@@ -14003,7 +14046,7 @@
                                             {/* Add/Edit Note (single book only) */}
                                             {count === 1 ? (
                                                 <div
-                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         const book = selectedBooksArray[0];
@@ -14025,7 +14068,7 @@
                                                 </div>
                                             ) : (
                                                 <div
-                                                    className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
+                                                    className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3" role="menuitem" aria-disabled="true"
                                                     title="Notes can only be edited for one book at a time">
                                                     <span>📝</span>
                                                     <span>Add/Edit Note</span>
@@ -14034,7 +14077,7 @@
 
                                             {/* v5.0.0-alpha.170.1 - Tags submenu (moved to be with Add Note) */}
                                             <div
-                                                className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                                className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative" role="menuitem" aria-haspopup="true"
                                                 onMouseEnter={() => { setTagInputValue(''); setContextSubmenu('explorer-tags'); }}
                                                 onMouseLeave={(e) => {
                                                     setTimeout(() => {
@@ -14058,7 +14101,7 @@
                                                 {/* Tags Submenu */}
                                                 {contextSubmenu === 'explorer-tags' && (
                                                     <div
-                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[220px] max-h-[350px] overflow-y-auto z-[70]"
+                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[220px] max-h-[350px] overflow-y-auto z-[70]" role="menu" aria-label="Tags"
                                                         style={{
                                                             [submenuOnLeft ? 'right' : 'left']: '100%',
                                                             [tagsSubmenuOverflows ? 'bottom' : 'top']: '0'
@@ -14118,7 +14161,7 @@
                                                                                     </button>
                                                                                 </div>
                                                                             ))}
-                                                                        <div className="border-t border-gray-200 my-1"></div>
+                                                                        <div className="border-t border-gray-200 my-1" role="separator"></div>
                                                                     </>
                                                                 );
                                                             }
@@ -14294,7 +14337,7 @@
                                                         {/* Manage Tags link */}
                                                         <div className="border-t border-gray-200 mt-1 pt-1">
                                                             <div
-                                                                className="px-3 py-1.5 hover:bg-gray-100 cursor-pointer text-sm text-blue-600"
+                                                                className="px-3 py-1.5 hover:bg-gray-100 cursor-pointer text-sm text-blue-600" role="menuitem"
                                                                 onClick={() => {
                                                                     setTagManagementOpen(true);
                                                                     setExplorerBookContextMenu(null);
@@ -14309,7 +14352,7 @@
 
                                             {/* Set Price Goal submenu */}
                                             <div
-                                                className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                                className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative" role="menuitem" aria-haspopup="true"
                                                 onMouseEnter={() => setContextSubmenu('price-goal')}
                                                 onMouseLeave={(e) => {
                                                     setTimeout(() => {
@@ -14327,7 +14370,7 @@
                                                 {/* Price Goal Submenu - v5.0.0-alpha.169.9 viewport-aware vertical positioning */}
                                                 {contextSubmenu === 'price-goal' && (
                                                     <div
-                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[150px] z-[70]"
+                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[150px] z-[70]" role="menu" aria-label="Price goal options"
                                                         style={{
                                                             [submenuOnLeft ? 'right' : 'left']: '100%',
                                                             [priceGoalSubmenuOverflows ? 'bottom' : 'top']: '0'
@@ -14371,7 +14414,7 @@
                                                             }}>
                                                             Custom...
                                                         </div>
-                                                        <div className="border-t border-gray-200 my-1"></div>
+                                                        <div className="border-t border-gray-200 my-1" role="separator"></div>
                                                         <div
                                                             className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
                                                             onClick={async () => {
@@ -14399,7 +14442,7 @@
                                                 const allHidden = selectedBooksArray.every(b => b.isHidden);
                                                 return (
                                                     <div
-                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
                                                         onClick={async () => {
                                                             const newHiddenState = !allHidden;
                                                             const bookIdsToToggle = Array.from(explorerSelectedBooks);
@@ -14436,13 +14479,13 @@
                                             </>)}
 
                                             {/* Separator before Delete/Restore */}
-                                            <div className="border-t border-gray-200 my-1"></div>
+                                            <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                             {/* v6.0.0-alpha.49 - Delete / Trash actions */}
                                             {selectedFolderId === '__trash__' ? (
                                                 <>
                                                     <div
-                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
                                                         onClick={() => {
                                                             restoreBooks(Array.from(explorerSelectedBooks));
                                                             setExplorerBookContextMenu(null);
@@ -14451,9 +14494,9 @@
                                                         <span>↩️</span>
                                                         <span>Restore{count !== 1 ? ` ${count} Books` : ''}</span>
                                                     </div>
-                                                    <div className="border-t border-gray-200 my-1"></div>
+                                                    <div className="border-t border-gray-200 my-1" role="separator"></div>
                                                     <div
-                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
+                                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600" role="menuitem"
                                                         onClick={async () => {
                                                             if (confirm(`Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
                                                                 setExplorerBookContextMenu(null);
@@ -14470,7 +14513,7 @@
                                                 </>
                                             ) : isTagViewCtx ? (
                                                 <div
-                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
+                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600" role="menuitem"
                                                     onClick={() => {
                                                         const bookIdsToRemove = Array.from(explorerSelectedBooks);
                                                         setBooks(prev => {
@@ -14503,7 +14546,7 @@
                                                 </div>
                                             ) : selectedFolderId === '__all__' ? (
                                                 <div
-                                                    className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3"
+                                                    className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3" role="menuitem" aria-disabled="true"
                                                     title="Delete books from their folder">
                                                     <span>🗑️</span>
                                                     <span>Delete</span>
@@ -14511,7 +14554,7 @@
                                                 </div>
                                             ) : (
                                                 <div
-                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
+                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600" role="menuitem"
                                                     onClick={() => {
                                                         softDeleteBooks(Array.from(explorerSelectedBooks));
                                                         setExplorerBookContextMenu(null);
@@ -14566,6 +14609,7 @@
                                     />
                                     <div
                                         className="bg-white rounded-lg shadow-xl w-full max-w-md pointer-events-auto fixed z-50"
+                                        role="dialog" aria-modal="true" aria-labelledby="modal-tag-properties"
                                         style={{
                                             left: `${dialogDrag?.dialogX || 0}px`,
                                             top: `${dialogDrag?.dialogY || 0}px`,
@@ -14573,6 +14617,7 @@
                                         }}
                                         onClick={(e) => e.stopPropagation()}>
                                         <h2
+                                            id="modal-tag-properties"
                                             className="text-xl font-semibold mb-4 p-6 pb-0 cursor-grab active:cursor-grabbing select-none"
                                             onMouseDown={(e) => {
                                                 const rect = e.currentTarget.parentElement.getBoundingClientRect();
@@ -14714,6 +14759,7 @@
                                 {/* Dialog - v5.0.0-alpha.144: Draggable */}
                                 <div
                                     className="bg-white rounded-lg shadow-xl w-full max-w-md pointer-events-auto fixed z-50"
+                                    role="dialog" aria-modal="true" aria-labelledby="modal-folder-properties"
                                     style={{
                                         left: `${dialogDrag?.dialogX || 0}px`,
                                         top: `${dialogDrag?.dialogY || 0}px`,
@@ -14721,6 +14767,7 @@
                                     }}
                                     onClick={(e) => e.stopPropagation()}>
                                     <h2
+                                        id="modal-folder-properties"
                                         className="text-xl font-semibold mb-4 p-6 pb-0 cursor-grab active:cursor-grabbing select-none"
                                         onMouseDown={(e) => {
                                             const rect = e.currentTarget.parentElement.getBoundingClientRect();
