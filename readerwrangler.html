@@ -47,10 +47,32 @@
             border-radius: 50%;
             animation: splash-spin 0.8s linear infinite;
         }
-        .splash-msg {
-            transition: opacity 0.3s ease;
-            min-height: 1.4em;
+        /* v6.3.0 - CSS-only rotating messages (runs on compositor, immune to JS blocking) */
+        .splash-msgs {
+            position: relative;
+            height: 1.4em;
+            margin-bottom: 24px;
         }
+        .splash-msgs span {
+            position: absolute;
+            left: 0; right: 0;
+            text-align: center;
+            opacity: 0;
+            animation: splash-fade 20s infinite;
+        }
+        @keyframes splash-fade {
+            0%, 1% { opacity: 0; }
+            2.5%, 10% { opacity: 1; }
+            12.5%, 100% { opacity: 0; }
+        }
+        .splash-msgs span:nth-child(1) { animation-delay: 0s; }
+        .splash-msgs span:nth-child(2) { animation-delay: 2.5s; }
+        .splash-msgs span:nth-child(3) { animation-delay: 5s; }
+        .splash-msgs span:nth-child(4) { animation-delay: 7.5s; }
+        .splash-msgs span:nth-child(5) { animation-delay: 10s; }
+        .splash-msgs span:nth-child(6) { animation-delay: 12.5s; }
+        .splash-msgs span:nth-child(7) { animation-delay: 15s; }
+        .splash-msgs span:nth-child(8) { animation-delay: 17.5s; }
         [data-theme="dark"] #splash img,
         [data-theme="hc-dark"] #splash img {
             filter: invert(1) hue-rotate(180deg);
@@ -63,78 +85,19 @@
         <div id="splash" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:var(--bg-page, #ffffff);">
             <img src="icons/logo-transparent.png" alt="" style="width:80px; height:80px; margin-bottom:20px;">
             <div style="font-family:'Libre Baskerville',Georgia,serif; font-size:1.8em; font-weight:700; color:var(--text-primary, #1e293b); margin-bottom:8px;">ReaderWrangler&#8482;</div>
-            <div id="splashMsg" class="splash-msg" style="color:var(--text-muted, #64748b); font-size:0.9em; margin-bottom:24px;">Loading...</div>
+            <!-- v6.3.0 - CSS-only rotating messages (immune to JS thread blocking) -->
+            <div class="splash-msgs" style="color:var(--text-muted, #64748b); font-size:0.9em;">
+                <span>Wrangling your library...</span>
+                <span>Shelving your books...</span>
+                <span>Your books, your order.</span>
+                <span>Dusting the shelves...</span>
+                <span>Unbury your next great read.</span>
+                <span>Herding stray paperbacks...</span>
+                <span>From chaos to control.</span>
+                <span>Brewing a reading-sized coffee...</span>
+            </div>
             <div class="splash-spinner"></div>
         </div>
-        <!-- v6.3.0 - Rotating splash messages: brand blurbs alternate with library banter -->
-        <script>
-            (function() {
-                var blurbs = [
-                    "Wrangling your library...",
-                    "Your books, your order.",
-                    "Wrangle order from chaos.",
-                    "Unbury your next great read.",
-                    "Organizing the chaos into a system.",
-                    "See all your books in one place.",
-                    "Folders, tags, and total control.",
-                    "Your reading life, organized.",
-                    "From chaos to control.",
-                    "The organizer Amazon forgot to build.",
-                    "Every book accounted for.",
-                    "Rediscover forgotten treasures.",
-                    "Never lose track of what to read next.",
-                    "Take command of your reading life.",
-                    "A file manager for your reading list."
-                ];
-                var banter = [
-                    "Shelving your books...",
-                    "Taming the chaos...",
-                    "Organizing the stacks...",
-                    "Dusting the shelves...",
-                    "Alphabetizing the spines...",
-                    "Sorting by series order...",
-                    "Herding stray paperbacks...",
-                    "Untangling your reading list...",
-                    "Rescuing buried favorites...",
-                    "Shushing the noisy ones...",
-                    "Checking books in...",
-                    "Cataloging the collection...",
-                    "Straightening the bookends...",
-                    "Pressing the dog-ears flat...",
-                    "Evicting the bookworms...",
-                    "Waking the librarian...",
-                    "Brewing a reading-sized coffee...",
-                    "Finding your bookmark..."
-                ];
-                function shuffle(arr) {
-                    for (var i = arr.length - 1; i > 0; i--) {
-                        var j = Math.floor(Math.random() * (i + 1));
-                        var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
-                    }
-                    return arr;
-                }
-                shuffle(blurbs);
-                shuffle(banter);
-                var el = document.getElementById('splashMsg');
-                if (!el) return;
-                var idx = 0, useBlurb = true;
-                // Show first message immediately
-                el.textContent = blurbs[0];
-                useBlurb = false; idx = 0;
-                window._splashTimer = setInterval(function() {
-                    if (!document.getElementById('splashMsg')) { clearInterval(window._splashTimer); return; }
-                    var pool = useBlurb ? blurbs : banter;
-                    var msg = pool[idx % pool.length];
-                    el.style.opacity = '0';
-                    setTimeout(function() {
-                        el.textContent = msg;
-                        el.style.opacity = '1';
-                    }, 300);
-                    if (useBlurb) idx++;
-                    useBlurb = !useBlurb;
-                }, 2500);
-            })();
-        </script>
     </div>
 
     <!-- Libraries (moved from head to allow splash to paint first) -->
