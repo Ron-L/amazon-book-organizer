@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.10.0';
+    const FETCHER_VERSION = 'v4.10.1-alpha.1';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -1226,8 +1226,13 @@ async function fetchAmazonLibrary() {
         // Step 3: Fetch new books (Phase 1)
         stats.timing.pass1Start = Date.now();
         console.log('[3/7] Fetching new books from library...');
-        progressUI.updatePhase('Downloading Titles', 'Retrieving books from your library');
-        console.log('   Will stop when we reach existing books\n');
+        if (existingBooks.length === 0) {
+            progressUI.updatePhase('Downloading Titles', 'Full library scan — relay data expired. This may take a few minutes.');
+            console.log('   Full scan - no existing relay data\n');
+        } else {
+            progressUI.updatePhase('Downloading Titles', 'Checking for new books...');
+            console.log('   Will stop when we reach existing books\n');
+        }
 
         const newBooks = [];
         const seenASINs = new Map();  // Track ASINs to detect duplicates
