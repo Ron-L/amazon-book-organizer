@@ -19,6 +19,22 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: Users permanently delete a purchased book expecting it gone, but it reappears after next fetch
    - Impact: Prevents confusion and wasted effort; guides users to Hide for purchased books
 
+**2. 🎬 Loading Splash Screen** - HIGH/LOW (1-2 hours)
+   - Add a branded loading screen in `readerwrangler.html` with rotating messages while Babel/Tailwind/React load
+   - Messages mix brand language and library humor: "Wrangling your library...", "Taming the chaos...", "Shelving your books...", "Organizing the stacks..."
+   - Pure HTML/CSS in readerwrangler.html, zero build step
+   - App hides splash when React mounts (e.g., `document.getElementById('splash').style.display = 'none'`)
+   - Turns the ~14s wait into a branded experience instead of a blank page
+   - Problem: Blank page during 14s load feels broken, especially for first-time users
+   - Impact: Professional first impression; loading feels intentional, not slow
+
+""Wrangling your library..."
+"Shelving your books..."
+"Taming the chaos..."
+"Organizing the stacks..."
+"Dusting your shelves..."
+
+
 ---
 
 ### 🔒 Priority 3: Pre-Launch Gate

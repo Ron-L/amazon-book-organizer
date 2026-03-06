@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.1.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.2.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -191,6 +191,79 @@
 
                 btnRow.appendChild(cancelBtn);
                 btnRow.appendChild(confirmBtn);
+                dialog.appendChild(titleEl);
+                dialog.appendChild(messageEl);
+                dialog.appendChild(btnRow);
+                overlay.appendChild(dialog);
+                document.body.appendChild(overlay);
+            });
+        }
+
+        // v6.2.0 - Warning dialog for deleting purchased books (3 buttons: Hide Instead / Delete Anyway / Cancel)
+        function showDeleteWarningDialog(purchasedCount) {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                    background: rgba(0, 0, 0, 0.5);
+                    display: flex; align-items: center; justify-content: center;
+                    z-index: 10000;
+                `;
+
+                const dialog = document.createElement('div');
+                dialog.style.cssText = `
+                    background: var(--bg-surface); border-radius: 8px; padding: 24px;
+                    max-width: 500px; width: 90%;
+                    box-shadow: var(--shadow-modal);
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                `;
+
+                const titleEl = document.createElement('h2');
+                titleEl.textContent = '⚠️ Purchased Book' + (purchasedCount !== 1 ? 's' : '');
+                titleEl.style.cssText = `margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: var(--text-primary);`;
+
+                const messageEl = document.createElement('div');
+                messageEl.style.cssText = `margin-bottom: 24px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);`;
+                messageEl.textContent = purchasedCount === 1
+                    ? 'This book is purchased and likely still in your Amazon library. It will reappear the next time you run the fetcher. Consider using Hide instead.'
+                    : `${purchasedCount} of these books are purchased and likely still in your Amazon library. They will reappear the next time you run the fetcher. Consider using Hide instead.`;
+
+                const btnRow = document.createElement('div');
+                btnRow.style.cssText = `display: flex; gap: 8px; justify-content: flex-end;`;
+
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = 'Cancel';
+                cancelBtn.style.cssText = `
+                    background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-strong);
+                    border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;
+                `;
+                cancelBtn.onmouseover = () => cancelBtn.style.background = 'var(--bg-hover)';
+                cancelBtn.onmouseout = () => cancelBtn.style.background = 'var(--bg-elevated)';
+                cancelBtn.onclick = () => { document.body.removeChild(overlay); resolve(null); };
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete Anyway';
+                deleteBtn.style.cssText = `
+                    background: #dc2626; color: white; border: none;
+                    border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;
+                `;
+                deleteBtn.onmouseover = () => deleteBtn.style.background = '#b91c1c';
+                deleteBtn.onmouseout = () => deleteBtn.style.background = '#dc2626';
+                deleteBtn.onclick = () => { document.body.removeChild(overlay); resolve('delete'); };
+
+                const hideBtn = document.createElement('button');
+                hideBtn.textContent = 'Hide Instead';
+                hideBtn.style.cssText = `
+                    background: var(--bg-accent); color: var(--text-on-accent); border: none;
+                    border-radius: 4px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer;
+                `;
+                hideBtn.onmouseover = () => hideBtn.style.background = 'var(--bg-accent-hover)';
+                hideBtn.onmouseout = () => hideBtn.style.background = 'var(--bg-accent)';
+                hideBtn.onclick = () => { document.body.removeChild(overlay); resolve('hide'); };
+
+                btnRow.appendChild(cancelBtn);
+                btnRow.appendChild(deleteBtn);
+                btnRow.appendChild(hideBtn);
                 dialog.appendChild(titleEl);
                 dialog.appendChild(messageEl);
                 dialog.appendChild(btnRow);
@@ -1090,8 +1163,10 @@
             };
 
             // v6.0.0-alpha.48 - Trash Bin: soft delete, restore, permanent delete
-            const softDeleteBooks = (bookIds) => {
+            // v6.2.0 - Async: warns before trashing purchased books (they'll reappear from Amazon)
+            const softDeleteBooks = async (bookIds) => {
                 const bookIdsSet = new Set(bookIds);
+                const currentFolderId = selectedFolderId;
 
                 // Capture current folder membership for each book (for restore)
                 const folderMembership = {};
@@ -1104,37 +1179,63 @@
                     });
                 });
 
-                // Remove books from current folder's bookIds
-                const currentFolderId = selectedFolderId;
-
                 // Determine which folders to remove from
                 // All Books is an aggregate view — delete is disabled there
                 const foldersToRemoveFrom = new Set([currentFolderId]);
 
-                // Update folders: remove book references
-                const updatedFolders = folders.map(f => {
+                // Calculate which books would go to trash (lose their last folder ref)
+                const tempFolders = folders.map(f => {
                     if (foldersToRemoveFrom.has(f.id)) {
                         return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIdsSet.has(id)) };
                     }
                     return f;
                 });
-
-                // Check which books are still in some folder after removal
                 const remainingFolderBooks = new Set();
-                updatedFolders.forEach(f => {
+                tempFolders.forEach(f => {
                     (f.bookIds || []).forEach(id => {
                         if (bookIdsSet.has(id)) remainingFolderBooks.add(id);
                     });
                 });
-
-                // Books not in any folder → move to Trash
                 const booksToTrash = bookIds.filter(id => !remainingFolderBooks.has(id));
-                const booksToTrashSet = new Set(booksToTrash);
 
-                // For trashed books: store ALL folder membership (for restore)
-                // and clean up bookIds from ALL folders (not just current)
+                // v6.2.0 - Check for purchased books going to trash
+                let hideInsteadIds = new Set();
                 if (booksToTrash.length > 0) {
-                    // Remove trashed books from every folder's bookIds
+                    const purchasedTrashBooks = booksToTrash.filter(id => {
+                        const book = books.find(b => b.id === id);
+                        const type = book?.ownershipType || 'purchased';
+                        return type === 'purchased';
+                    });
+
+                    if (purchasedTrashBooks.length > 0) {
+                        const result = await showDeleteWarningDialog(purchasedTrashBooks.length);
+                        if (result === null) return; // Cancel — abort everything
+                        if (result === 'hide') {
+                            hideInsteadIds = new Set(purchasedTrashBooks);
+                        }
+                        // 'delete' → proceed normally
+                    }
+                }
+
+                // Books being hidden stay in their folders — exclude from folder removal
+                const booksToRemoveFromFolder = hideInsteadIds.size > 0
+                    ? bookIds.filter(id => !hideInsteadIds.has(id))
+                    : bookIds;
+                const booksToRemoveSet = new Set(booksToRemoveFromFolder);
+
+                // Recalculate folder updates and trash list excluding hidden books
+                const updatedFolders = folders.map(f => {
+                    if (foldersToRemoveFrom.has(f.id) && booksToRemoveSet.size > 0) {
+                        return { ...f, bookIds: (f.bookIds || []).filter(id => !booksToRemoveSet.has(id)) };
+                    }
+                    return f;
+                });
+
+                const actualBooksToTrash = booksToTrash.filter(id => !hideInsteadIds.has(id));
+                const booksToTrashSet = new Set(actualBooksToTrash);
+
+                // For trashed books: clean up bookIds from ALL folders (not just current)
+                if (actualBooksToTrash.length > 0) {
                     for (let i = 0; i < updatedFolders.length; i++) {
                         const f = updatedFolders[i];
                         if ((f.bookIds || []).some(id => booksToTrashSet.has(id))) {
@@ -1143,6 +1244,7 @@
                     }
                 }
 
+                // Apply book changes: trash non-purchased, hide purchased
                 setBooks(prev => {
                     const updated = prev.map(b => {
                         if (booksToTrashSet.has(b.id)) {
@@ -1153,6 +1255,9 @@
                                 deletedFromFolderIds: folderMembership[b.id] || []
                             };
                         }
+                        if (hideInsteadIds.has(b.id)) {
+                            return { ...b, isHidden: true };
+                        }
                         return b;
                     });
                     saveBooksToIndexedDB(updated);
@@ -1161,20 +1266,36 @@
 
                 setFolders(updatedFolders);
 
-                recordAction({
-                    type: 'SOFT_DELETE_BOOKS',
-                    bookIds: Array.from(bookIds),
-                    booksToTrash,
-                    folderMembership,
-                    fromFolderId: currentFolderId
-                });
+                // Record undo actions
+                if (booksToRemoveFromFolder.length > 0 || actualBooksToTrash.length > 0) {
+                    recordAction({
+                        type: 'SOFT_DELETE_BOOKS',
+                        bookIds: booksToRemoveFromFolder,
+                        booksToTrash: actualBooksToTrash,
+                        folderMembership,
+                        fromFolderId: currentFolderId
+                    });
+                }
+                if (hideInsteadIds.size > 0) {
+                    const previousStates = {};
+                    hideInsteadIds.forEach(id => { previousStates[id] = false; });
+                    recordAction({
+                        type: 'TOGGLE_HIDE',
+                        bookIds: Array.from(hideInsteadIds),
+                        previousStates,
+                        newState: true
+                    });
+                }
 
                 setExplorerSelectedBooks(new Set());
-                const trashMsg = booksToTrash.length > 0 ? `Moved ${booksToTrash.length} to Trash` : '';
-                const removeMsg = bookIds.length - booksToTrash.length > 0
-                    ? `Removed ${bookIds.length - booksToTrash.length} from folder` : '';
-                const msg = [trashMsg, removeMsg].filter(Boolean).join(', ');
-                if (msg) showToast(msg);
+
+                // Toast messages
+                const msgs = [];
+                if (actualBooksToTrash.length > 0) msgs.push(`Moved ${actualBooksToTrash.length} to Trash`);
+                if (hideInsteadIds.size > 0) msgs.push(`Hid ${hideInsteadIds.size} purchased book${hideInsteadIds.size !== 1 ? 's' : ''}`);
+                const removedFromFolder = booksToRemoveFromFolder.length - actualBooksToTrash.length;
+                if (removedFromFolder > 0) msgs.push(`Removed ${removedFromFolder} from folder`);
+                if (msgs.length > 0) showToast(msgs.join(', '));
             };
 
             const restoreBooks = (bookIds) => {
