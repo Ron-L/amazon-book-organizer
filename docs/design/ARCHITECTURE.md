@@ -45,15 +45,15 @@
 │  Author Bib       │        │    full library + organization   │        │  + backup      │
 │                   │        │    snapshot for mobile sync      │        │  restore       │
 └───────────────────┘        │                                  │        │                │
-                             └──────────────┬───────────────────┘        └───────┬────────┘
-                                            │                                    │
-                                       pull │                               save │ restore
-                                            │                                    │
-                                     ┌──────▼──────┐                     ┌───────▼────────┐
-                                     │   Mobile    │                     │  Backup File   │
-                                     │  (read-only │                     │  (JSON)        │
-                                     │   viewer)   │                     │                │
-                                     └─────────────┘                     └────────────────┘
+                             └──────────────┬───────────────────┘        └────────┬───────┘
+                                            │                               save │ ▲
+                                       pull │                                    ▼ │ restore
+                                            │                            ┌──────────┴───────┐
+                                     ┌──────▼──────┐                     │   Backup File    │
+                                     │   Mobile    │                     │   (JSON)         │
+                                     │  (read-only │                     │                  │
+                                     │   viewer)   │                     └──────────────────┘
+                                     └─────────────┘
 ```
 
 ### Data Flow Summary
