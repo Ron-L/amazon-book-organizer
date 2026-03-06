@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.10.1-alpha.1';
+    const FETCHER_VERSION = 'v4.10.1-alpha.2';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -150,6 +150,7 @@ async function fetchAmazonLibrary() {
     // ============================================================================
     const progressUI = (() => {
         let overlay = null;
+        let infoBanner = null;
         let phaseElement = null;
         let detailElement = null;
         let progressBarFill = null;
@@ -191,6 +192,8 @@ async function fetchAmazonLibrary() {
                 <div style="font-size: 18px; font-weight: bold; color: #333; margin-bottom: 10px;">
                     📚 Library Download ${FETCHER_VERSION}
                 </div>
+                <div id="infoBanner" style="display: none; font-size: 13px; color: #856404; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 8px 12px; margin-bottom: 10px;">
+                </div>
                 <div id="progressPhase" style="font-size: 14px; color: #667eea; margin-bottom: 8px; font-weight: 500;">
                     Starting...
                 </div>
@@ -208,6 +211,7 @@ async function fetchAmazonLibrary() {
                 </div>
             `;
 
+            infoBanner = overlay.querySelector('#infoBanner');
             phaseElement = overlay.querySelector('#progressPhase');
             detailElement = overlay.querySelector('#progressDetail');
             progressBarFill = overlay.querySelector('#progressBarFill');
@@ -466,7 +470,15 @@ async function fetchAmazonLibrary() {
             });
         }
 
-        return { create, updatePhase, updateDetail, updateProgress, remove, showComplete, showFetchComplete, updateOrphanProgress, showOrphanResult, showError, isAborted, showRetryUpload };
+        function showInfoBanner(text) {
+            if (!overlay) create();
+            if (infoBanner) {
+                infoBanner.textContent = text;
+                infoBanner.style.display = 'block';
+            }
+        }
+
+        return { create, updatePhase, updateDetail, updateProgress, remove, showComplete, showFetchComplete, updateOrphanProgress, showOrphanResult, showError, isAborted, showRetryUpload, showInfoBanner };
     })();
 
     // Initialize progress UI
@@ -1227,12 +1239,10 @@ async function fetchAmazonLibrary() {
         stats.timing.pass1Start = Date.now();
         console.log('[3/7] Fetching new books from library...');
         if (existingBooks.length === 0) {
-            progressUI.updatePhase('Downloading Titles', 'Full library scan — relay data expired. This may take a few minutes.');
+            progressUI.showInfoBanner('Full library scan — relay data expired. This may take a few minutes.');
             console.log('   Full scan - no existing relay data\n');
-        } else {
-            progressUI.updatePhase('Downloading Titles', 'Checking for new books...');
-            console.log('   Will stop when we reach existing books\n');
         }
+        progressUI.updatePhase('Downloading Titles', existingBooks.length === 0 ? 'Scanning full library...' : 'Checking for new books...');
 
         const newBooks = [];
         const seenASINs = new Map();  // Track ASINs to detect duplicates
