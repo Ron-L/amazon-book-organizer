@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.2.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.2.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3179,8 +3179,8 @@
                         }
                     }
 
-                    // Delete - Delete current folder
-                    if (e.key === 'Delete' && !isSpecialFolder) {
+                    // Delete - Delete current folder (skip if books selected in explorer)
+                    if (e.key === 'Delete' && !isSpecialFolder && explorerSelectedBooks.size === 0) {
                         e.preventDefault();
 
                         const hasChildren = folders.some(f => f.parentId === currentFolder.id);
@@ -3260,7 +3260,7 @@
 
                 window.addEventListener('keydown', handleKeyboard);
                 return () => window.removeEventListener('keydown', handleKeyboard);
-            }, [selectedFolderId, folders, folderClipboard, folderContextMenu, folderPropertiesDialog, explorerSelectedFolders]); // v5.0.0-alpha.157 - Added explorerSelectedFolders for F2
+            }, [selectedFolderId, folders, folderClipboard, folderContextMenu, folderPropertiesDialog, explorerSelectedFolders, explorerSelectedBooks]); // v5.0.0-alpha.157 - Added explorerSelectedFolders for F2
 
             // v5.0.0-alpha.175.48 - Removed saveSettings function (dead code)
 
