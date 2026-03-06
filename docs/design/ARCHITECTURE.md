@@ -34,33 +34,14 @@
 
 ### System Overview
 
-```
-┌───────────────────┐        ┌──────────────────────────────────┐        ┌───────────────┐
-│     Fetchers      │        │        Cloudflare Relay (KV)     │        │  App (Desktop) │
-│                   │        │                                  │        │                │
-│  Library Fetcher  ├─push──▶│  library-data    (24h TTL)       │──pull──▶│  Import from   │
-│  Collections      │        │    manifest + encrypted chunks   │        │  Relay         │
-│  Wishlist         │        │                                  │        │                │
-│  Series Page      │        │  device-state    (90-day TTL)    │◀─push──┤  After import  │
-│  Author Bib       │        │    full library + organization   │        │  + backup      │
-│                   │        │    snapshot for mobile sync      │        │  restore       │
-└───────────────────┘        │                                  │        │                │
-                             └──────────────┬───────────────────┘        └────────┬───────┘
-                                            │                               save │ ▲
-                                       pull │                                    ▼ │ restore
-                                            │                            ┌──────────┴───────┐
-                                     ┌──────▼──────┐                     │   Backup File    │
-                                     │   Mobile    │                     │   (JSON)         │
-                                     │  (read-only │                     │                  │
-                                     │   viewer)   │                     └──────────────────┘
-                                     └─────────────┘
-```
+![System Overview](data-flow.svg)
 
 ### Data Flow Summary
 
 | Path | From | To | Mechanism | Data |
 |------|------|----|-----------|------|
-| Fetch | Fetchers | Relay | push (encrypted chunks) | Library, collections, wishlist |
+| Fetch baseline | Relay | Fetchers | pull (decrypt existing) | Existing library as merge baseline |
+| Fetch upload | Fetchers | Relay | push (encrypted chunks) | Library, collections, wishlist |
 | Import | Relay | App | pull + delete | Library data → merge into IndexedDB |
 | Permanent delete | App | Relay | push (full re-upload) | Entire library minus deleted books, in fetcher format |
 | Mobile sync | App → Relay | Mobile | push, then pull | Full library + organization snapshot |
@@ -69,8 +50,8 @@
 
 ### Key Design Points
 
-- **Fetchers only push.** They upload encrypted chunks and a plaintext manifest, then exit.
-- **App pulls library data on demand** (File → Import from Relay), then deletes chunks from KV.
+- **Fetchers pull then push.** They download the existing library as a baseline, merge new data, then upload encrypted chunks and a plaintext manifest.
+- **App pulls and pushes library data.** Pulls on demand (File → Import from Relay), pushes after permanent deletes (full re-upload minus deleted books).
 - **App pushes device-state** after every import and backup restore, keeping mobile in sync.
 - **Mobile only pulls.** It reads device-state from relay. It never writes back.
 - **Backup is the only file-based path.** All routine data transfer goes through the relay.
@@ -80,7 +61,7 @@
 
 ### Overview
 
-A Cloudflare Worker serves as the cross-domain relay between the bookmarklet (amazon.com) and the app (readerwrangler.com). All data is encrypted client-side before transit.
+A Cloudflare Worker serves as the bidirectional, cross-domain relay between the bookmarklet (amazon.com) and the app (readerwrangler.com), as well as between the app and mobile viewer. All data (except the manifest, which contains only non-sensitive metadata) is encrypted client-side before transit and remains encrypted at rest in Cloudflare KV.
 
 ### Worker URL
 
@@ -96,7 +77,9 @@ relay:{channelId}:device-state   → encrypted full library snapshot (TTL: 90 da
 
 ### Permanent Delete → Relay Sync
 
-When books are permanently deleted, the app re-uploads the entire library to the relay in fetcher format. This overwrites the relay data with the library minus the deleted books. Next time a fetcher runs, it downloads this as the baseline — deleted books won't reappear because they're no longer in the relay data. No exclusion list needed; the relay itself is the two-way conduit.
+When books are permanently deleted, the app re-uploads the entire library to the relay in fetcher format. This overwrites the relay data with the library minus the deleted books. Next time a fetcher runs, it downloads this as the baseline and merges in books found on Amazon.
+
+**Limitation:** This only prevents reappearance for books that are also gone from Amazon (expired borrows, removed wishlist items). Purchased books still in Amazon's library will be re-fetched and re-added. The app warns users at trash time if they're deleting a purchased book and suggests using Hide instead.
 
 ### Security Model
 
@@ -117,7 +100,7 @@ Three vanilla JS modules loaded as globals (no build step):
 
 ### Bookmarklet Credential Injection
 
-Relay-enabled bookmarklets have credentials baked in as string literals:
+The relay-enabled bookmarklet has credentials baked in as string literals:
 ```javascript
 window._RW_RELAY_CHANNEL = '<channelId>';
 window._RW_RELAY_PASSPHRASE = '<passphrase>';
@@ -143,7 +126,6 @@ The nav-hub detects these globals and chains relay module loading before the fet
 | Relay credentials (channelId, passphrase) | localStorage | Persistent across sessions |
 | Library transfer (cross-domain) | Cloudflare KV (24h TTL) | Encrypted relay between amazon.com and readerwrangler.com |
 | Mobile sync (device-state) | Cloudflare KV (90-day TTL) | Full library snapshot for mobile viewer |
-| Exclusion list | Cloudflare KV (90-day TTL) | Deleted ASINs for fetcher filtering |
 | Backup/restore | JSON file save/restore | Portability, disaster recovery |
 
 ### The Cross-Domain Problem
@@ -230,6 +212,6 @@ const cacheBuster = IS_DEV_MODE ? '?v=' + Date.now() : '';  // Line 214
 Bookmarklets are generated in-app via **File → Relay Setup**. Relay credentials (channelId + passphrase) are baked into the bookmarklet code as string literals. Each environment's bookmarklet loads scripts from its respective origin.
 
 **Testing workflow:**
-1. Start local server: `python -m http.server 8000`
+1. Start local server in the project directory: `python -m http.server 8000`
 2. Open the app, go to File → Relay Setup to generate bookmarklet
 3. On Amazon, click bookmarklet to test fetcher → relay → app flow

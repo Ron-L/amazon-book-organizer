@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 470" font-family="Segoe UI, Arial, sans-serif" font-size="13">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="10" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#555"/>
+    </marker>
+  </defs>
+
+  <!-- Fetchers block -->
+  <rect x="20" y="30" width="160" height="310" rx="8" fill="#e7f3ff" stroke="#007bff" stroke-width="1.5"/>
+  <text x="100" y="52" text-anchor="middle" font-weight="bold" font-size="14">Fetchers</text>
+  <text x="100" y="68" text-anchor="middle" font-size="11" fill="#555">(amazon.com)</text>
+  <rect x="40" y="82" width="120" height="30" rx="5" fill="#fff" stroke="#007bff"/>
+  <text x="100" y="102" text-anchor="middle">Library</text>
+  <rect x="40" y="122" width="120" height="30" rx="5" fill="#fff" stroke="#007bff"/>
+  <text x="100" y="142" text-anchor="middle">Collections</text>
+  <rect x="40" y="162" width="120" height="30" rx="5" fill="#fff" stroke="#007bff"/>
+  <text x="100" y="182" text-anchor="middle">Wishlist</text>
+  <rect x="40" y="202" width="120" height="30" rx="5" fill="#fff" stroke="#007bff"/>
+  <text x="100" y="222" text-anchor="middle">Series Page</text>
+  <rect x="40" y="242" width="120" height="30" rx="5" fill="#fff" stroke="#007bff"/>
+  <text x="100" y="262" text-anchor="middle">Author Bib</text>
+
+  <!-- Relay block (same height as Fetchers) -->
+  <rect x="310" y="30" width="250" height="310" rx="8" fill="#fff3cd" stroke="#ffc107" stroke-width="1.5"/>
+  <text x="435" y="52" text-anchor="middle" font-weight="bold" font-size="14">Cloudflare Relay (KV)</text>
+
+  <!-- device-state inside relay -->
+  <rect x="330" y="125" width="210" height="70" rx="5" fill="#fff" stroke="#d4a017"/>
+  <text x="435" y="145" text-anchor="middle" font-weight="bold">device-state</text>
+  <text x="435" y="161" text-anchor="middle" font-size="11" fill="#666">full library + organization</text>
+  <text x="435" y="177" text-anchor="middle" font-size="11" fill="#888">TTL: 90 days</text>
+
+  <!-- library-data inside relay -->
+  <rect x="330" y="215" width="210" height="70" rx="5" fill="#fff" stroke="#d4a017"/>
+  <text x="435" y="235" text-anchor="middle" font-weight="bold">library-data</text>
+  <text x="435" y="251" text-anchor="middle" font-size="11" fill="#666">manifest + chunks</text>
+  <text x="435" y="267" text-anchor="middle" font-size="11" fill="#888">TTL: 24h</text>
+
+  <!-- Mobile block (above App) -->
+  <rect x="710" y="20" width="150" height="50" rx="8" fill="#f0f0f0" stroke="#666" stroke-width="1.5"/>
+  <text x="785" y="42" text-anchor="middle" font-weight="bold">Mobile</text>
+  <text x="785" y="57" text-anchor="middle" font-size="11" fill="#666">read-only viewer</text>
+
+  <!-- App block (shorter, below Mobile) -->
+  <rect x="670" y="90" width="230" height="200" rx="8" fill="#d4edda" stroke="#28a745" stroke-width="1.5"/>
+  <text x="785" y="112" text-anchor="middle" font-weight="bold" font-size="14">App (Desktop)</text>
+  <text x="785" y="128" text-anchor="middle" font-size="11" fill="#555">readerwrangler.com</text>
+
+  <!-- Device-state sync inside app -->
+  <rect x="690" y="145" width="190" height="30" rx="5" fill="#fff" stroke="#28a745"/>
+  <text x="785" y="165" text-anchor="middle">Device-state sync</text>
+
+  <!-- Library data sync inside app -->
+  <rect x="690" y="235" width="190" height="30" rx="5" fill="#fff" stroke="#28a745"/>
+  <text x="785" y="255" text-anchor="middle">Library data sync</text>
+
+  <!-- Backup File block -->
+  <rect x="710" y="350" width="150" height="50" rx="8" fill="#f0f0f0" stroke="#666" stroke-width="1.5"/>
+  <text x="785" y="372" text-anchor="middle" font-weight="bold">Backup File</text>
+  <text x="785" y="387" text-anchor="middle" font-size="11" fill="#666">JSON</text>
+
+  <!-- Arrow: Fetchers → library-data (push) -->
+  <line x1="180" y1="256" x2="326" y2="256" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="253" y="249" text-anchor="middle" font-size="12" fill="#555" font-style="italic">push</text>
+  <!-- encrypt bubble (Fetchers side) -->
+  <rect x="186" y="262" width="50" height="16" rx="8" fill="#fce4ec" stroke="#c62828" stroke-width="0.75"/>
+  <text x="211" y="274" text-anchor="middle" font-size="9" fill="#c62828">encrypt</text>
+
+  <!-- Arrow: library-data → Fetchers (pull) -->
+  <line x1="326" y1="240" x2="180" y2="240" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="253" y="233" text-anchor="middle" font-size="12" fill="#555" font-style="italic">pull</text>
+  <!-- decrypt bubble (Fetchers side) -->
+  <rect x="186" y="220" width="50" height="16" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="0.75"/>
+  <text x="211" y="232" text-anchor="middle" font-size="9" fill="#2e7d32">decrypt</text>
+
+  <!-- Arrow: library-data → Library data sync (pull) -->
+  <line x1="540" y1="244" x2="686" y2="244" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="613" y="237" text-anchor="middle" font-size="12" fill="#555" font-style="italic">pull</text>
+  <!-- decrypt bubble (App side) -->
+  <rect x="645" y="224" width="50" height="16" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="0.75"/>
+  <text x="670" y="236" text-anchor="middle" font-size="9" fill="#2e7d32">decrypt</text>
+
+  <!-- Arrow: Library data sync → library-data (push, deletes) -->
+  <line x1="686" y1="258" x2="540" y2="258" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="613" y="275" text-anchor="middle" font-size="12" fill="#555" font-style="italic">push</text>
+  <!-- encrypt bubble (App side) -->
+  <rect x="645" y="262" width="50" height="16" rx="8" fill="#fce4ec" stroke="#c62828" stroke-width="0.75"/>
+  <text x="670" y="274" text-anchor="middle" font-size="9" fill="#c62828">encrypt</text>
+
+  <!-- Arrow: Device-state sync → device-state (push) -->
+  <line x1="690" y1="160" x2="544" y2="160" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="617" y="153" text-anchor="middle" font-size="12" fill="#555" font-style="italic">push</text>
+  <!-- encrypt bubble (App side) -->
+  <rect x="645" y="166" width="50" height="16" rx="8" fill="#fce4ec" stroke="#c62828" stroke-width="0.75"/>
+  <text x="670" y="178" text-anchor="middle" font-size="9" fill="#c62828">encrypt</text>
+
+  <!-- Arrow: device-state → Mobile (pull) -->
+  <line x1="540" y1="140" x2="706" y2="55" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="610" y="85" text-anchor="middle" font-size="12" fill="#555" font-style="italic">pull</text>
+  <!-- decrypt bubble (Mobile side) -->
+  <rect x="660" y="32" width="50" height="16" rx="8" fill="#e8f5e9" stroke="#2e7d32" stroke-width="0.75"/>
+  <text x="685" y="44" text-anchor="middle" font-size="9" fill="#2e7d32">decrypt</text>
+
+  <!-- Arrow: App → Backup File (save) -->
+  <line x1="765" y1="290" x2="765" y2="346" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="750" y="325" text-anchor="end" font-size="12" fill="#555" font-style="italic">save</text>
+
+  <!-- Arrow: Backup File → App (restore) -->
+  <line x1="805" y1="350" x2="805" y2="294" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="820" y="325" font-size="12" fill="#555" font-style="italic">restore</text>
+</svg>

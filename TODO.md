@@ -7,6 +7,20 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 ---
 
 
+### 🔥 Priority 1: Immediate
+
+**1. ⚠️ Purchased Book Delete Warning** - HIGH/LOW (1-2 hours)
+   - When user deletes (sends to Trash) a purchased book, show warning dialog:
+     - "This book is purchased and still in your Amazon library. It will reappear the next time you run the fetcher. Consider using Hide instead."
+     - Buttons: [Hide Instead] [Delete Anyway] [Cancel]
+   - Warning triggers at trash time (not empty-trash time) so the user decides per-book while context is fresh
+   - Non-purchased books (wishlist, expired borrows) go to Trash silently as before
+   - Background: Permanent delete re-uploads library to relay without the deleted book. But the fetcher pulls from Amazon's API, so purchased books still in Amazon's library get re-added on next fetch. Only books no longer in Amazon (expired borrows, removed wishlist items) stay deleted.
+   - Problem: Users permanently delete a purchased book expecting it gone, but it reappears after next fetch
+   - Impact: Prevents confusion and wasted effort; guides users to Hide for purchased books
+
+---
+
 ### 🔒 Priority 3: Pre-Launch Gate
 
 ~~**2. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)~~ ✅ v6.1.0 — ARIA attributes on modals, context menus, filter dropdowns, icon-only buttons. Keyboard operability deferred to Priority 7.
@@ -90,14 +104,25 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: No visibility into relay usage; no warning before free tier exhaustion
    - Impact: Prevents surprise outages for users
 
-**3. Pre-compile Babel JSX for Faster Load Times** - MEDIUM/LOW (1-2 hours)
+**3. Improve Load Time Experience** - MEDIUM/LOW-MEDIUM (2-4 hours)
    - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
-   - Step 1 (Babel): `npm install --save-dev @babel/cli @babel/core @babel/preset-react`, add `build.bat` that runs `npx babel readerwrangler.js --presets=@babel/preset-react -o dist/readerwrangler.js`. Update HTML to load `dist/readerwrangler.js` as regular `<script>` instead of `type="text/babel"`. Remove Babel CDN.
-   - Step 2 (optional, Tailwind): `npx tailwindcss -i input.css -o dist/styles.css --content "readerwrangler.js,readerwrangler.html"`. Swap Tailwind CDN `<script>` for `<link>` to generated CSS.
-   - Prerequisite: Node.js (already installed for scripts/)
-   - Note: User loads the page once per session, so this is a one-time cost per use. Medium reward/work ratio.
+   - Console warnings (dev-only, users don't see): Tailwind CDN "not for production", Babel "precompile your scripts", Babel "deoptimised styling" (skips formatting for files >500KB — cosmetic, no functional impact)
+   - **Option A: Pre-compile (eliminates warnings, fastest load)**
+     - Step 1 (Babel): `npx babel readerwrangler.js --presets=@babel/preset-react -o dist/readerwrangler.js`. Load `dist/readerwrangler.js` as regular `<script>` instead of `type="text/babel"`. Remove Babel CDN.
+     - Step 2 (Tailwind): `npx tailwindcss -i input.css -o dist/styles.css --content "readerwrangler.js,readerwrangler.html"`. Swap Tailwind CDN for `<link>` to generated CSS.
+     - Prerequisite: Node.js (already installed for scripts/)
+     - **Trade-off: Introduces a build step.** Every JS/CSS edit requires re-running the build before deploy. Options: local `build.bat` (manual, risk of forgetting), GitHub Actions (auto on push, adds CI complexity), or pre-commit hook (auto on commit, slows commits).
+     - **Trade-off: Transparency.** Source files are no longer what's served. Pre-compiled output is readable (not minified) but shows `React.createElement()` instead of JSX. Mitigate with "View Source on GitHub" link.
+     - Estimated load time: ~5-8s (Step 1 only) or ~3-5s (both steps)
+   - **Option B: Splash screen with personality (no build step, same load time)**
+     - Add a themed loading screen in `readerwrangler.html` with rotating messages while Babel/Tailwind/React load
+     - Examples: "Shelving your library...", "Alphabetizing the chaos...", "Dusting off the spines..."
+     - Pure HTML/CSS, zero build step, hides when app mounts
+     - Turns the 14s wait into a branded experience instead of a blank page
+     - Can be combined with Option A for even better UX
+   - Note: User loads the page once per session, so this is a one-time cost per use
    - Problem: 14s initial load is noticeable, especially for first-time users
-   - Impact: Estimated load time reduction to ~5-8s (Step 1) or ~3-5s (both steps)
+   - Impact: Option A reduces load time; Option B makes the wait enjoyable; both improve first impression
 
 ---
 
