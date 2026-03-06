@@ -60,11 +60,11 @@
             left: 0; right: 0;
             text-align: center;
             opacity: 0;
-            animation: splash-fade 20s infinite;
+            animation: splash-fade 24s infinite;
         }
         @keyframes splash-fade {
             0%, 1% { opacity: 0; }
-            2.5%, 10% { opacity: 1; }
+            2%, 10.5% { opacity: 1; }
             12.5%, 100% { opacity: 0; }
         }
         /* animation-delay set inline by shuffle script */
@@ -109,7 +109,7 @@
                     for (var i = 0; i < 8; i++) {
                         var s = document.createElement('span');
                         s.textContent = i % 2 === 0 ? blurbs[i >> 1] : banter[i >> 1];
-                        s.style.animationDelay = (i * 2.5) + 's';
+                        s.style.animationDelay = (i * 3) + 's';
                         el.appendChild(s);
                     }
                 })();
