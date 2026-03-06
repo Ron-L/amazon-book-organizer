@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.2.0] - 2026-03-06
+
+### Added
+- **Purchased book delete warning** — When deleting purchased books to Trash, a warning dialog explains they'll reappear after the next fetch and offers Hide Instead / Delete Anyway / Cancel. Already-hidden purchased books skip the dialog.
+- **Fetcher scan mode banner** — Library fetcher progress dialog now shows a persistent info banner indicating whether it's a full library scan (relay data expired) or an incremental scan (with existing book count).
+
+### Fixed
+- **DEL key firing both book and folder delete** — Pressing DEL with books selected in the right pane no longer also triggers the folder delete dialog from the left pane.
+
+### Changed
+- **Auto-Organize wizard** — Moved Select All/Some/None controls to left side near checkboxes and added "Select:" label for discoverability.
+
 ## [6.1.0] - 2026-03-06
 
 ### Added

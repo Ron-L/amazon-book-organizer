@@ -9,15 +9,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔥 Priority 1: Immediate
 
-**1. ⚠️ Purchased Book Delete Warning** - HIGH/LOW (1-2 hours)
-   - When user deletes (sends to Trash) a purchased book, show warning dialog:
-     - "This book is purchased and still in your Amazon library. It will reappear the next time you run the fetcher. Consider using Hide instead."
-     - Buttons: [Hide Instead] [Delete Anyway] [Cancel]
-   - Warning triggers at trash time (not empty-trash time) so the user decides per-book while context is fresh
-   - Non-purchased books (wishlist, expired borrows) go to Trash silently as before
-   - Background: Permanent delete re-uploads library to relay without the deleted book. But the fetcher pulls from Amazon's API, so purchased books still in Amazon's library get re-added on next fetch. Only books no longer in Amazon (expired borrows, removed wishlist items) stay deleted.
-   - Problem: Users permanently delete a purchased book expecting it gone, but it reappears after next fetch
-   - Impact: Prevents confusion and wasted effort; guides users to Hide for purchased books
+~~**1. ⚠️ Purchased Book Delete Warning** - HIGH/LOW (1-2 hours)~~ ✅ v6.2.0 — Warning dialog with Hide Instead / Delete Anyway / Cancel. Already-hidden books skip dialog. Also: fetcher info banner (full vs incremental scan), DEL key fix, Auto-Organize Select label.
 
 **2. 🎬 Loading Splash Screen** - HIGH/LOW (1-2 hours)
    - Add a branded loading screen in `readerwrangler.html` with rotating messages while Babel/Tailwind/React load

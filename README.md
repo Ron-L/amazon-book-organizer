@@ -121,6 +121,10 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v6.2 - Delete Warning + Fetcher UX** (March 2026)
+- Purchased book delete warning with Hide Instead option — prevents confusion when books reappear after fetch
+- Fetcher progress shows full scan vs. incremental mode with persistent info banner
+
 **v6.0 - Cloud Relay + Trash Bin** (March 2026)
 - Encrypted cloud relay replaces file-based transfer — one-click import, no downloads needed
 - Trash Bin with two-stage delete: soft delete to Trash, permanent delete from library and relay
