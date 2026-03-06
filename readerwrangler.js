@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.0.2-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.0.2-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7907,7 +7907,7 @@
                                     <button onClick={() => setAboutDialogOpen(false)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div className="p-6 space-y-4 text-center">
-                                    <img src="icons/ReaderWranglerXparent.png" alt="ReaderWrangler" className="about-logo" style={{ width: '200px', height: '200px', margin: '0 auto' }} />
+                                    <img src="icons/logo-transparent.png" alt="ReaderWrangler" className="about-logo" style={{ width: '200px', height: '200px', margin: '0 auto' }} />
                                     <p className="text-sm text-gray-600">Wrangle your Kindle library with power and precision</p>
                                     <div className="text-sm text-gray-700 border-t border-gray-200 pt-4">
                                         <p className="font-semibold"><a href="changelog.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 hover:underline">Version {APP_VERSION}</a></p>
