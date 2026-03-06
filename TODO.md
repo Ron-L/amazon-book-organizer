@@ -9,9 +9,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔥 Priority 1: Immediate
 
-~~**1. ⚠️ Purchased Book Delete Warning** - HIGH/LOW (1-2 hours)~~ ✅ v6.2.0 — Warning dialog with Hide Instead / Delete Anyway / Cancel. Already-hidden books skip dialog. Also: fetcher info banner (full vs incremental scan), DEL key fix, Auto-Organize Select label.
-
-**2. 🎬 Loading Splash Screen** - HIGH/LOW (1-2 hours)
+**1. 🎬 Loading Splash Screen** - HIGH/LOW (1-2 hours)
    - Add a branded loading screen in `readerwrangler.html` with rotating messages while Babel/Tailwind/React load
    - Messages mix brand language and library humor: "Wrangling your library...", "Taming the chaos...", "Shelving your books...", "Organizing the stacks..."
    - Pure HTML/CSS in readerwrangler.html, zero build step
