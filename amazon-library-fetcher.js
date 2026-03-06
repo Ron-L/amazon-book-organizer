@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.10.1-alpha.2';
+    const FETCHER_VERSION = 'v4.10.1-alpha.3';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -1241,6 +1241,9 @@ async function fetchAmazonLibrary() {
         if (existingBooks.length === 0) {
             progressUI.showInfoBanner('Full library scan — relay data expired. This may take a few minutes.');
             console.log('   Full scan - no existing relay data\n');
+        } else {
+            progressUI.showInfoBanner(`Incremental scan — checking for new books since last fetch (${existingBooks.length} existing).`);
+            console.log(`   Incremental scan - ${existingBooks.length} existing books on relay\n`);
         }
         progressUI.updatePhase('Downloading Titles', existingBooks.length === 0 ? 'Scanning full library...' : 'Checking for new books...');
 
