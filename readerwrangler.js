@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.2.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.2.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8189,34 +8189,13 @@
                                     <div className="border border-gray-300 rounded-lg bg-white">
                                         {/* Header with Select All/None + Sort Toggle */}
                                         <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-300">
-                                            <span className="text-sm font-semibold text-gray-700">
-                                                Authors found: {wizardAuthors.length}
-                                            </span>
                                             <div className="flex gap-3 items-center">
-                                                {/* v5.1.0-alpha.11 - Segmented control for sort */}
-                                                <div className="flex border border-gray-300 rounded overflow-hidden">
-                                                    <button
-                                                        onClick={() => setWizardSortBy('bookCount')}
-                                                        className={`px-3 py-1 text-xs transition-colors ${
-                                                            wizardSortBy === 'bookCount'
-                                                                ? 'bg-blue-600 text-white font-semibold'
-                                                                : 'bg-white text-gray-700 hover:bg-gray-100'
-                                                        }`}>
-                                                        # Books
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setWizardSortBy('authorName')}
-                                                        className={`px-3 py-1 text-xs transition-colors border-l border-gray-300 ${
-                                                            wizardSortBy === 'authorName'
-                                                                ? 'bg-blue-600 text-white font-semibold'
-                                                                : 'bg-white text-gray-700 hover:bg-gray-100'
-                                                        }`}>
-                                                        A-Z
-                                                    </button>
-                                                </div>
-
-                                                {/* v5.1.0-alpha.12 - 3-segment control for selection state */}
+                                                <span className="text-sm font-semibold text-gray-700">
+                                                    Authors found: {wizardAuthors.length}
+                                                </span>
                                                 <div className="h-5 w-px bg-gray-300"></div>
+                                                {/* v5.1.0-alpha.12 / v6.2.0 - Selection control moved left, added "Select:" label */}
+                                                <span className="text-xs text-gray-500">Select:</span>
                                                 <div className="flex border border-gray-300 rounded overflow-hidden">
                                                     {(() => {
                                                         const selectedCount = wizardSelectedAuthors.size;
@@ -8257,6 +8236,27 @@
                                                         );
                                                     })()}
                                                 </div>
+                                            </div>
+                                            {/* v5.1.0-alpha.11 - Segmented control for sort */}
+                                            <div className="flex border border-gray-300 rounded overflow-hidden">
+                                                <button
+                                                    onClick={() => setWizardSortBy('bookCount')}
+                                                    className={`px-3 py-1 text-xs transition-colors ${
+                                                        wizardSortBy === 'bookCount'
+                                                            ? 'bg-blue-600 text-white font-semibold'
+                                                            : 'bg-white text-gray-700 hover:bg-gray-100'
+                                                    }`}>
+                                                    # Books
+                                                </button>
+                                                <button
+                                                    onClick={() => setWizardSortBy('authorName')}
+                                                    className={`px-3 py-1 text-xs transition-colors border-l border-gray-300 ${
+                                                        wizardSortBy === 'authorName'
+                                                            ? 'bg-blue-600 text-white font-semibold'
+                                                            : 'bg-white text-gray-700 hover:bg-gray-100'
+                                                    }`}>
+                                                    A-Z
+                                                </button>
                                             </div>
                                         </div>
 
