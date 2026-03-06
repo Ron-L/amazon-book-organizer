@@ -9,13 +9,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔒 Priority 3: Pre-Launch Gate
 
-**1. Button Consistency Audit** - LOW/LOW (2-4 hours)
-   - Audit all button hover states across the app
-   - Define 3 button styles: Primary/Secondary/Tertiary
-   - Apply consistently everywhere (price goals, Add Tag, View on Amazon, Add Note, Edit Series, etc.)
-   - Document button style patterns
-   - Problem: Different buttons have different hover behaviors, users can't predict interaction
-   - Impact: Consistent, predictable UI interactions
+~~**1. Button Consistency Audit**~~ ✅ v6.0.1 — Theme-aware filled button overrides (Dark, HC-Light, HC-Dark). HC-Dark text legibility fix. Button variant normalization.
 
 **2. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)
    - Semantic HTML audit (use `<button>` not `<div onclick>`)

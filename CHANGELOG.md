@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.0.1] - 2026-03-05
+
+### Fixed
+- **Theme-aware filled buttons** - Action buttons (blue/red/green) now adapt to Dark, HC-Light, and HC-Dark themes via CSS Tailwind overrides. Previously kept exact light-mode colors in all themes.
+- **HC-Dark button text legibility** - Button text switches from white to black on bright accent backgrounds in High Contrast Dark mode (WCAG contrast fix).
+- **Button variant normalization** - Standardized blue-500→blue-600, rounded→rounded-lg, and cancel button hover states across folder Properties and date filter dialogs.
+
 ## [6.0.0] - 2026-03-05
 
 ### Added
