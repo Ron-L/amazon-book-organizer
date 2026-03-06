@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.2.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.2.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1199,12 +1199,13 @@
                 const booksToTrash = bookIds.filter(id => !remainingFolderBooks.has(id));
 
                 // v6.2.0 - Check for purchased books going to trash
+                // Skip dialog for already-hidden purchased books (user already tried the gentle path)
                 let hideInsteadIds = new Set();
                 if (booksToTrash.length > 0) {
                     const purchasedTrashBooks = booksToTrash.filter(id => {
                         const book = books.find(b => b.id === id);
                         const type = book?.ownershipType || 'purchased';
-                        return type === 'purchased';
+                        return type === 'purchased' && !book?.isHidden;
                     });
 
                     if (purchasedTrashBooks.length > 0) {
