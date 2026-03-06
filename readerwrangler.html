@@ -47,6 +47,10 @@
             border-radius: 50%;
             animation: splash-spin 0.8s linear infinite;
         }
+        .splash-msg {
+            transition: opacity 0.3s ease;
+            min-height: 1.4em;
+        }
         [data-theme="dark"] #splash img,
         [data-theme="hc-dark"] #splash img {
             filter: invert(1) hue-rotate(180deg);
@@ -59,9 +63,75 @@
         <div id="splash" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:var(--bg-page, #ffffff);">
             <img src="icons/logo-transparent.png" alt="" style="width:80px; height:80px; margin-bottom:20px;">
             <div style="font-family:'Libre Baskerville',Georgia,serif; font-size:1.8em; font-weight:700; color:var(--text-primary, #1e293b); margin-bottom:8px;">ReaderWrangler&#8482;</div>
-            <div style="color:var(--text-muted, #64748b); font-size:0.9em; margin-bottom:24px;">Loading...</div>
+            <div id="splashMsg" class="splash-msg" style="color:var(--text-muted, #64748b); font-size:0.9em; margin-bottom:24px;">Loading...</div>
             <div class="splash-spinner"></div>
         </div>
+        <!-- v6.3.0 - Rotating splash messages: brand blurbs alternate with library banter -->
+        <script>
+            (function() {
+                var blurbs = [
+                    "Wrangling your library...",
+                    "Your books, your order.",
+                    "Wrangle order from chaos.",
+                    "Unbury your next great read.",
+                    "Organizing the chaos into a system.",
+                    "See all your books in one place.",
+                    "Folders, tags, and total control.",
+                    "Your reading life, organized.",
+                    "From chaos to control.",
+                    "The organizer Amazon forgot to build.",
+                    "Every book accounted for.",
+                    "Rediscover forgotten treasures.",
+                    "Never lose track of what to read next.",
+                    "Take command of your reading life.",
+                    "A file manager for your reading list."
+                ];
+                var banter = [
+                    "Shelving your books...",
+                    "Taming the chaos...",
+                    "Organizing the stacks...",
+                    "Dusting the shelves...",
+                    "Alphabetizing the spines...",
+                    "Sorting by series order...",
+                    "Herding stray paperbacks...",
+                    "Untangling your reading list...",
+                    "Rescuing buried favorites...",
+                    "Shushing the noisy ones...",
+                    "Checking books in...",
+                    "Cataloging the collection...",
+                    "Straightening the bookends...",
+                    "Pressing the dog-ears flat...",
+                    "Evicting the bookworms...",
+                    "Waking the librarian...",
+                    "Brewing a reading-sized coffee...",
+                    "Finding your bookmark..."
+                ];
+                function shuffle(arr) {
+                    for (var i = arr.length - 1; i > 0; i--) {
+                        var j = Math.floor(Math.random() * (i + 1));
+                        var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+                    }
+                    return arr;
+                }
+                shuffle(blurbs);
+                shuffle(banter);
+                var el = document.getElementById('splashMsg');
+                if (!el) return;
+                var idx = 0, useBlurb = true;
+                window._splashTimer = setInterval(function() {
+                    var pool = useBlurb ? blurbs : banter;
+                    var msg = pool[idx % pool.length];
+                    el.style.opacity = '0';
+                    setTimeout(function() {
+                        el.textContent = msg;
+                        el.style.opacity = '1';
+                    }, 300);
+                    useBlurb = !useBlurb;
+                    if (!useBlurb) idx++;
+                    if (!document.getElementById('splashMsg')) clearInterval(window._splashTimer);
+                }, 2500);
+            })();
+        </script>
     </div>
 
     <!-- Libraries (moved from head to allow splash to paint first) -->
