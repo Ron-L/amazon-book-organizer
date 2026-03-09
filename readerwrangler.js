@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.3.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.3.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3295,7 +3295,7 @@
                     const result = await Promise.race([importWork(), timeout]);
 
                     if (result.empty) {
-                        await progress.finish('Relay Import', 'No library data found on the relay.\n\nIf you recently regenerated your encryption keys, your bookmarklet may be out of date. Open File → Relay Setup and drag the updated bookmarklet to your bookmarks bar, then re-fetch from Amazon.');
+                        await progress.finish('Relay Import', 'No library data found on the relay. This usually means the data has expired (relay data is kept for 24 hours). Run the fetcher bookmarklet on your Amazon library page to refresh it.\n\nIf you recently regenerated your encryption keys, update your bookmarklet via File → Relay Setup.');
                         return;
                     }
 
