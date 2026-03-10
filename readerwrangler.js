@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.5.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.5.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10014,7 +10014,7 @@
                                                 }
                                                 setFolderDropHighlight(null);
                                             }}
-                                            title="Your personal organization — move books here to arrange your library">
+                                            title="Your personal organization — drag books into any folder below to arrange your library.">
                                             Folders
                                         </span>
                                         <div className="flex items-center gap-1">
