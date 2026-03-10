@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.4.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.4.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -720,6 +720,7 @@
             const [folderPropertiesEditedName, setFolderPropertiesEditedName] = useState(''); // v5.0.0-alpha.143 - Edited name in properties dialog
             const [dialogDrag, setDialogDrag] = useState(null); // v5.0.0-alpha.144 - Dragging state { isDragging, offsetX, offsetY, dialogX, dialogY }
             const [showAllFoldersOverride, setShowAllFoldersOverride] = useState(false); // v5.0.0-alpha.169 - Override auto-hide when filter active
+            const [viewsSectionCollapsed, setViewsSectionCollapsed] = useState(false); // v6.4.0 - Collapse/expand Views section
             const [savedExpansionState, setSavedExpansionState] = useState(null); // v5.0.0-alpha.169 - Saved folder expansion state (Map of folderId → collapsed)
             const [visibleColumns, setVisibleColumns] = useState({ // v5.0.0-alpha.104 - Column visibility (Name always visible)
                 author: true,
@@ -9815,7 +9816,15 @@
                                             title="Different ways to see the same books — not separate copies">
                                             Views
                                         </span>
+                                        <button
+                                            onClick={() => setViewsSectionCollapsed(prev => !prev)}
+                                            className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
+                                            title={viewsSectionCollapsed ? 'Expand views' : 'Collapse views'}
+                                            aria-label={viewsSectionCollapsed ? 'Expand views' : 'Collapse views'}>
+                                            {viewsSectionCollapsed ? '▶' : '▼'}
+                                        </button>
                                     </div>
+                                    {!viewsSectionCollapsed && <>
                                     {/* All Books (virtual, view-only) */}
                                     <div
                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
@@ -9971,6 +9980,7 @@
                                             );
                                         });
                                     })()}
+                                    </>}
                                     {/* v6.4.0 - FOLDERS section header */}
                                     <div className="flex items-center justify-between px-2 pt-2 pb-0.5 mt-1 border-t border-gray-100">
                                         <span
