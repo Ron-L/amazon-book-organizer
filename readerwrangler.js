@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.5.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.5.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9832,7 +9832,8 @@
                                     {/* All Books (virtual, view-only) */}
                                     <div
                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
-                                        onClick={() => navigateToFolder('__all__')}>
+                                        onClick={() => navigateToFolder('__all__')}
+                                        title="Every book in your library, organized or not. You can't move books out of here — use folders to arrange them.">
                                         <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
                                         <span className="flex-1 pointer-events-none font-semibold">{FOLDER_ALL_BOOKS.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">({books.filter(b => !b.isDeleted).length})</span>
@@ -10062,6 +10063,7 @@
                                     <div
                                         className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__inbox__')}
+                                        title="This is where ReaderWrangler puts newly imported books. Drag them into folders to organize your library."
                                         onDragOver={(e) => {
                                             e.preventDefault();
                                             e.dataTransfer.dropEffect = 'move';
@@ -10754,6 +10756,7 @@
                                                 selectedFolderId === '__trash__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
                                             } ${trashCount === 0 ? 'text-gray-400' : ''}`}
                                             onClick={() => navigateToFolder('__trash__')}
+                                            title="Deleted books that are still recoverable. Right-click to empty the trash and remove them permanently."
                                             onContextMenu={(e) => {
                                                 e.preventDefault();
                                                 if (trashCount > 0) {
