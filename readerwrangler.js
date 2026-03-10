@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.4.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.4.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9821,7 +9821,7 @@
                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__all__')}>
                                         <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
-                                        <span className="flex-1 pointer-events-none">{FOLDER_ALL_BOOKS.name}</span>
+                                        <span className="flex-1 pointer-events-none font-semibold">{FOLDER_ALL_BOOKS.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">({books.filter(b => !b.isDeleted).length})</span>
                                     </div>
                                     {/* v6.4.0 - Pinned tag views render under VIEWS (previously interleaved with folders) */}
@@ -10114,7 +10114,7 @@
                                             setExplorerDragData(null);
                                         }}>
                                         <span className="pointer-events-none">{FOLDER_INBOX.icon}</span>
-                                        <span className="flex-1 pointer-events-none">{FOLDER_INBOX.name}</span>
+                                        <span className="flex-1 pointer-events-none font-semibold">{FOLDER_INBOX.name}</span>
                                         {/* v5.0.0-alpha.169.2 - Show filtered count (X/Y) when filter active */}
                                         {hasActiveFilters ? (() => {
                                             const { matching, total } = getFilteredFolderCount('__inbox__');
@@ -10734,7 +10734,7 @@
                                     {/* v5.0.0-alpha.52 - Removed bottom "New Folder" button; use "+" on All Books or folder rows instead */}
 
                                     {/* v6.0.0-alpha.50 - Trash Bin */}
-                                    <div className="border-t border-gray-200 mt-2 pt-1">
+                                    <div>
                                         <div
                                             className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${
                                                 selectedFolderId === '__trash__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
@@ -10771,7 +10771,7 @@
                                                 softDeleteBooks(bookIds);
                                             }}>
                                             <span className="pointer-events-none">🗑️</span>
-                                            <span className="flex-1 pointer-events-none">Trash</span>
+                                            <span className="flex-1 pointer-events-none font-semibold">Trash</span>
                                             {trashCount > 0 && (
                                                 <span className="text-xs text-gray-500 pointer-events-none">({trashCount})</span>
                                             )}
