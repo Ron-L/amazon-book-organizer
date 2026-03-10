@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.3.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.3.0-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9801,49 +9801,25 @@
                                     </div>
                                 )}
                                 <div className="p-2">
-                                    {/* All Books (virtual, view-only) - v5.0.0-alpha.52 added "+" for new root folder */}
+                                    {/* All Books (virtual, view-only) */}
                                     <div
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group relative ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__all__')}>
                                         <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
                                         <span className="flex-1 pointer-events-none">{FOLDER_ALL_BOOKS.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">({books.length})</span>
-                                        {/* v5.5.15-alpha.28 - Absolute position to avoid pushing count left */}
-                                        <div className="absolute right-1 top-0 bottom-0 flex items-center opacity-0 group-hover:opacity-100">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const newFolder = {
-                                                        id: `folder-${Date.now()}`,
-                                                        name: 'New Folder',
-                                                        parentId: null,
-                                                        bookIds: [],
-                                                        childFolderIds: [],
-                                                        collapsed: false
-                                                    };
-                                                    recordAction({
-                                                        type: 'CREATE_FOLDER',
-                                                        folderId: newFolder.id,
-                                                        parentId: null,
-                                                        folder: { ...newFolder }
-                                                    });
-                                                    setFolders(prev => [...prev, newFolder]);
-                                                    navigateToFolder(newFolder.id);
-                                                    setEditingFolderId(newFolder.id);
-                                                    setEditingFolderName('New Folder');
-                                                }}
-                                                className="text-blue-500 hover:text-blue-700 px-1"
-                                                title="New folder">
-                                                +
-                                            </button>
-                                        </div>
                                     </div>
                                     {/* Divider line to separate All Books from folders */}
                                     <div className="border-b border-gray-200 my-1 mx-2"></div>
                                     {/* v5.4.4 - My Library: selectable + folder drop target */}
+                                    {/* v6.3.0 - Added + button and right-click context menu for New Folder */}
                                     <div
                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer relative ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__library__')}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            setFolderContextMenu({ folderId: '__library__', x: e.clientX, y: e.clientY, source: 'left' });
+                                        }}
                                         onDragOver={(e) => {
                                             // Accept folder drags only — books go to Inbox, not root
                                             if (Array.from(e.dataTransfer.types).includes('application/x-folder-reorder')) {
@@ -9880,6 +9856,33 @@
                                                 ▲
                                             </button>
                                         )}
+                                        {/* v6.3.0 - New Folder button (moved from All Books, always visible) */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const newFolder = {
+                                                    id: `folder-${Date.now()}`,
+                                                    name: 'New Folder',
+                                                    parentId: null,
+                                                    bookIds: [],
+                                                    childFolderIds: [],
+                                                    collapsed: false
+                                                };
+                                                recordAction({
+                                                    type: 'CREATE_FOLDER',
+                                                    folderId: newFolder.id,
+                                                    parentId: null,
+                                                    folder: { ...newFolder }
+                                                });
+                                                setFolders(prev => [...prev, newFolder]);
+                                                navigateToFolder(newFolder.id);
+                                                setEditingFolderId(newFolder.id);
+                                                setEditingFolderName('New Folder');
+                                            }}
+                                            className="text-blue-500 hover:text-blue-700 text-sm px-1 hover:bg-gray-100 rounded"
+                                            title="New folder" aria-label="New folder">
+                                            +
+                                        </button>
                                         <span className="text-xs text-gray-500 pointer-events-none">
                                             ({getChildFolders(null).length} folders)
                                         </span>
@@ -13128,6 +13131,52 @@
                                             }}>
                                             <span>🗑️</span>
                                             <span>Empty Trash</span>
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        }
+
+                        // v6.3.0 - My Library context menu: Open + New Folder
+                        if (folderContextMenu.folderId === '__library__') {
+                            const menuWidth = 180;
+                            const menuX = Math.max(10, Math.min(folderContextMenu.x, window.innerWidth - menuWidth - 10));
+                            const menuY = Math.max(10, Math.min(folderContextMenu.y, window.innerHeight - 120));
+                            return (
+                                <>
+                                    <div className="fixed inset-0 z-50" onClick={() => setFolderContextMenu(null)} />
+                                    <div
+                                        className="fixed bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[180px] z-50"
+                                        role="menu" aria-label="My Library options"
+                                        style={{ left: `${menuX}px`, top: `${menuY}px` }}
+                                        onClick={(e) => e.stopPropagation()}>
+                                        <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                            role="menuitem"
+                                            onClick={() => { navigateToFolder('__library__'); setFolderContextMenu(null); }}>
+                                            <span>📂</span><span>Open</span>
+                                        </div>
+                                        <div className="border-t border-gray-200 my-1" role="separator"></div>
+                                        <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                            role="menuitem"
+                                            onClick={() => {
+                                                const newFolder = {
+                                                    id: `folder-${Date.now()}`,
+                                                    name: 'New Folder',
+                                                    parentId: null,
+                                                    bookIds: [],
+                                                    childFolderIds: [],
+                                                    collapsed: false
+                                                };
+                                                recordAction({ type: 'CREATE_FOLDER', folderId: newFolder.id, parentId: null, folder: { ...newFolder } });
+                                                setFolders(prev => [...prev, newFolder]);
+                                                navigateToFolder(newFolder.id);
+                                                setEditingFolderId(newFolder.id);
+                                                setEditingFolderName('New Folder');
+                                                setFolderContextMenu(null);
+                                            }}>
+                                            <span>📁</span><span>New Folder</span>
                                         </div>
                                     </div>
                                 </>
