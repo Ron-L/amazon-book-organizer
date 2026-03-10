@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.4.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.4.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10790,6 +10790,7 @@
                                         </div>
                                     </div>
                                 </div>
+                                </div> {/* end single scroll zone */}
                             </div>
 
                             {/* v5.0.0-alpha.91 - Resizable divider */}
