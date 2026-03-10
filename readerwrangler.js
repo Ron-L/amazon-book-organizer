@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.4.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.4.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -11346,11 +11346,28 @@
                                                 return sum;
                                             }, 0);
 
+                                            // v6.4.0 - Simplified headers for container views (Views/Folders)
+                                            const isContainerView = selectedFolderId === '__library__' || selectedFolderId === '__views__';
+
                                             return (
                                         <table className="text-sm" style={{
                                             tableLayout: 'fixed',
-                                            width: `${tableWidth}px`
+                                            width: isContainerView ? '100%' : `${tableWidth}px`
                                         }}>
+                                            {isContainerView ? (
+                                                <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
+                                                    <tr className="text-left text-gray-600">
+                                                        <th className="p-2" style={{ width: '24px' }}></th>
+                                                        <th className="p-2 w-12"></th>
+                                                        <th className="p-2 font-medium text-sm cursor-pointer hover:bg-gray-100 select-none"
+                                                            onClick={() => setExplorerSort(prev => [{ column: 'title', direction: prev[0]?.column === 'title' ? (prev[0].direction === 'asc' ? 'desc' : 'asc') : 'asc' }])}>
+                                                            Name {explorerSort[0]?.column === 'title' ? (explorerSort[0].direction === 'asc' ? '▲' : '▼') : ''}
+                                                        </th>
+                                                        <th className="p-2 text-right font-medium text-sm" style={{ width: '80px' }}>Books</th>
+                                                        <th className="p-2"></th>
+                                                    </tr>
+                                                </thead>
+                                            ) : (
                                             <thead className="sticky top-0 bg-gray-50 z-10 border-b border-gray-200">
                                                 <tr className="text-left text-gray-600"
                                                     onContextMenu={(e) => {
@@ -11481,6 +11498,7 @@
                                                     <th className="p-2"></th>
                                                 </tr>
                                             </thead>
+                                            )}
                                             <tbody>
                                                 {/* v5.0.0-alpha.54 - Folder rows (before books) */}
                                                 {(() => {
@@ -11501,18 +11519,15 @@
                                                                 className="cursor-pointer border-b border-gray-100 hover:bg-gray-100"
                                                                 onDoubleClick={() => navigateToFolder(view.id)}
                                                                 onClick={() => navigateToFolder(view.id)}>
-                                                                <td className="p-2 pl-3">
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span>{view.icon}</span>
-                                                                        <span className="font-medium">{view.name}</span>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="p-2 text-gray-500 text-sm">
+                                                                                              <td className="p-2" style={{ width: '24px' }}></td>
+                                                                <td className="p-2 text-center text-xl">{view.icon}</td>
+                                                                <td className="p-2 font-medium">{view.name}</td>
+                                                                <td className="p-2 text-right text-gray-500 text-sm" style={{ width: '80px' }}>
                                                                     {view.id === '__all__'
-                                                                        ? `${books.filter(b => !b.isDeleted).length} books`
-                                                                        : `${getTagCount(view.id.slice(6, -2))} books`}
+                                                                        ? books.filter(b => !b.isDeleted).length
+                                                                        : getTagCount(view.id.slice(6, -2))}
                                                                 </td>
-                                                                <td className="p-2"></td><td className="p-2"></td><td className="p-2"></td><td className="p-2"></td><td className="p-2"></td>
+                                                                <td className="p-2"></td>
                                                             </tr>
                                                         ));
                                                     }
@@ -11858,17 +11873,27 @@
                                                                     )}
                                                                 </td>
                                                                 {/* v5.0.0-alpha.172.1 - Dynamic placeholder cells for folder rows */}
-                                                                {columnOrder.filter(colKey => colKey !== 'title' && visibleColumns[colKey]).map(colKey => (
-                                                                    <td key={colKey} className="p-2 text-gray-400" style={{ width: `var(${COLUMN_CONFIG[colKey].cssVar}, ${columnWidths[colKey]}px)` }}>—</td>
-                                                                ))}
-                                                                <td className="p-2"></td>
+                                                                {/* v6.4.0 - Container views show Books count instead of "—" columns */}
+                                                                {isContainerView ? (
+                                                                    <>
+                                                                        <td className="p-2 text-right text-gray-500 text-sm" style={{ width: '80px' }}>{getFolderBookIds(folder.id).length}</td>
+                                                                        <td className="p-2"></td>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        {columnOrder.filter(colKey => colKey !== 'title' && visibleColumns[colKey]).map(colKey => (
+                                                                            <td key={colKey} className="p-2 text-gray-400" style={{ width: `var(${COLUMN_CONFIG[colKey].cssVar}, ${columnWidths[colKey]}px)` }}>—</td>
+                                                                        ))}
+                                                                        <td className="p-2"></td>
+                                                                    </>
+                                                                )}
                                                             </tr>
                                                         );
                                                         // Add separator line after Inbox when in My Library view
                                                         if (selectedFolderId === '__library__' && folder.id === '__inbox__') {
                                                             return [row, (
                                                                 <tr key="inbox-separator" className="h-0">
-                                                                    <td colSpan="8" className="p-0"><div className="border-b-2 border-gray-300 my-1"></div></td>
+                                                                    <td colSpan={isContainerView ? "5" : "8"} className="p-0"><div className="border-b-2 border-gray-300 my-1"></div></td>
                                                                 </tr>
                                                             )];
                                                         }
