@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.5.0] - 2026-03-10
+
+### Added
+- **Folder/Tag View descriptions** — Right-click any user folder or pinned tag view → Properties → Description field. Description is saved to the folder/pinnedTagFolder object and displayed as a tooltip on hover in the sidebar and right-pane rows/tiles. Empty = no tooltip. System folders (All Books, Inbox, Trash, Views label, Folders label) are excluded.
+- **System sidebar tooltips** — Built-in tooltips on all five system sidebar entries:
+  - *Views*: "Different ways to see the same books — not separate copies"
+  - *Folders*: "Your personal organization — drag books into any folder below to arrange your library."
+  - *All Books*: "Every book in your library, organized or not. You can't move books out of here — use folders to arrange them."
+  - *Inbox*: "This is where ReaderWrangler puts newly imported books. Drag them into folders to organize your library."
+  - *Trash*: "Deleted books that are still recoverable. Right-click to empty the trash and remove them permanently."
+
 ## [6.4.0] - 2026-03-10
 
 ### Added

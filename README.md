@@ -121,6 +121,10 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v6.5 - Folder & Tag View Descriptions + Sidebar Tooltips** (March 2026)
+- Add a description to any folder or tag view via right-click → Properties; shown as a tooltip on hover — empty = no tooltip
+- Built-in tooltips on all system sidebar entries: Views, Folders, All Books, Inbox, and Trash
+
 **v6.4 - Views / Folders Navigation Split** (March 2026)
 - Left panel reorganized into two named sections: *Views* (All Books + pinned tag virtual folders) and *Folders* (Inbox + personal folder tree) — with tooltips explaining the distinction
 - Views section has a collapse/expand chevron; entire panel scrolls as one unified zone
