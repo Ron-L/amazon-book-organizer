@@ -6,13 +6,13 @@
  * KV Namespace binding: RELAY_KV
  *
  * Key layout:
- *   relay:{channelId}:manifest       → upload manifest (TTL: 24h)
- *   relay:{channelId}:chunk:{n}      → encrypted library chunk (TTL: 24h)
+ *   relay:{channelId}:manifest       → upload manifest (TTL: 10 days)
+ *   relay:{channelId}:chunk:{n}      → encrypted library chunk (TTL: 10 days)
  *   relay:{channelId}:device-state   → encrypted device state (TTL: 90 days)
  */
 
-const EPHEMERAL_TTL = 86400;   // 24 hours in seconds
-const PERSISTENT_TTL = 7776000; // 90 days in seconds
+const LIBRARY_TTL = 864000;    // 10 days in seconds (fetcher→app relay data)
+const PERSISTENT_TTL = 7776000; // 90 days in seconds (device-state sync)
 const MAX_CHUNK_SIZE = 25 * 1024 * 1024; // 25 MB (KV value limit)
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -102,7 +102,7 @@ async function handleUploadChunk(request, env, channelId, chunkNum) {
   await env.RELAY_KV.put(
     `relay:${channelId}:chunk:${chunkNum}`,
     body,
-    { expirationTtl: EPHEMERAL_TTL }
+    { expirationTtl: LIBRARY_TTL }
   );
 
   return jsonResponse({ ok: true, chunk: chunkNum, bytes: body.byteLength });
@@ -122,7 +122,7 @@ async function handleUploadManifest(request, env, channelId) {
   await env.RELAY_KV.put(
     `relay:${channelId}:manifest`,
     manifest,
-    { expirationTtl: EPHEMERAL_TTL }
+    { expirationTtl: LIBRARY_TTL }
   );
 
   return jsonResponse({ ok: true });

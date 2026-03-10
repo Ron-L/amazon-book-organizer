@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.3.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.3.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10720,13 +10720,37 @@
                                         <div
                                             className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${
                                                 selectedFolderId === '__trash__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
-                                            } ${trashCount === 0 ? 'text-gray-400' : ''}`}
+                                            } ${trashCount === 0 ? 'text-gray-400' : ''} ${folderDropHighlight === '__trash__' ? 'ring-2 ring-red-400 bg-red-50' : ''}`}
                                             onClick={() => navigateToFolder('__trash__')}
                                             onContextMenu={(e) => {
                                                 e.preventDefault();
                                                 if (trashCount > 0) {
                                                     setFolderContextMenu({ folderId: '__trash__', x: e.clientX, y: e.clientY, source: 'left' });
                                                 }
+                                            }}
+                                            onDragOver={(e) => {
+                                                if (!Array.from(e.dataTransfer.types).includes('application/x-readerwrangler')) return;
+                                                e.preventDefault();
+                                                e.dataTransfer.dropEffect = 'move';
+                                                setFolderDropHighlight('__trash__');
+                                            }}
+                                            onDragLeave={(e) => {
+                                                if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                    setFolderDropHighlight(null);
+                                                }
+                                            }}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                setFolderDropHighlight(null);
+                                                const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                if (!bookDataStr) return;
+                                                const { sourceFolder, bookIds } = JSON.parse(bookDataStr);
+                                                if (sourceFolder === '__trash__') return;
+                                                setExplorerSelectedBooks(new Set());
+                                                stopDragVirtualization();
+                                                setExplorerDragBookId(null);
+                                                setExplorerDragData(null);
+                                                softDeleteBooks(bookIds);
                                             }}>
                                             <span className="pointer-events-none">🗑️</span>
                                             <span className="flex-1 pointer-events-none">Trash</span>
@@ -14127,7 +14151,7 @@
                                                 <span>Copy Title{count !== 1 ? 's' : ''}</span>
                                             </div>
 
-                                            {/* Edit, Note, Tags, Price Goal, Hide — hidden in Trash view */}
+                                            {/* Edit, Note, Tags, Price Goal — hidden in Trash view */}
                                             {!isTrashView && (<>
                                             {/* v5.4.7 - Bulk Edit submenu */}
                                             <div
@@ -14573,7 +14597,8 @@
                                                 )}
                                             </div>
 
-                                            {/* Hide Book */}
+                                            </>)}
+                                            {/* Hide Book — available in all views including Trash */}
                                             {(() => {
                                                 const allHidden = selectedBooksArray.every(b => b.isHidden);
                                                 return (
@@ -14612,7 +14637,6 @@
                                                     </div>
                                                 );
                                             })()}
-                                            </>)}
 
                                             {/* Separator before Delete/Restore */}
                                             <div className="border-t border-gray-200 my-1" role="separator"></div>
