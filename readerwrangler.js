@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.4.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.4.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9807,6 +9807,9 @@
                                         </button>
                                     </div>
                                 )}
+                                </div> {/* end sticky header */}
+                                {/* v6.4.0 - Single scroll zone: Views + Folders + all contents */}
+                                <div className="flex-1 overflow-y-auto folder-scroll-container" style={{ contain: 'layout style paint' }}>
                                 <div className="p-2">
                                     {/* v6.4.0 - VIEWS section header */}
                                     <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
@@ -10135,9 +10138,8 @@
                                         )}
                                     </div>
                                 </div>
-                                </div>
-                                {/* Scrollable section: User folders */}
-                                <div className="flex-1 overflow-y-auto p-2 folder-scroll-container" style={{ contain: 'layout style paint' }}>
+                                {/* User folders */}
+                                <div className="p-2">
                                     {/* User folders with recursive subfolder rendering */}
                                     {(() => {
                                         // Recursive folder renderer
