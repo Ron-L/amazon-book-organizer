@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.3.0] - 2026-03-10
+
+### Added
+- **Data integrity checking** — On load and after each import or restore, the app automatically detects and fixes structural issues: homeless books placed in Inbox, ghost folder references (stale book IDs) removed, and duplicate folder references deduplicated. Results shown in Data Status with a full book list for any auto-fixed items. Anonymous telemetry via goatcounter (count only, no titles).
+- **Drag books to Trash** — Drag one or more selected books from any folder directly onto the Trash Bin to delete them, following the same purchased-book warning as the DEL key path.
+- **Hide available in Trash view** — Right-click context menu now includes Hide/Unhide in Trash view, consistent with all other views.
+- **New Folder button on My Library** — Always-visible `+` button on the My Library row creates a top-level folder instantly. Right-click My Library for a context menu with Open and New Folder.
+
+### Fixed
+- **Folder +/× buttons hidden behind book count** — Book count now hides on hover and the +/× buttons appear in its place, eliminating the overlap.
+- **Race conditions in data operations** — Three-layer protection: (1) atomic IndexedDB clear+add in a single transaction, (2) write serialization mutex queuing concurrent saves, (3) operation guard preventing overlapping import/restore/delete/device-state-push.
+- **Relay import Inbox placement race** — `loadLibrary` now returns new book IDs directly, eliminating the post-import IndexedDB re-read that could race with the write transaction.
+
+### Changed
+- **Relay data expiry message** — "kept for 24 hours" corrected to "kept for 10 days after each fetch" (matching actual relay TTL for library data).
+- **New Folder button location** — Moved from All Books (a view, not a container) to My Library (the root folder container). All Books no longer has a `+` button.
+
 ## [6.2.0] - 2026-03-06
 
 ### Added

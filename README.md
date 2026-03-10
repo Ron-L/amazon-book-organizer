@@ -121,6 +121,12 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v6.3 - Data Integrity + UX Polish** (March 2026)
+- Automatic data integrity checks on load and after each import — homeless books placed in Inbox, stale folder references cleaned up, results shown in Data Status
+- Race condition protection: atomic IndexedDB writes, write mutex, operation guard
+- Drag books to Trash; Hide available in Trash view
+- New Folder button moved to My Library; folder +/× buttons no longer hidden behind book count
+
 **v6.2 - Delete Warning + Fetcher UX** (March 2026)
 - Purchased book delete warning with Hide Instead option — prevents confusion when books reappear after fetch
 - Fetcher progress shows full scan vs. incremental mode with persistent info banner
