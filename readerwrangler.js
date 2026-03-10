@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.4.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.5.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -718,6 +718,7 @@
             const [folderClipboard, setFolderClipboard] = useState({ items: [], operation: null }); // v5.0.0-alpha.141 - Clipboard for cut/copy/paste
             const [folderPropertiesDialog, setFolderPropertiesDialog] = useState(null); // v5.0.0-alpha.142 - Folder properties dialog { folderId }
             const [folderPropertiesEditedName, setFolderPropertiesEditedName] = useState(''); // v5.0.0-alpha.143 - Edited name in properties dialog
+            const [folderPropertiesEditedDescription, setFolderPropertiesEditedDescription] = useState(''); // v6.5.0 - Description in properties dialog
             const [dialogDrag, setDialogDrag] = useState(null); // v5.0.0-alpha.144 - Dragging state { isDragging, offsetX, offsetY, dialogX, dialogY }
             const [showAllFoldersOverride, setShowAllFoldersOverride] = useState(false); // v5.0.0-alpha.169 - Override auto-hide when filter active
             const [viewsSectionCollapsed, setViewsSectionCollapsed] = useState(false); // v6.4.0 - Collapse/expand Views section
@@ -9950,7 +9951,7 @@
                                                         e.preventDefault();
                                                         setFolderContextMenu({ folderId: tagFolderId, x: e.clientX, y: e.clientY, source: 'left' });
                                                     }}
-                                                    title={`Tag view: ${tagLabel} (${bookCount} books)`}>
+                                                    title={tv.description || `Tag view: ${tagLabel} (${bookCount} books)`}>
                                                     <span className="pointer-events-none">
                                                         <TagIconSVG size={16} color="#d97706" />
                                                     </span>
@@ -10489,7 +10490,8 @@
                                                                 y: e.clientY,
                                                                 source: 'left' // v5.0.0-alpha.156 - Track which panel triggered menu
                                                             });
-                                                        }}>
+                                                        }}
+                                                        title={folder.description || undefined}>
                                                         {/* Expand/collapse chevron for folders with children */}
                                                         {hasChildren ? (
                                                             <span
@@ -11518,7 +11520,8 @@
                                                             <tr key={`view-${view.id}`}
                                                                 className="cursor-pointer border-b border-gray-100 hover:bg-gray-100"
                                                                 onDoubleClick={() => navigateToFolder(view.id)}
-                                                                onClick={() => navigateToFolder(view.id)}>
+                                                                onClick={() => navigateToFolder(view.id)}
+                                                                title={view.description || undefined}>
                                                                                               <td className="p-2" style={{ width: '24px' }}></td>
                                                                 <td className="p-2 text-center text-xl">{view.icon}</td>
                                                                 <td className="p-2 font-medium">{view.name}</td>
@@ -11586,6 +11589,7 @@
                                                             <tr
                                                                 key={`folder-${folder.id}`}
                                                                 className={`group cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                                title={folder.description || undefined}
                                                                 style={(() => {
                                                                     // v5.0.0-alpha.73 - Phase C: Visual feedback (blue=valid, red=invalid)
                                                                     // v5.0.0-alpha.147 - Add cut opacity feedback
@@ -12229,12 +12233,14 @@
                                                         ...[...pinnedTagFolders].sort((a, b) => a.position - b.position).map(tv => ({
                                                             id: `__tag_${tv.tagId}__`,
                                                             name: tagRegistry[tv.tagId]?.label || tv.tagId,
-                                                            virtual: true, icon: '🏷️'
+                                                            virtual: true, icon: '🏷️',
+                                                            description: tv.description
                                                         }))
                                                     ];
                                                     return viewItems.map(view => (
                                                         <div key={`view-${view.id}`}
                                                             className="cursor-pointer hover:opacity-80"
+                                                            title={view.description || undefined}
                                                             onClick={() => navigateToFolder(view.id)}
                                                             onDoubleClick={() => navigateToFolder(view.id)}>
                                                             <div className="w-full aspect-square bg-gray-100 rounded-lg flex flex-col items-center justify-center gap-1 border border-gray-200">
@@ -12295,6 +12301,7 @@
                                                     <div
                                                         key={`folder-${folder.id}`}
                                                         className={`cursor-pointer hover:opacity-80 ${!isDraggable ? 'select-none' : ''} ${explorerSelectedFolders.has(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
+                                                        title={folder.description || undefined}
                                                         style={(() => {
                                                             // v5.4.3 - Book drop target feedback now handled by ref-based setFolderDropHighlight
                                                             // v5.0.0-alpha.73 - Phase C: Visual feedback (blue=valid, red=invalid)
@@ -13712,6 +13719,7 @@
                                     role="menuitem"
                                     onClick={() => {
                                         setFolderPropertiesEditedName(folder.name); // v5.0.0-alpha.143 - Initialize edited name
+                                        setFolderPropertiesEditedDescription(folder.description || ''); // v6.5.0
                                         setFolderPropertiesDialog({ folderId: folder.id });
                                         // v5.0.0-alpha.144 - Initialize dialog position (centered)
                                         setDialogDrag({
@@ -13838,6 +13846,7 @@
                                     role="menuitem"
                                     onClick={() => {
                                         setFolderPropertiesEditedName(tagLabel);
+                                        setFolderPropertiesEditedDescription(pinnedTagFolders.find(p => p.tagId === tagId)?.description || ''); // v6.5.0
                                         setFolderPropertiesDialog({ folderId: folderContextMenu.folderId });
                                         setDialogDrag({
                                             isDragging: false,
@@ -14919,6 +14928,9 @@
                                     ...prev,
                                     [tagId]: { ...prev[tagId], label: folderPropertiesEditedName.trim() }
                                 }));
+                                setPinnedTagFolders(prev => prev.map(p =>
+                                    p.tagId === tagId ? { ...p, description: folderPropertiesEditedDescription.trim() || undefined } : p
+                                ));
                                 setFolderPropertiesDialog(null);
                                 console.log(`💾 Updated tag "${tagLabel}" → "${folderPropertiesEditedName.trim()}"`);
                             };
@@ -14983,6 +14995,19 @@
                                                     <span className="text-gray-600">Status:</span>
                                                     <span className="text-gray-900">{isPinned ? 'Pinned to sidebar' : 'Not pinned'}</span>
                                                 </div>
+                                            </div>
+
+                                            {/* Description - v6.5.0 */}
+                                            <div className="mb-4">
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                                <textarea
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                                                    rows={3}
+                                                    placeholder="Add a description… (shown as tooltip on hover)"
+                                                    value={folderPropertiesEditedDescription}
+                                                    onChange={(e) => setFolderPropertiesEditedDescription(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
+                                                />
                                             </div>
 
                                             {/* Buttons */}
@@ -15064,7 +15089,7 @@
 
                             // Update folder - v5.0.0-alpha.144: Removed modified timestamp (not tracked)
                             setFolders(prev => prev.map(f =>
-                                f.id === folder.id ? { ...f, name: folderPropertiesEditedName.trim() } : f
+                                f.id === folder.id ? { ...f, name: folderPropertiesEditedName.trim(), description: folderPropertiesEditedDescription.trim() || undefined } : f
                             ));
 
                             setFolderPropertiesDialog(null);
@@ -15145,6 +15170,21 @@
                                                 </div>
                                             )}
                                         </div>
+
+                                        {/* Description - v6.5.0 */}
+                                        {!isSpecialFolder && (
+                                            <div className="mb-4">
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                                <textarea
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                                                    rows={3}
+                                                    placeholder="Add a description… (shown as tooltip on hover)"
+                                                    value={folderPropertiesEditedDescription}
+                                                    onChange={(e) => setFolderPropertiesEditedDescription(e.target.value)}
+                                                    onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
+                                                />
+                                            </div>
+                                        )}
 
                                         {/* Buttons */}
                                         <div className="flex gap-2 justify-end">
