@@ -121,6 +121,11 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v6.4 - Views / Folders Navigation Split** (March 2026)
+- Left panel reorganized into two named sections: *Views* (All Books + pinned tag virtual folders) and *Folders* (Inbox + personal folder tree) — with tooltips explaining the distinction
+- Views section has a collapse/expand chevron; entire panel scrolls as one unified zone
+- Right pane shows Name + Books columns only when browsing Views or Folders (no irrelevant book columns)
+
 **v6.3 - Data Integrity + UX Polish** (March 2026)
 - Automatic data integrity checks on load and after each import — homeless books placed in Inbox, stale folder references cleaned up, results shown in Data Status
 - Race condition protection: atomic IndexedDB writes, write mutex, operation guard

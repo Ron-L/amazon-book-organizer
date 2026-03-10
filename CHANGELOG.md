@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.4.0] - 2026-03-10
+
+### Added
+- **Views / Folders sidebar split** — Left panel reorganized into two named sections: *Views* (All Books + pinned tag virtual folders, with tooltip "Different ways to see the same books — not separate copies") and *Folders* (Inbox + personal folder tree, with tooltip "Your personal organization — move books here to arrange your library"). Clicking either section label navigates to a right-pane card grid showing its children.
+- **Views section collapse/expand chevron** — ▼/▶ toggle for the Views section persists in both states (unlike Folders' ▲ which disappears when expanded).
+- **Single-scroll left panel** — Views and Folders sections scroll together as one unified zone, so a large Views section no longer pushes the Folders tree off screen.
+- **Simplified right-pane headers for Views and Folders** — When viewing the Views or Folders section, only Name (sortable) and Books count columns are shown; irrelevant book columns (Author, Series, Rating, etc.) are hidden.
+
+### Changed
+- **My Library renamed to Folders** — The root navigation label and section header is now "Folders".
+- **System folder names bolded** — All Books, Inbox, and Trash names are rendered in bold for visual hierarchy.
+- **Trash divider removed** — Border above Trash Bin removed; bold text provides sufficient visual separation.
+
 ## [6.3.0] - 2026-03-10
 
 ### Added
