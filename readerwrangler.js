@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.3.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.3.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -763,6 +763,7 @@
             const [deviceStateSynced, setDeviceStateSynced] = useState(true); // v6.0.0 Phase 2 - false = unsynced changes pending push to relay
             const deviceStatePushTimerRef = useRef(null); // v6.0.0 Phase 2 - debounce timer for device-state push
             const deviceStatePushingRef = useRef(false); // v6.0.0 Phase 2 - true while push is in flight
+            const dataOpInProgressRef = useRef(false); // v6.3.0 - Guards against overlapping import/restore/delete operations
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -1374,7 +1375,8 @@
 
                 // v6.0.0-alpha.58 - Re-upload library to relay in fetcher format (not backup format)
                 // Fetchers reject isBackup:true, so we build a fetcher-compatible payload
-                if (window.RWRelay && window.RWRelay.isConfigured()) {
+                // v6.3.0 - Skip relay push if another data op (import/restore) is in progress
+                if (window.RWRelay && window.RWRelay.isConfigured() && !dataOpInProgressRef.current) {
                     try {
                         const allBooks = await loadBooksFromIndexedDB();
                         const bookItems = allBooks.map(book => ({
@@ -2322,6 +2324,7 @@
                 // Set new 15-second debounce timer
                 deviceStatePushTimerRef.current = setTimeout(async () => {
                     if (deviceStatePushingRef.current) return; // Already pushing
+                    if (dataOpInProgressRef.current) return; // v6.3.0 - Skip if import/restore in progress
                     deviceStatePushingRef.current = true;
                     try {
                         console.log('📡 Device-state push: building payload...');
@@ -3270,6 +3273,11 @@
             const RELAY_IMPORT_TIMEOUT = 30000; // 30 seconds
             const importFromRelay = async () => {
                 if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
+                if (dataOpInProgressRef.current) {
+                    console.warn('⚠️ Data operation already in progress, skipping import');
+                    return;
+                }
+                dataOpInProgressRef.current = true;
                 const bookIdsBefore = new Set(books.map(b => b.id)); // v6.0.0-alpha.53 - Track IDs for Inbox placement
                 const booksBefore = books.length;
                 setRelayImporting(true);
@@ -3284,8 +3292,8 @@
                         const jsonString = await window.RWRelay.download((phase, detail) => {
                             console.log(`📡 Relay import: ${detail}`);
                         });
-                        const totalBooks = await loadLibrary(jsonString);
-                        return { totalBooks };
+                        const result = await loadLibrary(jsonString);
+                        return result; // { totalBooks, newBookIds }
                     };
 
                     const timeout = new Promise((_, reject) =>
@@ -3299,13 +3307,8 @@
                         return;
                     }
 
-                    // v6.0.0-alpha.53 - Add new books to Inbox explicitly (replaces useEffect collector)
-                    // loadLibrary() has already called setBooks() — read current books from IndexedDB
-                    // to get the merged result (setBooks is async/batched, can't read state immediately)
-                    const mergedBooks = await loadBooksFromIndexedDB();
-                    const newBookIds = mergedBooks
-                        .filter(b => !bookIdsBefore.has(b.id) && !b.isDeleted)
-                        .map(b => b.id);
+                    // v6.3.0 - Use newBookIds returned by loadLibrary (no more IndexedDB re-read race)
+                    const newBookIds = (result.newBookIds || []).filter(id => !bookIdsBefore.has(id));
                     if (newBookIds.length > 0) {
                         console.log(`📥 Adding ${newBookIds.length} new books to Inbox`);
                         setFolders(prev => prev.map(f => {
@@ -3330,6 +3333,7 @@
                     await progress.finish('Import Failed', err.message);
                 } finally {
                     setRelayImporting(false);
+                    dataOpInProgressRef.current = false;
                 }
             };
 
@@ -3391,6 +3395,11 @@
                 input.onchange = async (e) => {
                     const file = e.target.files[0];
                     if (file) {
+                        if (dataOpInProgressRef.current) {
+                            console.warn('⚠️ Data operation already in progress, skipping restore');
+                            return;
+                        }
+                        dataOpInProgressRef.current = true;
                         try {
                             const text = await file.text();
                             const parsedData = JSON.parse(text);
@@ -3463,6 +3472,8 @@
                                 console.error('Error details: Unknown error (null or no message)');
                                 showInfoDialog('Import Error', 'Failed to load backup file: Unknown error');
                             }
+                        } finally {
+                            dataOpInProgressRef.current = false;
                         }
                     }
                 };
@@ -4239,7 +4250,10 @@
 
                 // Save to IndexedDB (returns merged books including preserved orphan wishlists)
                 // v5.0.0-alpha.173.1 - Pass preserveUserData=true for imports to merge with existing
+                // v6.3.0 - Capture existing IDs before merge so we can report new books to caller
+                const existingIds = new Set((await loadBooksFromIndexedDB()).map(b => b.id));
                 const mergedBooks = await saveBooksToIndexedDB(processedBooks, true);
+                const newBookIds = mergedBooks.filter(b => !existingIds.has(b.id) && !b.isDeleted).map(b => b.id);
                 setBooks(mergedBooks);
 
                 // v6.0.0 - Upload restored library to relay so fetchers can find it
@@ -4409,7 +4423,7 @@
                     setLastSyncTime(Date.now());
                     setSyncStatus('fresh');
                     if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
-                    return mergedBooks.length;
+                    return { totalBooks: mergedBooks.length, newBookIds };
                 }
 
                 // No organization found, start fresh
@@ -4417,7 +4431,7 @@
                 setLastSyncTime(Date.now());
                 setSyncStatus('fresh');
                 if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
-                return mergedBooks.length;
+                return { totalBooks: mergedBooks.length, newBookIds };
             };
 
             const checkIfBlankImage = (img, bookId) => {

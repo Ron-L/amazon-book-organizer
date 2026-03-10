@@ -1,6 +1,6 @@
 // storage.js - IndexedDB and Cache API operations
 // Extracted from readerwrangler.js for reuse by Book Explorer
-// v5.0.0-alpha.169.7
+// v6.3.0 - Added write mutex and atomic transactions
 // Depends on: uiHelpers.js (normalizeBook)
 
 // ===== IndexedDB Constants =====
@@ -28,10 +28,21 @@ const openDB = () => {
     });
 };
 
+// v6.3.0 - Write serialization mutex: queues concurrent saveBooksToIndexedDB calls
+// so each completes before the next starts (prevents interleaving clear+add)
+let _dbWriteQueue = Promise.resolve();
+
 // v4.18.0.a - Merge logic: preserve orphan wishlist items on import
 // Uses onWishlist field (normalized from legacy isWishlist/isOwned)
 // v5.0.0-alpha.173.1 - Add preserveUserData param to control merge behavior
 const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
+    // Acquire write lock: queue behind any in-flight write
+    let releaseLock;
+    const myTurn = new Promise(r => { releaseLock = r; });
+    const waitForPrev = _dbWriteQueue;
+    _dbWriteQueue = myTurn;
+    await waitForPrev;
+
     try {
         console.log(`🔄 Saving ${books.length} books to IndexedDB... (preserveUserData: ${preserveUserData})`);
 
@@ -179,34 +190,21 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
             console.log(`🎉 ${wishlistToOwned.length} wishlist items now owned (price goals preserved)`);
         }
 
-        // Step 5: Clear and save
-        await new Promise((resolve, reject) => {
-            const clearTxn = db.transaction([BOOKS_STORE], 'readwrite');
-            const clearStore = clearTxn.objectStore(BOOKS_STORE);
-            clearStore.clear();
-            clearTxn.oncomplete = () => {
-                console.log('✅ Cleared existing IndexedDB books');
-                resolve();
-            };
-            clearTxn.onerror = () => reject(clearTxn.error || new Error('Failed to clear IndexedDB'));
-        });
-
-        // Step 6: Add all unique books
+        // v6.3.0 - Atomic clear+add in single transaction (prevents race where
+        // a concurrent read sees empty store between separate clear and add txns)
         return new Promise((resolve, reject) => {
-            const addTxn = db.transaction([BOOKS_STORE], 'readwrite');
-            const addStore = addTxn.objectStore(BOOKS_STORE);
-
-            // Add all unique books
+            const txn = db.transaction([BOOKS_STORE], 'readwrite');
+            const store = txn.objectStore(BOOKS_STORE);
+            store.clear();
             for (const book of uniqueBooks) {
-                addStore.add(book);
+                store.add(book);
             }
-
-            addTxn.oncomplete = () => {
+            txn.oncomplete = () => {
                 console.log('✅ Saved', uniqueBooks.length, 'unique books to IndexedDB');
-                resolve(uniqueBooks);  // Return merged books for UI state
+                resolve(uniqueBooks);
             };
-            addTxn.onerror = () => {
-                const error = addTxn.error || new Error('IndexedDB transaction failed with no error details');
+            txn.onerror = () => {
+                const error = txn.error || new Error('IndexedDB transaction failed');
                 console.error('❌ IndexedDB save failed:', error);
                 reject(error);
             };
@@ -214,6 +212,8 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
     } catch (error) {
         console.error('❌ IndexedDB save exception:', error);
         throw error || new Error('IndexedDB save failed');
+    } finally {
+        releaseLock();
     }
 };
 
