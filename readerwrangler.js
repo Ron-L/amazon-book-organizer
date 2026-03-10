@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.3.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.4.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -769,7 +769,8 @@
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
-            const FOLDER_LIBRARY = { id: '__library__', name: 'My Library', virtual: true, icon: '📚' }; // v5.0.0-alpha.63
+            const FOLDER_LIBRARY = { id: '__library__', name: 'Folders', virtual: true, icon: '📁' }; // v5.0.0-alpha.63 — renamed My Library → Folders in v6.4.0
+            const FOLDER_VIEWS = { id: '__views__', name: 'Views', virtual: true, icon: '🔍' }; // v6.4.0 — Views section header
             const FOLDER_INBOX = { id: '__inbox__', name: 'Inbox', virtual: false, icon: '📥', isInbox: true };
             const FOLDER_TRASH = { id: '__trash__', name: 'Trash', virtual: true, icon: '🗑️' };
 
@@ -822,7 +823,8 @@
             const getFolderBookIds = (folderId) => {
                 if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first, includes trashed books
                 if (folderId === '__trash__') return books.filter(b => b.isDeleted).sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0)).map(b => b.id);
-                if (folderId === '__library__') return []; // v5.0.0-alpha.63 - My Library shows folders, not books
+                if (folderId === '__library__') return []; // v5.0.0-alpha.63 - Folders section shows folders, not books
+                if (folderId === '__views__') return []; // v6.4.0 - Views section shows views, not books
                 // v5.5.15-alpha.21 - Tag virtual folder: return books with this tag
                 // v5.5.15-alpha.31 - Respect bookOrder for manual ordering
                 if (folderId?.startsWith('__tag_') && folderId?.endsWith('__')) {
@@ -1090,6 +1092,7 @@
             const getFolderById = (folderId) => {
                 if (folderId === '__all__') return FOLDER_ALL_BOOKS;
                 if (folderId === '__library__') return FOLDER_LIBRARY; // v5.0.0-alpha.63
+                if (folderId === '__views__') return FOLDER_VIEWS; // v6.4.0
                 if (folderId === '__trash__') return FOLDER_TRASH; // v6.0.0-alpha.50
                 const folder = folders.find(f => f.id === folderId);
                 if (folder?.id === '__inbox__') return { ...folder, ...FOLDER_INBOX };
@@ -1100,6 +1103,7 @@
             const getFolderPath = (folderId) => {
                 if (folderId === '__all__') return [FOLDER_ALL_BOOKS];
                 if (folderId === '__library__') return [FOLDER_LIBRARY];
+                if (folderId === '__views__') return [FOLDER_VIEWS]; // v6.4.0
                 if (folderId === '__trash__') return [FOLDER_TRASH]; // v6.0.0-alpha.50
                 // v5.5.15-alpha.21 - Tag virtual folder breadcrumb
                 if (folderId?.startsWith('__tag_') && folderId?.endsWith('__')) {
@@ -1126,7 +1130,7 @@
             const getFoldersContainingBook = (bookId) => {
                 const result = folders.filter(f => {
                     // Skip virtual folders
-                    if (f.id === '__all__' || f.id === '__library__') return false;
+                    if (f.id === '__all__' || f.id === '__library__' || f.id === '__views__') return false;
                     // Check if folder's bookIds includes this book
                     return (f.bookIds || []).includes(bookId);
                 });
@@ -2676,7 +2680,7 @@
                     // No saved sort - use sensible defaults
                     if (selectedFolderId === '__all__') {
                         setExplorerSort([{ column: 'dateAdded', direction: 'desc' }]);
-                    } else if (selectedFolderId === '__library__') {
+                    } else if (selectedFolderId === '__library__' || selectedFolderId === '__views__') {
                         setExplorerSort([{ column: 'title', direction: 'asc' }]);
                     } else {
                         setExplorerSort([{ column: 'custom', direction: 'asc' }]);
@@ -2730,8 +2734,8 @@
 
             // v5.0.0-alpha.82 - Auto-expand tree to show selected folder
             useEffect(() => {
-                // Skip virtual folders (All Books, My Library)
-                if (!selectedFolderId || selectedFolderId === '__all__' || selectedFolderId === '__library__') return;
+                // Skip virtual folders (All Books, Views, Folders)
+                if (!selectedFolderId || selectedFolderId === '__all__' || selectedFolderId === '__library__' || selectedFolderId === '__views__') return;
 
                 // Get path from root to selected folder
                 const path = getFolderPath(selectedFolderId);
@@ -2830,7 +2834,7 @@
                         e.preventDefault(); // Prevent browser's select-all
 
                         // Determine what to select based on current view
-                        if (selectedFolderId === '__all__' || (selectedFolderId !== '__library__' && getFolderBookIds(selectedFolderId).length > 0)) {
+                        if (selectedFolderId === '__all__' || (selectedFolderId !== '__library__' && selectedFolderId !== '__views__' && getFolderBookIds(selectedFolderId).length > 0)) {
                             // Viewing books - select all visible (filtered) books
                             const allVisibleBookIds = getFolderBookIds(selectedFolderId)
                                 .map(id => books.find(b => b.id === id))
@@ -2841,10 +2845,12 @@
                             setExplorerSelectedFolders(new Set()); // Clear folder selection
                             console.log(`✅ Selected ${allVisibleBookIds.length} book(s) in Explorer`);
                         } else {
-                            // Viewing folders (My Library or folder with subfolders) - select all visible folders
+                            // Viewing folders/views - select all visible items
                             const childFolders = selectedFolderId === '__library__'
                                 ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
-                                : getChildFolders(selectedFolderId);
+                                : selectedFolderId === '__views__'
+                                    ? [FOLDER_ALL_BOOKS, ...[...pinnedTagFolders].sort((a, b) => a.position - b.position).map(tv => ({ id: `__tag_${tv.tagId}__`, name: tagRegistry[tv.tagId]?.label || tv.tagId }))]
+                                    : getChildFolders(selectedFolderId);
 
                             const allVisibleFolderIds = childFolders.map(f => f.id);
 
@@ -3111,7 +3117,7 @@
                     const currentFolder = folders.find(f => f.id === selectedFolderId);
                     if (!currentFolder) return;
 
-                    const isSpecialFolder = ['__all__', '__inbox__', '__library__'].includes(currentFolder.id);
+                    const isSpecialFolder = ['__all__', '__inbox__', '__library__', '__views__'].includes(currentFolder.id);
 
                     // Ctrl+X - Cut folder
                     if (e.ctrlKey && e.key === 'x' && !isSpecialFolder) {
@@ -9801,91 +9807,242 @@
                                     </div>
                                 )}
                                 <div className="p-2">
+                                    {/* v6.4.0 - VIEWS section header */}
+                                    <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
+                                        <span
+                                            className={`text-xs font-semibold uppercase tracking-wide cursor-pointer ${selectedFolderId === '__views__' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                            onClick={() => navigateToFolder('__views__')}
+                                            title="Different ways to see the same books — not separate copies">
+                                            Views
+                                        </span>
+                                    </div>
                                     {/* All Books (virtual, view-only) */}
                                     <div
                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__all__')}>
                                         <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
                                         <span className="flex-1 pointer-events-none">{FOLDER_ALL_BOOKS.name}</span>
-                                        <span className="text-xs text-gray-500 pointer-events-none">({books.length})</span>
+                                        <span className="text-xs text-gray-500 pointer-events-none">({books.filter(b => !b.isDeleted).length})</span>
                                     </div>
-                                    {/* Divider line to separate All Books from folders */}
-                                    <div className="border-b border-gray-200 my-1 mx-2"></div>
-                                    {/* v5.4.4 - My Library: selectable + folder drop target */}
-                                    {/* v6.3.0 - Added + button and right-click context menu for New Folder */}
-                                    <div
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer relative ${selectedFolderId === '__library__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
-                                        onClick={() => navigateToFolder('__library__')}
-                                        onContextMenu={(e) => {
-                                            e.preventDefault();
-                                            setFolderContextMenu({ folderId: '__library__', x: e.clientX, y: e.clientY, source: 'left' });
-                                        }}
-                                        onDragOver={(e) => {
-                                            // Accept folder drags only — books go to Inbox, not root
-                                            if (Array.from(e.dataTransfer.types).includes('application/x-folder-reorder')) {
+                                    {/* v6.4.0 - Pinned tag views render under VIEWS (previously interleaved with folders) */}
+                                    {(() => {
+                                        const sortedViews = [...pinnedTagFolders].sort((a, b) => a.position - b.position);
+                                        return sortedViews.map((tv, viewIndex) => {
+                                            const tagFolderId = `__tag_${tv.tagId}__`;
+                                            const tagLabel = tagRegistry[tv.tagId]?.label || tv.tagId;
+                                            const bookCount = getTagCount(tv.tagId);
+                                            return (
+                                                <div
+                                                    key={tagFolderId}
+                                                    data-folder-id={tagFolderId}
+                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === tagFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                                    style={sidebarFolderDragTarget?.type === 'reorder' && sidebarFolderDragTarget?.folderId === tagFolderId
+                                                        ? sidebarFolderDragTarget.position === 'before'
+                                                            ? { borderTop: '3px solid var(--border-focus)' }
+                                                            : { borderBottom: '3px solid var(--border-focus)' }
+                                                        : {}}
+                                                    draggable={true}
+                                                    onDragStart={(e) => {
+                                                        e.dataTransfer.effectAllowed = 'move';
+                                                        e.dataTransfer.setData('application/x-tagview-reorder', JSON.stringify({ tagViewId: tagFolderId, tagId: tv.tagId }));
+                                                    }}
+                                                    onDragEnd={() => setSidebarFolderDragTarget(null)}
+                                                    onDragOver={(e) => {
+                                                        e.preventDefault();
+                                                        const types = Array.from(e.dataTransfer.types);
+                                                        const isTagDrag = types.includes('application/x-tagview-reorder');
+                                                        const isBookDrag = types.includes('application/x-readerwrangler');
+                                                        if (isBookDrag) {
+                                                            e.dataTransfer.dropEffect = e.ctrlKey ? 'copy' : 'move';
+                                                            setFolderDropHighlight(e.currentTarget);
+                                                        } else if (isTagDrag) {
+                                                            e.dataTransfer.dropEffect = 'move';
+                                                            const rect = e.currentTarget.getBoundingClientRect();
+                                                            const position = (e.clientY - rect.top) < rect.height / 2 ? 'before' : 'after';
+                                                            const current = sidebarFolderDragTarget;
+                                                            if (!current || current.folderId !== tagFolderId || current.position !== position) {
+                                                                setSidebarFolderDragTarget({ type: 'reorder', folderId: tagFolderId, position });
+                                                            }
+                                                        }
+                                                    }}
+                                                    onDragLeave={(e) => {
+                                                        if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                            setSidebarFolderDragTarget(null);
+                                                            setFolderDropHighlight(null);
+                                                        }
+                                                    }}
+                                                    onDrop={(e) => {
+                                                        e.preventDefault();
+                                                        const target = sidebarFolderDragTarget;
+                                                        setSidebarFolderDragTarget(null);
+                                                        // Tag view reorder
+                                                        const tagDropData = e.dataTransfer.getData('application/x-tagview-reorder');
+                                                        if (tagDropData) {
+                                                            const { tagId: draggedTagId } = JSON.parse(tagDropData);
+                                                            if (draggedTagId === tv.tagId) return;
+                                                            let newPos;
+                                                            if (target?.position === 'before') {
+                                                                const prev = viewIndex > 0 ? sortedViews[viewIndex - 1] : null;
+                                                                newPos = prev ? (prev.position + tv.position) / 2 : tv.position - 1;
+                                                            } else {
+                                                                const next = viewIndex < sortedViews.length - 1 ? sortedViews[viewIndex + 1] : null;
+                                                                newPos = next ? (tv.position + next.position) / 2 : tv.position + 1;
+                                                            }
+                                                            setPinnedTagFolders(prev => prev.map(p => p.tagId === draggedTagId ? { ...p, position: newPos } : p));
+                                                            return;
+                                                        }
+                                                        // Book drop → add tag
+                                                        const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                        if (bookDataStr) {
+                                                            const { sourceFolder, bookIds } = JSON.parse(bookDataStr);
+                                                            const destTagId = tv.tagId;
+                                                            const destTagLabel = tagRegistry[destTagId]?.label || destTagId;
+                                                            const isCopy = e.ctrlKey;
+                                                            const isFromTagView = sourceFolder?.startsWith('__tag_') && sourceFolder?.endsWith('__');
+                                                            const sourceTagId = isFromTagView ? sourceFolder.slice(6, -2) : null;
+                                                            const isMove = isFromTagView && !isCopy && sourceTagId !== destTagId;
+                                                            const bookIdSet = new Set(bookIds);
+                                                            const addedDest = books.filter(b => bookIdSet.has(b.id) && !(b.tags || []).includes(destTagId)).map(b => b.id);
+                                                            const removedSource = isMove ? books.filter(b => bookIdSet.has(b.id) && (b.tags || []).includes(sourceTagId)).map(b => b.id) : [];
+                                                            const addedCount = addedDest.length;
+                                                            setBooks(prev => {
+                                                                const updated = prev.map(b => {
+                                                                    if (!bookIdSet.has(b.id)) return b;
+                                                                    let tags = [...(b.tags || [])];
+                                                                    if (isMove && tags.includes(sourceTagId)) tags = tags.filter(t => t !== sourceTagId);
+                                                                    if (!tags.includes(destTagId)) tags.push(destTagId);
+                                                                    return { ...b, tags };
+                                                                });
+                                                                saveBooksToIndexedDB(updated);
+                                                                return updated;
+                                                            });
+                                                            if (addedDest.length > 0 || removedSource.length > 0) {
+                                                                recordAction({ type: 'TAG_BOOKS_DRAG', bookIds, destTagId, sourceTagId: isMove ? sourceTagId : null, addedDest, removedSource });
+                                                            }
+                                                            setFolderDropHighlight(null);
+                                                            setExplorerSelectedBooks(new Set());
+                                                            stopDragVirtualization();
+                                                            setExplorerDragBookId(null);
+                                                            setExplorerDragData(null);
+                                                            if (isMove) {
+                                                                showToast(`Moved ${bookIds.length} ${bookIds.length === 1 ? 'book' : 'books'}: "${tagRegistry[sourceTagId]?.label || sourceTagId}" → "${destTagLabel}"`, e.clientX, e.clientY);
+                                                            } else if (addedCount > 0) {
+                                                                showToast(`Tagged ${addedCount} ${addedCount === 1 ? 'book' : 'books'} as "${destTagLabel}"`, e.clientX, e.clientY);
+                                                            } else {
+                                                                showToast(`Already tagged as "${destTagLabel}"`, e.clientX, e.clientY);
+                                                            }
+                                                        }
+                                                    }}
+                                                    onClick={() => { if (editingFolderId !== tagFolderId) navigateToFolder(tagFolderId); }}
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault();
+                                                        setFolderContextMenu({ folderId: tagFolderId, x: e.clientX, y: e.clientY, source: 'left' });
+                                                    }}
+                                                    title={`Tag view: ${tagLabel} (${bookCount} books)`}>
+                                                    <span className="pointer-events-none">
+                                                        <TagIconSVG size={16} color="#d97706" />
+                                                    </span>
+                                                    {editingFolderId === tagFolderId ? (
+                                                        <input
+                                                            type="text"
+                                                            className="flex-1 px-1 py-0 border border-blue-400 rounded text-sm focus:outline-none"
+                                                            value={editingFolderName}
+                                                            onChange={(e) => setEditingFolderName(e.target.value)}
+                                                            onBlur={() => {
+                                                                if (editingFolderName.trim()) {
+                                                                    setTagRegistry(prev => ({ ...prev, [tv.tagId]: { ...prev[tv.tagId], label: editingFolderName.trim() } }));
+                                                                }
+                                                                setEditingFolderId(null);
+                                                                setEditingFolderName('');
+                                                            }}
+                                                            onKeyDown={(e) => {
+                                                                e.stopPropagation();
+                                                                if (e.key === 'Enter') e.target.blur();
+                                                                else if (e.key === 'Escape') { setEditingFolderId(null); setEditingFolderName(''); }
+                                                            }}
+                                                            autoFocus
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        />
+                                                    ) : (
+                                                        <span className="flex-1 pointer-events-none">{tagLabel}</span>
+                                                    )}
+                                                    <span className="text-xs text-gray-500 pointer-events-none">({bookCount})</span>
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+                                    {/* v6.4.0 - FOLDERS section header */}
+                                    <div className="flex items-center justify-between px-2 pt-2 pb-0.5 mt-1 border-t border-gray-100">
+                                        <span
+                                            className={`text-xs font-semibold uppercase tracking-wide cursor-pointer ${selectedFolderId === '__library__' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
+                                            onClick={() => navigateToFolder('__library__')}
+                                            onContextMenu={(e) => {
                                                 e.preventDefault();
-                                                e.dataTransfer.dropEffect = 'move';
-                                                setFolderDropHighlight(e.currentTarget);
-                                            }
-                                        }}
-                                        onDragLeave={(e) => {
-                                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                setFolderContextMenu({ folderId: '__library__', x: e.clientX, y: e.clientY, source: 'left' });
+                                            }}
+                                            onDragOver={(e) => {
+                                                if (Array.from(e.dataTransfer.types).includes('application/x-folder-reorder')) {
+                                                    e.preventDefault();
+                                                    e.dataTransfer.dropEffect = 'move';
+                                                    setFolderDropHighlight(e.currentTarget);
+                                                }
+                                            }}
+                                            onDragLeave={(e) => {
+                                                if (!e.currentTarget.contains(e.relatedTarget)) setFolderDropHighlight(null);
+                                            }}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                const folderData = e.dataTransfer.getData('application/x-folder-reorder');
+                                                if (folderData) {
+                                                    const { folderIds } = JSON.parse(folderData);
+                                                    reparentFolder(folderIds, null);
+                                                }
                                                 setFolderDropHighlight(null);
-                                            }
-                                        }}
-                                        onDrop={(e) => {
-                                            e.preventDefault();
-                                            const folderData = e.dataTransfer.getData('application/x-folder-reorder');
-                                            if (folderData) {
-                                                const { folderIds } = JSON.parse(folderData);
-                                                reparentFolder(folderIds, null);
-                                            }
-                                            setFolderDropHighlight(null);
-                                        }}>
-                                        <span className="pointer-events-none">{FOLDER_LIBRARY.icon}</span>
-                                        <span className="flex-1 pointer-events-none">{FOLDER_LIBRARY.name}</span>
-                                        {/* v6.0.0-alpha.57 - Single Collapse All button (replaces expand/collapse pair) */}
-                                        {folders.some(f => !f.collapsed) && (
+                                            }}
+                                            title="Your personal organization — move books here to arrange your library">
+                                            Folders
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            {/* Collapse all button */}
+                                            {folders.some(f => !f.collapsed) && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setFolders(prev => prev.map(f => ({ ...f, collapsed: true })));
+                                                    }}
+                                                    className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
+                                                    title="Collapse all folders" aria-label="Collapse all folders">
+                                                    ▲
+                                                </button>
+                                            )}
+                                            {/* New Folder button */}
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    setFolders(prev => prev.map(f => ({ ...f, collapsed: true })));
+                                                    const newFolder = {
+                                                        id: `folder-${Date.now()}`,
+                                                        name: 'New Folder',
+                                                        parentId: null,
+                                                        bookIds: [],
+                                                        childFolderIds: [],
+                                                        collapsed: false
+                                                    };
+                                                    recordAction({
+                                                        type: 'CREATE_FOLDER',
+                                                        folderId: newFolder.id,
+                                                        parentId: null,
+                                                        folder: { ...newFolder }
+                                                    });
+                                                    setFolders(prev => [...prev, newFolder]);
+                                                    navigateToFolder(newFolder.id);
+                                                    setEditingFolderId(newFolder.id);
+                                                    setEditingFolderName('New Folder');
                                                 }}
-                                                className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
-                                                title="Collapse all folders" aria-label="Collapse all folders">
-                                                ▲
+                                                className="text-blue-500 hover:text-blue-700 text-sm px-1 hover:bg-gray-100 rounded"
+                                                title="New folder" aria-label="New folder">
+                                                +
                                             </button>
-                                        )}
-                                        {/* v6.3.0 - New Folder button (moved from All Books, always visible) */}
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                const newFolder = {
-                                                    id: `folder-${Date.now()}`,
-                                                    name: 'New Folder',
-                                                    parentId: null,
-                                                    bookIds: [],
-                                                    childFolderIds: [],
-                                                    collapsed: false
-                                                };
-                                                recordAction({
-                                                    type: 'CREATE_FOLDER',
-                                                    folderId: newFolder.id,
-                                                    parentId: null,
-                                                    folder: { ...newFolder }
-                                                });
-                                                setFolders(prev => [...prev, newFolder]);
-                                                navigateToFolder(newFolder.id);
-                                                setEditingFolderId(newFolder.id);
-                                                setEditingFolderName('New Folder');
-                                            }}
-                                            className="text-blue-500 hover:text-blue-700 text-sm px-1 hover:bg-gray-100 rounded"
-                                            title="New folder" aria-label="New folder">
-                                            +
-                                        </button>
-                                        <span className="text-xs text-gray-500 pointer-events-none">
-                                            ({getChildFolders(null).length} folders)
-                                        </span>
+                                        </div>
                                     </div>
                                     {/* Inbox - indented as part of folder hierarchy */}
                                     <div
@@ -10559,247 +10716,17 @@
                                             );
                                         };
 
-                                        // v5.5.15-alpha.26 - Render folders + tag views in unified interleaved list
+                                        // v6.4.0 - Folders-only list (pinned tag views moved to VIEWS section above)
+                                        // Previously this was a merged list of folders + tag views (v5.5.15-alpha.26)
                                         const rootFolders = getChildFolders(null).filter(f => f.id !== '__inbox__');
-
-                                        // Build merged display list: folders (displayPos = index * 2) + tag views (displayPos = position)
-                                        const mergedItems = [];
-                                        rootFolders.forEach((f, i) => mergedItems.push({ type: 'folder', id: f.id, folder: f, displayPos: i * 2 }));
-                                        pinnedTagFolders.forEach(tv => mergedItems.push({ type: 'tag', id: `__tag_${tv.tagId}__`, tagId: tv.tagId, displayPos: tv.position }));
-                                        mergedItems.sort((a, b) => a.displayPos - b.displayPos);
+                                        // Keep mergedItems name for drop handler compatibility, but folders only
+                                        const mergedItems = rootFolders.map((f, i) => ({ type: 'folder', id: f.id, folder: f, displayPos: i * 2 }));
 
                                         const elements = mergedItems.map(item => {
                                             if (item.type === 'folder') {
                                                 return renderFolder(item.folder, 0);
                                             }
-                                            // Tag view rendering with drag support
-                                            const tagLabel = tagRegistry[item.tagId]?.label || item.tagId;
-                                            const tagFolderId = item.id;
-                                            const bookCount = getTagCount(item.tagId);
-                                            return (
-                                                <div
-                                                    key={tagFolderId}
-                                                    data-folder-id={tagFolderId}
-                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${
-                                                        selectedFolderId === tagFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
-                                                    }`}
-                                                    style={{
-                                                        ...(sidebarFolderDragTarget?.type === 'reorder' && sidebarFolderDragTarget?.folderId === tagFolderId
-                                                            ? sidebarFolderDragTarget.position === 'before'
-                                                                ? { borderTop: '3px solid var(--border-focus)' }
-                                                                : { borderBottom: '3px solid var(--border-focus)' }
-                                                            : {})
-                                                    }}
-                                                    draggable={true}
-                                                    onDragStart={(e) => {
-                                                        e.dataTransfer.effectAllowed = 'move';
-                                                        e.dataTransfer.setData('application/x-tagview-reorder', JSON.stringify({
-                                                            tagViewId: tagFolderId, tagId: item.tagId
-                                                        }));
-                                                    }}
-                                                    onDragEnd={() => {
-                                                        setSidebarFolderDragTarget(null);
-                                                    }}
-                                                    onDragOver={(e) => {
-                                                        e.preventDefault();
-                                                        const types = Array.from(e.dataTransfer.types);
-                                                        const isTagDrag = types.includes('application/x-tagview-reorder');
-                                                        const isFolderDrag = types.includes('application/x-folder-reorder');
-                                                        const isBookDrag = types.includes('application/x-readerwrangler');
-
-                                                        if (isBookDrag) {
-                                                            // v5.5.15-alpha.31 - Book drag → tag view: accept drop to add tag
-                                                            // v5.5.15-alpha.33 - Ctrl = copy (keep source tag), plain = move (remove source tag)
-                                                            e.dataTransfer.dropEffect = e.ctrlKey ? 'copy' : 'move';
-                                                            setFolderDropHighlight(e.currentTarget);
-                                                        } else if (isTagDrag || isFolderDrag) {
-                                                            e.dataTransfer.dropEffect = 'move';
-                                                            const rect = e.currentTarget.getBoundingClientRect();
-                                                            const y = e.clientY - rect.top;
-                                                            const position = y < rect.height / 2 ? 'before' : 'after';
-
-                                                            const newTarget = { type: 'reorder', folderId: tagFolderId, position };
-                                                            const current = sidebarFolderDragTarget;
-                                                            if (!current || current.folderId !== tagFolderId || current.position !== position) {
-                                                                setSidebarFolderDragTarget(newTarget);
-                                                            }
-                                                        }
-                                                    }}
-                                                    onDragLeave={(e) => {
-                                                        if (!e.currentTarget.contains(e.relatedTarget)) {
-                                                            setSidebarFolderDragTarget(null);
-                                                            setFolderDropHighlight(null);
-                                                        }
-                                                    }}
-                                                    onDrop={(e) => {
-                                                        e.preventDefault();
-                                                        const target = sidebarFolderDragTarget;
-                                                        setSidebarFolderDragTarget(null);
-
-                                                        // Handle tag view reorder (tag dropped on tag)
-                                                        const tagDropData = e.dataTransfer.getData('application/x-tagview-reorder');
-                                                        if (tagDropData) {
-                                                            const { tagId: draggedTagId } = JSON.parse(tagDropData);
-                                                            if (draggedTagId === item.tagId) return; // Dropped on self
-                                                            const myIndex = mergedItems.findIndex(m => m.id === tagFolderId);
-                                                            let newPos;
-                                                            if (target?.position === 'before') {
-                                                                const prev = myIndex > 0 ? mergedItems[myIndex - 1] : null;
-                                                                newPos = prev ? (prev.displayPos + item.displayPos) / 2 : item.displayPos - 1;
-                                                            } else {
-                                                                const next = myIndex < mergedItems.length - 1 ? mergedItems[myIndex + 1] : null;
-                                                                newPos = next ? (item.displayPos + next.displayPos) / 2 : item.displayPos + 1;
-                                                            }
-                                                            setPinnedTagFolders(prev => prev.map(p =>
-                                                                p.tagId === draggedTagId ? { ...p, position: newPos } : p
-                                                            ));
-                                                            return;
-                                                        }
-
-                                                        // Handle folder drop on tag view (reorder folder)
-                                                        const folderDropData = e.dataTransfer.getData('application/x-folder-reorder');
-                                                        if (folderDropData) {
-                                                            try {
-                                                                const { folderIds } = JSON.parse(folderDropData);
-                                                                const draggedFolder = folders.find(f => f.id === folderIds[0]);
-                                                                if (!draggedFolder || draggedFolder.parentId !== null) return;
-
-                                                                // Find nearest folder above this tag in merged list
-                                                                const myIndex = mergedItems.findIndex(m => m.id === tagFolderId);
-                                                                let insertAfterFolderId = null;
-                                                                for (let i = myIndex - 1; i >= 0; i--) {
-                                                                    if (mergedItems[i].type === 'folder') {
-                                                                        insertAfterFolderId = mergedItems[i].id;
-                                                                        break;
-                                                                    }
-                                                                }
-
-                                                                const siblings = rootFolders;
-                                                                const fromIndex = siblings.findIndex(f => f.id === folderIds[0]);
-                                                                let toIndex = insertAfterFolderId
-                                                                    ? siblings.findIndex(f => f.id === insertAfterFolderId) + 1
-                                                                    : 0;
-                                                                if (fromIndex < toIndex) toIndex--;
-
-                                                                if (fromIndex !== -1 && fromIndex !== toIndex) {
-                                                                    const newOrder = siblings.filter(f => f.id !== folderIds[0]);
-                                                                    newOrder.splice(toIndex, 0, draggedFolder);
-                                                                    setFolders(prev => prev.map(f => {
-                                                                        const idx = newOrder.findIndex(s => s.id === f.id);
-                                                                        if (idx !== -1) return { ...f, sortIndex: idx };
-                                                                        return f;
-                                                                    }));
-                                                                    recordAction({ type: 'REORDER_FOLDER', folderId: folderIds[0], fromIndex, toIndex, parentId: null });
-                                                                }
-                                                            } catch (err) {
-                                                                console.error('Folder on tag view drop error:', err);
-                                                            }
-                                                            return;
-                                                        }
-
-                                                        // v5.5.15-alpha.31 - Handle book drop on tag view (add tag)
-                                                        // v5.5.15-alpha.33 - Move semantics: remove source tag when dragging from tag view (Ctrl = copy/keep)
-                                                        // v5.6.4-alpha.1 - Fix: compute tag changes synchronously before setBooks (updater is deferred in React 18)
-                                                        const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
-                                                        if (bookDataStr) {
-                                                            const { sourceFolder, bookIds } = JSON.parse(bookDataStr);
-                                                            const destTagId = item.tagId;
-                                                            const destTagLabel = tagRegistry[destTagId]?.label || destTagId;
-                                                            const isCopy = e.ctrlKey;
-                                                            const isFromTagView = sourceFolder?.startsWith('__tag_') && sourceFolder?.endsWith('__');
-                                                            const sourceTagId = isFromTagView ? sourceFolder.slice(6, -2) : null;
-                                                            const isMove = isFromTagView && !isCopy && sourceTagId !== destTagId;
-                                                            // Pre-compute which books need tag changes (synchronous — reads current books state)
-                                                            const bookIdSet = new Set(bookIds);
-                                                            const addedDest = books.filter(b => bookIdSet.has(b.id) && !(b.tags || []).includes(destTagId)).map(b => b.id);
-                                                            const removedSource = isMove ? books.filter(b => bookIdSet.has(b.id) && (b.tags || []).includes(sourceTagId)).map(b => b.id) : [];
-                                                            const addedCount = addedDest.length;
-                                                            setBooks(prev => {
-                                                                const updated = prev.map(b => {
-                                                                    if (!bookIdSet.has(b.id)) return b;
-                                                                    let tags = [...(b.tags || [])];
-                                                                    if (isMove && tags.includes(sourceTagId)) {
-                                                                        tags = tags.filter(t => t !== sourceTagId);
-                                                                    }
-                                                                    if (!tags.includes(destTagId)) {
-                                                                        tags.push(destTagId);
-                                                                    }
-                                                                    return { ...b, tags };
-                                                                });
-                                                                saveBooksToIndexedDB(updated);
-                                                                return updated;
-                                                            });
-                                                            // Record for undo/redo
-                                                            if (addedDest.length > 0 || removedSource.length > 0) {
-                                                                recordAction({
-                                                                    type: 'TAG_BOOKS_DRAG',
-                                                                    bookIds,
-                                                                    destTagId,
-                                                                    sourceTagId: isMove ? sourceTagId : null,
-                                                                    addedDest,
-                                                                    removedSource
-                                                                });
-                                                            }
-                                                            setFolderDropHighlight(null);
-                                                            setExplorerSelectedBooks(new Set());
-                                                            stopDragVirtualization();
-                                                            setExplorerDragBookId(null);
-                                                            setExplorerDragData(null);
-                                                            if (isMove) {
-                                                                const sourceLabel = tagRegistry[sourceTagId]?.label || sourceTagId;
-                                                                const bookWord = bookIds.length === 1 ? 'book' : 'books';
-                                                                showToast(`Moved ${bookIds.length} ${bookWord}: "${sourceLabel}" → "${destTagLabel}"`, e.clientX, e.clientY);
-                                                            } else if (addedCount > 0) {
-                                                                const bookWord = addedCount === 1 ? 'book' : 'books';
-                                                                showToast(`Tagged ${addedCount} ${bookWord} as "${destTagLabel}"`, e.clientX, e.clientY);
-                                                            } else {
-                                                                showToast(`Already tagged as "${destTagLabel}"`, e.clientX, e.clientY);
-                                                            }
-                                                        }
-                                                    }}
-                                                    onClick={() => { if (editingFolderId !== tagFolderId) navigateToFolder(tagFolderId); }}
-                                                    onContextMenu={(e) => {
-                                                        e.preventDefault();
-                                                        setFolderContextMenu({ folderId: tagFolderId, x: e.clientX, y: e.clientY, source: 'left' });
-                                                    }}
-                                                    title={`Tag view: ${tagLabel} (${bookCount} books)`}>
-                                                    <span className="pointer-events-none">
-                                                        <TagIconSVG size={16} color="#d97706" />
-                                                    </span>
-                                                    {editingFolderId === tagFolderId ? (
-                                                        <input
-                                                            type="text"
-                                                            className="flex-1 px-1 py-0 border border-blue-400 rounded text-sm focus:outline-none"
-                                                            value={editingFolderName}
-                                                            onChange={(e) => setEditingFolderName(e.target.value)}
-                                                            onBlur={() => {
-                                                                if (editingFolderName.trim()) {
-                                                                    setTagRegistry(prev => ({
-                                                                        ...prev,
-                                                                        [item.tagId]: { ...prev[item.tagId], label: editingFolderName.trim() }
-                                                                    }));
-                                                                }
-                                                                setEditingFolderId(null);
-                                                                setEditingFolderName('');
-                                                            }}
-                                                            onKeyDown={(e) => {
-                                                                e.stopPropagation();
-                                                                if (e.key === 'Enter') {
-                                                                    e.target.blur();
-                                                                } else if (e.key === 'Escape') {
-                                                                    setEditingFolderId(null);
-                                                                    setEditingFolderName('');
-                                                                }
-                                                            }}
-                                                            autoFocus
-                                                            onClick={(e) => e.stopPropagation()}
-                                                        />
-                                                    ) : (
-                                                        <span className="flex-1 pointer-events-none">{tagLabel}</span>
-                                                    )}
-                                                    <span className="text-xs text-gray-500 pointer-events-none">({bookCount})</span>
-                                                </div>
-                                            );
+                                            return null; // (tag views moved to VIEWS section — should not reach here)
                                         });
 
                                         return elements;
@@ -10883,7 +10810,7 @@
                                                             const isFolderDrag = types.includes('application/x-folder-reorder');
                                                             const isBookDrag = types.includes('application/x-readerwrangler');
                                                             // Books can't go to root level (My Library)
-                                                            if (isFolderDrag || (isBookDrag && folder.id !== '__library__')) {
+                                                            if (isFolderDrag || (isBookDrag && folder.id !== '__library__' && folder.id !== '__views__')) {
                                                                 e.preventDefault();
                                                                 e.dataTransfer.dropEffect = 'move';
                                                                 setBreadcrumbDropTargetId(folder.id);
@@ -10913,7 +10840,7 @@
 
                                                             // Try book drag
                                                             const bookData = e.dataTransfer.getData('application/x-readerwrangler');
-                                                            if (bookData && folder.id !== '__library__') {
+                                                            if (bookData && folder.id !== '__library__' && folder.id !== '__views__') {
                                                                 try {
                                                                     const { sourceFolder, bookIds } = JSON.parse(bookData);
                                                                     const targetFolder = folders.find(f => f.id === folder.id);
@@ -10973,7 +10900,9 @@
                                                     ? []
                                                     : selectedFolderId === '__library__'
                                                         ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
-                                                        : getChildFolders(selectedFolderId);
+                                                        : selectedFolderId === '__views__'
+                                                            ? [FOLDER_ALL_BOOKS, ...pinnedTagFolders]
+                                                            : getChildFolders(selectedFolderId);
                                                 const folderCount = childFolders.length;
                                                 const allBookIds = getFolderBookIds(selectedFolderId);
                                                 const filteredCount = allBookIds
@@ -10981,9 +10910,12 @@
                                                     .filter(book => filterBookForExplorer(book))
                                                     .length;
                                                 const totalCount = allBookIds.length;
-                                                // v5.0.0-alpha.63 - My Library shows only folders, no books
                                                 if (selectedFolderId === '__library__') {
                                                     return `(${folderCount} folders)`;
+                                                }
+                                                // v6.4.0 - Views section shows view count
+                                                if (selectedFolderId === '__views__') {
+                                                    return `(${folderCount} views)`;
                                                 }
                                                 const bookPart = filteredCount === totalCount
                                                     ? `${totalCount} books`
@@ -11001,6 +10933,11 @@
                                         {selectedFolderId === '__library__' && (
                                             <span className="text-xs text-gray-400 ml-2 italic">
                                                 — double-click to open folder
+                                            </span>
+                                        )}
+                                        {selectedFolderId === '__views__' && (
+                                            <span className="text-xs text-gray-400 ml-2 italic">
+                                                — click to open view
                                             </span>
                                         )}
                                     </div>
@@ -11502,7 +11439,7 @@
                                                                             {explorerSort[sortIndex].direction === 'asc' ? '▲' : '▼'}
                                                                             {sortIndex > 0 && <sub>{sortIndex + 1}</sub>}
                                                                         </span>
-                                                                        {sortIndex === 0 && selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && (
+                                                                        {sortIndex === 0 && selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && selectedFolderId !== '__views__' && (
                                                                             <button
                                                                                 onClick={(e) => { e.stopPropagation(); setExplorerSort([{ column: 'custom', direction: 'asc' }]); setExplorerGroupOn(false); }}
                                                                                 className="ml-2 text-gray-500 hover:text-red-500 font-bold"
@@ -11536,7 +11473,37 @@
                                                 {(() => {
                                                     // Get child folders (only for user folders, not All Books)
                                                     if (selectedFolderId === '__all__') return null;
-                                                    // v5.0.0-alpha.63 - My Library shows Inbox + root folders
+                                                    // v6.4.0 - Views section shows All Books + pinned tags
+                                                    if (selectedFolderId === '__views__') {
+                                                        const viewItems = [
+                                                            { ...FOLDER_ALL_BOOKS },
+                                                            ...[...pinnedTagFolders].sort((a, b) => a.position - b.position).map(tv => ({
+                                                                id: `__tag_${tv.tagId}__`,
+                                                                name: tagRegistry[tv.tagId]?.label || tv.tagId,
+                                                                virtual: true, icon: '🏷️'
+                                                            }))
+                                                        ];
+                                                        return viewItems.map(view => (
+                                                            <tr key={`view-${view.id}`}
+                                                                className="cursor-pointer border-b border-gray-100 hover:bg-gray-100"
+                                                                onDoubleClick={() => navigateToFolder(view.id)}
+                                                                onClick={() => navigateToFolder(view.id)}>
+                                                                <td className="p-2 pl-3">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span>{view.icon}</span>
+                                                                        <span className="font-medium">{view.name}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="p-2 text-gray-500 text-sm">
+                                                                    {view.id === '__all__'
+                                                                        ? `${books.filter(b => !b.isDeleted).length} books`
+                                                                        : `${getTagCount(view.id.slice(6, -2))} books`}
+                                                                </td>
+                                                                <td className="p-2"></td><td className="p-2"></td><td className="p-2"></td><td className="p-2"></td><td className="p-2"></td>
+                                                            </tr>
+                                                        ));
+                                                    }
+                                                    // v5.0.0-alpha.63 - Folders section shows Inbox + root folders
                                                     const childFolders = selectedFolderId === '__library__'
                                                         ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
                                                         : getChildFolders(selectedFolderId);
@@ -11547,10 +11514,9 @@
                                                     const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
                                                     let sortedFolders;
                                                     if (selectedFolderId === '__library__') {
-                                                        // My Library: Inbox first (pinned), then alphabetical or custom
+                                                        // Folders section: Inbox first (pinned), then alphabetical or custom
                                                         const inbox = childFolders.find(f => f.id === '__inbox__');
                                                         const others = childFolders.filter(f => f.id !== '__inbox__');
-                                                        // In custom mode, use order from getChildFolders; otherwise sort alphabetically
                                                         const sortedOthers = explorerSort[0].column === 'custom'
                                                             ? others
                                                             : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
@@ -11562,8 +11528,8 @@
                                                             : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
                                                     }
 
-                                                    // v5.0.0-alpha.88 - Allow folder reordering in My Library (Inbox protected by isDraggable=false)
-                                                    // v5.0.8 - Folders CAN be reordered in My Library (unlike books), just not in All Books
+                                                    // v5.0.0-alpha.88 - Allow folder reordering in Folders section (Inbox protected by isDraggable=false)
+                                                    // v5.0.8 - Folders CAN be reordered in Folders section (unlike books), just not in All Books
                                                     const canReorderFolders = explorerSort[0].column === 'custom' &&
                                                         selectedFolderId !== '__all__';
                                                     const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
@@ -12000,7 +11966,7 @@
                                                                 e.stopPropagation();
                                                                 if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.borderTop = ''; explorerReorderTargetRef.current = null; }
                                                                 const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
-                                                                if (bookDataStr && explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
+                                                                if (bookDataStr && explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && selectedFolderId !== '__views__') {
                                                                     const dragData = JSON.parse(bookDataStr);
                                                                     if (dragData.sourceFolder === selectedFolderId) {
                                                                         // v5.5.15-alpha.31 - Route to tag view reorder for tag views
@@ -12218,7 +12184,29 @@
                                             {/* v5.0.0-alpha.54 - Folder tiles (before books) */}
                                             {(() => {
                                                 if (selectedFolderId === '__all__') return null;
-                                                // v5.0.0-alpha.63 - My Library shows Inbox + root folders
+                                                // v6.4.0 - Views section shows All Books + pinned tags as tiles
+                                                if (selectedFolderId === '__views__') {
+                                                    const viewItems = [
+                                                        { ...FOLDER_ALL_BOOKS },
+                                                        ...[...pinnedTagFolders].sort((a, b) => a.position - b.position).map(tv => ({
+                                                            id: `__tag_${tv.tagId}__`,
+                                                            name: tagRegistry[tv.tagId]?.label || tv.tagId,
+                                                            virtual: true, icon: '🏷️'
+                                                        }))
+                                                    ];
+                                                    return viewItems.map(view => (
+                                                        <div key={`view-${view.id}`}
+                                                            className="cursor-pointer hover:opacity-80"
+                                                            onClick={() => navigateToFolder(view.id)}
+                                                            onDoubleClick={() => navigateToFolder(view.id)}>
+                                                            <div className="w-full aspect-square bg-gray-100 rounded-lg flex flex-col items-center justify-center gap-1 border border-gray-200">
+                                                                <span style={{ fontSize: '2rem' }}>{view.icon}</span>
+                                                                <span className="text-xs text-gray-500 font-medium text-center px-1 leading-tight">{view.name}</span>
+                                                            </div>
+                                                        </div>
+                                                    ));
+                                                }
+                                                // v5.0.0-alpha.63 - Folders section shows Inbox + root folders
                                                 const childFolders = selectedFolderId === '__library__'
                                                     ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
                                                     : getChildFolders(selectedFolderId);
@@ -12240,7 +12228,7 @@
                                                         : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
                                                 }
 
-                                                // v5.0.0-alpha.88 - Allow folder reordering in My Library (Inbox protected by isDraggable=false)
+                                                // v5.0.0-alpha.88 - Allow folder reordering in Folders section (Inbox protected by isDraggable=false)
                                                 const canReorderFolders = explorerSort[0].column === 'custom' &&
                                                     selectedFolderId !== '__all__';
                                                 const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
@@ -12550,7 +12538,7 @@
                                                             e.stopPropagation();
                                                             if (explorerReorderTargetRef.current) { explorerReorderTargetRef.current.style.outline = ''; explorerReorderTargetRef.current.style.outlineOffset = ''; explorerReorderTargetRef.current = null; }
                                                             const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
-                                                            if (bookDataStr && explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__') {
+                                                            if (bookDataStr && explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && selectedFolderId !== '__views__') {
                                                                 const dragData = JSON.parse(bookDataStr);
                                                                 if (dragData.sourceFolder === selectedFolderId) {
                                                                     // v5.5.15-alpha.31 - Route to tag view reorder for tag views
