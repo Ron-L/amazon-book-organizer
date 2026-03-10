@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.3.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.3.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10399,6 +10399,8 @@
                                                         ) : (
                                                             <>
                                                                 <span className="flex-1 pointer-events-none">{folder.name}</span>
+                                                                {/* v6.3.0 - Count hidden on hover; buttons shown in its place (no overlap) */}
+                                                                <span className="group-hover:hidden">
                                                                 {(() => {
                                                                     // v5.0.0-alpha.169.3 - Show filtered count with "inside" badge
                                                                     if (hasActiveFilters) {
@@ -10445,8 +10447,9 @@
                                                                         </span>
                                                                     );
                                                                 })()}
-                                                                {/* v5.0.0-alpha.52 - New subfolder button — v5.5.15-alpha.28 absolute for count alignment */}
-                                                                <div className="absolute right-1 top-0 bottom-0 flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                                                                </span>
+                                                                {/* v5.0.0-alpha.52 - New subfolder + delete buttons (inline, swap with count on hover) */}
+                                                                <div className="hidden group-hover:flex items-center gap-0.5">
                                                                 <button
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
