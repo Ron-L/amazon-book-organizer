@@ -7,42 +7,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 ---
 
 
-### 🔥 Priority 1: Immediate
-
-**1. 🎬 Loading Splash Screen** - HIGH/LOW (1-2 hours)
-   - Add a branded loading screen in `readerwrangler.html` with rotating messages while Babel/Tailwind/React load
-   - Messages mix brand language and library humor: "Wrangling your library...", "Taming the chaos...", "Shelving your books...", "Organizing the stacks..."
-   - Pure HTML/CSS in readerwrangler.html, zero build step
-   - App hides splash when React mounts (e.g., `document.getElementById('splash').style.display = 'none'`)
-   - Turns the ~14s wait into a branded experience instead of a blank page
-   - Problem: Blank page during 14s load feels broken, especially for first-time users
-   - Impact: Professional first impression; loading feels intentional, not slow
-
-""Wrangling your library..."
-"Shelving your books..."
-"Taming the chaos..."
-"Organizing the stacks..."
-"Dusting your shelves..."
-
-
----
-
-### 🔒 Priority 3: Pre-Launch Gate
-
-~~**2. Basic Accessibility Improvements** - LOW/LOW (2-3 hours)~~ ✅ v6.1.0 — ARIA attributes on modals, context menus, filter dropdowns, icon-only buttons. Keyboard operability deferred to Priority 7.
-
-
-**3. Quality Attribute Validation** - LOW/LOW (2-3 hours)
-   - See [docs/PROJECT-CONTEXT.md](docs/PROJECT-CONTEXT.md) for quality priorities
-   - ~~**Scenario A: Scalability Test** - Duplicate library to 9200 books (4x), verify sort/filter/drag performance <1 second~~ ✅ v5.5.4
-   - **Scenario C: Data Recovery** - Manually corrupt localStorage, verify graceful error handling + backup restore option
-   - **Storage monitoring:** 2300 books = 150 MB / 557 GB quota (0.03%) - NOT a concern
-   - Problem: Need confidence app handles edge cases for public release
-   - Impact: Robustness validation before launch
-
-
----
-
 ### 📖 Priority 4: Launch Documentation
 
 **1. 📦 Demo Backup File** - HIGH/LOW (30 min)
