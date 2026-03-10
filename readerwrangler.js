@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.3.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.3.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3303,7 +3303,7 @@
                     const result = await Promise.race([importWork(), timeout]);
 
                     if (result.empty) {
-                        await progress.finish('Relay Import', 'No library data found on the relay. This usually means the data has expired (relay data is kept for 24 hours). Run the fetcher bookmarklet on your Amazon library page to refresh it.\n\nIf you recently regenerated your encryption keys, update your bookmarklet via File → Relay Setup.');
+                        await progress.finish('Relay Import', 'No library data found on the relay. This usually means the data has expired (relay data is kept for 10 days after each fetch). Run the fetcher bookmarklet on your Amazon library page to refresh it.\n\nIf you recently regenerated your encryption keys, update your bookmarklet via File → Relay Setup.');
                         return;
                     }
 
@@ -3318,7 +3318,7 @@
                     }
 
                     setRelayManifest(null); // Clear banner after successful import
-                    console.log('✅ Relay import complete (data remains on relay until next fetch or 24h TTL)');
+                    console.log('✅ Relay import complete (data remains on relay until next fetch or 10-day TTL)');
 
                     const totalBooks = result.totalBooks;
                     const newBooks = totalBooks - booksBefore;
