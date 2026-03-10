@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.3.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.3.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -521,6 +521,8 @@
             // manifestData state removed in v3.7.0.m - replaced by libraryStatus/collectionsStatus
             const [statusModalOpen, setStatusModalOpen] = useState(false);
             const [dupReviewOpen, setDupReviewOpen] = useState(false);
+            const [integrityResults, setIntegrityResults] = useState(() => loadIntegrityResults()); // v6.3.0
+            const [integrityCheckPending, setIntegrityCheckPending] = useState(false); // v6.3.0 - triggers post-import check
             const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
             const [collectionsData, setCollectionsData] = useState(null); // Map of ASIN -> {readStatus, collections[]}
             const [collectionFilter, setCollectionFilter] = useState(''); // Filter by collection name or special values
@@ -1161,6 +1163,33 @@
                         }, 10000);
                     }, 1000); // Animation duration
                 }, 1500); // Wait before animating
+            };
+
+            // v6.3.0 - Run integrity check, save results, fire goatcounter, return result.
+            // Returns null if check throws (previous results preserved per design).
+            const runIntegrityCheck = (booksArr, foldersArr) => {
+                try {
+                    const result = checkDataIntegrity(booksArr, foldersArr);
+                    saveIntegrityResults(result);
+                    setIntegrityResults({ autoFixed: result.autoFixed, needsReview: result.needsReview, checkedAt: result.checkedAt });
+                    // Telemetry: one event per violation type found (count only, no titles)
+                    const sessionKey = 'rw-integrity-telemetry-sent';
+                    if (!sessionStorage.getItem(sessionKey)) {
+                        for (const fix of result.autoFixed) {
+                            new Image().src = `https://readerwrangler.goatcounter.com/count?p=/event/integrity-${fix.type}`;
+                        }
+                        for (const issue of result.needsReview) {
+                            new Image().src = `https://readerwrangler.goatcounter.com/count?p=/event/integrity-${issue.type}`;
+                        }
+                        if (result.autoFixed.length > 0 || result.needsReview.length > 0) {
+                            sessionStorage.setItem(sessionKey, '1');
+                        }
+                    }
+                    return result;
+                } catch (e) {
+                    console.error('Integrity check failed:', e);
+                    return null; // Previous localStorage results preserved
+                }
             };
 
             // v6.0.0-alpha.48 - Trash Bin: soft delete, restore, permanent delete
@@ -2175,27 +2204,22 @@
                         if (loadedBooks.length > 0) {
                             loadedBooks = await mergeCollectionsIntoBooks(loadedBooks);
 
-                            // v5.1.0-alpha.8 - Clean up orphaned bookIds in folders
+                            // v6.3.0 - Data integrity check (replaces v5.1.0-alpha.8 inline orphan cleanup)
+                            // Checks: ghost refs, duplicate refs, homeless books, corrupted objects
                             if (loadedFolders.length > 0) {
-                                const validBookIds = new Set(loadedBooks.map(b => b.id));
-                                let totalOrphans = 0;
-
-                                loadedFolders = loadedFolders.map(folder => {
-                                    if (folder.bookIds && folder.bookIds.length > 0) {
-                                        const before = folder.bookIds.length;
-                                        folder.bookIds = folder.bookIds.filter(id => validBookIds.has(id));
-                                        const removed = before - folder.bookIds.length;
-                                        if (removed > 0) {
-                                            console.log(`[CLEANUP] Removed ${removed} orphaned bookIds from folder "${folder.name}"`);
-                                            totalOrphans += removed;
-                                        }
+                                const integrityResult = runIntegrityCheck(loadedBooks, loadedFolders);
+                                if (integrityResult) {
+                                    loadedFolders = integrityResult.correctedFolders;
+                                    if (integrityResult.autoFixed.length > 0) {
+                                        localStorage.setItem(FOLDERS_KEY, JSON.stringify(loadedFolders));
+                                        const totalFixed = integrityResult.autoFixed.reduce((s, f) => s + (f.books.length || 1), 0);
+                                        console.log(`🔧 Integrity auto-fixed on load:`, integrityResult.autoFixed.map(f => f.description));
+                                        // Show toast after render (setTimeout lets setFolders/setBooks settle first)
+                                        setTimeout(() => showToast(`Library repair: ${totalFixed} issue${totalFixed !== 1 ? 's' : ''} fixed — see Data Status`), 500);
                                     }
-                                    return folder;
-                                });
-
-                                if (totalOrphans > 0) {
-                                    console.log(`[CLEANUP] Total orphaned bookIds removed: ${totalOrphans}`);
-                                    localStorage.setItem(FOLDERS_KEY, JSON.stringify(loadedFolders));
+                                    if (integrityResult.needsReview.length > 0) {
+                                        console.warn(`⚠️ Integrity issues need review:`, integrityResult.needsReview.map(i => i.description));
+                                    }
                                 }
                             }
 
@@ -2347,6 +2371,27 @@
                     }
                 };
             }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, pinnedTagFolders, books]);
+
+            // v6.3.0 - Post-import/restore integrity check
+            // Fires when integrityCheckPending is set by importFromRelay / importBackup.
+            // Runs after React has settled all state updates from loadLibrary, so books + folders are fresh.
+            useEffect(() => {
+                if (!integrityCheckPending) return;
+                if (books.length === 0) return;
+                setIntegrityCheckPending(false);
+                const result = runIntegrityCheck(books, folders);
+                if (!result) return;
+                if (result.autoFixed.length > 0) {
+                    setFolders(result.correctedFolders);
+                    localStorage.setItem(FOLDERS_KEY, JSON.stringify(result.correctedFolders));
+                    const totalFixed = result.autoFixed.reduce((s, f) => s + (f.books.length || 1), 0);
+                    showToast(`Library repair: ${totalFixed} issue${totalFixed !== 1 ? 's' : ''} fixed — see Data Status`);
+                    console.log(`🔧 Integrity auto-fixed:`, result.autoFixed.map(f => f.description));
+                }
+                if (result.needsReview.length > 0) {
+                    console.warn(`⚠️ Integrity issues need review:`, result.needsReview.map(i => i.description));
+                }
+            }, [integrityCheckPending, books, folders]);
 
             // v6.0.0 Phase 2 - Warn user before closing if device-state is unsynced
             useEffect(() => {
@@ -3334,6 +3379,7 @@
                 } finally {
                     setRelayImporting(false);
                     dataOpInProgressRef.current = false;
+                    setIntegrityCheckPending(true); // v6.3.0 - triggers integrity check after state settles
                 }
             };
 
@@ -3474,6 +3520,7 @@
                             }
                         } finally {
                             dataOpInProgressRef.current = false;
+                            setIntegrityCheckPending(true); // v6.3.0 - triggers integrity check after state settles
                         }
                     }
                 };
@@ -4357,28 +4404,15 @@
                             });
                         }
 
-                        // v5.1.0-alpha.8 - Clean up orphaned bookIds in folders
-                        const validBookIds = new Set(processedBooks.map(b => b.id));
-                        let totalOrphans = 0;
-
-                        restoredFolders.forEach(folder => {
-                            if (folder.bookIds && folder.bookIds.length > 0) {
-                                const before = folder.bookIds.length;
-                                folder.bookIds = folder.bookIds.filter(id => validBookIds.has(id));
-                                const removed = before - folder.bookIds.length;
-                                if (removed > 0) {
-                                    console.log(`[CLEANUP] Removed ${removed} orphaned bookIds from folder "${folder.name}"`);
-                                    totalOrphans += removed;
-                                }
-                            }
-                        });
-
-                        if (totalOrphans > 0) {
-                            console.log(`[CLEANUP] Total orphaned bookIds removed: ${totalOrphans}`);
+                        // v6.3.0 - Run integrity check on restored folders (replaces v5.1.0-alpha.8 inline orphan cleanup)
+                        const integrityResult = runIntegrityCheck(mergedBooks, restoredFolders);
+                        const finalFolders = integrityResult ? integrityResult.correctedFolders : restoredFolders;
+                        if (integrityResult?.autoFixed?.length > 0) {
+                            console.log(`🔧 Integrity auto-fixed during restore:`, integrityResult.autoFixed.map(f => f.description));
                         }
 
-                        setFolders(restoredFolders);
-                        localStorage.setItem(FOLDERS_KEY, JSON.stringify(restoredFolders));
+                        setFolders(finalFolders);
+                        localStorage.setItem(FOLDERS_KEY, JSON.stringify(finalFolders));
                         console.log(`✅ Restored ${restoredFolders.length} folders from ${orgSource}`);
                     } else {
                         // No folders in backup - preserve existing folders from localStorage (backward compatibility)
@@ -7566,7 +7600,7 @@
                                     </div>
 
                                     {/* Duplicate detection */}
-                                    <div>
+                                    <div className="border-b border-gray-200 pb-3">
                                         <p className="text-sm text-gray-700">
                                             {duplicateCount > 0
                                                 ? <>{'\uD83D\uDD04'} <strong>Duplicates:</strong> {duplicateCount} duplicate book{duplicateCount !== 1 ? 's' : ''} found
@@ -7574,6 +7608,57 @@
                                                 </>
                                                 : <><span>✅</span> <strong>Duplicates:</strong> None</>}
                                         </p>
+                                    </div>
+
+                                    {/* Library integrity — v6.3.0 */}
+                                    <div>
+                                        {integrityResults === null ? (
+                                            <p className="text-sm text-gray-500">🔍 <strong>Integrity:</strong> Not yet checked</p>
+                                        ) : integrityResults.autoFixed.length === 0 && integrityResults.needsReview.length === 0 ? (
+                                            <p className="text-sm text-gray-700">
+                                                <span>✅</span> <strong>Integrity:</strong> Clean
+                                                <span className="text-xs text-gray-400 ml-2">checked {new Date(integrityResults.checkedAt).toLocaleString()}</span>
+                                            </p>
+                                        ) : (
+                                            <div>
+                                                <p className="text-sm text-gray-700 mb-1">
+                                                    {integrityResults.needsReview.length > 0
+                                                        ? <><span>⚠️</span> <strong>Integrity:</strong> {integrityResults.needsReview.length} issue{integrityResults.needsReview.length !== 1 ? 's' : ''} need review</>
+                                                        : <><span>✅</span> <strong>Integrity:</strong> Auto-repaired</>}
+                                                    <span className="text-xs text-gray-400 ml-2">checked {new Date(integrityResults.checkedAt).toLocaleString()}</span>
+                                                </p>
+                                                {integrityResults.autoFixed.length > 0 && (
+                                                    <div className="mt-1 text-xs text-gray-600 space-y-1">
+                                                        <p className="font-medium text-gray-700">Auto-fixed:</p>
+                                                        {integrityResults.autoFixed.map((fix, i) => (
+                                                            <div key={i}>
+                                                                <span>• {fix.description}</span>
+                                                                {fix.books && fix.books.length > 0 && (
+                                                                    <ul className="ml-4 mt-0.5 text-gray-500">
+                                                                        {fix.books.map(b => <li key={b.id}>– {b.title}{b.author ? ` · ${b.author}` : ''}</li>)}
+                                                                    </ul>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {integrityResults.needsReview.length > 0 && (
+                                                    <div className="mt-1 text-xs text-gray-600 space-y-1">
+                                                        <p className="font-medium text-orange-600">Needs review:</p>
+                                                        {integrityResults.needsReview.map((issue, i) => (
+                                                            <div key={i}>
+                                                                <span>• {issue.description}</span>
+                                                                {issue.books && issue.books.length > 0 && (
+                                                                    <ul className="ml-4 mt-0.5 text-gray-500">
+                                                                        {issue.books.map(b => <li key={b.id}>– {b.title}</li>)}
+                                                                    </ul>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Help text */}
