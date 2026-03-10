@@ -10720,7 +10720,7 @@
                                         <div
                                             className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${
                                                 selectedFolderId === '__trash__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'
-                                            } ${trashCount === 0 ? 'text-gray-400' : ''} ${folderDropHighlight === '__trash__' ? 'ring-2 ring-red-400 bg-red-50' : ''}`}
+                                            } ${trashCount === 0 ? 'text-gray-400' : ''}`}
                                             onClick={() => navigateToFolder('__trash__')}
                                             onContextMenu={(e) => {
                                                 e.preventDefault();
@@ -10732,7 +10732,7 @@
                                                 if (!Array.from(e.dataTransfer.types).includes('application/x-readerwrangler')) return;
                                                 e.preventDefault();
                                                 e.dataTransfer.dropEffect = 'move';
-                                                setFolderDropHighlight('__trash__');
+                                                setFolderDropHighlight(e.currentTarget);
                                             }}
                                             onDragLeave={(e) => {
                                                 if (!e.currentTarget.contains(e.relatedTarget)) {
