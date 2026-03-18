@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.5.0-alpha.1';
+    const NAV_HUB_VERSION = 'v1.6.0';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
@@ -59,6 +59,32 @@
     const onSeriesPage = document.querySelectorAll('.series-childAsin-item').length > 0;
     const onAuthorPage = /\/stores\/[^/]+\/author\/[A-Z0-9]{10}/i.test(currentUrl);
     const onWishlistPage = onProductPage || onSeriesPage || onAuthorPage;
+
+    // Helper: custom navigation reminder dialog (replaces native alert)
+    function showNavReminder(heading, body, onOk) {
+        const d = document.createElement('div');
+        d.style.cssText = `
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: white; border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 28px 30px; z-index: 10001;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 420px; width: 90%; text-align: center;
+        `;
+        d.innerHTML = `
+            <button id="rw-nav-close" style="position: absolute; top: 10px; right: 12px;
+                background: none; border: none; font-size: 20px; color: #aaa;
+                cursor: pointer; line-height: 1; padding: 2px 6px;">&times;</button>
+            <div style="font-size: 17px; font-weight: 600; margin-bottom: 10px;">${heading}</div>
+            <div style="font-size: 14px; color: #555; margin-bottom: 20px; line-height: 1.5;">${body}</div>
+            <button id="rw-nav-ok" style="background: #4f46e5; color: white; border: none; border-radius: 8px;
+                padding: 10px 28px; font-size: 14px; font-weight: 600; cursor: pointer;">OK</button>
+        `;
+        document.body.appendChild(d);
+        d.querySelector('#rw-nav-close').onclick = () => d.remove();
+        d.querySelector('#rw-nav-ok').onclick = () => { d.remove(); onOk(); };
+    }
 
     // Create intro dialog
     const dialog = document.createElement('div');
@@ -140,8 +166,8 @@
     } else {
         dialogContent += `
             <button id="goLibrary" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;"
-                title="Navigate to your Amazon library page to download">
-                📖 Go to Library Page
+                title="Navigate to your Amazon library page to download your library">
+                📖 Go to Amazon Library Page
             </button>
         `;
     }
@@ -156,8 +182,8 @@
     } else {
         dialogContent += `
             <button id="goCollections" style="${primaryButtonStyle} width: 100%; margin-bottom: 10px;"
-                title="Navigate to the 'Manage Your Content' page to download">
-                📚 Go to Collections Page
+                title="Navigate to the 'Manage Your Content' page to download your collections">
+                📚 Go to Amazon Collections Page
             </button>
         `;
     }
@@ -288,13 +314,11 @@
     if (goLibraryBtn) {
         goLibraryBtn.onclick = () => {
             dialog.remove();
-            // Show reminder before navigation
-            setTimeout(() => {
-                alert('📚 Navigating to your library page...\n\nOnce the page loads, click the bookmarklet in your toolbar to download your books.');
-            }, 100);
-            setTimeout(() => {
-                window.location.href = 'https://www.amazon.com/yourbooks';
-            }, 200);
+            showNavReminder(
+                '📖 Navigating to your Amazon Library Page',
+                'Once the page loads, click the bookmarklet in your toolbar to download your books.',
+                () => { window.location.href = 'https://www.amazon.com/yourbooks'; }
+            );
         };
     }
 
@@ -302,13 +326,11 @@
     if (goCollectionsBtn) {
         goCollectionsBtn.onclick = () => {
             dialog.remove();
-            // Show reminder before navigation
-            setTimeout(() => {
-                alert('📚 Navigating to collections page...\n\nOnce the page loads, click the bookmarklet in your toolbar to download your collections.');
-            }, 100);
-            setTimeout(() => {
-                window.location.href = 'https://www.amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/';
-            }, 200);
+            showNavReminder(
+                '📚 Navigating to your Amazon Collections Page',
+                'Once the page loads, click the bookmarklet in your toolbar to download your collections.',
+                () => { window.location.href = 'https://www.amazon.com/hz/mycd/digital-console/contentlist/booksAll/dateDsc/'; }
+            );
         };
     }
 
