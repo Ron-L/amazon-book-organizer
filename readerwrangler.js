@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.6.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.6.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -601,6 +601,7 @@
             const explorerReorderTargetRef = useRef(null); // DOM element for reorder drop indicator (ref-based to avoid re-renders)
             const [explorerFolderDragTarget, setExplorerFolderDragTarget] = useState(null); // v5.0.0-alpha.69 - { type: 'reorder'|'reparent', index?, position?, folderId? }
             const explorerIsCopyDragRef = useRef(false); // Ctrl key pressed during drag (ref-based, only read on drop)
+            const ctrlKeyRef = useRef(false); // v6.6.0 - Global Ctrl key state (keydown/keyup), reliable on Windows/Chrome where e.ctrlKey in drag events is not
             // Helper: apply/clear folder drop highlight via DOM (avoids re-renders)
             const setFolderDropHighlight = (el) => {
                 if (explorerDropTargetRef.current === el) return;
@@ -1087,6 +1088,16 @@
             useEffect(() => {
                 if (!effectiveShowAll && showAllItems) setShowAllItems(false);
             }, [navigationKey]);
+
+            // v6.6.0 - Track Ctrl key state globally for reliable Ctrl+Drag detection
+            // e.ctrlKey in drag/drop events is unreliable on Windows/Chrome
+            useEffect(() => {
+                const onKeyDown = (e) => { if (e.key === 'Control') ctrlKeyRef.current = true; };
+                const onKeyUp   = (e) => { if (e.key === 'Control') ctrlKeyRef.current = false; };
+                window.addEventListener('keydown', onKeyDown);
+                window.addEventListener('keyup', onKeyUp);
+                return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); };
+            }, []);
 
             // Get folder by ID (handles All Books and My Library virtual folders)
             const getFolderById = (folderId) => {
@@ -9865,7 +9876,7 @@
                                                         const isTagDrag = types.includes('application/x-tagview-reorder');
                                                         const isBookDrag = types.includes('application/x-readerwrangler');
                                                         if (isBookDrag) {
-                                                            e.dataTransfer.dropEffect = e.ctrlKey ? 'copy' : 'move';
+                                                            e.dataTransfer.dropEffect = ctrlKeyRef.current ? 'copy' : 'move';
                                                             setFolderDropHighlight(e.currentTarget);
                                                         } else if (isTagDrag) {
                                                             e.dataTransfer.dropEffect = 'move';
@@ -9909,7 +9920,7 @@
                                                             const { sourceFolder, bookIds } = JSON.parse(bookDataStr);
                                                             const destTagId = tv.tagId;
                                                             const destTagLabel = tagRegistry[destTagId]?.label || destTagId;
-                                                            const isCopy = e.ctrlKey;
+                                                            const isCopy = ctrlKeyRef.current;
                                                             const isFromTagView = sourceFolder?.startsWith('__tag_') && sourceFolder?.endsWith('__');
                                                             const sourceTagId = isFromTagView ? sourceFolder.slice(6, -2) : null;
                                                             const isMove = isFromTagView && !isCopy && sourceTagId !== destTagId;
@@ -10117,7 +10128,7 @@
 
                                             // v6.6.0 - Add to Inbox explicitly; remove first instance only from source (preserves same-folder copies); respect Ctrl+Drag for copy mode; record undo
                                             // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
-                                            explorerIsCopyDragRef.current = e.ctrlKey;
+                                            explorerIsCopyDragRef.current = ctrlKeyRef.current;
                                             const sourceFolderObj = folders.find(f => f.id === sourceFolder);
                                             const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
                                             const isCopy = explorerIsCopyDragRef.current;
@@ -10239,7 +10250,7 @@
                                                                     return;
                                                                 }
                                                                 // Book drag - existing behavior
-                                                                const isCopy = e.ctrlKey;
+                                                                const isCopy = ctrlKeyRef.current;
                                                                 explorerIsCopyDragRef.current = isCopy;
                                                                 e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
                                                                 setFolderDropHighlight(e.currentTarget);
@@ -10457,7 +10468,7 @@
                                                             }
 
                                                             // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
-                                                            explorerIsCopyDragRef.current = e.ctrlKey;
+                                                            explorerIsCopyDragRef.current = ctrlKeyRef.current;
                                                             const existing = new Set(folder.bookIds || []);
                                                             const newBookIds = bookIds.filter(id => !existing.has(id));
                                                             if (newBookIds.length === 0) {
@@ -11664,7 +11675,7 @@
                                                                     // v5.4.3 - Book drag: highlight entire folder as drop target
                                                                     if (e.dataTransfer.types.includes('application/x-readerwrangler')) {
                                                                         e.preventDefault();
-                                                                        const isCopy = e.ctrlKey;
+                                                                        const isCopy = ctrlKeyRef.current;
                                                                         explorerIsCopyDragRef.current = isCopy;
                                                                         e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
                                                                         setFolderDropHighlight(e.currentTarget);
@@ -11738,7 +11749,7 @@
                                                                         } else {
                                                                             const existing = new Set(folder.bookIds || []);
                                                                             // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
-                                                                            explorerIsCopyDragRef.current = e.ctrlKey;
+                                                                            explorerIsCopyDragRef.current = ctrlKeyRef.current;
                                                                             const newBookIds = bookIds.filter(id => !existing.has(id));
                                                                             if (newBookIds.length === 0) {
                                                                                 showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder', e.clientX, e.clientY);
@@ -12364,7 +12375,7 @@
                                                             // v5.4.3 - Book drag: highlight entire folder as drop target
                                                             if (e.dataTransfer.types.includes('application/x-readerwrangler')) {
                                                                 e.preventDefault();
-                                                                const isCopy = e.ctrlKey;
+                                                                const isCopy = ctrlKeyRef.current;
                                                                 explorerIsCopyDragRef.current = isCopy;
                                                                 e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
                                                                 setFolderDropHighlight(e.currentTarget);
@@ -12437,7 +12448,7 @@
                                                                     showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
                                                                 } else {
                                                                     // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
-                                                                    explorerIsCopyDragRef.current = e.ctrlKey;
+                                                                    explorerIsCopyDragRef.current = ctrlKeyRef.current;
                                                                     const existing = new Set(folder.bookIds || []);
                                                                     const newBookIds = bookIds.filter(id => !existing.has(id));
                                                                     if (newBookIds.length === 0) {
