@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.7.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.8.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -722,6 +722,9 @@
             const [folderPropertiesEditedDescription, setFolderPropertiesEditedDescription] = useState(''); // v6.5.0 - Description in properties dialog
             const [dialogDrag, setDialogDrag] = useState(null); // v5.0.0-alpha.144 - Dragging state { isDragging, offsetX, offsetY, dialogX, dialogY }
             const [showAllFoldersOverride, setShowAllFoldersOverride] = useState(false); // v5.0.0-alpha.169 - Override auto-hide when filter active
+            const springLoadTimerRef = useRef(null); // v6.8.0 - Spring-load timer for Show All drag hover
+            const [springLoadActive, setSpringLoadActive] = useState(false); // v6.8.0 - True while spring-load countdown is running (drives pulse animation)
+            const [newFolderHiddenAlert, setNewFolderHiddenAlert] = useState(null); // v6.8.0 - { folderName } when newly created folder is hidden by active filters
             const [viewsSectionCollapsed, setViewsSectionCollapsed] = useState(false); // v6.4.0 - Collapse/expand Views section
             const [savedExpansionState, setSavedExpansionState] = useState(null); // v5.0.0-alpha.169 - Saved folder expansion state (Map of folderId → collapsed)
             const [visibleColumns, setVisibleColumns] = useState({ // v5.0.0-alpha.104 - Column visibility (Name always visible)
@@ -8147,6 +8150,44 @@
                         </div>
                     )}
 
+                    {/* v6.8.0 - New folder hidden by active filters alert */}
+                    {newFolderHiddenAlert && (
+                        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full mx-4" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex justify-between items-start p-4 border-b border-gray-200">
+                                    <h2 className="text-base font-semibold text-gray-900">New folder is hidden</h2>
+                                    <button onClick={() => setNewFolderHiddenAlert(null)} className="text-gray-400 hover:text-gray-600 text-xl font-bold leading-none" title="Close" aria-label="Close">×</button>
+                                </div>
+                                <div className="p-4 space-y-3">
+                                    <p className="text-sm text-gray-700">Active filters are hiding folders with no matching books. <strong>"{newFolderHiddenAlert.folderName}"</strong> won't appear in the sidebar until filters change.</p>
+                                    <div className="flex flex-col gap-2 pt-1">
+                                        <button
+                                            onClick={() => {
+                                                setSearchTerm(''); setReadStatusFilter(''); setCollectionFilter(''); setRatingFilter('');
+                                                setOwnershipFilter(''); setSeriesFilter(''); setDateFrom(''); setDateTo('');
+                                                setTagFilter([]); setDealsFilterActive(false); setSelectedCollections([]);
+                                                setMinAmazonRating(''); setMinMyRating(''); setSelectedSeries([]);
+                                                setNewFolderHiddenAlert(null);
+                                            }}
+                                            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
+                                            Clear All Filters
+                                        </button>
+                                        <button
+                                            onClick={() => { setShowAllFoldersOverride(true); setNewFolderHiddenAlert(null); }}
+                                            className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium">
+                                            Show All Folders
+                                        </button>
+                                        <button
+                                            onClick={() => setNewFolderHiddenAlert(null)}
+                                            className="w-full px-4 py-2 text-gray-500 hover:text-gray-700 text-sm">
+                                            Leave As Is
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* v5.0.0-alpha.175.2 - About Dialog */}
                     {aboutDialogOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setAboutDialogOpen(false); backdropMouseDownRef.current = null; }}>
@@ -9795,10 +9836,29 @@
                                         </div>
                                     </div>
                                 </div>
-                                {/* v5.0.0-alpha.169 - Filtered folder indicator */}
+                                {/* v5.0.0-alpha.169 - Filtered folder indicator; v6.8.0 - Restyled + spring-load drag hover */}
                                 {hasActiveFilters && (
-                                    <div className="px-3 py-1.5 text-xs text-gray-600 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-                                        <span>
+                                    <div
+                                        className={`mx-2 my-1 px-2 py-1.5 text-xs rounded border flex items-center justify-between ${springLoadActive ? 'bg-amber-100 border-amber-400' : 'bg-amber-50 border-amber-200'}`}
+                                        onDragOver={(e) => {
+                                            if (showAllFoldersOverride) return;
+                                            e.preventDefault();
+                                            if (!springLoadTimerRef.current) {
+                                                setSpringLoadActive(true);
+                                                springLoadTimerRef.current = setTimeout(() => {
+                                                    springLoadTimerRef.current = null;
+                                                    setSpringLoadActive(false);
+                                                    setShowAllFoldersOverride(true);
+                                                }, 650);
+                                            }
+                                        }}
+                                        onDragLeave={(e) => {
+                                            if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                if (springLoadTimerRef.current) { clearTimeout(springLoadTimerRef.current); springLoadTimerRef.current = null; }
+                                                setSpringLoadActive(false);
+                                            }
+                                        }}>
+                                        <span className="text-amber-700">
                                             {(() => {
                                                 // v5.0.0-alpha.169.2 - Exclude Inbox from count (it's rendered separately)
                                                 const userFolders = folders.filter(f => f.id !== '__inbox__');
@@ -9822,7 +9882,7 @@
                                             })()}
                                         </span>
                                         <button
-                                            className="text-blue-600 hover:text-blue-800 hover:underline"
+                                            className={`ml-2 border font-medium px-2 py-0.5 rounded flex-shrink-0 ${springLoadActive ? 'bg-amber-200 border-amber-400 text-amber-900 animate-pulse' : 'bg-white border-amber-300 text-amber-700 hover:bg-amber-100'}`}
                                             onClick={() => setShowAllFoldersOverride(prev => !prev)}>
                                             {showAllFoldersOverride ? 'Hide empty' : 'Show all'}
                                         </button>
@@ -10072,6 +10132,7 @@
                                                     navigateToFolder(newFolder.id);
                                                     setEditingFolderId(newFolder.id);
                                                     setEditingFolderName('New Folder');
+                                                    if (hasActiveFilters && !showAllFoldersOverride) setNewFolderHiddenAlert({ folderName: 'New Folder' }); // v6.8.0
                                                 }}
                                                 className="text-blue-500 hover:text-blue-700 text-sm px-1 hover:bg-gray-100 rounded"
                                                 title="New folder" aria-label="New folder">
@@ -10697,6 +10758,7 @@
                                                                         setEditingFolderId(newFolder.id);
                                                                         setEditingFolderName('New Subfolder');
                                                                         setIsPlaceholderMode(true); // v5.0.0-alpha.134 - Show as placeholder
+                                                                        if (hasActiveFilters && !showAllFoldersOverride) setNewFolderHiddenAlert({ folderName: 'New Subfolder' }); // v6.8.0
                                                                     }}
                                                                     className="text-blue-500 hover:text-blue-700 px-1"
                                                                     title="New subfolder">
@@ -13276,6 +13338,7 @@
                                                 setEditingFolderId(newFolder.id);
                                                 setEditingFolderName('New Folder');
                                                 setFolderContextMenu(null);
+                                                if (hasActiveFilters && !showAllFoldersOverride) setNewFolderHiddenAlert({ folderName: 'New Folder' }); // v6.8.0
                                             }}>
                                             <span>📁</span><span>New Folder</span>
                                         </div>

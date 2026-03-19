@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.6.0';
+    const NAV_HUB_VERSION = 'v1.7.0';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
@@ -59,6 +59,38 @@
     const onSeriesPage = document.querySelectorAll('.series-childAsin-item').length > 0;
     const onAuthorPage = /\/stores\/[^/]+\/author\/[A-Z0-9]{10}/i.test(currentUrl);
     const onWishlistPage = onProductPage || onSeriesPage || onAuthorPage;
+
+    // Helper: custom error dialog with Retry + Close (replaces native alert for load failures) v1.7.0
+    function showNavError(description, onRetry) {
+        const d = document.createElement('div');
+        d.style.cssText = `
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: white; border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 28px 30px; z-index: 10001;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 420px; width: 90%; text-align: center;
+            border-top: 4px solid #dc2626;
+        `;
+        d.innerHTML = `
+            <button id="rw-err-close" style="position: absolute; top: 10px; right: 12px;
+                background: none; border: none; font-size: 20px; color: #aaa;
+                cursor: pointer; line-height: 1; padding: 2px 6px;">&times;</button>
+            <div style="font-size: 17px; font-weight: 600; margin-bottom: 10px; color: #dc2626;">Failed to load ${description}</div>
+            <div style="font-size: 14px; color: #555; margin-bottom: 20px; line-height: 1.5;">Please check your internet connection and try again.</div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="rw-err-retry" style="background: #4f46e5; color: white; border: none; border-radius: 8px;
+                    padding: 10px 28px; font-size: 14px; font-weight: 600; cursor: pointer;">Retry</button>
+                <button id="rw-err-cancel" style="background: #f3f4f6; color: #374151; border: none; border-radius: 8px;
+                    padding: 10px 28px; font-size: 14px; font-weight: 600; cursor: pointer;">Close</button>
+            </div>
+        `;
+        document.body.appendChild(d);
+        d.querySelector('#rw-err-close').onclick = () => d.remove();
+        d.querySelector('#rw-err-cancel').onclick = () => d.remove();
+        d.querySelector('#rw-err-retry').onclick = () => { d.remove(); onRetry(); };
+    }
 
     // Helper: custom navigation reminder dialog (replaces native alert)
     function showNavReminder(heading, body, onOk) {
@@ -278,12 +310,12 @@
                     console.warn('📚 ReaderWrangler: Relay module failed, loading fetcher without relay:', err.message);
                     // Fetcher will check RWRelay.isConfigured() and fall through to file save
                     loadScript(scriptName, description).catch(() => {
-                        alert(`❌ Failed to load ${description}. Please check your internet connection.`);
+                        showNavError(description, () => loadFetcher(scriptName, description));
                     });
                 });
         } else {
             loadScript(scriptName, description).catch(() => {
-                alert(`❌ Failed to load ${description}. Please check your internet connection.`);
+                showNavError(description, () => loadFetcher(scriptName, description));
             });
         }
     }
