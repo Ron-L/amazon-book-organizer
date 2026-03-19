@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.8.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.8.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7894,7 +7894,8 @@
 
                                             // ─── Section 1: Credentials ───
                                             sectionHeader('credentials', '1', 'Encryption Keys', hasCreds, false),
-                                            activeSection === 'credentials' && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                            React.createElement('div', { style: { maxHeight: activeSection === 'credentials' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
+                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
                                                 relayManualCreds
                                                     // ── Manual entry mode (replaces status area + button row) ──
                                                     ? React.createElement('div', { className: 'space-y-2' },
@@ -7960,8 +7961,8 @@
                                                                         className: 'px-3 py-1.5 rounded text-sm',
                                                                         style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer' }
                                                                     }, relayTestStatus === 'testing' ? 'Testing…' : 'Test Connection'),
-                                                                    relayTestStatus === 'ok' && React.createElement('span', { style: { fontSize: '13px', color: 'var(--text-success, #16a34a)' } }, '✅ Connected'),
-                                                                    relayTestStatus === 'error' && React.createElement('span', { style: { fontSize: '13px', color: 'var(--text-danger, #dc2626)' } }, '⚠ Could not reach relay — check your internet connection')
+                                                                    relayTestStatus === 'ok' && React.createElement('span', { style: { fontSize: '13px', color: '#16a34a' } }, '✅ Connected'),
+                                                                    relayTestStatus === 'error' && React.createElement('span', { style: { fontSize: '13px', color: '#dc2626' } }, '⚠ Could not reach relay — check your internet connection')
                                                                 )
                                                             )
                                                             : React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Encryption keys secure your data between ReaderWrangler pages via Cloudflare. They are NOT your Amazon password. Choose one of the methods below to generate or load them.'),
@@ -8043,11 +8044,12 @@
                                                             }, 'Backup')
                                                         )
                                                     )
-                                            ),
+                                            )),
 
                                             // ─── Section 2: Install Bookmarklet ───
                                             sectionHeader('bookmarklet', '2', 'Install Bookmarklet', false, false),
-                                            activeSection === 'bookmarklet' && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                            React.createElement('div', { style: { maxHeight: activeSection === 'bookmarklet' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
+                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
                                                 !hasCreds
                                                     ? React.createElement(React.Fragment, null,
                                                         React.createElement('div', { className: 'rounded p-3 text-sm mb-3', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', textAlign: 'center' } },
@@ -8084,11 +8086,12 @@
                                                     )
                                                 )
                                                     ) // close hasCreds Fragment
-                                            ),
+                                            )),
 
                                             // ─── Section 3: Mobile Pairing ───
                                             sectionHeader('mobile', '3', 'Mobile Pairing (Optional)', false, false),
-                                            activeSection === 'mobile' && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                            React.createElement('div', { style: { maxHeight: activeSection === 'mobile' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
+                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
                                                 !hasCreds
                                                     ? React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Encryption keys are required for mobile pairing — complete Step 1 first.')
                                                     : React.createElement(React.Fragment, null,
@@ -8127,12 +8130,12 @@
                                                     }, 'Copy')
                                                 )
                                                     ) // close hasCreds Fragment
-                                            ),
+                                            )),
 
                                             // ─── Footer ───
                                             React.createElement('div', { style: { padding: '12px 16px', display: 'flex', justifyContent: 'flex-end' } },
                                                 React.createElement('button', {
-                                                    onClick: () => { setRelaySetupOpen(false); setRelaySetupSection(null); },
+                                                    onClick: () => { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); },
                                                     className: 'px-4 py-2 rounded-lg font-medium text-sm',
                                                     style: { background: 'var(--bg-accent)', color: 'white', cursor: 'pointer' }
                                                 }, hasCreds ? 'Done' : 'Close')
