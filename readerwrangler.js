@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.6.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.6.0-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9842,7 +9842,7 @@
                                     <div
                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__all__')}
-                                        title="Every book in your library, organized or not. You can't move books out of here — use folders to arrange them.">
+                                        title="Every unique book in your library, organized or not. You can't move books out of here — use folders to arrange them.">
                                         <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
                                         <span className="flex-1 pointer-events-none font-semibold">{FOLDER_ALL_BOOKS.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">({books.filter(b => !b.isDeleted).length})</span>
@@ -10151,6 +10151,7 @@
                                             }));
                                             if (isCopy) {
                                                 recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId: '__inbox__', bookIds, toIndex: 0 });
+                                                showToast(`Copied to 'Inbox' — same book, two folders. Your ratings, notes, and edits apply to both.`);
                                             } else {
                                                 recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId: sourceFolder, toFolderId: '__inbox__', bookIds, fromIndices, toIndex: 0 });
                                             }
@@ -10496,6 +10497,7 @@
                                                                         bookIds: newBookIds,
                                                                         toIndex: 0 // Prepended to start
                                                                     });
+                                                                    showToast(`Copied to '${folder.name}' — same book, two folders. Your ratings, notes, and edits apply to both.`);
                                                                     console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
                                                                 } else {
                                                                     recordAction({
@@ -11763,6 +11765,7 @@
                                                                                 }));
                                                                                 if (explorerIsCopyDragRef.current) {
                                                                                     recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId: folder.id, bookIds: newBookIds, toIndex: 0 });
+                                                                                    showToast(`Copied to '${folder.name}' — same book, two folders. Your ratings, notes, and edits apply to both.`);
                                                                                     console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
                                                                                 } else {
                                                                                     recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId: sourceFolder, toFolderId: folder.id, bookIds, fromIndices, toIndex: 0 });
@@ -12463,6 +12466,7 @@
                                                                         }));
                                                                         if (explorerIsCopyDragRef.current) {
                                                                             recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId: folder.id, bookIds: newBookIds, toIndex: 0 });
+                                                                            showToast(`Copied to '${folder.name}' — same book, two folders. Your ratings, notes, and edits apply to both.`);
                                                                             console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
                                                                         } else {
                                                                             recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId: sourceFolder, toFolderId: folder.id, bookIds, fromIndices, toIndex: 0 });
@@ -14022,6 +14026,7 @@
                             setContextSubmenu(null);
 
                             const targetFolder = folders.find(f => f.id === targetFolderId);
+                            showToast(`Copied to '${targetFolder?.name || 'folder'}' — same book, two folders. Your ratings, notes, and edits apply to both.`);
                             console.log(`📋 Copied ${selectedBookIds.length} book(s) to "${targetFolder?.name || 'Unknown'}"`);
                         };
 
