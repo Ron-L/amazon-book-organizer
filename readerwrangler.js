@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.6.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.6.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10118,6 +10118,8 @@
                                             }
 
                                             // v6.6.0 - Add to Inbox explicitly; remove first instance only from source (preserves same-folder copies); respect Ctrl+Drag for copy mode; record undo
+                                            // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
+                                            explorerIsCopyDragRef.current = e.ctrlKey;
                                             const sourceFolderObj = folders.find(f => f.id === sourceFolder);
                                             const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
                                             const isCopy = explorerIsCopyDragRef.current;
@@ -10456,6 +10458,8 @@
                                                                 return;
                                                             }
 
+                                                            // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
+                                                            explorerIsCopyDragRef.current = e.ctrlKey;
                                                             const existing = new Set(folder.bookIds || []);
                                                             const newBookIds = bookIds.filter(id => !existing.has(id));
                                                             if (newBookIds.length === 0) {
@@ -11735,6 +11739,8 @@
                                                                             showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
                                                                         } else {
                                                                             const existing = new Set(folder.bookIds || []);
+                                                                            // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
+                                                                            explorerIsCopyDragRef.current = e.ctrlKey;
                                                                             const newBookIds = bookIds.filter(id => !existing.has(id));
                                                                             if (newBookIds.length === 0) {
                                                                                 showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder', e.clientX, e.clientY);
@@ -12432,6 +12438,8 @@
                                                                 if (sourceFolder === '__all__') {
                                                                     showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
                                                                 } else {
+                                                                    // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
+                                                                    explorerIsCopyDragRef.current = e.ctrlKey;
                                                                     const existing = new Set(folder.bookIds || []);
                                                                     const newBookIds = bookIds.filter(id => !existing.has(id));
                                                                     if (newBookIds.length === 0) {
