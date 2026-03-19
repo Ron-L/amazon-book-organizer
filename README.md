@@ -121,6 +121,13 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v6.6 - Drag & Copy Fixes** (March 2026)
+- Ctrl+Drag now reliably copies books between folders (book stays in source, appears in target) — fixed three layered Windows/Chrome drag API bugs
+- Copy shows a toast explaining the hardlink model: *"same book, two folders — ratings, notes, and edits apply to both"*
+- Backup restore no longer lands books in Trash after a prior soft-delete
+- All Books now correctly excludes Trash; tooltip clarified to "Every unique book…"
+- Books dragged to Inbox now land in Inbox correctly with full undo support
+
 **v6.5 - Folder & Tag View Descriptions + Sidebar Tooltips** (March 2026)
 - Add a description to any folder or tag view via right-click → Properties; shown as a tooltip on hover — empty = no tooltip
 - Built-in tooltips on all system sidebar entries: Views, Folders, All Books, Inbox, and Trash

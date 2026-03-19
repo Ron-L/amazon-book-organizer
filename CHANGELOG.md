@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.6.0] - 2026-03-19
+
+### Fixed
+- **Inbox drop handler** — Books dragged to Inbox disappeared (removed from all folders, never added). Fixed to explicitly add to Inbox, remove only from source folder (first instance only, preserving same-folder copies), and record undo.
+- **Backup restore → books in Trash** — Restoring a backup after soft-deleting books caused restored books to land in Trash. Root cause: `storage.js` OR-merged `isDeleted` state from IndexedDB with backup data. Fixed: backup restores now use the backup's value for `isDeleted`, `deletedAt`, and `deletedFromFolderIds`.
+- **All Books included Trash** — All Books view and count were inconsistent (count excluded deleted books, view included them). Fixed to exclude deleted books from All Books entirely — Trash is a safety net, not a parallel location.
+- **Ctrl+Drag copies instead of moves** — Three layered root causes fixed: (1) `e.ctrlKey` unreliable in `onDragOver` on Windows/Chrome → global `keydown`/`keyup` listener (`ctrlKeyRef`); (2) `e.ctrlKey` unreliable in `onDrop` too → use `ctrlKeyRef` instead; (3) React `setFolders` updater runs after event handler completes, so `explorerIsCopyDragRef` was already reset to `false` → capture `const isCopy` before `setFolders` and close over the local variable.
+
+### Added
+- **Copy toast** — Ctrl+Drag now shows: *"Copied to 'Folder' — same book, two folders. Your ratings, notes, and edits apply to both."* Sets expectations about the hardlink model and shared edits.
+
+### Changed
+- **All Books tooltip** — Updated to "Every **unique** book in your library…" to clarify that copies don't inflate the count.
+
 ## [6.5.0] - 2026-03-10
 
 ### Added
