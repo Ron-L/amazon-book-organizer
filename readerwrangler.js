@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.6.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.6.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -823,7 +823,7 @@
 
             // Get books for a folder (handles All Books and My Library virtual folders)
             const getFolderBookIds = (folderId) => {
-                if (folderId === '__all__') return [...books.map(b => b.id)].reverse(); // Newest first, includes trashed books
+                if (folderId === '__all__') return [...books.filter(b => !b.isDeleted).map(b => b.id)].reverse(); // v6.6.0 - Newest first, excludes trashed books
                 if (folderId === '__trash__') return books.filter(b => b.isDeleted).sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0)).map(b => b.id);
                 if (folderId === '__library__') return []; // v5.0.0-alpha.63 - Folders section shows folders, not books
                 if (folderId === '__views__') return []; // v6.4.0 - Views section shows views, not books
@@ -849,11 +849,9 @@
             const filterBookForExplorer = (book) => {
                 if (!book) return false;
 
-                // Trash view: show only deleted books
-                // All Books: deleted books pass through all filters (tooltip shows 🗑️ Trash)
-                // Other views: hide deleted books
+                // Trash view: show only deleted books; all other views hide deleted books
                 if (selectedFolderId === '__trash__') return book.isDeleted === true;
-                if (book.isDeleted && selectedFolderId !== '__all__') return false;
+                if (book.isDeleted) return false;
 
                 // Text search filter
                 const matchesSearch = !searchTerm ||
