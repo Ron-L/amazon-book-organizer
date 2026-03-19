@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.8.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.8.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -768,6 +768,7 @@
             const [relayImporting, setRelayImporting] = useState(false); // true while importing from relay
             const [relayManualCreds, setRelayManualCreds] = useState(false); // show manual credential entry in Relay Setup
             const [relaySetupSection, setRelaySetupSection] = useState(null); // which accordion section is open: 'credentials'|'bookmarklet'|'mobile'|null
+            const [relayTestStatus, setRelayTestStatus] = useState(null); // v6.8.0 null|'testing'|'ok'|'error'
             const [deviceStateSynced, setDeviceStateSynced] = useState(true); // v6.0.0 Phase 2 - false = unsynced changes pending push to relay
             const deviceStatePushTimerRef = useRef(null); // v6.0.0 Phase 2 - debounce timer for device-state push
             const deviceStatePushingRef = useRef(false); // v6.0.0 Phase 2 - true while push is in flight
@@ -7939,9 +7940,29 @@
                                                     : React.createElement(React.Fragment, null,
                                                         // Status area
                                                         hasCreds
-                                                            ? React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-success)', border: '1px solid var(--border-success, #86efac)', marginBottom: '12px' } },
-                                                                React.createElement('p', { className: 'font-semibold' }, '✅ Encryption keys are set up'),
-                                                                React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
+                                                            ? React.createElement(React.Fragment, null,
+                                                                React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-success)', border: '1px solid var(--border-success, #86efac)', marginBottom: '8px' } },
+                                                                    React.createElement('p', { className: 'font-semibold' }, '✅ Encryption keys are set up'),
+                                                                    React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
+                                                                ),
+                                                                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' } },
+                                                                    React.createElement('button', {
+                                                                        onClick: async () => {
+                                                                            setRelayTestStatus('testing');
+                                                                            try {
+                                                                                await window.RWRelay.getDeviceState();
+                                                                                setRelayTestStatus('ok');
+                                                                            } catch {
+                                                                                setRelayTestStatus('error');
+                                                                            }
+                                                                        },
+                                                                        disabled: relayTestStatus === 'testing',
+                                                                        className: 'px-3 py-1.5 rounded text-sm',
+                                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer' }
+                                                                    }, relayTestStatus === 'testing' ? 'Testing…' : 'Test Connection'),
+                                                                    relayTestStatus === 'ok' && React.createElement('span', { style: { fontSize: '13px', color: 'var(--text-success, #16a34a)' } }, '✅ Connected'),
+                                                                    relayTestStatus === 'error' && React.createElement('span', { style: { fontSize: '13px', color: 'var(--text-danger, #dc2626)' } }, '⚠ Could not reach relay — check your internet connection')
+                                                                )
                                                             )
                                                             : React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Encryption keys secure your data between ReaderWrangler pages via Cloudflare. They are NOT your Amazon password. Choose one of the methods below to generate or load them.'),
 
@@ -8025,8 +8046,16 @@
                                             ),
 
                                             // ─── Section 2: Install Bookmarklet ───
-                                            sectionHeader('bookmarklet', '2', 'Install Bookmarklet', false, !hasCreds),
-                                            activeSection === 'bookmarklet' && hasCreds && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                            sectionHeader('bookmarklet', '2', 'Install Bookmarklet', false, false),
+                                            activeSection === 'bookmarklet' && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                                !hasCreds
+                                                    ? React.createElement(React.Fragment, null,
+                                                        React.createElement('div', { className: 'rounded p-3 text-sm mb-3', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', textAlign: 'center' } },
+                                                            React.createElement('img', { src: 'images/bookmarklet-install.gif', alt: 'Drag bookmarklet to bookmarks bar', style: { maxWidth: '100%', height: 'auto', borderRadius: '6px', marginBottom: '10px' } }),
+                                                            React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Generate encryption keys in Step 1 to get your personal bookmarklet.')
+                                                        )
+                                                    )
+                                                    : React.createElement(React.Fragment, null,
                                                 React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Drag the bookmarklet to your bookmarks bar. It has your encryption keys baked in. It lets you fetch your books from Amazon and securely transfer them to ReaderWrangler.'),
                                                 React.createElement('div', { className: 'rounded p-3', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' } },
                                                     ...bookmarklets.map((bm) =>
@@ -8054,11 +8083,15 @@
                                                         React.createElement('li', null, 'Follow the prompts to fetch your library and collections or add books to your wishlists. Then use the bookmarklet to launch the app and organize your books, your way.')
                                                     )
                                                 )
+                                                    ) // close hasCreds Fragment
                                             ),
 
                                             // ─── Section 3: Mobile Pairing ───
-                                            sectionHeader('mobile', '3', 'Mobile Pairing (Optional)', false, !hasCreds),
-                                            activeSection === 'mobile' && hasCreds && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                            sectionHeader('mobile', '3', 'Mobile Pairing (Optional)', false, false),
+                                            activeSection === 'mobile' && React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                                !hasCreds
+                                                    ? React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Encryption keys are required for mobile pairing — complete Step 1 first.')
+                                                    : React.createElement(React.Fragment, null,
                                                 React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Pair your phone with this app to browse your organized library on the go. See your folders, covers, and notes from anywhere — perfect for picking your next read at the bookstore or library.'),
                                                 React.createElement('div', { className: 'rounded p-4', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', textAlign: 'center' } },
                                                     React.createElement('div', {
@@ -8093,6 +8126,7 @@
                                                         style: { background: 'var(--bg-muted)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
                                                     }, 'Copy')
                                                 )
+                                                    ) // close hasCreds Fragment
                                             ),
 
                                             // ─── Footer ───
