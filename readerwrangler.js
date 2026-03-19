@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.8.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.8.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7862,7 +7862,8 @@
                                         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                                         const isDevRepo = window.location.hostname === 'ron-l.github.io' && window.location.pathname.startsWith('/readerwranglerdev');
                                         // 'none' = user explicitly collapsed all; null = modal just opened (auto-open default)
-                                        const activeSection = relaySetupSection === 'none' ? null : (relaySetupSection || (hasCreds ? 'bookmarklet' : 'credentials'));
+                                        // null = nothing open (modal just opened or user closed all); 'none' also maps to null
+                                        const activeSection = (relaySetupSection === 'none' || relaySetupSection === null) ? null : relaySetupSection;
 
                                         const sectionHeader = (id, stepNum, title, isComplete, isLocked) => {
                                             const isOpen = activeSection === id;
@@ -7890,13 +7891,13 @@
                                         return React.createElement(React.Fragment, null,
                                             // Security banner
                                             React.createElement('div', { className: 'text-xs', style: { padding: '8px 16px', background: 'var(--bg-info, #eff6ff)', borderBottom: '1px solid var(--border-info, #93c5fd)', color: 'var(--text-secondary)' } },
-                                                '🔒 Your data is encrypted in your browser using your encryption keys. The Cloudflare relay only ever sees encrypted data that cannot be read without these keys.'
+                                                '🔒 Your data is encrypted in your browser before it leaves. The relay transfers encrypted data between your Amazon fetcher, this app, and your mobile device — it can never read your data. Use the steps below to configure your relay.'
                                             ),
 
                                             // ─── Section 1: Credentials ───
                                             sectionHeader('credentials', '1', 'Encryption Keys', hasCreds, false),
                                             React.createElement('div', { style: { maxHeight: activeSection === 'credentials' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
-                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)', borderLeft: '4px solid #667eea' } },
                                                 relayManualCreds
                                                     // ── Manual entry mode (replaces status area + button row) ──
                                                     ? React.createElement('div', { className: 'space-y-2' },
@@ -8050,14 +8051,9 @@
                                             // ─── Section 2: Install Bookmarklet ───
                                             sectionHeader('bookmarklet', '2', 'Install Bookmarklet', false, false),
                                             React.createElement('div', { style: { maxHeight: activeSection === 'bookmarklet' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
-                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)', borderLeft: '4px solid #667eea' } },
                                                 !hasCreds
-                                                    ? React.createElement(React.Fragment, null,
-                                                        React.createElement('div', { className: 'rounded p-3 text-sm mb-3', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', textAlign: 'center' } },
-                                                            React.createElement('img', { src: 'images/bookmarklet-install.gif', alt: 'Drag bookmarklet to bookmarks bar', style: { maxWidth: '100%', height: 'auto', borderRadius: '6px', marginBottom: '10px' } }),
-                                                            React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Generate encryption keys in Step 1 to get your personal bookmarklet.')
-                                                        )
-                                                    )
+                                                    ? React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Complete Step 1 to generate your encryption keys. Your personal bookmarklet will be ready to drag to your bookmarks bar.')
                                                     : React.createElement(React.Fragment, null,
                                                 React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Drag the bookmarklet to your bookmarks bar. It has your encryption keys baked in. It lets you fetch your books from Amazon and securely transfer them to ReaderWrangler.'),
                                                 React.createElement('div', { className: 'rounded p-3', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' } },
@@ -8092,7 +8088,7 @@
                                             // ─── Section 3: Mobile Pairing ───
                                             sectionHeader('mobile', '3', 'Mobile Pairing (Optional)', false, false),
                                             React.createElement('div', { style: { maxHeight: activeSection === 'mobile' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
-                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
+                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)', borderLeft: '4px solid #667eea' } },
                                                 !hasCreds
                                                     ? React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Encryption keys are required for mobile pairing — complete Step 1 first.')
                                                     : React.createElement(React.Fragment, null,
