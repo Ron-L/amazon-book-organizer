@@ -7,6 +7,29 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 ---
 
 
+### 🔥 Priority 0: Immediate Fixes
+
+**T0. Convert remaining `alert()` calls in `bookmarklet-nav-hub.js` to custom dialogs**
+   - Lines 255 and 260: `❌ Failed to load {description}. Please check your internet connection.`
+   - Both are the same message, different code paths (relay fallback vs. direct load failure)
+   - Native `alert()` shows "readerwrangler.com says" prefix — jarring and confusing to users
+   - Use the `showNavReminder` helper already added in v1.6.0, or a variant with error styling (red accent)
+
+**T1. "No folders match / Show all" — prominence, affordance, and spring-load**
+   - A "No folders match" + "Show all" row already exists under the Folders header when filters hide all folders. The mechanism is correct; the UX failures are visibility, affordance, and drag interaction.
+   - **Restyle "Show all" as a button** (not a hyperlink) — it performs an action, not navigation
+   - **Increase prominence** of the entire "No folders match / Show all" row — subtle amber/yellow tint or border so it reads as a callout, not a footnote. Should catch the eye when filters are hiding folders.
+   - **Spring-loaded activation during drag** — hovering over "Show All" while dragging books for ~600-750ms activates it (folders appear) without dropping the drag. Visual pulse/highlight during the delay signals to the user it's working. Moving off before timer fires cancels. Based on macOS Finder spring-loaded folders — established UX pattern, not a 1-off. Depends on T1 prominence fix (target needs to be large enough to hover on while dragging).
+
+**T2. Post-creation safety net dialog**
+   - When a newly created folder is not visible in the sidebar (filters active, no books match yet), proactively show:
+     > *"Your folder was created but isn't visible because active filters are hiding folders with no matches."*
+     > Buttons: `[Clear Filters]` `[Show All Folders]` `[Leave As Is]`
+   - Fires only on the specific condition: folder just created + not visible in sidebar. Not a general warning.
+   - Distinct from T1 — T1 helps users who notice the sidebar; T2 catches users who don't.
+
+---
+
 ### 📖 Priority 4: Launch Documentation
 
 **1. 📦 Demo Backup File** - HIGH/LOW (30 min)
@@ -59,12 +82,19 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🚀 Priority 6: Post-Launch Internal Improvements
 
-**1. 🏷️ Deferred Desktop Polish** - LOW/LOW (2-3 hours)
+**1. 🔌 Relay Disconnect / Reset** - LOW/LOW (1 hour)
+   - Relay Setup has no way to intentionally disconnect or reset credentials
+   - Add a "Disconnect Relay" or "Reset Credentials" option in the Relay Setup dialog
+   - Use case: re-pair after a passphrase exposure, switch relay channels, or intentionally go offline
+   - On confirm: clear `relay.channelId` and `relay.passphrase` from localStorage and app state
+   - Normal users never need this, but the gap is real (currently requires DevTools to clear)
+
+**2. 🏷️ Deferred Desktop Polish** - LOW/LOW (2-3 hours)
    - Left pane keyboard navigation: Up/Down arrow, Left/Right collapse/expand, Home/End
    - ~~Desktop Mode escape hatch~~ ✅ v6.0.0-alpha.18 — Interstitial in readerwrangler.html shows "Return to Mobile Mode" / "Continue in Desktop Mode" before loading any app code. Uses sessionStorage to lock mode per tab session.
    - Directional shadow consistency with mobile cover view
 
-**2. ☁️ Cloudflare Free Tier Monitoring** - LOW/LOW (1 hour)
+**3. ☁️ Cloudflare Free Tier Monitoring** - LOW/LOW (1 hour)
    - Free tier limits: 100K requests/day, 1K KV writes/day, 1K KV deletes/day, 1GB KV storage
    - **KV writes (1,000/day) is the tightest limit** — each putDeviceState() or fetcher upload is a write
    - Cloudflare does NOT warn before limits are hit — requests just start failing (HTTP 1015)
@@ -74,7 +104,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - Problem: No visibility into relay usage; no warning before free tier exhaustion
    - Impact: Prevents surprise outages for users
 
-**3. Improve Load Time Experience** - MEDIUM/LOW-MEDIUM (2-4 hours)
+**4. Improve Load Time Experience** - MEDIUM/LOW-MEDIUM (2-4 hours)
    - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
    - Console warnings (dev-only, users don't see): Tailwind CDN "not for production", Babel "precompile your scripts", Babel "deoptimised styling" (skips formatting for files >500KB — cosmetic, no functional impact)
    - **Option A: Pre-compile (eliminates warnings, fastest load)**
