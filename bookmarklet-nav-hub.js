@@ -79,12 +79,10 @@
                 cursor: pointer; line-height: 1; padding: 2px 6px;">&times;</button>
             <div style="font-size: 17px; font-weight: 600; margin-bottom: 10px; color: #dc2626;">Failed to load ${description}</div>
             <div style="font-size: 14px; color: #555; margin-bottom: 20px; line-height: 1.5;">Please check your internet connection and try again.</div>
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <button id="rw-err-retry" style="background: #4f46e5; color: white; border: none; border-radius: 8px;
-                    padding: 10px 28px; font-size: 14px; font-weight: 600; cursor: pointer;">Retry</button>
-                <button id="rw-err-cancel" style="background: #f3f4f6; color: #374151; border: none; border-radius: 8px;
-                    padding: 10px 28px; font-size: 14px; font-weight: 600; cursor: pointer;">Close</button>
-            </div>
+            <button id="rw-err-retry" style="display: inline-block; background: #4f46e5; color: white; border: none; border-radius: 8px;
+                padding: 10px 28px; font-size: 14px; font-weight: 600; cursor: pointer; margin-right: 8px;">Retry</button>
+            <button id="rw-err-cancel" style="display: inline-block; background: #f3f4f6; color: #374151; border: none; border-radius: 8px;
+                padding: 10px 28px; font-size: 14px; font-weight: 600; cursor: pointer;">Close</button>
         `;
         document.body.appendChild(d);
         d.querySelector('#rw-err-close').onclick = () => d.remove();
