@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.5.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.6.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10117,11 +10117,32 @@
                                                 return;
                                             }
 
-                                            // Remove these books from all user folders
-                                            setFolders(prev => prev.map(folder => ({
-                                                ...folder,
-                                                bookIds: (folder.bookIds || []).filter(id => !bookIds.includes(id))
-                                            })));
+                                            // v6.6.0 - Add to Inbox explicitly; remove first instance only from source (preserves same-folder copies); respect Ctrl+Drag for copy mode; record undo
+                                            const sourceFolderObj = folders.find(f => f.id === sourceFolder);
+                                            const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
+                                            const isCopy = explorerIsCopyDragRef.current;
+                                            setFolders(prev => prev.map(f => {
+                                                if (f.id === '__inbox__') {
+                                                    const existing = new Set(f.bookIds || []);
+                                                    const toAdd = bookIds.filter(id => !existing.has(id));
+                                                    return { ...f, bookIds: [...toAdd, ...(f.bookIds || [])] };
+                                                }
+                                                if (!isCopy && f.id === sourceFolder) {
+                                                    // Remove first instance only — preserves additional same-folder copies
+                                                    const updated = [...(f.bookIds || [])];
+                                                    bookIds.forEach(id => {
+                                                        const idx = updated.indexOf(id);
+                                                        if (idx !== -1) updated.splice(idx, 1);
+                                                    });
+                                                    return { ...f, bookIds: updated };
+                                                }
+                                                return f;
+                                            }));
+                                            if (isCopy) {
+                                                recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId: '__inbox__', bookIds, toIndex: 0 });
+                                            } else {
+                                                recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId: sourceFolder, toFolderId: '__inbox__', bookIds, fromIndices, toIndex: 0 });
+                                            }
                                             setFolderDropHighlight(null);
                                             setExplorerSelectedBooks(new Set());
                                             stopDragVirtualization(); // v5.5.4-alpha.23
