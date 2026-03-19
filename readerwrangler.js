@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.6.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.6.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10468,8 +10468,9 @@
                                                                 return;
                                                             }
 
-                                                            // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
-                                                            explorerIsCopyDragRef.current = ctrlKeyRef.current;
+                                                            // v6.6.0 - Capture isCopy BEFORE setFolders — updater runs after event handler so ref would already be reset
+                                                            const isCopy = ctrlKeyRef.current;
+                                                            explorerIsCopyDragRef.current = isCopy;
                                                             const existing = new Set(folder.bookIds || []);
                                                             const newBookIds = bookIds.filter(id => !existing.has(id));
                                                             if (newBookIds.length === 0) {
@@ -10483,14 +10484,14 @@
                                                                     if (f.id === folder.id) {
                                                                         return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
                                                                     }
-                                                                    if (!explorerIsCopyDragRef.current && f.id === sourceFolder) {
+                                                                    if (!isCopy && f.id === sourceFolder) {
                                                                         return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
                                                                     }
                                                                     return f;
                                                                 }));
 
                                                                 // v5.0.0-alpha.46 - Record action for undo
-                                                                if (explorerIsCopyDragRef.current) {
+                                                                if (isCopy) {
                                                                     recordAction({
                                                                         type: 'COPY_BOOKS_FOLDER',
                                                                         toFolderId: folder.id,
@@ -11749,9 +11750,10 @@
                                                                         if (sourceFolder === '__all__') {
                                                                             showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
                                                                         } else {
+                                                                            // v6.6.0 - Capture isCopy BEFORE setFolders — updater runs after event handler so ref would already be reset
+                                                                            const isCopy = ctrlKeyRef.current;
+                                                                            explorerIsCopyDragRef.current = isCopy;
                                                                             const existing = new Set(folder.bookIds || []);
-                                                                            // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
-                                                                            explorerIsCopyDragRef.current = ctrlKeyRef.current;
                                                                             const newBookIds = bookIds.filter(id => !existing.has(id));
                                                                             if (newBookIds.length === 0) {
                                                                                 showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder', e.clientX, e.clientY);
@@ -11760,10 +11762,10 @@
                                                                                 const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
                                                                                 setFolders(prev => prev.map(f => {
                                                                                     if (f.id === folder.id) return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
-                                                                                    if (!explorerIsCopyDragRef.current && f.id === sourceFolder) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                                                    if (!isCopy && f.id === sourceFolder) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
                                                                                     return f;
                                                                                 }));
-                                                                                if (explorerIsCopyDragRef.current) {
+                                                                                if (isCopy) {
                                                                                     recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId: folder.id, bookIds: newBookIds, toIndex: 0 });
                                                                                     showToast(`Copied to '${folder.name}' — same book, two folders. Your ratings, notes, and edits apply to both.`);
                                                                                     console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
@@ -12450,8 +12452,9 @@
                                                                 if (sourceFolder === '__all__') {
                                                                     showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
                                                                 } else {
-                                                                    // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
-                                                                    explorerIsCopyDragRef.current = ctrlKeyRef.current;
+                                                                    // v6.6.0 - Capture isCopy BEFORE setFolders — updater runs after event handler so ref would already be reset
+                                                                    const isCopy = ctrlKeyRef.current;
+                                                                    explorerIsCopyDragRef.current = isCopy;
                                                                     const existing = new Set(folder.bookIds || []);
                                                                     const newBookIds = bookIds.filter(id => !existing.has(id));
                                                                     if (newBookIds.length === 0) {
@@ -12461,10 +12464,10 @@
                                                                         const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
                                                                         setFolders(prev => prev.map(f => {
                                                                             if (f.id === folder.id) return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
-                                                                            if (!explorerIsCopyDragRef.current && f.id === sourceFolder) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                                                                            if (!isCopy && f.id === sourceFolder) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
                                                                             return f;
                                                                         }));
-                                                                        if (explorerIsCopyDragRef.current) {
+                                                                        if (isCopy) {
                                                                             recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId: folder.id, bookIds: newBookIds, toIndex: 0 });
                                                                             showToast(`Copied to '${folder.name}' — same book, two folders. Your ratings, notes, and edits apply to both.`);
                                                                             console.log(`📋 Copied ${newBookIds.length} book(s) to "${folder.name}"`);
