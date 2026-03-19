@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.8.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.8.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4752,7 +4752,7 @@
                     if (resetConfirmOpen) { setResetConfirmOpen(false); return; }
                     if (statusModalOpen) { setStatusModalOpen(false); return; }
                     if (relaySetupOpen && relayManualCreds) { setRelayManualCreds(false); return; }
-                    if (relaySetupOpen) { setRelaySetupOpen(false); setRelaySetupSection(null); return; }
+                    if (relaySetupOpen) { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); return; }
                 };
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
@@ -7848,11 +7848,11 @@
 
                     {/* v6.0.0 - Relay Setup Modal */}
                     {relaySetupOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setRelaySetupOpen(false); backdropMouseDownRef.current = null; }}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); } backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" role="dialog" aria-modal="true" aria-labelledby="modal-relay-setup" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                                 <div className="flex justify-between items-start p-4 rounded-t-lg border-b" style={{ background: 'var(--bg-chrome)', borderColor: 'var(--border-default)', flexShrink: 0 }}>
                                     <h2 id="modal-relay-setup" className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src={`icons/sync-tower-${window.RWRelay && window.RWRelay.isConfigured() ? 'green' : 'red'}.svg`} alt="" style={{ width: '14px', height: '22px' }} /> Relay Setup</h2>
-                                    <button onClick={() => setRelaySetupOpen(false)} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
+                                    <button onClick={() => { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); }} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div style={{ overflowY: 'auto', flex: 1 }}>
                                     {(() => {
@@ -7861,20 +7861,21 @@
                                         const bookmarklets = hasCreds ? generateRelayBookmarklets(stored.channelId, stored.passphrase) : [];
                                         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                                         const isDevRepo = window.location.hostname === 'ron-l.github.io' && window.location.pathname.startsWith('/readerwranglerdev');
-                                        // Default open section: credentials if none exist, bookmarklet if they do
-                                        const activeSection = relaySetupSection || (hasCreds ? 'bookmarklet' : 'credentials');
+                                        // 'none' = user explicitly collapsed all; null = modal just opened (auto-open default)
+                                        const activeSection = relaySetupSection === 'none' ? null : (relaySetupSection || (hasCreds ? 'bookmarklet' : 'credentials'));
 
                                         const sectionHeader = (id, stepNum, title, isComplete, isLocked) => {
                                             const isOpen = activeSection === id;
                                             return React.createElement('button', {
-                                                onClick: () => { if (!isLocked) setRelaySetupSection(isOpen ? null : id); },
+                                                onClick: () => { if (!isLocked) setRelaySetupSection(isOpen ? 'none' : id); },
                                                 style: {
                                                     width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
                                                     padding: '12px 16px', border: 'none', borderBottom: '1px solid var(--border-default)',
-                                                    background: isOpen ? 'var(--bg-muted)' : 'var(--bg-surface)',
+                                                    borderLeft: isOpen ? '4px solid #667eea' : '4px solid transparent',
+                                                    background: isOpen ? '#f5f3ff' : 'var(--bg-surface)',
                                                     cursor: isLocked ? 'not-allowed' : 'pointer', opacity: isLocked ? 0.5 : 1,
                                                     textAlign: 'left', fontSize: '14px', fontWeight: '600',
-                                                    color: 'var(--text-primary)', transition: 'background 0.15s'
+                                                    color: 'var(--text-primary)', transition: 'background 0.15s, border-color 0.15s'
                                                 }
                                             },
                                                 React.createElement('span', { style: {
