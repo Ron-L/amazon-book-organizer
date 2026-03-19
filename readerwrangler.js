@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.6.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.7.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3310,6 +3310,9 @@
                             setFolders(prev => prev.filter(f => !folderIdsToDelete.has(f.id)));
                         }
 
+                        // Remove sort settings for deleted folders (no undo handler for DELETE_FOLDER keyboard path)
+                        setFolderSortSettings(prev => { const next = { ...prev }; foldersToDelete.forEach(f => delete next[f.id]); return next; });
+
                         // Navigate to parent or All Books
                         if (selectedFolderId === currentFolder.id || folderIdsToDelete.has(selectedFolderId)) {
                             navigateToFolder(currentFolder.parentId || '__all__');
@@ -4927,6 +4930,10 @@
                         if (action.deletedFolders?.length > 0) {
                             setSelectedFolderId(action.deletedFolders[0].id);
                         }
+                        // Restore sort settings for un-deleted folders
+                        if (action.savedSortSettings && Object.keys(action.savedSortSettings).length > 0) {
+                            setFolderSortSettings(prev => ({ ...prev, ...action.savedSortSettings }));
+                        }
                         break;
                     case 'CREATE_FOLDER':
                         // v5.0.0-alpha.51 - Undo folder creation: remove the created folder
@@ -5322,6 +5329,10 @@
                         // v5.0.0-alpha.58 - Navigate to parent folder instead of All Books
                         if (folderIdsToDeleteRedo.has(selectedFolderId)) {
                             setSelectedFolderId(action.orphanDestination || '__all__');
+                        }
+                        // Remove sort settings for re-deleted folders
+                        if (action.savedSortSettings && Object.keys(action.savedSortSettings).length > 0) {
+                            setFolderSortSettings(prev => { const next = { ...prev }; action.deletedFolders.forEach(f => delete next[f.id]); return next; });
                         }
                         break;
                     case 'CREATE_FOLDER':
@@ -10719,13 +10730,19 @@
                                                                             const uniqueOrphanedBookIds = [...new Set(allOrphanedBookIds)];
 
                                                                             // Record action for undo (includes orphan relocation info)
+                                                                            const savedSortSettings = {};
+                                                                            foldersToDelete.forEach(f => { if (folderSortSettings[f.id]) savedSortSettings[f.id] = folderSortSettings[f.id]; });
                                                                             recordAction({
                                                                                 type: 'DELETE_FOLDERS',
                                                                                 deletedFolders: foldersToDelete.map(f => ({ ...f })),
                                                                                 folderIndices: folderIndices,
                                                                                 orphanedBooks: uniqueOrphanedBookIds,
-                                                                                orphanDestination: destinationId
+                                                                                orphanDestination: destinationId,
+                                                                                savedSortSettings
                                                                             });
+                                                                            if (Object.keys(savedSortSettings).length > 0) {
+                                                                                setFolderSortSettings(prev => { const next = { ...prev }; foldersToDelete.forEach(f => delete next[f.id]); return next; });
+                                                                            }
 
                                                                             // Move orphaned books to destination, then delete folders
                                                                             setFolders(prev => {
@@ -13723,6 +13740,8 @@
                                                 const allOrphanedBookIds = foldersToDelete.flatMap(f => f.bookIds || []);
                                                 const uniqueOrphanedBookIds = [...new Set(allOrphanedBookIds)];
 
+                                                const savedSortSettings = {};
+                                                foldersToDelete.forEach(f => { if (folderSortSettings[f.id]) savedSortSettings[f.id] = folderSortSettings[f.id]; });
                                                 recordAction({
                                                     type: 'DELETE_FOLDERS',
                                                     deletedFolders: foldersToDelete.map(f => ({ ...f })),
@@ -13731,8 +13750,12 @@
                                                         bookId,
                                                         fromFolderId: foldersToDelete.find(f => f.bookIds?.includes(bookId))?.id,
                                                         toFolderId: destinationId
-                                                    }))
+                                                    })),
+                                                    savedSortSettings
                                                 });
+                                                if (Object.keys(savedSortSettings).length > 0) {
+                                                    setFolderSortSettings(prev => { const next = { ...prev }; foldersToDelete.forEach(f => delete next[f.id]); return next; });
+                                                }
 
                                                 setFolders(prev => prev
                                                     .filter(f => !folderIdsToDelete.has(f.id))
