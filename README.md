@@ -121,6 +121,15 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v6.8 - Relay Setup Redesign + Error Handling** (March 2026)
+- Relay Setup steps are now freely navigable — no sequential lock, steps start collapsed, animated accordion
+- Pulsing green tower icon in Encryption Keys header confirms relay is configured at a glance
+- "Test Connection" button verifies the relay is reachable without leaving the dialog
+- Bookmarklet now shows an error card instead of failing silently when the server is unreachable
+- Fetcher load failures show a styled Retry/Close dialog instead of a native alert
+- "Show All" filter indicator only appears when folders are actually hidden by the active filter
+- New folder created while filters are hiding it now triggers a helpful dialog
+
 **v6.6 - Drag & Copy Fixes** (March 2026)
 - Ctrl+Drag now reliably copies books between folders (book stays in source, appears in target) — fixed three layered Windows/Chrome drag API bugs
 - Copy shows a toast explaining the hardlink model: *"same book, two folders — ratings, notes, and edits apply to both"*

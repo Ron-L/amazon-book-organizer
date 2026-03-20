@@ -7,28 +7,6 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 ---
 
 
-### 🔥 Priority 0: Immediate Fixes
-
-**T0. Convert remaining `alert()` calls in `bookmarklet-nav-hub.js` to custom dialogs**
-   - Lines 255 and 260: `❌ Failed to load {description}. Please check your internet connection.`
-   - Both are the same message, different code paths (relay fallback vs. direct load failure)
-   - Native `alert()` shows "readerwrangler.com says" prefix — jarring and confusing to users
-   - Use the `showNavReminder` helper already added in v1.6.0, or a variant with error styling (red accent)
-
-**T1. "No folders match / Show all" — prominence, affordance, and spring-load**
-   - A "No folders match" + "Show all" row already exists under the Folders header when filters hide all folders. The mechanism is correct; the UX failures are visibility, affordance, and drag interaction.
-   - **Restyle "Show all" as a button** (not a hyperlink) — it performs an action, not navigation
-   - **Increase prominence** of the entire "No folders match / Show all" row — subtle amber/yellow tint or border so it reads as a callout, not a footnote. Should catch the eye when filters are hiding folders.
-   - **Spring-loaded activation during drag** — hovering over "Show All" while dragging books for ~600-750ms activates it (folders appear) without dropping the drag. Visual pulse/highlight during the delay signals to the user it's working. Moving off before timer fires cancels. Based on macOS Finder spring-loaded folders — established UX pattern, not a 1-off. Depends on T1 prominence fix (target needs to be large enough to hover on while dragging).
-
-**T2. Post-creation safety net dialog**
-   - When a newly created folder is not visible in the sidebar (filters active, no books match yet), proactively show:
-     > *"Your folder was created but isn't visible because active filters are hiding folders with no matches."*
-     > Buttons: `[Clear Filters]` `[Show All Folders]` `[Leave As Is]`
-   - Fires only on the specific condition: folder just created + not visible in sidebar. Not a general warning.
-   - Distinct from T1 — T1 helps users who notice the sidebar; T2 catches users who don't.
-
----
 
 ### 📖 Priority 4: Launch Documentation
 

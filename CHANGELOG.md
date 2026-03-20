@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.0] - 2026-03-19
+
+### Added
+- **Relay Setup redesign** — All three steps are now always accessible (no sequential lock). Steps start collapsed; user opens the step they need. Active step shown with animated left accent stripe and pulsing green tower icon when keys are configured.
+- **Relay Setup: Test Connection** — Step 1 shows a "Test Connection" button when keys are set; result shown inline with color-coded feedback.
+- **Relay Setup: animated accordion** — Steps open and close with a smooth CSS transition instead of snapping.
+- **Relay Setup: placeholder content** — Step 2 shows guidance text when no keys exist; Step 3 explains keys are required before the QR code appears.
+- **Bookmarklet error dialog** — When the nav hub script itself fails to load (server down, no internet), an inline error card appears with a Close button instead of failing silently.
+- **Nav hub custom error dialog** — When a fetcher script fails to load, a styled error dialog with Retry and Close replaces the native `alert()`.
+- **New folder hidden alert** — Creating a folder while active filters would hide it immediately shows a dialog: Clear Filters / Show All Folders / Leave As Is.
+- **Spring-loaded "Show All" during drag** — Hovering over the amber "Show All" row while dragging books for 650 ms activates it, revealing all folders without dropping the drag.
+
+### Changed
+- **Relay Setup banner** — Updated to explain the relay's role: transfers encrypted data between fetcher, app, and mobile device; relay never reads your data.
+- **"Load from backup file" renamed** — Now "Load from credentials file" to match the `readerwrangler-credentials.json` default export name and avoid confusion with full backups.
+- **"Show All" row visibility** — Amber filter indicator row now only appears when filters are actually hiding folders (not whenever any filter is active).
+
+### Fixed
+- **Relay Setup relayTestStatus** — Connection test result now resets on all modal close paths (X button, backdrop click, ESC, Done).
+
 ## [6.7.0] - 2026-03-19
 
 ### Fixed
