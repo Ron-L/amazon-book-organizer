@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.8.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.8.1-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8021,7 +8021,7 @@
                                                                                     setRelaySetupOpen(false);
                                                                                     setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                                 } else {
-                                                                                    alert('No encryption keys found in this backup file.');
+                                                                                    alert('No encryption keys found in this file.');
                                                                                 }
                                                                             } catch { alert('Could not read file. Make sure it is a ReaderWrangler backup (.json).'); }
                                                                         };
@@ -8030,22 +8030,9 @@
                                                                     input.click();
                                                                 },
                                                                 className: 'px-3 py-1.5 rounded text-sm',
-                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
-                                                            }, 'Load from credentials file'),
-                                                            // Backup button (only when keys exist) - exports only relay keys
-                                                            hasCreds && React.createElement('button', {
-                                                                onClick: () => {
-                                                                    const blob = new Blob([JSON.stringify({ relay: stored }, null, 2)], { type: 'application/json' });
-                                                                    const url = URL.createObjectURL(blob);
-                                                                    const a = document.createElement('a');
-                                                                    a.href = url;
-                                                                    a.download = 'readerwrangler-credentials.json';
-                                                                    a.click();
-                                                                    URL.revokeObjectURL(url);
-                                                                },
-                                                                className: 'px-3 py-1.5 rounded text-sm',
-                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' }
-                                                            }, 'Backup')
+                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' },
+                                                                title: 'Only loads encryption keys — your library data is not affected'
+                                                            }, 'Load from backup file')
                                                         )
                                                     )
                                             ))),

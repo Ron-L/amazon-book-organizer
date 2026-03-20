@@ -1,5 +1,6 @@
 # Data files (user-specific)
 *-library.json
+!readerwrangler-demo-library.json
 *-collections.json
 *-backup-*.json
 readerwrangler-backup-*.json

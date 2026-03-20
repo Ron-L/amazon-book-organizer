@@ -26,6 +26,10 @@ Launch the app to set up your relay, install the bookmarklet, and import your Ki
 
 Already set up? The app opens right to your library.
 
+**New to ReaderWrangler?** Start with the [Demo Library](https://raw.githubusercontent.com/Ron-L/readerwrangler/refs/heads/main/readerwrangler-demo-library.json) — more than 100 classic books waiting to be organized. Download the file, then use **File → Restore Backup** to load it.
+
+> **Tip:** Keep a `ReaderWrangler/` folder on your desktop for the demo file and your backups. Your organizational backup also contains your relay encryption keys — no separate credentials file needed.
+
 ---
 
 ## Why ReaderWrangler?
