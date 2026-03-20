@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.8.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.8.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7872,7 +7872,7 @@
                                                 style: {
                                                     width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
                                                     padding: '12px 16px', border: 'none', borderBottom: '1px solid var(--border-default)',
-                                                    borderLeft: isOpen ? '6px solid #667eea' : '6px solid transparent',
+                                                    borderLeft: isOpen ? '12px solid #667eea' : '12px solid transparent',
                                                     background: isOpen ? '#f5f3ff' : 'var(--bg-surface)',
                                                     cursor: isLocked ? 'not-allowed' : 'pointer', opacity: isLocked ? 0.5 : 1,
                                                     textAlign: 'left', fontSize: '14px', fontWeight: '600',
@@ -7898,7 +7898,7 @@
                                             // ─── Section 1: Credentials ───
                                             sectionHeader('credentials', '1', 'Encryption Keys', hasCreds, false),
                                             React.createElement('div', { style: { maxHeight: activeSection === 'credentials' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
-                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)', borderLeft: '6px solid #667eea' } },
+                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)', borderLeft: '12px solid #667eea' } },
                                                 relayManualCreds
                                                     // ── Manual entry mode (replaces status area + button row) ──
                                                     ? React.createElement('div', { className: 'space-y-2' },
@@ -8052,7 +8052,7 @@
                                             // ─── Section 2: Install Bookmarklet ───
                                             sectionHeader('bookmarklet', '2', 'Install Bookmarklet', false, false),
                                             React.createElement('div', { style: { maxHeight: activeSection === 'bookmarklet' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
-                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)', borderLeft: '6px solid #667eea' } },
+                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)', borderLeft: '12px solid #667eea' } },
                                                 !hasCreds
                                                     ? React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Complete Step 1 to generate your encryption keys. Your personal bookmarklet will be ready to drag to your bookmarks bar.')
                                                     : React.createElement(React.Fragment, null,
@@ -8089,7 +8089,7 @@
                                             // ─── Section 3: Mobile Pairing ───
                                             sectionHeader('mobile', '3', 'Mobile Pairing (Optional)', false, false),
                                             React.createElement('div', { style: { maxHeight: activeSection === 'mobile' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
-                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)', borderLeft: '6px solid #667eea' } },
+                                            React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)', borderLeft: '12px solid #667eea' } },
                                                 !hasCreds
                                                     ? React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Encryption keys are required for mobile pairing — complete Step 1 first.')
                                                     : React.createElement(React.Fragment, null,
