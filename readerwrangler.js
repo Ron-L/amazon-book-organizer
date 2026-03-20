@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.8.0-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "6.8.0-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7883,7 +7883,7 @@
                                                     background: 'var(--bg-muted)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)'
                                                 } }, stepNum),
                                                 React.createElement('span', { style: { flex: 1 } }, title),
-                                                isComplete && React.createElement('img', { className: 'animate-pulse', src: 'icons/sync-tower-green.svg', alt: '', style: { width: '10px', height: '16px', marginRight: '4px' } }),
+                                                isComplete && React.createElement('img', { className: 'animate-pulse', src: 'icons/sync-tower-green.svg', alt: '', style: { width: '14px', height: '22px', marginRight: '4px' } }),
                                                 !isLocked && React.createElement('span', { style: { fontSize: '12px', color: 'var(--text-muted)', transition: 'transform 0.15s', transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' } }, '▼')
                                             );
                                         };
