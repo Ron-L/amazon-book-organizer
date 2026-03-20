@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.8.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "6.8.0-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9875,57 +9875,54 @@
                                     </div>
                                 </div>
                                 {/* v5.0.0-alpha.169 - Filtered folder indicator; v6.8.0 - Restyled + spring-load drag hover */}
-                                {hasActiveFilters && (
-                                    <div
-                                        className={`mx-2 my-1 px-2 py-1.5 text-xs rounded border flex items-center justify-between ${springLoadActive ? 'bg-amber-100 border-amber-400' : 'bg-amber-50 border-amber-200'}`}
-                                        onDragOver={(e) => {
-                                            if (showAllFoldersOverride) return;
-                                            e.preventDefault();
-                                            if (!springLoadTimerRef.current) {
-                                                setSpringLoadActive(true);
-                                                springLoadTimerRef.current = setTimeout(() => {
-                                                    springLoadTimerRef.current = null;
+                                {hasActiveFilters && (() => {
+                                    // Compute visibility — only show row when filters actually hide some folders
+                                    const userFolders = folders.filter(f => f.id !== '__inbox__');
+                                    const hasMatchingDescendant = (folderId) => {
+                                        const childFolders = folders.filter(c => c.parentId === folderId);
+                                        return childFolders.some(child => {
+                                            const { matching: childMatching } = getFilteredFolderCount(child.id);
+                                            return childMatching > 0 || hasMatchingDescendant(child.id);
+                                        });
+                                    };
+                                    const visibleCount = userFolders.filter(f => {
+                                        const { matching } = getFilteredFolderCount(f.id);
+                                        return matching > 0 || hasMatchingDescendant(f.id);
+                                    }).length;
+                                    const totalCount = userFolders.length;
+                                    // Hide row when all folders match and override isn't active
+                                    if (!showAllFoldersOverride && visibleCount === totalCount) return null;
+                                    const text = visibleCount === 0 ? 'No folders match' : `${visibleCount} of ${totalCount} folders match`;
+                                    return (
+                                        <div
+                                            className={`mx-2 my-1 px-2 py-1.5 text-xs rounded border flex items-center justify-between ${springLoadActive ? 'bg-amber-100 border-amber-400' : 'bg-amber-50 border-amber-200'}`}
+                                            onDragOver={(e) => {
+                                                if (showAllFoldersOverride) return;
+                                                e.preventDefault();
+                                                if (!springLoadTimerRef.current) {
+                                                    setSpringLoadActive(true);
+                                                    springLoadTimerRef.current = setTimeout(() => {
+                                                        springLoadTimerRef.current = null;
+                                                        setSpringLoadActive(false);
+                                                        setShowAllFoldersOverride(true);
+                                                    }, 650);
+                                                }
+                                            }}
+                                            onDragLeave={(e) => {
+                                                if (!e.currentTarget.contains(e.relatedTarget)) {
+                                                    if (springLoadTimerRef.current) { clearTimeout(springLoadTimerRef.current); springLoadTimerRef.current = null; }
                                                     setSpringLoadActive(false);
-                                                    setShowAllFoldersOverride(true);
-                                                }, 650);
-                                            }
-                                        }}
-                                        onDragLeave={(e) => {
-                                            if (!e.currentTarget.contains(e.relatedTarget)) {
-                                                if (springLoadTimerRef.current) { clearTimeout(springLoadTimerRef.current); springLoadTimerRef.current = null; }
-                                                setSpringLoadActive(false);
-                                            }
-                                        }}>
-                                        <span className="text-amber-700">
-                                            {(() => {
-                                                // v5.0.0-alpha.169.2 - Exclude Inbox from count (it's rendered separately)
-                                                const userFolders = folders.filter(f => f.id !== '__inbox__');
-                                                const visibleCount = userFolders.filter(f => {
-                                                    const { matching } = getFilteredFolderCount(f.id);
-                                                    // Folder is visible if it has matches OR has descendant with matches
-                                                    const hasMatchingDescendant = (folderId) => {
-                                                        const childFolders = folders.filter(c => c.parentId === folderId);
-                                                        return childFolders.some(child => {
-                                                            const { matching: childMatching } = getFilteredFolderCount(child.id);
-                                                            return childMatching > 0 || hasMatchingDescendant(child.id);
-                                                        });
-                                                    };
-                                                    return matching > 0 || hasMatchingDescendant(f.id);
-                                                }).length;
-                                                const totalCount = userFolders.length;
-                                                // v5.0.0-alpha.169.3 - Changed wording to remove "Showing" implication
-                                                return visibleCount === 0
-                                                    ? 'No folders match'
-                                                    : `${visibleCount} of ${totalCount} folders match`;
-                                            })()}
-                                        </span>
-                                        <button
-                                            className={`ml-2 border font-medium px-2 py-0.5 rounded flex-shrink-0 ${springLoadActive ? 'bg-amber-200 border-amber-400 text-amber-900 animate-pulse' : 'bg-white border-amber-300 text-amber-700 hover:bg-amber-100'}`}
-                                            onClick={() => setShowAllFoldersOverride(prev => !prev)}>
-                                            {showAllFoldersOverride ? 'Hide empty' : 'Show all'}
-                                        </button>
-                                    </div>
-                                )}
+                                                }
+                                            }}>
+                                            <span className="text-amber-700">{text}</span>
+                                            <button
+                                                className={`ml-2 border font-medium px-2 py-0.5 rounded flex-shrink-0 ${springLoadActive ? 'bg-amber-200 border-amber-400 text-amber-900 animate-pulse' : 'bg-white border-amber-300 text-amber-700 hover:bg-amber-100'}`}
+                                                onClick={() => setShowAllFoldersOverride(prev => !prev)}>
+                                                {showAllFoldersOverride ? 'Hide empty' : 'Show all'}
+                                            </button>
+                                        </div>
+                                    );
+                                })()}
                                 </div> {/* end sticky header */}
                                 {/* v6.4.0 - Single scroll zone: Views + Folders + all contents */}
                                 <div className="flex-1 overflow-y-auto folder-scroll-container" style={{ contain: 'layout style paint' }}>
