@@ -125,6 +125,11 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v6.8.1 - Demo Library + UX Fixes** (March 2026)
+- Download the [Demo Library](https://raw.githubusercontent.com/Ron-L/readerwrangler/refs/heads/main/readerwrangler-demo-library.json) — 100+ classic books ready to organize, no Amazon account needed
+- Stale folder selection now resets to All Books on load instead of showing an empty pane
+- Relay Setup: removed redundant credentials-only Backup button; organizational backup covers it
+
 **v6.8 - Relay Setup Redesign + Error Handling** (March 2026)
 - Relay Setup steps are now freely navigable — no sequential lock, steps start collapsed, animated accordion
 - Pulsing green tower icon in Encryption Keys header confirms relay is configured at a glance

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.8.1] - 2026-03-20
+
+### Added
+- **Demo Library** — `readerwrangler-demo-library.json` (100+ classic public-domain books, all in Inbox) added to repo and linked from the landing page Get Started section as an amber callout box.
+
+### Changed
+- **"Load from backup file"** — Renamed back from "Load from credentials file"; tooltip now explains that only encryption keys are loaded, and that File → Save Backup produces a backup that includes credentials.
+- **Relay Setup: removed Backup button** — Credentials-only export removed; File → Save Backup (organizational backup) already includes relay credentials, making a separate credentials file redundant.
+
+### Fixed
+- **Stale folder selection on load** — If the saved folder selection points to a deleted or missing folder, the app now resets to All Books instead of showing an empty right pane.
+
 ## [6.8.0] - 2026-03-19
 
 ### Added
