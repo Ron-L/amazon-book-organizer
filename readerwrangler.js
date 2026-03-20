@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.8.1-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.8.1-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2765,6 +2765,15 @@
                     ));
                 }
             }, [selectedFolderId]);
+
+            // v6.8.1 - Validate selectedFolderId after load; reset to All Books if stale/deleted
+            useEffect(() => {
+                if (syncStatus === 'loading') return;
+                const VIRTUAL_IDS = new Set(['__all__', '__library__', '__views__', '__trash__', '__inbox__']);
+                if (VIRTUAL_IDS.has(selectedFolderId)) return;
+                const exists = folders.some(f => f.id === selectedFolderId);
+                if (!exists) setSelectedFolderId('__all__');
+            }, [syncStatus, folders, selectedFolderId]);
 
             // Expose books to window for debugging
             useEffect(() => {
@@ -8031,7 +8040,7 @@
                                                                 },
                                                                 className: 'px-3 py-1.5 rounded text-sm',
                                                                 style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' },
-                                                                title: 'Only loads encryption keys — your library data is not affected'
+                                                                title: 'Only loads encryption keys — your library data is not affected. Use File → Save Backup to save a backup that includes your credentials.'
                                                             }, 'Load from backup file')
                                                         )
                                                     )
