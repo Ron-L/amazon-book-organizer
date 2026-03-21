@@ -752,6 +752,13 @@ async function fetchAmazonCollections() {
         console.warn('   Proceeding with fetched data...\n');
     }
 
+    // Demo whitelist filter — remove non-whitelisted books before processing
+    if (whitelistASINs) {
+        const beforeCount = allBooks.length;
+        allBooks = allBooks.filter(b => whitelistASINs.has(b.asin));
+        console.log(`🔒 Whitelist filtered: ${beforeCount} → ${allBooks.length} books`);
+    }
+
     // ==========================================
     // Phase 2: Process and Format Data
     // ==========================================
@@ -796,20 +803,16 @@ async function fetchAmazonCollections() {
     console.log('[Phase 3] Generating unified JSON file...\n');
     progressUI.updatePhase('Saving Library', 'Generating and downloading unified file');
 
-    // Demo whitelist filter — remove non-whitelisted books before output
-    let filteredProcessedBooks = processedBooks;
+    // Demo whitelist filter — remove non-whitelisted books from existingBooks before output
     let filteredExistingBooks = existingBooks;
-    if (whitelistASINs) {
-        filteredProcessedBooks = processedBooks.filter(b => whitelistASINs.has(b.asin));
-        if (filteredExistingBooks && filteredExistingBooks.items) {
-            filteredExistingBooks = {
-                ...filteredExistingBooks,
-                items: filteredExistingBooks.items.filter(b => whitelistASINs.has(b.asin)),
-                totalBooks: undefined // recalculated below
-            };
-            filteredExistingBooks.totalBooks = filteredExistingBooks.items.length;
-        }
-        console.log(`   🔒 Whitelist filtered: ${processedBooks.length} → ${filteredProcessedBooks.length} collections, ${existingBooks?.items?.length || 0} → ${filteredExistingBooks?.items?.length || 0} books`);
+    if (whitelistASINs && filteredExistingBooks && filteredExistingBooks.items) {
+        const beforeCount = filteredExistingBooks.items.length;
+        filteredExistingBooks = {
+            ...filteredExistingBooks,
+            items: filteredExistingBooks.items.filter(b => whitelistASINs.has(b.asin))
+        };
+        filteredExistingBooks.totalBooks = filteredExistingBooks.items.length;
+        console.log(`   🔒 Whitelist filtered existing books: ${beforeCount} → ${filteredExistingBooks.items.length}`);
     }
 
     // Create output in Schema v2.0 unified format
@@ -821,9 +824,9 @@ async function fetchAmazonCollections() {
         collections: {
             fetchDate: new Date().toISOString(),
             fetcherVersion: FETCHER_VERSION,
-            totalBooksScanned: filteredProcessedBooks.length,
+            totalBooksScanned: processedBooks.length,
             booksWithCollections: booksWithCollections,
-            items: filteredProcessedBooks
+            items: processedBooks
         }
     };
     // Preserve existing organization section if present
