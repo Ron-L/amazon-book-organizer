@@ -60,7 +60,7 @@ From chaos to control - slide to compare Amazon's view vs. ReaderWrangler
 | **Works With Your Amazon Library** | **Library Management** |
 | • See all your Kindle books in one visual dashboard<br>• Covers, ratings, reviews, and descriptions all in one place<br>• No manual CSV exports or local ebook files required | • View your entire ebook library with titles, authors, covers, descriptions, and ratings<br>• Advanced filtering by author, series, genre, and reading status<br>• Smart search across titles and authors<br>• **Wishlist** - Add books from Amazon to track what you want to buy |
 | **Organization (Desktop)** | **Data & Privacy** |
-| • Drag-and-drop interface for organizing books into folders<br>• Multi-select with Ctrl/Shift for bulk operations<br>• Nested folder hierarchy with Auto-Organize<br>• **Tags & Tag Views** - Label books across folders; pin tags as virtual folders<br>• **Hide books** - Soft-delete books you don't want to see<br>• **Context menu** - Right-click for quick actions (Open in Amazon, Copy Title) | • End-to-end encrypted relay keeps your data secure<br>• Your library saves automatically in your browser<br>• Export a backup file to save your organization |
+| • Drag-and-drop interface for organizing books into folders<br>• Multi-select with Ctrl/Shift for bulk operations<br>• Nested folder hierarchy with Auto-Organize<br>• **Tags & Tag Views** - Label books across folders; pin tags as virtual folders<br>• **Hide books** - Soft-delete books you don't want to see<br>• **Context menu** - Right-click for quick actions (Open in Amazon, Copy Title) | • End-to-end encrypted relay keeps your data secure<br>• Your library saves automatically in your browser<br>• Export a backup file to save your organization<br>• Or [run it locally](https://readerwrangler.com/security.html) — download the source and open in your browser |
 | **Mobile Viewer** | |
 | • Browse your organized library on any phone<br>• Dashboard shelves, folder navigation, tag views<br>• Search, sort, and view full book details<br>• Add to home screen for app-like experience | |
 
@@ -240,11 +240,11 @@ ReaderWrangler is licensed under the **MIT License with Commons Clause**.
 
 **What does this mean?**
 
-You're free to use ReaderWrangler for personal use, explore the code, learn from it, and even modify it for your own needs. However, you cannot use this code to create a competing commercial product or service.
+You're free to use ReaderWrangler for personal use, explore the code, learn from it, and even modify it for your own needs. However, you cannot use this code to create a competing commercial product or service, and any public distribution must retain the original affiliate referral links.
 
 This license protects the project while keeping the source code transparent and accessible. If you're interested in contributing improvements, pull requests are welcome!
 
-See [LICENSE.md](LICENSE.md) for full details.
+See [LICENSE](LICENSE) for full details.
 
 **Trademarks**
 

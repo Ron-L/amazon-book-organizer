@@ -42,13 +42,14 @@
         </div>
 
         <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Privacy Guarantee</h2>
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Privacy &amp; Data Security</h2>
             <ul class="list-disc list-inside text-gray-600 space-y-2">
-                <li><strong>100% Client-Side:</strong> All processing happens in your browser. Your library data never leaves your computer.</li>
-                <li><strong>No Server:</strong> ReaderWrangler is hosted on GitHub Pages as static files. There is no backend server collecting data.</li>
-                <li><strong>Minimal Analytics:</strong> We use <a href="https://www.goatcounter.com/" class="text-blue-600 hover:underline">GoatCounter</a> for basic traffic statistics (page views, referrers). GoatCounter is privacy-focused: no cookies, no personal data, no cross-site tracking. Your book library data is never sent anywhere.</li>
                 <li><strong>No Account Required:</strong> No sign-up, no login, no personal information collected.</li>
-                <li><strong>Open Source:</strong> All code is visible on <a href="https://github.com/Ron-L/ReaderWrangler" class="text-blue-600 hover:underline">GitHub</a>.</li>
+                <li><strong>Your Library Stays in Your Browser:</strong> All book data (titles, covers, folders, tags) is stored in your browser's local storage. It is not uploaded to any cloud service.</li>
+                <li><strong>Encrypted Data Transfer:</strong> When syncing between the bookmarklet and the app, your library data is encrypted end-to-end (AES-256-GCM) before it leaves your browser. The relay server stores and returns encrypted data it cannot read. Your encryption keys never leave your devices.</li>
+                <li><strong>No Cloud Storage:</strong> The relay is a temporary pass-through, not a permanent store. Synced data expires automatically (10 days for library imports, 90 days for device state).</li>
+                <li><strong>Privacy-Focused Analytics:</strong> We use <a href="https://www.goatcounter.com/" class="text-blue-600 hover:underline">GoatCounter</a> for basic traffic statistics (page views, referrers) and anonymous usage events (e.g., how often imports and backups occur) to improve the site. GoatCounter uses no cookies, collects no personal data, and does no cross-site tracking. Your book library data is never included in analytics.</li>
+                <li><strong>Open Source:</strong> All code is visible on <a href="https://github.com/Ron-L/ReaderWrangler" class="text-blue-600 hover:underline">GitHub</a>. Security rests on encryption, not obscurity.</li>
             </ul>
         </div>
 
@@ -59,13 +60,14 @@
             </p>
             <ol class="list-decimal list-inside text-gray-600 space-y-2">
                 <li>Shows a navigation dialog with options</li>
-                <li>When you click "Refresh Library Data", it loads our reader script</li>
+                <li>When you click "Refresh Library Data", it loads the fetcher script</li>
                 <li>The script reads your book data from the Amazon page you're viewing</li>
-                <li>Data is saved to a JSON file on YOUR computer via browser download</li>
-                <li>The ReaderWrangler app reads this local file to display your books</li>
+                <li>Your data is encrypted in the browser using your personal encryption keys</li>
+                <li>The encrypted data is uploaded to a temporary relay (Cloudflare Worker)</li>
+                <li>The ReaderWrangler app downloads and decrypts it using the same keys</li>
             </ol>
             <p class="text-gray-600 mt-4 text-sm">
-                At no point does any data leave your browser except to Amazon's own servers (which you're already logged into).
+                The relay server only ever sees encrypted data. Your encryption keys are generated on your device and never sent to the server.
             </p>
         </div>
 
@@ -75,11 +77,29 @@
                 All source code is available for inspection:
             </p>
             <ul class="list-disc list-inside text-gray-600 space-y-2">
-                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/bookmarklet-nav-hub.js" class="text-blue-600 hover:underline">bookmarklet-nav-hub.js</a> - Navigation dialog</li>
-                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/amazon-library-fetcher.js" class="text-blue-600 hover:underline">amazon-library-fetcher.js</a> - Library data reader</li>
-                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/amazon-collections-fetcher.js" class="text-blue-600 hover:underline">amazon-collections-fetcher.js</a> - Collections reader</li>
-                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/readerwrangler.js" class="text-blue-600 hover:underline">readerwrangler.js</a> - Main application</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/bookmarklet-nav-hub.js" class="text-blue-600 hover:underline">bookmarklet-nav-hub.js</a> — Navigation dialog</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/amazon-library-fetcher.js" class="text-blue-600 hover:underline">amazon-library-fetcher.js</a> — Library data fetcher</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/amazon-collections-fetcher.js" class="text-blue-600 hover:underline">amazon-collections-fetcher.js</a> — Collections fetcher</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/amazon-wishlist-fetcher.js" class="text-blue-600 hover:underline">amazon-wishlist-fetcher.js</a> — Wishlist fetcher</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/series-page-fetcher.js" class="text-blue-600 hover:underline">series-page-fetcher.js</a> — Series page fetcher</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/author-bibliography-fetcher.js" class="text-blue-600 hover:underline">author-bibliography-fetcher.js</a> — Author bibliography fetcher</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/relay-crypto.js" class="text-blue-600 hover:underline">relay-crypto.js</a> — Encryption module (AES-256-GCM)</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/relay-client.js" class="text-blue-600 hover:underline">relay-client.js</a> — Relay communication</li>
+                <li><a href="https://github.com/Ron-L/ReaderWrangler/blob/main/readerwrangler.js" class="text-blue-600 hover:underline">readerwrangler.js</a> — Main application</li>
             </ul>
+            <p class="text-gray-600 mt-4 text-sm">
+                For a comprehensive technical security review, see our <a href="https://github.com/Ron-L/ReaderWrangler/blob/main/docs/reference/SECURITY.md" class="text-blue-600 hover:underline">Security Model</a> documentation.
+            </p>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Run It Locally</h2>
+            <p class="text-gray-600 mb-4">
+                Don't want to use our hosted version? ReaderWrangler is open source under the <a href="https://github.com/Ron-L/ReaderWrangler/blob/main/LICENSE" class="text-blue-600 hover:underline">MIT License with Commons Clause</a>. Download the source from <a href="https://github.com/Ron-L/ReaderWrangler" class="text-blue-600 hover:underline">GitHub</a> (Code &rarr; Download ZIP), unzip, and open <code class="bg-gray-100 px-1 rounded">readerwrangler.html</code> in your browser. No installation required.
+            </p>
+            <p class="text-gray-600 text-sm">
+                The app runs entirely from your machine. The only external dependency is the relay for syncing data between the bookmarklet and the app &mdash; self-hosted users still use our Cloudflare relay for this, or can deploy their own using the source in the <code class="bg-gray-100 px-1 rounded">relay/</code> directory.
+            </p>
         </div>
 
         <div class="bg-white rounded-lg shadow-md p-6">

@@ -438,6 +438,10 @@ This visible checking ensures rules are actively applied, not just available in 
 
 ### Git Workflow
 
+#### Sensitive Files
+
+Backup files (`*-backup-*.json`) contain relay credentials in plaintext and are excluded by `.gitignore`. Do not commit them to version control.
+
 #### Feature Development
 1. Create feature branch: `git checkout -b feature-name`
 2. Make incremental commits with letter versions (v3.1.0.a, v3.1.0.b, etc.)
