@@ -80,7 +80,7 @@ Tutorial videos show the live fetch → relay import flow. Without a filter, the
 ### Source File
 
 - **Filename:** `demo-whitelist.json`
-- **Location:** Repo root (gitignored — contains ASINs tied to developer's account)
+- **Location:** Repo root (checked in — ASINs match the public demo library file)
 - **Format:** `{ "description": "...", "count": 119, "asins": ["B00XYZ123", ...] }`
 - **Generated from:** `readerwrangler-demo-library.json` via Node one-liner (see Phase 1 below)
 
@@ -243,16 +243,16 @@ Which features each part of the demo showcases:
 - [x] Verify cleaned file: all 119 books in Inbox, metadata intact
 - [x] Check `readerwrangler-demo-library.json` into repo root (with `.gitignore` negation)
 - [x] Add demo library link + amber callout to index.html and README.md
-- [ ] Add `demo-whitelist.json` to `.gitignore`
+- [x] ~~Add `demo-whitelist.json` to `.gitignore`~~ — checked into repo instead (ASINs match public demo library)
 
-### Phase 2: Whitelist Filter
+### Phase 2: Whitelist Filter ✅
 - [x] Generate `demo-whitelist.json` (119 ASINs extracted from demo library backup)
-- [x] Add `demo-whitelist.json` to `.gitignore`
+- [x] Check `demo-whitelist.json` into repo root (ASINs match public demo library, no reason to hide)
 - [x] Create `.private/load-demo-whitelist.js` console script (file picker → amazon.com localStorage)
 - [x] Add whitelist filter to `amazon-library-fetcher.js` (Phase 1 + existingBooks)
 - [x] Add whitelist filter to `amazon-collections-fetcher.js` (processedBooks + existingBooks)
-- [ ] Test: load whitelist via console script on amazon.com, run library fetcher → verify only 119 books
-- [ ] Test: run collections fetcher with whitelist → verify filtered output
+- [x] Test: load whitelist via console script on amazon.com, run library fetcher → verify only 119 books
+- [x] Test: run collections fetcher with whitelist → verify filtered output
 
 ### Phase 3: Training Docs
 - [ ] Update `VIDEO-PRODUCTION-PLAN.md` — full rewrite of Content Update Tracker + video scripts to reflect current app (v6.5.0) and demo library workflow

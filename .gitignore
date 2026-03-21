@@ -3,7 +3,6 @@
 !readerwrangler-demo-library.json
 *-collections.json
 *-backup-*.json
-demo-whitelist.json
 readerwrangler-backup-*.json
 style.html
 
