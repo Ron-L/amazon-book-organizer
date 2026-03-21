@@ -699,9 +699,14 @@ async function fetchAmazonCollections() {
             allBooks = allBooks.concat(books);
             pageNum++;
 
-            // Update progress bar
+            // Update progress bar — rescale when whitelist is active
             if (totalCount > 0) {
-                progressUI.updateProgress(allBooks.length, totalCount);
+                if (whitelistASINs) {
+                    const matched = allBooks.filter(b => whitelistASINs.has(b.asin)).length;
+                    progressUI.updateProgress(matched, whitelistASINs.size);
+                } else {
+                    progressUI.updateProgress(allBooks.length, totalCount);
+                }
             }
 
             // Stop condition 2: Safety limit reached
