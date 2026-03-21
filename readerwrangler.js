@@ -6263,18 +6263,25 @@
                                                     {getStatusBall()} Data Status: {getUrgencyInfo().text}
                                                 </button>
                                                 {/* v6.0.0-alpha.44 - Relay import first (primary action), then backups */}
-                                                {window.RWRelay && window.RWRelay.isConfigured() && (
-                                                    <button onClick={() => { importFromRelay(); setOpenMenuBar(null); }} disabled={relayImporting} style={{
-                                                        width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                        border: 'none', background: 'var(--bg-surface)',
-                                                        cursor: relayImporting ? 'not-allowed' : 'pointer',
-                                                        transition: 'background 0.1s',
-                                                        color: relayImporting ? 'var(--text-muted)' : 'var(--text-primary)',
-                                                        opacity: relayImporting ? 0.5 : 1
-                                                    }} onMouseEnter={e => !relayImporting && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                        📡 Import from Relay
-                                                    </button>
-                                                )}
+                                                {(() => {
+                                                    const relayReady = window.RWRelay && window.RWRelay.isConfigured();
+                                                    const isDisabled = !relayReady || relayImporting;
+                                                    return (
+                                                        <button onClick={() => { if (relayReady) { importFromRelay(); setOpenMenuBar(null); } }}
+                                                            disabled={isDisabled}
+                                                            title={!relayReady ? 'Set up relay first — File > Relay Setup' : ''}
+                                                            style={{
+                                                                width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                                border: 'none', background: 'var(--bg-surface)',
+                                                                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                                                transition: 'background 0.1s',
+                                                                color: isDisabled ? 'var(--text-muted)' : 'var(--text-primary)',
+                                                                opacity: isDisabled ? 0.5 : 1
+                                                            }} onMouseEnter={e => !isDisabled && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
+                                                            📡 Import from Relay
+                                                        </button>
+                                                    );
+                                                })()}
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
                                                 <button onClick={() => { importBackup(); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',

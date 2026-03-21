@@ -1272,6 +1272,11 @@ async function fetchAmazonLibrary() {
 
         const newBooks = [];
         const seenASINs = new Map();  // Track ASINs to detect duplicates
+
+        // Seed seenASINs with existing books so Phase 1 doesn't re-add them as new
+        for (let i = 0; i < existingBooks.length; i++) {
+            seenASINs.set(existingBooks[i].asin, -1); // -1 = existing, not in newBooks
+        }
         let cursor = "";
         let pageNum = 0;
         let hasMore = true;

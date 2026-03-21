@@ -6,7 +6,16 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
+### 🔒 Priority 0: Security
 
+**0. 🔒 Relay Security Hardening** - HIGH/MEDIUM - See [docs/design/RELAY-SECURITY-PLAN.md](docs/design/RELAY-SECURITY-PLAN.md)
+   - Phase 1A: Self-service credential revocation (SHA-256 proof of ownership → Worker deletes all data + blocklists channelId)
+   - Phase 1B: Rate limiting (per-channelId write throttle to prevent abuse)
+   - Phase 2A: Edge blocking (Cloudflare WAF rules for non-browser clients)
+   - Problem: No way to revoke compromised credentials; no abuse protection on relay
+   - Impact: Users can recover from credential exposure; relay protected from cost abuse
+
+---
 
 ### 📖 Priority 4: Launch Documentation
 
