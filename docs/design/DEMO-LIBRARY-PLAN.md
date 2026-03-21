@@ -60,10 +60,10 @@ Both purposes share one asset: a curated 119-book backup file representing a bel
 
 ### Storage & Distribution
 
-- **Filename:** `demo-library.json`
+- **Filename:** `readerwrangler-demo-library.json`
 - **Location:** Repo root (checked in, public)
 - **Link from:** `index.html` — "Try it with a sample library" option alongside "Connect your Amazon library"
-- **In-app:** File menu → Restore Backup → user selects `demo-library.json`
+- **In-app:** File menu → Restore Backup → user selects `readerwrangler-demo-library.json`
 - **Future:** Consider "Load Demo Library" one-click button in the Welcome screen
 
 ---
@@ -77,45 +77,37 @@ Tutorial videos show the live fetch → relay import flow. Without a filter, the
 - Takes too long for a tutorial
 - Produces uncontrolled results that don't match the scripted demo
 
-### Format
-
-Simple JSON array of ASINs — minimal, fast to check, easy to generate:
-
-```json
-{
-  "description": "ReaderWrangler demo library whitelist — fetcher filter for tutorial videos",
-  "asins": [
-    "B00XYZ123",
-    "B00ABC456",
-    ...
-  ]
-}
-```
-
-### Filename & Location
+### Source File
 
 - **Filename:** `demo-whitelist.json`
-- **Location:** Local only — NOT in repo (contains ASINs tied to developer's account)
-- **Add to `.gitignore`:** `demo-whitelist.json`
+- **Location:** Repo root (gitignored — contains ASINs tied to developer's account)
+- **Format:** `{ "description": "...", "count": 119, "asins": ["B00XYZ123", ...] }`
+- **Generated from:** `readerwrangler-demo-library.json` via Node one-liner (see Phase 1 below)
 
-### Generation
+### Delivery to Fetchers (localStorage)
 
-Extract ASINs from `demo-library.json` using a one-time script:
+Fetchers run on `amazon.com` and cannot access local files or the repo. The whitelist is loaded into `amazon.com` localStorage using a console script, where both fetchers can read it via same-origin access.
 
-```javascript
-const backup = JSON.parse(fs.readFileSync('demo-library.json'));
-const asins = backup.books.map(b => b.asin);
-fs.writeFileSync('demo-whitelist.json', JSON.stringify({ description: '...', asins }, null, 2));
-```
+**localStorage keys (on amazon.com):**
+
+| Key | Value | Purpose |
+|-----|-------|---------|
+| `readerwrangler-demo-whitelist` | JSON array of ASINs (`["B00XYZ123", ...]`) | The ASIN filter list |
+| `readerwrangler-demo-whitelist-enabled` | `"true"` or absent | Toggle — remove key to disable without deleting the list |
+
+**Console script:** `.private/load-demo-whitelist.js` — file picker loads `demo-whitelist.json`, writes both keys to localStorage. Run from DevTools console on any `amazon.com` page. Same script works on both `/yourbooks` and `/hz/mycd/digital-console/contentlist/` pages.
+
+**To disable:** Open DevTools on amazon.com → Application → Local Storage → delete `readerwrangler-demo-whitelist-enabled`.
 
 ### Fetcher Behavior
 
-- Fetcher checks for `demo-whitelist.json` at startup
-- If present: filter mode — only upload books whose ASIN is in the whitelist
-- If absent: normal mode — no change to existing behavior
-- Whitelist applies to: Library fetcher Phase 1-4 results and relay upload
-- Whitelist does NOT affect: orphan scan (skip or run normally)
-- Whitelist check is silent — no UI change, no indication to viewer that filtering is happening
+- At startup, fetcher checks `localStorage.getItem('readerwrangler-demo-whitelist-enabled')`
+- If `'true'`: load ASIN list from `readerwrangler-demo-whitelist`, build a `Set` for O(1) lookup
+- If absent or not `'true'`: normal mode — no filtering, no change to existing behavior
+- **Library fetcher:** filters at Phase 1 before `newBooks.push()` — skipped books never enter Phases 2-4. Also filters `existingBooks` loaded from relay (prevents non-demo books from persisting across runs).
+- **Collections fetcher:** filters `processedBooks` and `existingBooks.items` before output/upload
+- Whitelist does NOT affect: orphan scan (runs normally on whatever books are in the library)
+- Whitelist check is silent — no UI change, console log only (`🔒 Demo whitelist active: N ASINs`)
 
 ---
 
@@ -245,18 +237,22 @@ Which features each part of the demo showcases:
 
 ## Implementation Tasks
 
-### Phase 1: Demo File (do first)
-- [ ] Export backup from current Currated List folder in app
-- [ ] Write cleanup script: strip folder assignments, orphans, integrity metadata, relay metadata, personal tags, trash
-- [ ] Verify cleaned file: all 119 books in Inbox, metadata intact
-- [ ] Check `demo-library.json` into repo root
-- [ ] Add "Load Demo Library" option to index.html (link to file with instructions)
+### Phase 1: Demo File ✅ (shipped v6.8.1)
+- [x] Export backup from current Curated List folder in app
+- [x] Write cleanup script: strip folder assignments, orphans, integrity metadata, relay metadata, personal tags, trash
+- [x] Verify cleaned file: all 119 books in Inbox, metadata intact
+- [x] Check `readerwrangler-demo-library.json` into repo root (with `.gitignore` negation)
+- [x] Add demo library link + amber callout to index.html and README.md
 - [ ] Add `demo-whitelist.json` to `.gitignore`
 
-### Phase 2: Whitelist Generator
-- [ ] Write one-time ASIN extraction script → `demo-whitelist.json`
-- [ ] Add whitelist support to library fetcher (check at startup, filter uploads)
-- [ ] Test: fetch with whitelist active → verify only 119 books upload
+### Phase 2: Whitelist Filter
+- [x] Generate `demo-whitelist.json` (119 ASINs extracted from demo library backup)
+- [x] Add `demo-whitelist.json` to `.gitignore`
+- [x] Create `.private/load-demo-whitelist.js` console script (file picker → amazon.com localStorage)
+- [x] Add whitelist filter to `amazon-library-fetcher.js` (Phase 1 + existingBooks)
+- [x] Add whitelist filter to `amazon-collections-fetcher.js` (processedBooks + existingBooks)
+- [ ] Test: load whitelist via console script on amazon.com, run library fetcher → verify only 119 books
+- [ ] Test: run collections fetcher with whitelist → verify filtered output
 
 ### Phase 3: Training Docs
 - [ ] Update `VIDEO-PRODUCTION-PLAN.md` — full rewrite of Content Update Tracker + video scripts to reflect current app (v6.5.0) and demo library workflow

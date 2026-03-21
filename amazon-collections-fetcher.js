@@ -35,6 +35,19 @@ async function fetchAmazonCollections() {
     const FETCH_DELAY_MS = 0; // 0ms - network RTT (~400ms) provides natural throttling
     const FILENAME = 'amazon-library.json';
 
+    // Demo whitelist — filter to specific ASINs for tutorial video recording
+    let whitelistASINs = null;
+    if (localStorage.getItem('readerwrangler-demo-whitelist-enabled') === 'true') {
+        try {
+            const asinList = JSON.parse(localStorage.getItem('readerwrangler-demo-whitelist') || '[]');
+            if (asinList.length > 0) {
+                whitelistASINs = new Set(asinList);
+                console.log(`🔒 Demo whitelist active: ${whitelistASINs.size} ASINs`);
+            }
+        } catch (e) {
+            console.warn('⚠️ Demo whitelist parse error, ignoring:', e.message);
+        }
+    }
 
     // ============================================================================
     // Progress Overlay UI (Enhanced with timer and progress bar)
@@ -783,18 +796,34 @@ async function fetchAmazonCollections() {
     console.log('[Phase 3] Generating unified JSON file...\n');
     progressUI.updatePhase('Saving Library', 'Generating and downloading unified file');
 
+    // Demo whitelist filter — remove non-whitelisted books before output
+    let filteredProcessedBooks = processedBooks;
+    let filteredExistingBooks = existingBooks;
+    if (whitelistASINs) {
+        filteredProcessedBooks = processedBooks.filter(b => whitelistASINs.has(b.asin));
+        if (filteredExistingBooks && filteredExistingBooks.items) {
+            filteredExistingBooks = {
+                ...filteredExistingBooks,
+                items: filteredExistingBooks.items.filter(b => whitelistASINs.has(b.asin)),
+                totalBooks: undefined // recalculated below
+            };
+            filteredExistingBooks.totalBooks = filteredExistingBooks.items.length;
+        }
+        console.log(`   🔒 Whitelist filtered: ${processedBooks.length} → ${filteredProcessedBooks.length} collections, ${existingBooks?.items?.length || 0} → ${filteredExistingBooks?.items?.length || 0} books`);
+    }
+
     // Create output in Schema v2.0 unified format
     // Collections Fetcher owns: collections
     // Preserves: schemaVersion, books, organization (from input file)
     const outputData = {
         schemaVersion: SCHEMA_VERSION,
-        books: existingBooks,
+        books: filteredExistingBooks,
         collections: {
             fetchDate: new Date().toISOString(),
             fetcherVersion: FETCHER_VERSION,
-            totalBooksScanned: processedBooks.length,
+            totalBooksScanned: filteredProcessedBooks.length,
             booksWithCollections: booksWithCollections,
-            items: processedBooks
+            items: filteredProcessedBooks
         }
     };
     // Preserve existing organization section if present

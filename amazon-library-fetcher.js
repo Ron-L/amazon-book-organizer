@@ -48,6 +48,20 @@ async function fetchAmazonLibrary() {
     // CSRF token (initialized later, but declared here for scope access in fetchWithRetry)
     let csrfToken = null;
 
+    // Demo whitelist — filter to specific ASINs for tutorial video recording
+    let whitelistASINs = null;
+    if (localStorage.getItem('readerwrangler-demo-whitelist-enabled') === 'true') {
+        try {
+            const asinList = JSON.parse(localStorage.getItem('readerwrangler-demo-whitelist') || '[]');
+            if (asinList.length > 0) {
+                whitelistASINs = new Set(asinList);
+                console.log(`🔒 Demo whitelist active: ${whitelistASINs.size} ASINs`);
+            }
+        } catch (e) {
+            console.warn('⚠️ Demo whitelist parse error, ignoring:', e.message);
+        }
+    }
+
     // Book-only bindings (filter out non-book items)
     const BOOK_BINDINGS = [
         'Kindle Edition',
@@ -847,6 +861,15 @@ async function fetchAmazonLibrary() {
                     }
                 }
 
+                // Demo whitelist filter — remove non-whitelisted books from existing data
+                if (whitelistASINs && existingBooks.length > 0) {
+                    const beforeCount = existingBooks.length;
+                    existingBooks = existingBooks.filter(b => whitelistASINs.has(b.asin));
+                    if (existingBooks.length !== beforeCount) {
+                        console.log(`   🔒 Whitelist filtered existing books: ${beforeCount} → ${existingBooks.length}`);
+                    }
+                }
+
                 if (existingBooks.length > 0) {
                     console.log(`✅ Loaded ${existingBooks.length} existing books from relay`);
                     if (mostRecentDate) {
@@ -1489,6 +1512,11 @@ async function fetchAmazonLibrary() {
                             // Unknown type - track for bug report
                             ownershipType = 'unknown';
                             stats.ownershipTypes.unknown.push({ asin: product.asin, title, rawType: rawOwnershipType });
+                    }
+
+                    // Demo whitelist filter — skip books not in whitelist
+                    if (whitelistASINs && !whitelistASINs.has(product.asin)) {
+                        continue;
                     }
 
                     // Add book and track ASIN
