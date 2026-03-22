@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7961,14 +7961,15 @@
                                                     )
                                                     // ── Normal mode: status + test + create + revoke ──
                                                     : React.createElement(React.Fragment, null,
-                                                        // Status area + Test Connection
+                                                        // ── Status group ──
                                                         hasCreds
                                                             ? React.createElement(React.Fragment, null,
-                                                                React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: relayTestStatus === 'revoked' ? 'var(--bg-danger, #fef2f2)' : 'var(--bg-success)', border: `1px solid ${relayTestStatus === 'revoked' ? 'var(--border-danger, #fca5a5)' : 'var(--border-success, #86efac)'}`, marginBottom: '8px' } },
-                                                                    React.createElement('p', { className: 'font-semibold' }, relayTestStatus === 'revoked' ? '⚠ These keys have been revoked' : '✅ Encryption keys are set up'),
-                                                                    React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
-                                                                ),
-                                                                React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' } },
+                                                                React.createElement('p', { style: { fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' } }, 'Status'),
+                                                                React.createElement('div', { style: { display: 'flex', gap: '8px', alignItems: 'stretch', marginBottom: '12px' } },
+                                                                    React.createElement('div', { className: 'rounded p-3 text-sm', style: { flex: '1', background: relayTestStatus === 'revoked' ? 'var(--bg-danger, #fef2f2)' : 'var(--bg-success)', border: `1px solid ${relayTestStatus === 'revoked' ? 'var(--border-danger, #fca5a5)' : 'var(--border-success, #86efac)'}` } },
+                                                                        React.createElement('p', { className: 'font-semibold' }, relayTestStatus === 'revoked' ? '⚠ These keys have been revoked' : '✅ Encryption keys are set up'),
+                                                                        React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
+                                                                    ),
                                                                     React.createElement('button', {
                                                                         onClick: async () => {
                                                                             setRelayTestStatus('testing');
@@ -7985,13 +7986,13 @@
                                                                             }
                                                                         },
                                                                         disabled: relayTestStatus === 'testing',
-                                                                        className: 'px-3 py-1.5 rounded text-sm',
-                                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer' },
-                                                                        title: 'Check if the relay can be reached with these keys'
-                                                                    }, relayTestStatus === 'testing' ? 'Testing…' : 'Test connection'),
-                                                                    relayTestStatus === 'ok' && React.createElement('span', { style: { fontSize: '13px', color: '#16a34a' } }, '✅ Connected'),
-                                                                    relayTestStatus === 'revoked' && React.createElement('span', { style: { fontSize: '13px', color: '#dc2626' } }, '⚠ Revoked — generate new keys'),
-                                                                    relayTestStatus === 'error' && React.createElement('span', { style: { fontSize: '13px', color: '#dc2626' } }, '⚠ Could not reach relay — check your internet connection')
+                                                                        className: 'px-3 rounded text-sm',
+                                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' },
+                                                                        title: relayTestStatus === 'ok' ? '✅ Connected' : relayTestStatus === 'revoked' ? '⚠ Revoked — generate new keys' : relayTestStatus === 'error' ? '⚠ Could not reach relay — check your internet connection' : 'Check if the relay can be reached with these keys'
+                                                                    }, relayTestStatus === 'testing' ? 'Testing…' : 'Test connection')
+                                                                ),
+                                                                (relayTestStatus === 'ok' || relayTestStatus === 'error') && React.createElement('p', { className: 'text-sm', style: { color: relayTestStatus === 'ok' ? '#16a34a' : '#dc2626', marginTop: '-8px', marginBottom: '8px' } },
+                                                                    relayTestStatus === 'ok' ? '✅ Connected' : '⚠ Could not reach relay — check your internet connection'
                                                                 )
                                                             )
                                                             : React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Encryption keys secure your data between ReaderWrangler pages via Cloudflare. They are NOT your Amazon password. Choose one of the methods below to generate or load them.'),
@@ -15471,7 +15472,7 @@
                         <div className="text-right flex items-center gap-2 justify-end pr-3">
                             {window.RWRelay && window.RWRelay.isConfigured() && (
                                 <div
-                                    className={`sync-indicator ${deviceStateSynced ? 'sync-indicator-synced' : 'sync-indicator-unsynced'}`}
+                                    className={`sync-indicator ${deviceStateSynced ? 'sync-indicator-synced' : deviceStateErrorType ? 'sync-indicator-error' : 'sync-indicator-unsynced'}`}
                                     title={deviceStateSynced ? 'All changes synced to mobile' : deviceStateErrorType === 'revoked' ? 'Relay error — credentials have been revoked. Open Relay Setup to generate new keys.' : deviceStateErrorType === 'error' ? 'Relay error — could not sync. Will retry on next change.' : 'Syncing changes...'}
                                     onClick={() => setRelaySetupOpen(true)}
                                 >

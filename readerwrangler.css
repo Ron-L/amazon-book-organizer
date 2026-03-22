@@ -880,6 +880,9 @@ body { margin: 0; padding: 0; overflow: hidden; }
 /* Synced: static green tower, no arcs */
 .sync-indicator-synced .sync-arc { display: none; }
 
+/* Error/revoked: solid red tower, no arcs */
+.sync-indicator-error .sync-arc { display: none; }
+
 /* Unsynced: red tower with pulsing arcs */
 .sync-indicator-unsynced .sync-arc {
     border-top-color: #dc2626;
