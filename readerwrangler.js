@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7867,7 +7867,7 @@
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); } backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" role="dialog" aria-modal="true" aria-labelledby="modal-relay-setup" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                                 <div className="flex justify-between items-start p-4 rounded-t-lg border-b" style={{ background: 'var(--bg-chrome)', borderColor: 'var(--border-default)', flexShrink: 0 }}>
-                                    <h2 id="modal-relay-setup" className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src={`icons/sync-tower-${window.RWRelay && window.RWRelay.isConfigured() ? 'green' : 'red'}.svg`} alt="" style={{ width: '14px', height: '22px' }} /> Relay Setup</h2>
+                                    <h2 id="modal-relay-setup" className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src={`icons/sync-tower-${(() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY))?.channelId; } catch { return false; } })() ? 'green' : 'red'}.svg`} alt="" style={{ width: '14px', height: '22px' }} /> Relay Setup</h2>
                                     <button onClick={() => { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); }} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div style={{ overflowY: 'auto', flex: 1 }}>
@@ -7913,7 +7913,7 @@
 
                                             // ─── Section 1: Credentials ───
                                             React.createElement('div', { style: { borderLeft: activeSection === 'credentials' ? '18px solid #667eea' : 'none' } },
-                                            sectionHeader('credentials', '1', 'Encryption Keys', hasCreds, false),
+                                            sectionHeader('credentials', '1', 'Encryption Keys', hasCreds && relayTestStatus !== 'revoked', false),
                                             React.createElement('div', { style: { maxHeight: activeSection === 'credentials' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
                                             React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
                                                 relayManualCreds
@@ -7957,13 +7957,13 @@
                                                             }, 'Save Encryption Keys')
                                                         )
                                                     )
-                                                    // ── Normal mode: status area + action buttons ──
+                                                    // ── Normal mode: status + test + create + revoke ──
                                                     : React.createElement(React.Fragment, null,
-                                                        // Status area
+                                                        // Status area + Test Connection
                                                         hasCreds
                                                             ? React.createElement(React.Fragment, null,
-                                                                React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: 'var(--bg-success)', border: '1px solid var(--border-success, #86efac)', marginBottom: '8px' } },
-                                                                    React.createElement('p', { className: 'font-semibold' }, '✅ Encryption keys are set up'),
+                                                                React.createElement('div', { className: 'rounded p-3 text-sm', style: { background: relayTestStatus === 'revoked' ? 'var(--bg-danger, #fef2f2)' : 'var(--bg-success)', border: `1px solid ${relayTestStatus === 'revoked' ? 'var(--border-danger, #fca5a5)' : 'var(--border-success, #86efac)'}`, marginBottom: '8px' } },
+                                                                    React.createElement('p', { className: 'font-semibold' }, relayTestStatus === 'revoked' ? '⚠ These keys have been revoked' : '✅ Encryption keys are set up'),
                                                                     React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
                                                                 ),
                                                                 React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' } },
@@ -7975,7 +7975,6 @@
                                                                                 if (response.status === 403) {
                                                                                     setRelayTestStatus('revoked');
                                                                                 } else {
-                                                                                    // Re-init and call through RWRelay for decryption test
                                                                                     await window.RWRelay.getDeviceState();
                                                                                     setRelayTestStatus('ok');
                                                                                 }
@@ -7986,21 +7985,21 @@
                                                                         disabled: relayTestStatus === 'testing',
                                                                         className: 'px-3 py-1.5 rounded text-sm',
                                                                         style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer' }
-                                                                    }, relayTestStatus === 'testing' ? 'Testing…' : 'Test Connection'),
+                                                                    }, relayTestStatus === 'testing' ? 'Testing…' : 'Test connection'),
                                                                     relayTestStatus === 'ok' && React.createElement('span', { style: { fontSize: '13px', color: '#16a34a' } }, '✅ Connected'),
-                                                                    relayTestStatus === 'revoked' && React.createElement('span', { style: { fontSize: '13px', color: '#dc2626' } }, '⚠ This channel has been revoked — generate new keys'),
+                                                                    relayTestStatus === 'revoked' && React.createElement('span', { style: { fontSize: '13px', color: '#dc2626' } }, '⚠ Revoked — generate new keys'),
                                                                     relayTestStatus === 'error' && React.createElement('span', { style: { fontSize: '13px', color: '#dc2626' } }, '⚠ Could not reach relay — check your internet connection')
                                                                 )
                                                             )
                                                             : React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Encryption keys secure your data between ReaderWrangler pages via Cloudflare. They are NOT your Amazon password. Choose one of the methods below to generate or load them.'),
 
-                                                        // Action buttons — organized by hierarchy
+                                                        // Create keys group
                                                         React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
                                                             // Primary: Generate / Regenerate
                                                             React.createElement('button', {
                                                                 onClick: async () => {
                                                                     if (hasCreds) {
-                                                                        const confirmed = await showConfirmDialog('Regenerate Encryption Keys', 'This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone.', 'Regenerate', 'Cancel');
+                                                                        const confirmed = await showConfirmDialog('Regenerate keys', 'This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone.', 'Regenerate', 'Cancel');
                                                                         if (!confirmed) return;
                                                                     }
                                                                     const channelId = crypto.randomUUID();
@@ -8012,6 +8011,7 @@
                                                                     localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
                                                                     if (window.RWRelay) { window.RWRelay.initFromStorage(); }
                                                                     setRelayManualCreds(false);
+                                                                    setRelayTestStatus(null);
                                                                     setRelaySetupOpen(false);
                                                                     setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                 },
@@ -8019,8 +8019,8 @@
                                                                 style: hasCreds
                                                                     ? { background: 'var(--bg-muted)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' }
                                                                     : { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer', width: '100%' }
-                                                            }, hasCreds ? 'Regenerate Encryption Keys' : 'Generate Encryption Keys'),
-                                                            // Secondary row: Manually enter + Load from backup
+                                                            }, hasCreds ? 'Regenerate keys' : 'Generate keys'),
+                                                            // Secondary row: Enter manually + Load from backup
                                                             React.createElement('div', { style: { display: 'flex', gap: '8px' } },
                                                                 React.createElement('button', {
                                                                     onClick: () => setRelayManualCreds(true),
@@ -8043,12 +8043,13 @@
                                                                                         localStorage.setItem(RELAY_KEY, JSON.stringify(data.relay));
                                                                                         if (window.RWRelay) { window.RWRelay.initFromStorage(); }
                                                                                         setRelayManualCreds(false);
+                                                                                        setRelayTestStatus(null);
                                                                                         setRelaySetupOpen(false);
                                                                                         setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                                     } else {
-                                                                                        showInfoDialog('No Keys Found', 'No encryption keys found in this file.');
+                                                                                        showInfoDialog('No keys found', 'No encryption keys found in this file.');
                                                                                     }
-                                                                                } catch { showInfoDialog('Invalid File', 'Could not read file. Make sure it is a ReaderWrangler backup (.json).'); }
+                                                                                } catch { showInfoDialog('Invalid file', 'Could not read file. Make sure it is a ReaderWrangler backup (.json).'); }
                                                                             };
                                                                             reader.readAsText(file);
                                                                         };
@@ -8057,33 +8058,34 @@
                                                                     className: 'px-3 py-1.5 rounded text-sm',
                                                                     style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer', flex: 1 },
                                                                     title: 'Only loads encryption keys — your library data is not affected'
-                                                                }, 'Load from backup')
-                                                            ),
-                                                            // Danger: Revoke & Delete (only when keys exist)
-                                                            hasCreds && React.createElement('button', {
+                                                                }, 'Load keys from backup')
+                                                            )
+                                                        ),
+                                                        // Revoke — separated, bottom, deprioritized (only when keys exist)
+                                                        hasCreds && React.createElement('div', { style: { marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-default)' } },
+                                                            React.createElement('button', {
                                                                 onClick: async () => {
                                                                     const confirmed = await showConfirmDialog(
-                                                                        'Revoke & Delete',
+                                                                        'Revoke keys & delete data',
                                                                         'This will permanently delete all data on the relay and block these credentials from future use. You will need to generate new keys to continue syncing.',
-                                                                        'Revoke & Delete',
+                                                                        'Revoke & delete',
                                                                         'Cancel'
                                                                     );
                                                                     if (!confirmed) return;
                                                                     try {
                                                                         await window.RWRelay.revokeChannel();
                                                                         setRelayTestStatus(null);
-                                                                        // Refresh to show no-keys state
                                                                         setRelaySetupOpen(false);
                                                                         setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                         showToast('Relay credentials revoked. Generate new keys to continue syncing.');
                                                                     } catch (err) {
-                                                                        showInfoDialog('Revocation Failed', err.message);
+                                                                        showInfoDialog('Revocation failed', err.message);
                                                                     }
                                                                 },
                                                                 className: 'px-3 py-1.5 rounded text-sm',
-                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-danger, #dc2626)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%', marginTop: '4px', borderTop: '1px solid var(--border-default)' },
+                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-danger, #dc2626)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%', fontSize: '12px' },
                                                                 title: 'Permanently deletes all relay data and blocks these credentials from future use'
-                                                            }, 'Revoke & Delete')
+                                                            }, 'Revoke keys & delete data')
                                                         )
                                                     )
                                             ))),
