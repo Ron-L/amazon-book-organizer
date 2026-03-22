@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -772,6 +772,7 @@
             const [deviceStateSynced, setDeviceStateSynced] = useState(true); // v6.0.0 Phase 2 - false = unsynced changes pending push to relay
             const deviceStatePushTimerRef = useRef(null); // v6.0.0 Phase 2 - debounce timer for device-state push
             const deviceStatePushingRef = useRef(false); // v6.0.0 Phase 2 - true while push is in flight
+            const [deviceStateErrorType, setDeviceStateErrorType] = useState(null); // v6.9.0 - 'revoked'|'error'|null
             const dataOpInProgressRef = useRef(false); // v6.3.0 - Guards against overlapping import/restore/delete operations
 
             // v5.0.0 - Special folders
@@ -2375,10 +2376,11 @@
                         const jsonString = JSON.stringify(payload);
                         await window.RWRelay.putDeviceState(jsonString);
                         setDeviceStateSynced(true);
+                        setDeviceStateErrorType(null);
                         console.log(`✅ Device-state pushed (${payload.books.totalBooks} books, ${(jsonString.length / 1024).toFixed(0)} KB)`);
                     } catch (err) {
                         console.error('❌ Device-state push failed:', err);
-                        // Keep indicator red — will retry on next change
+                        setDeviceStateErrorType(err.status === 403 ? 'revoked' : 'error');
                     } finally {
                         deviceStatePushingRef.current = false;
                     }
@@ -6316,7 +6318,7 @@
                                                     transition: 'background 0.1s', color: 'var(--text-primary)',
                                                     display: 'flex', alignItems: 'center', gap: '6px'
                                                 }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                    <img src={`icons/sync-tower-${window.RWRelay && window.RWRelay.isConfigured() ? 'green' : 'red'}.svg`} alt="" style={{ width: '10px', height: '16px' }} />
+                                                    <img src="icons/sync-tower-neutral.svg" alt="" style={{ width: '10px', height: '16px' }} />
                                                     Relay Setup…
                                                 </button>
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
@@ -7867,7 +7869,7 @@
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); } backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" role="dialog" aria-modal="true" aria-labelledby="modal-relay-setup" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                                 <div className="flex justify-between items-start p-4 rounded-t-lg border-b" style={{ background: 'var(--bg-chrome)', borderColor: 'var(--border-default)', flexShrink: 0 }}>
-                                    <h2 id="modal-relay-setup" className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src={`icons/sync-tower-${(() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY))?.channelId; } catch { return false; } })() ? 'green' : 'red'}.svg`} alt="" style={{ width: '14px', height: '22px' }} /> Relay Setup</h2>
+                                    <h2 id="modal-relay-setup" className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src="icons/sync-tower-neutral.svg" alt="" style={{ width: '14px', height: '22px' }} /> Relay Setup</h2>
                                     <button onClick={() => { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); }} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div style={{ overflowY: 'auto', flex: 1 }}>
@@ -7913,7 +7915,7 @@
 
                                             // ─── Section 1: Credentials ───
                                             React.createElement('div', { style: { borderLeft: activeSection === 'credentials' ? '18px solid #667eea' : 'none' } },
-                                            sectionHeader('credentials', '1', 'Encryption Keys', hasCreds && relayTestStatus !== 'revoked', false),
+                                            sectionHeader('credentials', '1', 'Encryption Keys', false, false),
                                             React.createElement('div', { style: { maxHeight: activeSection === 'credentials' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
                                             React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
                                                 relayManualCreds
@@ -7984,7 +7986,8 @@
                                                                         },
                                                                         disabled: relayTestStatus === 'testing',
                                                                         className: 'px-3 py-1.5 rounded text-sm',
-                                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer' }
+                                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer' },
+                                                                        title: 'Check if the relay can be reached with these keys'
                                                                     }, relayTestStatus === 'testing' ? 'Testing…' : 'Test connection'),
                                                                     relayTestStatus === 'ok' && React.createElement('span', { style: { fontSize: '13px', color: '#16a34a' } }, '✅ Connected'),
                                                                     relayTestStatus === 'revoked' && React.createElement('span', { style: { fontSize: '13px', color: '#dc2626' } }, '⚠ Revoked — generate new keys'),
@@ -7993,39 +7996,40 @@
                                                             )
                                                             : React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Encryption keys secure your data between ReaderWrangler pages via Cloudflare. They are NOT your Amazon password. Choose one of the methods below to generate or load them.'),
 
-                                                        // Create keys group
-                                                        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
-                                                            // Primary: Generate / Regenerate
-                                                            React.createElement('button', {
-                                                                onClick: async () => {
-                                                                    if (hasCreds) {
-                                                                        const confirmed = await showConfirmDialog('Regenerate keys', 'This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone.', 'Regenerate', 'Cancel');
-                                                                        if (!confirmed) return;
-                                                                    }
-                                                                    const channelId = crypto.randomUUID();
-                                                                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-                                                                    let passphrase = '';
-                                                                    const arr = new Uint8Array(32);
-                                                                    crypto.getRandomValues(arr);
-                                                                    for (let i = 0; i < 32; i++) passphrase += chars[arr[i] % chars.length];
-                                                                    localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
-                                                                    if (window.RWRelay) { window.RWRelay.initFromStorage(); }
-                                                                    setRelayManualCreds(false);
-                                                                    setRelayTestStatus(null);
-                                                                    setRelaySetupOpen(false);
-                                                                    setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
-                                                                },
-                                                                className: 'px-3 py-2 rounded text-sm',
-                                                                style: hasCreds
-                                                                    ? { background: 'var(--bg-muted)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' }
-                                                                    : { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer', width: '100%' }
-                                                            }, hasCreds ? 'Regenerate keys' : 'Generate keys'),
-                                                            // Secondary row: Enter manually + Load from backup
-                                                            React.createElement('div', { style: { display: 'flex', gap: '8px' } },
+                                                        // ── Set up keys group ──
+                                                        React.createElement('div', { style: { marginTop: '4px' } },
+                                                            React.createElement('p', { style: { fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' } }, 'Set up keys'),
+                                                            React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
+                                                                React.createElement('button', {
+                                                                    onClick: async () => {
+                                                                        if (hasCreds) {
+                                                                            const confirmed = await showConfirmDialog('Regenerate keys', 'This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone.', 'Regenerate', 'Cancel');
+                                                                            if (!confirmed) return;
+                                                                        }
+                                                                        const channelId = crypto.randomUUID();
+                                                                        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                                                                        let passphrase = '';
+                                                                        const arr = new Uint8Array(32);
+                                                                        crypto.getRandomValues(arr);
+                                                                        for (let i = 0; i < 32; i++) passphrase += chars[arr[i] % chars.length];
+                                                                        localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
+                                                                        if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                                        setRelayManualCreds(false);
+                                                                        setRelayTestStatus(null);
+                                                                        setRelaySetupOpen(false);
+                                                                        setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
+                                                                    },
+                                                                    className: 'px-3 py-1.5 rounded text-sm',
+                                                                    style: hasCreds
+                                                                        ? { background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' }
+                                                                        : { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer', width: '100%' },
+                                                                    title: hasCreds ? 'Generate a new channel ID and passphrase — invalidates current bookmarklet and mobile pairing' : 'Generate a new channel ID and passphrase for encrypting relay data'
+                                                                }, hasCreds ? 'Regenerate keys' : 'Generate keys'),
                                                                 React.createElement('button', {
                                                                     onClick: () => setRelayManualCreds(true),
                                                                     className: 'px-3 py-1.5 rounded text-sm',
-                                                                    style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer', flex: 1 }
+                                                                    style: { background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' },
+                                                                    title: 'Type in a channel ID and passphrase from another device or source'
                                                                 }, 'Enter keys manually'),
                                                                 React.createElement('button', {
                                                                     onClick: () => {
@@ -8056,13 +8060,14 @@
                                                                         input.click();
                                                                     },
                                                                     className: 'px-3 py-1.5 rounded text-sm',
-                                                                    style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer', flex: 1 },
-                                                                    title: 'Only loads encryption keys — your library data is not affected'
+                                                                    style: { background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' },
+                                                                    title: 'Load encryption keys from a ReaderWrangler backup file — your library data is not affected'
                                                                 }, 'Load keys from backup')
                                                             )
                                                         ),
-                                                        // Revoke — separated, bottom, deprioritized (only when keys exist)
+                                                        // ── Danger zone ──
                                                         hasCreds && React.createElement('div', { style: { marginTop: '16px', paddingTop: '12px', borderTop: '1px solid var(--border-default)' } },
+                                                            React.createElement('p', { style: { fontSize: '11px', fontWeight: '600', color: 'var(--text-danger, #dc2626)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' } }, 'Danger zone'),
                                                             React.createElement('button', {
                                                                 onClick: async () => {
                                                                     const confirmed = await showConfirmDialog(
@@ -8083,7 +8088,7 @@
                                                                     }
                                                                 },
                                                                 className: 'px-3 py-1.5 rounded text-sm',
-                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-danger, #dc2626)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%', fontSize: '12px' },
+                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-danger, #dc2626)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' },
                                                                 title: 'Permanently deletes all relay data and blocks these credentials from future use'
                                                             }, 'Revoke keys & delete data')
                                                         )
@@ -15467,7 +15472,7 @@
                             {window.RWRelay && window.RWRelay.isConfigured() && (
                                 <div
                                     className={`sync-indicator ${deviceStateSynced ? 'sync-indicator-synced' : 'sync-indicator-unsynced'}`}
-                                    title={deviceStateSynced ? 'All changes synced to mobile' : 'Syncing changes...'}
+                                    title={deviceStateSynced ? 'All changes synced to mobile' : deviceStateErrorType === 'revoked' ? 'Relay error — credentials have been revoked. Open Relay Setup to generate new keys.' : deviceStateErrorType === 'error' ? 'Relay error — could not sync. Will retry on next change.' : 'Syncing changes...'}
                                     onClick={() => setRelaySetupOpen(true)}
                                 >
                                     <img className="sync-tower" src={`icons/sync-tower-${deviceStateSynced ? 'green' : 'red'}.svg`} alt="" />

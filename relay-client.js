@@ -289,7 +289,11 @@
       body: encrypted
     });
 
-    if (!response.ok) throw new Error('Failed to update device state');
+    if (!response.ok) {
+      const err = new Error(response.status === 403 ? 'Channel revoked' : 'Failed to update device state');
+      err.status = response.status;
+      throw err;
+    }
   }
 
   /**
