@@ -89,6 +89,21 @@ async function route(request, path, env) {
     return handleGetDeviceState(env, match[1]);
   }
 
+  // POST /test-alert?key={TEST_ALERT_KEY} — send a test email alert
+  match = path.match(/^\/test-alert$/);
+  if (match && request.method === 'POST') {
+    const testUrl = new URL(request.url);
+    if (!env.TEST_ALERT_KEY || testUrl.searchParams.get('key') !== env.TEST_ALERT_KEY) {
+      return jsonResponse({ error: 'Unauthorized' }, 401);
+    }
+    const countKey = 'test-alert-counter';
+    const prev = parseInt(await env.RELAY_KV.get(countKey) || '0');
+    const count = prev + 1;
+    await env.RELAY_KV.put(countKey, String(count));
+    await sendAlert(env, `Test Alert #${count}`, `Test alert #${count} from the ReaderWrangler relay worker.\nSent: ${new Date().toISOString()}`);
+    return jsonResponse({ ok: true, message: `Alert #${count} sent` });
+  }
+
   return new Response('Not Found', { status: 404 });
 }
 
@@ -193,6 +208,27 @@ async function handleGetDeviceState(env, channelId) {
   return new Response(data, {
     headers: { 'Content-Type': 'application/octet-stream' }
   });
+}
+
+// --- Email Alerts ---
+
+async function sendAlert(env, subject, message) {
+    if (!env.ALERT_TO_EMAIL || !env.RESEND_API_KEY) return;
+    try {
+        await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${env.RESEND_API_KEY}`
+            },
+            body: JSON.stringify({
+                from: 'ReaderWrangler Relay <alerts@readerwrangler.com>',
+                to: [env.ALERT_TO_EMAIL],
+                subject: `🚨 ${subject}`,
+                text: message
+            })
+        });
+    } catch { /* best-effort — don't let alert failure break the request */ }
 }
 
 // --- Helpers ---
