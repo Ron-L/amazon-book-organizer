@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8052,7 +8052,13 @@
                                                             // Revoke & Delete (only when keys exist)
                                                             hasCreds && React.createElement('button', {
                                                                 onClick: async () => {
-                                                                    if (!confirm('This will permanently delete all data on the relay and block these credentials from future use. You will need to generate new keys.\n\nContinue?')) return;
+                                                                    const confirmed = await showConfirmDialog(
+                                                                        'Revoke & Delete',
+                                                                        'This will permanently delete all data on the relay and block these credentials from future use. You will need to generate new keys to continue syncing.',
+                                                                        'Revoke & Delete',
+                                                                        'Cancel'
+                                                                    );
+                                                                    if (!confirmed) return;
                                                                     try {
                                                                         await window.RWRelay.revokeChannel();
                                                                         setRelaySetupOpen(false);
@@ -8060,7 +8066,7 @@
                                                                         setRelayTestStatus(null);
                                                                         showToast('Relay credentials revoked. Generate new keys to continue syncing.');
                                                                     } catch (err) {
-                                                                        alert('Revocation failed: ' + err.message);
+                                                                        showInfoDialog('Revocation Failed', err.message);
                                                                     }
                                                                 },
                                                                 className: 'px-3 py-1.5 rounded text-sm',
