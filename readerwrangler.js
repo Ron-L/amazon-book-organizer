@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7971,8 +7971,14 @@
                                                                         onClick: async () => {
                                                                             setRelayTestStatus('testing');
                                                                             try {
-                                                                                await window.RWRelay.getDeviceState();
-                                                                                setRelayTestStatus('ok');
+                                                                                const response = await fetch(`https://readerwrangler-relay.readerwrangler.workers.dev/device-state/${stored.channelId}`);
+                                                                                if (response.status === 403) {
+                                                                                    setRelayTestStatus('revoked');
+                                                                                } else {
+                                                                                    // Re-init and call through RWRelay for decryption test
+                                                                                    await window.RWRelay.getDeviceState();
+                                                                                    setRelayTestStatus('ok');
+                                                                                }
                                                                             } catch {
                                                                                 setRelayTestStatus('error');
                                                                             }
@@ -7982,17 +7988,21 @@
                                                                         style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer' }
                                                                     }, relayTestStatus === 'testing' ? 'Testing…' : 'Test Connection'),
                                                                     relayTestStatus === 'ok' && React.createElement('span', { style: { fontSize: '13px', color: '#16a34a' } }, '✅ Connected'),
+                                                                    relayTestStatus === 'revoked' && React.createElement('span', { style: { fontSize: '13px', color: '#dc2626' } }, '⚠ This channel has been revoked — generate new keys'),
                                                                     relayTestStatus === 'error' && React.createElement('span', { style: { fontSize: '13px', color: '#dc2626' } }, '⚠ Could not reach relay — check your internet connection')
                                                                 )
                                                             )
                                                             : React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Encryption keys secure your data between ReaderWrangler pages via Cloudflare. They are NOT your Amazon password. Choose one of the methods below to generate or load them.'),
 
-                                                        // Action buttons
-                                                        React.createElement('div', { style: { display: 'flex', gap: '8px', flexWrap: 'wrap' } },
-                                                            // Generate / Regenerate
+                                                        // Action buttons — organized by hierarchy
+                                                        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px' } },
+                                                            // Primary: Generate / Regenerate
                                                             React.createElement('button', {
-                                                                onClick: () => {
-                                                                    if (hasCreds && !confirm('This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone. Continue?')) return;
+                                                                onClick: async () => {
+                                                                    if (hasCreds) {
+                                                                        const confirmed = await showConfirmDialog('Regenerate Encryption Keys', 'This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone.', 'Regenerate', 'Cancel');
+                                                                        if (!confirmed) return;
+                                                                    }
                                                                     const channelId = crypto.randomUUID();
                                                                     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
                                                                     let passphrase = '';
@@ -8002,54 +8012,54 @@
                                                                     localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
                                                                     if (window.RWRelay) { window.RWRelay.initFromStorage(); }
                                                                     setRelayManualCreds(false);
-                                                                    // Close and reopen to refresh computed hasCreds, stay on section 1
                                                                     setRelaySetupOpen(false);
                                                                     setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                 },
-                                                                className: 'px-3 py-1.5 rounded text-sm',
+                                                                className: 'px-3 py-2 rounded text-sm',
                                                                 style: hasCreds
-                                                                    ? { background: 'var(--bg-muted)', color: 'var(--text-danger)', border: '1px solid var(--border-default)', cursor: 'pointer' }
-                                                                    : { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer' }
+                                                                    ? { background: 'var(--bg-muted)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' }
+                                                                    : { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer', width: '100%' }
                                                             }, hasCreds ? 'Regenerate Encryption Keys' : 'Generate Encryption Keys'),
-                                                            // Manually enter
-                                                            React.createElement('button', {
-                                                                onClick: () => setRelayManualCreds(true),
-                                                                className: 'px-3 py-1.5 rounded text-sm',
-                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-accent, #667eea)', border: '1px solid var(--text-accent, #667eea)', cursor: 'pointer' }
-                                                            }, 'Manually enter encryption keys'),
-                                                            // Load from backup
-                                                            React.createElement('button', {
-                                                                onClick: () => {
-                                                                    const input = document.createElement('input');
-                                                                    input.type = 'file';
-                                                                    input.accept = '.json';
-                                                                    input.onchange = (e) => {
-                                                                        const file = e.target.files[0];
-                                                                        if (!file) return;
-                                                                        const reader = new FileReader();
-                                                                        reader.onload = (ev) => {
-                                                                            try {
-                                                                                const data = JSON.parse(ev.target.result);
-                                                                                if (data.relay && data.relay.channelId && data.relay.passphrase) {
-                                                                                    localStorage.setItem(RELAY_KEY, JSON.stringify(data.relay));
-                                                                                    if (window.RWRelay) { window.RWRelay.initFromStorage(); }
-                                                                                    setRelayManualCreds(false);
-                                                                                    setRelaySetupOpen(false);
-                                                                                    setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
-                                                                                } else {
-                                                                                    alert('No encryption keys found in this file.');
-                                                                                }
-                                                                            } catch { alert('Could not read file. Make sure it is a ReaderWrangler backup (.json).'); }
+                                                            // Secondary row: Manually enter + Load from backup
+                                                            React.createElement('div', { style: { display: 'flex', gap: '8px' } },
+                                                                React.createElement('button', {
+                                                                    onClick: () => setRelayManualCreds(true),
+                                                                    className: 'px-3 py-1.5 rounded text-sm',
+                                                                    style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer', flex: 1 }
+                                                                }, 'Enter keys manually'),
+                                                                React.createElement('button', {
+                                                                    onClick: () => {
+                                                                        const input = document.createElement('input');
+                                                                        input.type = 'file';
+                                                                        input.accept = '.json';
+                                                                        input.onchange = (e) => {
+                                                                            const file = e.target.files[0];
+                                                                            if (!file) return;
+                                                                            const reader = new FileReader();
+                                                                            reader.onload = (ev) => {
+                                                                                try {
+                                                                                    const data = JSON.parse(ev.target.result);
+                                                                                    if (data.relay && data.relay.channelId && data.relay.passphrase) {
+                                                                                        localStorage.setItem(RELAY_KEY, JSON.stringify(data.relay));
+                                                                                        if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                                                        setRelayManualCreds(false);
+                                                                                        setRelaySetupOpen(false);
+                                                                                        setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
+                                                                                    } else {
+                                                                                        showInfoDialog('No Keys Found', 'No encryption keys found in this file.');
+                                                                                    }
+                                                                                } catch { showInfoDialog('Invalid File', 'Could not read file. Make sure it is a ReaderWrangler backup (.json).'); }
+                                                                            };
+                                                                            reader.readAsText(file);
                                                                         };
-                                                                        reader.readAsText(file);
-                                                                    };
-                                                                    input.click();
-                                                                },
-                                                                className: 'px-3 py-1.5 rounded text-sm',
-                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' },
-                                                                title: 'Only loads encryption keys — your library data is not affected. Use File → Save Backup to save a backup that includes your credentials.'
-                                                            }, 'Load from backup file'),
-                                                            // Revoke & Delete (only when keys exist)
+                                                                        input.click();
+                                                                    },
+                                                                    className: 'px-3 py-1.5 rounded text-sm',
+                                                                    style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer', flex: 1 },
+                                                                    title: 'Only loads encryption keys — your library data is not affected'
+                                                                }, 'Load from backup')
+                                                            ),
+                                                            // Danger: Revoke & Delete (only when keys exist)
                                                             hasCreds && React.createElement('button', {
                                                                 onClick: async () => {
                                                                     const confirmed = await showConfirmDialog(
@@ -8061,16 +8071,17 @@
                                                                     if (!confirmed) return;
                                                                     try {
                                                                         await window.RWRelay.revokeChannel();
-                                                                        setRelaySetupOpen(false);
-                                                                        setRelaySetupSection(null);
                                                                         setRelayTestStatus(null);
+                                                                        // Refresh to show no-keys state
+                                                                        setRelaySetupOpen(false);
+                                                                        setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                         showToast('Relay credentials revoked. Generate new keys to continue syncing.');
                                                                     } catch (err) {
                                                                         showInfoDialog('Revocation Failed', err.message);
                                                                     }
                                                                 },
                                                                 className: 'px-3 py-1.5 rounded text-sm',
-                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-danger, #dc2626)', border: '1px solid var(--text-danger, #dc2626)', cursor: 'pointer' },
+                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-danger, #dc2626)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%', marginTop: '4px', borderTop: '1px solid var(--border-default)' },
                                                                 title: 'Permanently deletes all relay data and blocks these credentials from future use'
                                                             }, 'Revoke & Delete')
                                                         )
