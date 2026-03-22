@@ -9,12 +9,18 @@
  *   relay:{channelId}:manifest       → upload manifest (TTL: 10 days)
  *   relay:{channelId}:chunk:{n}      → encrypted library chunk (TTL: 10 days)
  *   relay:{channelId}:device-state   → encrypted device state (TTL: 90 days)
+ *   ratelimit:{channelId}            → write counter per hour (TTL: 2 hours)
+ *   blocklist:{channelId}            → permanently blocked channel (no TTL)
+ *   test-alert-counter               → test alert sequence number
  */
 
 const LIBRARY_TTL = 864000;    // 10 days in seconds (fetcher→app relay data)
 const PERSISTENT_TTL = 7776000; // 90 days in seconds (device-state sync)
 const MAX_CHUNK_SIZE = 25 * 1024 * 1024; // 25 MB (KV value limit)
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const RATE_LIMIT_WINDOW_MS = 3600000; // 1 hour
+const RATE_LIMIT_MAX_WRITES = 200;    // per channelId per hour (normal: ~10-20)
+const RATE_LIMIT_AUTO_BLOCK = 2000;   // 10x limit → permanent blocklist
 
 export default {
   async fetch(request, env) {
@@ -111,6 +117,7 @@ async function route(request, path, env) {
 
 async function handleUploadChunk(request, env, channelId, chunkNum) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
+  if (!await checkRateLimit(env, channelId)) return jsonResponse({ error: 'Rate limit exceeded. Try again later.' }, 429);
   const body = await request.arrayBuffer();
   if (body.byteLength > MAX_CHUNK_SIZE) return badRequest('Chunk too large');
 
@@ -125,6 +132,7 @@ async function handleUploadChunk(request, env, channelId, chunkNum) {
 
 async function handleUploadManifest(request, env, channelId) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
+  if (!await checkRateLimit(env, channelId)) return jsonResponse({ error: 'Rate limit exceeded. Try again later.' }, 429);
   const manifest = await request.text();
 
   // Validate it's parseable JSON
@@ -190,6 +198,7 @@ async function handleCleanup(env, channelId) {
 
 async function handlePutDeviceState(request, env, channelId) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
+  if (!await checkRateLimit(env, channelId)) return jsonResponse({ error: 'Rate limit exceeded. Try again later.' }, 429);
   const body = await request.arrayBuffer();
   if (body.byteLength > MAX_CHUNK_SIZE) return badRequest('Device state too large');
 
@@ -208,6 +217,37 @@ async function handleGetDeviceState(env, channelId) {
   return new Response(data, {
     headers: { 'Content-Type': 'application/octet-stream' }
   });
+}
+
+// --- Rate Limiting ---
+
+async function checkRateLimit(env, channelId) {
+  const key = `ratelimit:${channelId}`;
+  const now = Date.now();
+
+  const raw = await env.RELAY_KV.get(key);
+  let data = raw ? JSON.parse(raw) : { count: 0, windowStart: now };
+
+  // Reset window if expired
+  if (now - data.windowStart > RATE_LIMIT_WINDOW_MS) {
+    data = { count: 0, windowStart: now };
+  }
+
+  data.count++;
+
+  if (data.count > RATE_LIMIT_MAX_WRITES) {
+    // Auto-blocklist on extreme abuse (10x normal limit)
+    if (data.count >= RATE_LIMIT_AUTO_BLOCK) {
+      await env.RELAY_KV.put(`blocklist:${channelId}`,
+        JSON.stringify({ revokedAt: new Date().toISOString(), reason: 'rate-limit-auto' }));
+      await sendAlert(env, 'Channel auto-blocked',
+        `Channel ${channelId} exceeded ${RATE_LIMIT_AUTO_BLOCK} writes/hour and was auto-blocked.\nTime: ${new Date().toISOString()}`);
+    }
+    return false; // Rate limited
+  }
+
+  await env.RELAY_KV.put(key, JSON.stringify(data), { expirationTtl: 7200 }); // 2hr TTL
+  return true; // Allowed
 }
 
 // --- Email Alerts ---
