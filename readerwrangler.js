@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -768,12 +768,91 @@
             const [relayImporting, setRelayImporting] = useState(false); // true while importing from relay
             const [relayManualCreds, setRelayManualCreds] = useState(false); // show manual credential entry in Relay Setup
             const [relaySetupSection, setRelaySetupSection] = useState(null); // which accordion section is open: 'credentials'|'bookmarklet'|'mobile'|null
-            const [relayTestStatus, setRelayTestStatus] = useState(null); // v6.8.0 null|'testing'|'ok'|'error'
-            const [deviceStateSynced, setDeviceStateSynced] = useState(true); // v6.0.0 Phase 2 - false = unsynced changes pending push to relay
+            const [relayTestStatus, setRelayTestStatus] = useState(() => { // v6.9.0 - Persisted: null|'testing'|'ok'|'error'|'revoked'
+                try { return localStorage.getItem(RELAY_STATUS_KEY) || null; } catch { return null; }
+            });
+            const [deviceStateSynced, setDeviceStateSynced] = useState(() => { // v6.0.0 Phase 2 - false = unsynced changes pending push to relay
+                try { return localStorage.getItem(RELAY_STATUS_KEY) !== 'revoked'; } catch { return true; }
+            });
             const deviceStatePushTimerRef = useRef(null); // v6.0.0 Phase 2 - debounce timer for device-state push
             const deviceStatePushingRef = useRef(false); // v6.0.0 Phase 2 - true while push is in flight
-            const [deviceStateErrorType, setDeviceStateErrorType] = useState(null); // v6.9.0 - 'revoked'|'error'|null
+            const [deviceStateErrorType, setDeviceStateErrorType] = useState(() => { // v6.9.0 - 'revoked'|'error'|null
+                try { return localStorage.getItem(RELAY_STATUS_KEY) === 'revoked' ? 'revoked' : null; } catch { return null; }
+            });
             const dataOpInProgressRef = useRef(false); // v6.3.0 - Guards against overlapping import/restore/delete operations
+
+            // v6.9.0 - Single gateway for all relay credential and status changes.
+            // Every key change and relay network result goes through here.
+            // Owns: localStorage (credentials + status), RWRelay.initFromStorage(), React state.
+            const relayOp = async (op, data) => {
+                switch (op) {
+                    case 'setKeys': {
+                        // data = { channelId, passphrase }
+                        localStorage.setItem(RELAY_KEY, JSON.stringify(data));
+                        if (window.RWRelay) window.RWRelay.initFromStorage();
+                        localStorage.removeItem(RELAY_STATUS_KEY);
+                        setRelayTestStatus(null);
+                        setDeviceStateSynced(true);
+                        setDeviceStateErrorType(null);
+                        break;
+                    }
+                    case 'clearKeys': {
+                        // After revoke — keys already removed by RWRelay.revokeChannel()
+                        localStorage.removeItem(RELAY_STATUS_KEY);
+                        setRelayTestStatus(null);
+                        setDeviceStateSynced(true);
+                        setDeviceStateErrorType(null);
+                        break;
+                    }
+                    case 'test': {
+                        // data = { channelId } — manual test connection
+                        setRelayTestStatus('testing');
+                        try {
+                            const response = await fetch(`https://readerwrangler-relay.readerwrangler.workers.dev/device-state/${data.channelId}`);
+                            if (response.status === 403) {
+                                localStorage.setItem(RELAY_STATUS_KEY, 'revoked');
+                                setRelayTestStatus('revoked');
+                                setDeviceStateSynced(false);
+                                setDeviceStateErrorType('revoked');
+                            } else {
+                                await window.RWRelay.getDeviceState();
+                                localStorage.setItem(RELAY_STATUS_KEY, 'ok');
+                                setRelayTestStatus('ok');
+                                setDeviceStateSynced(true);
+                                setDeviceStateErrorType(null);
+                            }
+                        } catch {
+                            // Transient error — don't persist
+                            setRelayTestStatus('error');
+                        }
+                        break;
+                    }
+                    case 'pushOk': {
+                        // Device-state push succeeded
+                        localStorage.setItem(RELAY_STATUS_KEY, 'ok');
+                        setRelayTestStatus('ok');
+                        setDeviceStateSynced(true);
+                        setDeviceStateErrorType(null);
+                        break;
+                    }
+                    case 'pushFail': {
+                        // data = { status } — HTTP status from putDeviceState error
+                        const isRevoked = data && data.status === 403;
+                        if (isRevoked) {
+                            localStorage.setItem(RELAY_STATUS_KEY, 'revoked');
+                            setRelayTestStatus('revoked');
+                        }
+                        setDeviceStateSynced(false);
+                        setDeviceStateErrorType(isRevoked ? 'revoked' : 'error');
+                        break;
+                    }
+                    case 'markUnsynced': {
+                        // Data changed, pending push
+                        setDeviceStateSynced(false);
+                        break;
+                    }
+                }
+            };
 
             // v5.0.0 - Special folders
             const FOLDER_ALL_BOOKS = { id: '__all__', name: 'All Books', virtual: true, icon: '📚' };
@@ -1957,7 +2036,10 @@
                                     setRelayManifest(manifest);
                                 }
                             })
-                            .catch(err => console.warn('Relay status check failed:', err.message));
+                            .catch(err => {
+                                console.warn('Relay status check failed:', err.message);
+                                if (err.status === 403) relayOp('pushFail', { status: 403 });
+                            });
                     }
                 }
             }, []);
@@ -2357,8 +2439,8 @@
                 if (syncStatus === 'loading' || books.length === 0) return;
                 if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
 
-                // Mark as unsynced
-                setDeviceStateSynced(false);
+                // Mark as unsynced via relayOp
+                relayOp('markUnsynced');
 
                 // Clear any existing debounce timer
                 if (deviceStatePushTimerRef.current) {
@@ -2375,12 +2457,11 @@
                         const payload = await buildDeviceStatePayload();
                         const jsonString = JSON.stringify(payload);
                         await window.RWRelay.putDeviceState(jsonString);
-                        setDeviceStateSynced(true);
-                        setDeviceStateErrorType(null);
+                        await relayOp('pushOk');
                         console.log(`✅ Device-state pushed (${payload.books.totalBooks} books, ${(jsonString.length / 1024).toFixed(0)} KB)`);
                     } catch (err) {
                         console.error('❌ Device-state push failed:', err);
-                        setDeviceStateErrorType(err.status === 403 ? 'revoked' : 'error');
+                        await relayOp('pushFail', { status: err.status });
                     } finally {
                         deviceStatePushingRef.current = false;
                     }
@@ -3512,8 +3593,7 @@
                             }
                             // v6.0.0 - Restore relay credentials from backup
                             if (parsedData.relay && parsedData.relay.channelId) {
-                                localStorage.setItem(RELAY_KEY, JSON.stringify(parsedData.relay));
-                                if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                relayOp('setKeys', parsedData.relay);
                                 console.log('📡 Restored relay credentials from backup');
                             }
 
@@ -4763,7 +4843,7 @@
                     if (resetConfirmOpen) { setResetConfirmOpen(false); return; }
                     if (statusModalOpen) { setStatusModalOpen(false); return; }
                     if (relaySetupOpen && relayManualCreds) { setRelayManualCreds(false); return; }
-                    if (relaySetupOpen) { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); return; }
+                    if (relaySetupOpen) { setRelaySetupOpen(false); setRelaySetupSection(null); return; }
                 };
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
@@ -7866,11 +7946,11 @@
 
                     {/* v6.0.0 - Relay Setup Modal */}
                     {relaySetupOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); } backdropMouseDownRef.current = null; }}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setRelaySetupOpen(false); setRelaySetupSection(null); } backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" role="dialog" aria-modal="true" aria-labelledby="modal-relay-setup" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                                 <div className="flex justify-between items-start p-4 rounded-t-lg border-b" style={{ background: 'var(--bg-chrome)', borderColor: 'var(--border-default)', flexShrink: 0 }}>
                                     <h2 id="modal-relay-setup" className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src="icons/sync-tower-neutral.svg" alt="" style={{ width: '14px', height: '22px' }} /> Relay Setup</h2>
-                                    <button onClick={() => { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); }} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
+                                    <button onClick={() => { setRelaySetupOpen(false); setRelaySetupSection(null); }} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
                                 </div>
                                 <div style={{ overflowY: 'auto', flex: 1 }}>
                                     {(() => {
@@ -7947,8 +8027,7 @@
                                                                     const ch = document.getElementById('relay-manual-channel')?.value?.trim();
                                                                     const pp = document.getElementById('relay-manual-passphrase')?.value?.trim();
                                                                     if (!ch || !pp) { alert('Both Channel ID and Passphrase are required.'); return; }
-                                                                    localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId: ch, passphrase: pp }));
-                                                                    if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                                    relayOp('setKeys', { channelId: ch, passphrase: pp });
                                                                     setRelayManualCreds(false);
                                                                     // Close and reopen to refresh state, stay on section 1
                                                                     setRelaySetupOpen(false);
@@ -7971,20 +8050,7 @@
                                                                         React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
                                                                     ),
                                                                     React.createElement('button', {
-                                                                        onClick: async () => {
-                                                                            setRelayTestStatus('testing');
-                                                                            try {
-                                                                                const response = await fetch(`https://readerwrangler-relay.readerwrangler.workers.dev/device-state/${stored.channelId}`);
-                                                                                if (response.status === 403) {
-                                                                                    setRelayTestStatus('revoked');
-                                                                                } else {
-                                                                                    await window.RWRelay.getDeviceState();
-                                                                                    setRelayTestStatus('ok');
-                                                                                }
-                                                                            } catch {
-                                                                                setRelayTestStatus('error');
-                                                                            }
-                                                                        },
+                                                                        onClick: () => relayOp('test', { channelId: stored.channelId }),
                                                                         disabled: relayTestStatus === 'testing',
                                                                         className: 'px-3 rounded text-sm',
                                                                         style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' },
@@ -8013,10 +8079,8 @@
                                                                         const arr = new Uint8Array(32);
                                                                         crypto.getRandomValues(arr);
                                                                         for (let i = 0; i < 32; i++) passphrase += chars[arr[i] % chars.length];
-                                                                        localStorage.setItem(RELAY_KEY, JSON.stringify({ channelId, passphrase }));
-                                                                        if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                                        await relayOp('setKeys', { channelId, passphrase });
                                                                         setRelayManualCreds(false);
-                                                                        setRelayTestStatus(null);
                                                                         setRelaySetupOpen(false);
                                                                         setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                     },
@@ -8045,10 +8109,8 @@
                                                                                 try {
                                                                                     const data = JSON.parse(ev.target.result);
                                                                                     if (data.relay && data.relay.channelId && data.relay.passphrase) {
-                                                                                        localStorage.setItem(RELAY_KEY, JSON.stringify(data.relay));
-                                                                                        if (window.RWRelay) { window.RWRelay.initFromStorage(); }
+                                                                                        relayOp('setKeys', data.relay);
                                                                                         setRelayManualCreds(false);
-                                                                                        setRelayTestStatus(null);
                                                                                         setRelaySetupOpen(false);
                                                                                         setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                                     } else {
@@ -8080,7 +8142,7 @@
                                                                     if (!confirmed) return;
                                                                     try {
                                                                         await window.RWRelay.revokeChannel();
-                                                                        setRelayTestStatus(null);
+                                                                        await relayOp('clearKeys');
                                                                         setRelaySetupOpen(false);
                                                                         setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                         showToast('Relay credentials revoked. Generate new keys to continue syncing.');
@@ -8182,7 +8244,7 @@
                                             // ─── Footer ───
                                             React.createElement('div', { style: { padding: '12px 16px', display: 'flex', justifyContent: 'flex-end' } },
                                                 React.createElement('button', {
-                                                    onClick: () => { setRelaySetupOpen(false); setRelaySetupSection(null); setRelayTestStatus(null); },
+                                                    onClick: () => { setRelaySetupOpen(false); setRelaySetupSection(null); },
                                                     className: 'px-4 py-2 rounded-lg font-medium text-sm',
                                                     style: { background: 'var(--bg-accent)', color: 'white', cursor: 'pointer' }
                                                 }, hasCreds ? 'Done' : 'Close')

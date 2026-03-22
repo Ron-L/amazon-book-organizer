@@ -173,7 +173,11 @@
 
     const response = await fetch(`${WORKER_URL}/status/${_channelId}`);
     if (response.status === 404) return null;
-    if (!response.ok) throw new Error('Status check failed');
+    if (!response.ok) {
+      const err = new Error(response.status === 403 ? 'Channel revoked' : 'Status check failed');
+      err.status = response.status;
+      throw err;
+    }
 
     return response.json();
   }
