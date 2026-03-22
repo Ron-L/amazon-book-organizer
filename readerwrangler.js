@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.8.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8048,7 +8048,25 @@
                                                                 className: 'px-3 py-1.5 rounded text-sm',
                                                                 style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: 'pointer' },
                                                                 title: 'Only loads encryption keys — your library data is not affected. Use File → Save Backup to save a backup that includes your credentials.'
-                                                            }, 'Load from backup file')
+                                                            }, 'Load from backup file'),
+                                                            // Revoke & Delete (only when keys exist)
+                                                            hasCreds && React.createElement('button', {
+                                                                onClick: async () => {
+                                                                    if (!confirm('This will permanently delete all data on the relay and block these credentials from future use. You will need to generate new keys.\n\nContinue?')) return;
+                                                                    try {
+                                                                        await window.RWRelay.revokeChannel();
+                                                                        setRelaySetupOpen(false);
+                                                                        setRelaySetupSection(null);
+                                                                        setRelayTestStatus(null);
+                                                                        showToast('Relay credentials revoked. Generate new keys to continue syncing.');
+                                                                    } catch (err) {
+                                                                        alert('Revocation failed: ' + err.message);
+                                                                    }
+                                                                },
+                                                                className: 'px-3 py-1.5 rounded text-sm',
+                                                                style: { background: 'var(--bg-surface)', color: 'var(--text-danger, #dc2626)', border: '1px solid var(--text-danger, #dc2626)', cursor: 'pointer' },
+                                                                title: 'Permanently deletes all relay data and blocks these credentials from future use'
+                                                            }, 'Revoke & Delete')
                                                         )
                                                     )
                                             ))),

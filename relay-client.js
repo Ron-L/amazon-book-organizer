@@ -292,6 +292,37 @@
     if (!response.ok) throw new Error('Failed to update device state');
   }
 
+  /**
+   * Revoke the current channel — permanently deletes all relay data and blocklists the channelId.
+   * Computes SHA-256(passphrase + channelId) as proof of ownership.
+   * Clears local credentials after successful revocation.
+   */
+  async function revokeChannel() {
+    if (!isConfigured()) throw new Error('Relay not configured');
+
+    // Compute proof: SHA-256(passphrase + channelId)
+    const proofData = new TextEncoder().encode(_passphrase + _channelId);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', proofData);
+    const proof = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+    const response = await fetch(`${WORKER_URL}/revoke/${_channelId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proof })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`Revocation failed: ${err}`);
+    }
+
+    // Clear local state
+    _channelId = null;
+    _passphrase = null;
+    _cryptoKey = null;
+    localStorage.removeItem(RELAY_STORAGE_KEY);
+  }
+
   // Auto-detect context and initialize
   if (window._RW_RELAY_CHANNEL) {
     initFromGlobals();
@@ -308,7 +339,8 @@
     download: download,
     cleanup: cleanup,
     getDeviceState: getDeviceState,
-    putDeviceState: putDeviceState
+    putDeviceState: putDeviceState,
+    revokeChannel: revokeChannel
   };
 
 })();
