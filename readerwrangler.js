@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -767,6 +767,8 @@
             const [relaySetupOpen, setRelaySetupOpen] = useState(false); // Relay Setup modal
             const [relayImporting, setRelayImporting] = useState(false); // true while importing from relay
             const [relayManualCreds, setRelayManualCreds] = useState(false); // show manual credential entry in Relay Setup
+            const [relayTestRan, setRelayTestRan] = useState(false); // v6.9.0 - true after user clicks Test in current dialog session
+            useEffect(() => { if (relaySetupOpen) setRelayTestRan(false); }, [relaySetupOpen]); // Reset when dialog opens
             const [relaySetupSection, setRelaySetupSection] = useState(null); // which accordion section is open: 'credentials'|'bookmarklet'|'mobile'|null
             const [relayTestStatus, setRelayTestStatus] = useState(() => { // v6.9.0 - Persisted: null|'testing'|'ok'|'error'|'revoked'
                 try { return localStorage.getItem(RELAY_STATUS_KEY) || null; } catch { return null; }
@@ -827,6 +829,7 @@
                     }
                     case 'test': {
                         // data = { channelId } — manual test connection
+                        setRelayTestRan(true);
                         setRelayTestStatus('testing');
                         try {
                             const response = await fetch(`https://readerwrangler-relay.readerwrangler.workers.dev/device-state/${data.channelId}`);
@@ -8086,7 +8089,7 @@
                                                                         style: {
                                                                             background: 'var(--bg-surface)',
                                                                             color: 'var(--text-secondary)',
-                                                                            border: `1px solid ${relayTestStatus === 'ok' ? 'var(--border-success, #86efac)' : relayTestStatus === 'revoked' || relayTestStatus === 'error' ? 'var(--border-danger, #fca5a5)' : 'var(--border-default)'}`,
+                                                                            border: `1px solid ${relayTestRan && relayTestStatus === 'ok' ? 'var(--border-success, #86efac)' : relayTestRan && (relayTestStatus === 'revoked' || relayTestStatus === 'error') ? 'var(--border-danger, #fca5a5)' : 'var(--border-default)'}`,
                                                                             cursor: relayTestStatus === 'testing' ? 'default' : 'pointer',
                                                                             whiteSpace: 'nowrap',
                                                                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
@@ -8094,9 +8097,9 @@
                                                                         title: relayTestStatus === 'ok' ? 'Connection verified — click to re-test' : relayTestStatus === 'revoked' ? 'These keys have been revoked — generate new keys' : relayTestStatus === 'error' ? 'Could not reach relay — click to retry' : 'Check if the relay can be reached with these keys'
                                                                     },
                                                                         React.createElement('span', null, relayTestStatus === 'testing' ? 'Testing…' : 'Test connection'),
-                                                                        relayTestStatus === 'ok' && React.createElement('span', { style: { fontSize: '11px', color: '#16a34a', fontWeight: '600' } }, '✅ Confirmed'),
-                                                                        relayTestStatus === 'revoked' && React.createElement('span', { style: { fontSize: '11px', color: '#dc2626', fontWeight: '600' } }, '⚠ Revoked'),
-                                                                        relayTestStatus === 'error' && React.createElement('span', { style: { fontSize: '11px', color: '#dc2626' } }, '⚠ Failed')
+                                                                        relayTestRan && relayTestStatus === 'ok' && React.createElement('span', { style: { fontSize: '11px', color: '#16a34a', fontWeight: '600' } }, '✅ Confirmed'),
+                                                                        relayTestRan && relayTestStatus === 'revoked' && React.createElement('span', { style: { fontSize: '11px', color: '#dc2626', fontWeight: '600' } }, '⚠ Revoked'),
+                                                                        relayTestRan && relayTestStatus === 'error' && React.createElement('span', { style: { fontSize: '11px', color: '#dc2626' } }, '⚠ Failed')
                                                                     )
                                                                 )
                                                             )
