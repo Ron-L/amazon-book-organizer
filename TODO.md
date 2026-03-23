@@ -8,12 +8,11 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ### 🔒 Priority 0: Security
 
-**0. 🔒 Relay Security Hardening** - HIGH/MEDIUM - See [docs/design/RELAY-SECURITY-PLAN.md](docs/design/RELAY-SECURITY-PLAN.md)
-   - Phase 1A: Self-service credential revocation (SHA-256 proof of ownership → Worker deletes all data + blocklists channelId)
-   - Phase 1B: Rate limiting (per-channelId write throttle to prevent abuse)
+**0. 🔒 Relay Security Hardening** - See [docs/design/RELAY-SECURITY-PLAN.md](docs/design/RELAY-SECURITY-PLAN.md)
+   - ~~Phase 1A: Self-service credential revocation~~ ✅ v6.9.0
+   - ~~Phase 1B: Rate limiting~~ ✅ v6.9.0
+   - ~~Phase 1C: Email alerts~~ ✅ v6.9.0
    - Phase 2A: Edge blocking (Cloudflare WAF rules for non-browser clients)
-   - Problem: No way to revoke compromised credentials; no abuse protection on relay
-   - Impact: Users can recover from credential exposure; relay protected from cost abuse
 
 ---
 
@@ -81,17 +80,7 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
    - ~~Desktop Mode escape hatch~~ ✅ v6.0.0-alpha.18 — Interstitial in readerwrangler.html shows "Return to Mobile Mode" / "Continue in Desktop Mode" before loading any app code. Uses sessionStorage to lock mode per tab session.
    - Directional shadow consistency with mobile cover view
 
-**3. ☁️ Cloudflare Free Tier Monitoring** - LOW/LOW (1 hour)
-   - Free tier limits: 100K requests/day, 1K KV writes/day, 1K KV deletes/day, 1GB KV storage
-   - **KV writes (1,000/day) is the tightest limit** — each putDeviceState() or fetcher upload is a write
-   - Cloudflare does NOT warn before limits are hit — requests just start failing (HTTP 1015)
-   - Set up: Dashboard → Account → Notifications → Workers usage threshold alerts
-   - Monitor: Workers & Pages → worker → Metrics; KV → namespace → Metrics
-   - If approaching limits: $5/month paid plan gives 10M requests, 1M KV writes (essentially unlimited)
-   - Problem: No visibility into relay usage; no warning before free tier exhaustion
-   - Impact: Prevents surprise outages for users
-
-**4. Improve Load Time Experience** - MEDIUM/LOW-MEDIUM (2-4 hours)
+**3. Improve Load Time Experience** - MEDIUM/LOW-MEDIUM (2-4 hours)
    - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
    - Console warnings (dev-only, users don't see): Tailwind CDN "not for production", Babel "precompile your scripts", Babel "deoptimised styling" (skips formatting for files >500KB — cosmetic, no functional impact)
    - **Option A: Pre-compile (eliminates warnings, fastest load)**

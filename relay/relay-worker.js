@@ -13,6 +13,7 @@
  *   ratelimit:{channelId}              → write counter per hour (TTL: 2 hours)
  *   blocklist:{channelId}              → permanently blocked channel (no TTL)
  *   test-alert-counter                 → test alert sequence number
+ *   usage-alert:{YYYY-MM-DD}           → threshold alerts already sent today (TTL: 2 days)
  */
 
 const LIBRARY_TTL = 864000;    // 10 days in seconds (fetcher→app relay data)
@@ -22,6 +23,16 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const RATE_LIMIT_WINDOW_MS = 3600000; // 1 hour
 const RATE_LIMIT_MAX_WRITES = 200;    // per channelId per hour (normal: ~10-20)
 const RATE_LIMIT_AUTO_BLOCK = 2000;   // 10x limit → permanent blocklist
+
+// Cloudflare free tier daily limits
+const CF_LIMITS = {
+  requests:   { limit: 100000, label: 'Worker requests' },
+  kvReads:    { limit: 100000, label: 'KV reads' },
+  kvWrites:   { limit: 1000,   label: 'KV writes' },
+  kvDeletes:  { limit: 1000,   label: 'KV deletes' },
+  kvStorageMB:{ limit: 1024,   label: 'KV storage' },
+};
+const THRESHOLDS = [25, 50, 75, 90];
 
 export default {
   async fetch(request, env) {
@@ -49,6 +60,19 @@ export default {
           headers: { 'Content-Type': 'application/json' }
         })
       );
+    }
+  },
+
+  async scheduled(event, env, ctx) {
+    const cron = event.cron;
+    try {
+      if (cron === '55 23 * * *') {
+        await sendDailySummary(env);
+      } else {
+        await checkUsageThresholds(env);
+      }
+    } catch (err) {
+      await sendAlert(env, 'Cron error', `Cron "${cron}" failed: ${err.message}\nTime: ${new Date().toISOString()}`);
     }
   }
 };
@@ -330,6 +354,143 @@ async function sendAlert(env, subject, message) {
             })
         });
     } catch { /* best-effort — don't let alert failure break the request */ }
+}
+
+// --- Usage Monitoring (Cron) ---
+
+async function queryCloudflareGraphQL(env, query, variables) {
+  const resp = await fetch('https://api.cloudflare.com/client/v4/graphql', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${env.CF_API_TOKEN}`
+    },
+    body: JSON.stringify({ query, variables })
+  });
+  if (!resp.ok) throw new Error(`GraphQL HTTP ${resp.status}`);
+  const json = await resp.json();
+  if (json.errors && json.errors.length) throw new Error(json.errors[0].message);
+  return json.data;
+}
+
+async function fetchUsage(env) {
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const accountId = env.CF_ACCOUNT_ID;
+
+  // Worker requests
+  const reqData = await queryCloudflareGraphQL(env, `
+    query ($accountTag: string!, $date: string!) {
+      viewer {
+        accounts(filter: { accountTag: $accountTag }) {
+          workersInvocationsAdaptive(filter: { date: $date }, limit: 1) {
+            sum { requests }
+          }
+        }
+      }
+    }
+  `, { accountTag: accountId, date: todayStr });
+
+  const reqRows = reqData.viewer.accounts[0]?.workersInvocationsAdaptive || [];
+  const requests = reqRows.length ? reqRows[0].sum.requests : 0;
+
+  // KV operations
+  const kvData = await queryCloudflareGraphQL(env, `
+    query ($accountTag: string!, $date: string!) {
+      viewer {
+        accounts(filter: { accountTag: $accountTag }) {
+          kvOperationsAdaptiveGroups(filter: { date: $date }, limit: 10) {
+            dimensions { actionType }
+            sum { requests }
+          }
+        }
+      }
+    }
+  `, { accountTag: accountId, date: todayStr });
+
+  const kvOps = kvData.viewer.accounts[0]?.kvOperationsAdaptiveGroups || [];
+  let kvReads = 0, kvWrites = 0, kvDeletes = 0;
+  for (const row of kvOps) {
+    const action = row.dimensions.actionType;
+    const count = row.sum.requests;
+    if (action === 'read') kvReads = count;
+    else if (action === 'write') kvWrites = count;
+    else if (action === 'delete') kvDeletes = count;
+  }
+
+  // KV storage
+  const storageData = await queryCloudflareGraphQL(env, `
+    query ($accountTag: string!, $date: string!) {
+      viewer {
+        accounts(filter: { accountTag: $accountTag }) {
+          kvStorageAdaptiveGroups(filter: { date: $date }, limit: 1) {
+            max { byteCount }
+          }
+        }
+      }
+    }
+  `, { accountTag: accountId, date: todayStr });
+
+  const storageRows = storageData.viewer.accounts[0]?.kvStorageAdaptiveGroups || [];
+  const storageBytes = storageRows.length ? storageRows[0].max.byteCount : 0;
+  const kvStorageMB = Math.round(storageBytes / (1024 * 1024) * 10) / 10;
+
+  return { requests, kvReads, kvWrites, kvDeletes, kvStorageMB };
+}
+
+async function checkUsageThresholds(env) {
+  if (!env.CF_API_TOKEN || !env.CF_ACCOUNT_ID) return;
+
+  const usage = await fetchUsage(env);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const stateKey = `usage-alert:${todayStr}`;
+
+  const raw = await env.RELAY_KV.get(stateKey);
+  const alerted = raw ? JSON.parse(raw) : {};
+
+  let alertsSent = false;
+  for (const [key, { limit, label }] of Object.entries(CF_LIMITS)) {
+    const current = usage[key];
+    const pct = (current / limit) * 100;
+
+    for (const threshold of THRESHOLDS) {
+      const alertKey = `${key}:${threshold}`;
+      if (pct >= threshold && !alerted[alertKey]) {
+        const unitSuffix = key === 'kvStorageMB' ? ' MB' : '';
+        await sendAlert(env, `Usage threshold: ${label} at ${threshold}%`,
+          `${label} has reached ${threshold}% of the daily free tier limit.\n` +
+          `Current: ${current.toLocaleString()}${unitSuffix} / ${limit.toLocaleString()}${unitSuffix}\n` +
+          `Time: ${new Date().toISOString()}`
+        );
+        alerted[alertKey] = true;
+        alertsSent = true;
+      }
+    }
+  }
+
+  if (alertsSent) {
+    await env.RELAY_KV.put(stateKey, JSON.stringify(alerted), { expirationTtl: 172800 }); // 2 day TTL
+  }
+}
+
+async function sendDailySummary(env) {
+  if (!env.CF_API_TOKEN || !env.CF_ACCOUNT_ID) return;
+
+  const usage = await fetchUsage(env);
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  const lines = [];
+  for (const [key, { limit, label }] of Object.entries(CF_LIMITS)) {
+    const current = usage[key];
+    const pct = ((current / limit) * 100).toFixed(1);
+    const unitSuffix = key === 'kvStorageMB' ? ' MB' : '';
+    const currentStr = current.toLocaleString() + unitSuffix;
+    const limitStr = limit.toLocaleString() + unitSuffix;
+    lines.push(`${label.padEnd(16)} ${currentStr.padStart(10)} / ${limitStr.padStart(10)}  (${pct}%)`);
+  }
+
+  const body = `ReaderWrangler Relay - Daily Usage Summary\nDate: ${todayStr}\n\n${lines.join('\n')}`;
+  await sendAlert(env, `Daily usage summary - ${todayStr}`, body);
 }
 
 // --- Helpers ---

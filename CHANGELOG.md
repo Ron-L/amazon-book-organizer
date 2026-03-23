@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.9.0] - 2026-03-23
+
+### Added
+- **Relay: channel revocation** — Self-service credential revocation with SHA-256 cryptographic proof. Revoked channels are permanently blocklisted and all data deleted.
+- **Relay: rate limiting** — Per-channel write throttle (200/hour) with automatic abuse blocking at 2,000 writes/hour. Rate-limited and auto-blocked channels trigger email alerts.
+- **Relay: email alerts** — Security event notifications via Resend: channel revocations, auto-blocks, rate limit violations, and test alerts.
+- **Relay: usage monitoring** — Cron-based Cloudflare free tier monitoring queries the GraphQL Analytics API every 30 minutes. Threshold alerts at 25/50/75/90% for requests, KV reads, KV writes, KV deletes, and KV storage. Daily summary email at 23:55 UTC.
+- **Relay Setup: Test Connection** — Inline button verifies relay reachability; result shown as sub-label with color-coded feedback.
+- **Relay Setup: verified/unverified key states** — Generated keys show immediate green verification. Loaded or manually entered keys show a question mark until tested.
+- **Relay Setup: redesigned UX** — Steps are freely navigable (no sequential lock), centralized `relayOp()` gateway for credential and status changes, solid red footer for errors, grouped action buttons.
+- **Relay client: `revokeChannel()`** — Client-side function computes SHA-256 proof and calls the `/revoke` endpoint.
+- **Revoke & Delete button** — Added to Relay Setup for self-service credential revocation from the app.
+
+### Changed
+- **SECURITY.md** — Updated with operational security details: email alerting, rate limiting, revocation, and usage monitoring.
+
 ## [6.8.1] - 2026-03-20
 
 ### Added

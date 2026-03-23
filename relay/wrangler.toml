@@ -4,7 +4,12 @@ compatibility_date = "2024-09-25"
 
 [vars]
 ALLOWED_ORIGINS = "https://www.amazon.com,https://readerwrangler.com,https://ron-l.github.io,http://localhost:8000"
+CF_ACCOUNT_ID = "fd7a55c08920584561205e24b2d7eeae"
+
+[triggers]
+crons = ["*/30 * * * *", "55 23 * * *"]
 
 [[kv_namespaces]]
 binding = "RELAY_KV"
 id = "4a445b412fb34860a896cfc145a67b9b"
+preview_id = "4a445b412fb34860a896cfc145a67b9b"

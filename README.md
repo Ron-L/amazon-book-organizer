@@ -125,6 +125,13 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
+**v6.9 - Relay Security + Usage Monitoring** (March 2026)
+- Self-service credential revocation with cryptographic proof of ownership
+- Per-channel rate limiting (200 writes/hour) with automatic abuse blocking at 10x threshold
+- Email alerts for security events: revocations, auto-blocks, rate limit violations
+- Relay Setup redesigned: freely navigable steps, Test Connection button, verified/unverified key states, inline feedback
+- Cloudflare free tier usage monitoring: cron-based threshold alerts (25/50/75/90%) and daily summary emails
+
 **v6.8.1 - Demo Library + UX Fixes** (March 2026)
 - Download the [Demo Library](https://raw.githubusercontent.com/Ron-L/readerwrangler/refs/heads/main/readerwrangler-demo-library.json) — 100+ classic books ready to organize, no Amazon account needed
 - Stale folder selection now resets to All Books on load instead of showing an empty pane
