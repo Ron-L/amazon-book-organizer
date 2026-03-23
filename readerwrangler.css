@@ -883,6 +883,9 @@ body { margin: 0; padding: 0; overflow: hidden; }
 /* Error/revoked: solid red tower, no arcs */
 .sync-indicator-error .sync-arc { display: none; }
 
+/* Unverified: gray tower, no arcs — keys loaded but not yet confirmed */
+.sync-indicator-unverified .sync-arc { display: none; }
+
 /* Unsynced: red tower with pulsing arcs */
 .sync-indicator-unsynced .sync-arc {
     border-top-color: #dc2626;

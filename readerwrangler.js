@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -772,12 +772,22 @@
                 try { return localStorage.getItem(RELAY_STATUS_KEY) || null; } catch { return null; }
             });
             const [deviceStateSynced, setDeviceStateSynced] = useState(() => { // v6.0.0 Phase 2 - false = unsynced changes pending push to relay
-                try { return localStorage.getItem(RELAY_STATUS_KEY) !== 'revoked'; } catch { return true; }
+                try {
+                    const status = localStorage.getItem(RELAY_STATUS_KEY);
+                    return status === 'ok'; // Only green when explicitly verified
+                } catch { return true; }
             });
             const deviceStatePushTimerRef = useRef(null); // v6.0.0 Phase 2 - debounce timer for device-state push
             const deviceStatePushingRef = useRef(false); // v6.0.0 Phase 2 - true while push is in flight
-            const [deviceStateErrorType, setDeviceStateErrorType] = useState(() => { // v6.9.0 - 'revoked'|'error'|null
-                try { return localStorage.getItem(RELAY_STATUS_KEY) === 'revoked' ? 'revoked' : null; } catch { return null; }
+            const [deviceStateErrorType, setDeviceStateErrorType] = useState(() => { // v6.9.0 - 'revoked'|'error'|'unverified'|null
+                try {
+                    const status = localStorage.getItem(RELAY_STATUS_KEY);
+                    if (status === 'revoked') return 'revoked';
+                    if (status === 'ok') return null;
+                    // No status but keys exist = unverified; no keys = null (no tower shown)
+                    const hasKeys = !!localStorage.getItem(RELAY_KEY);
+                    return hasKeys ? 'unverified' : null;
+                } catch { return null; }
             });
             const dataOpInProgressRef = useRef(false); // v6.3.0 - Guards against overlapping import/restore/delete operations
 
@@ -786,14 +796,24 @@
             // Owns: localStorage (credentials + status), RWRelay.initFromStorage(), React state.
             const relayOp = async (op, data) => {
                 switch (op) {
+                    case 'generate': {
+                        // data = { channelId, passphrase } — freshly generated, known-good
+                        localStorage.setItem(RELAY_KEY, JSON.stringify(data));
+                        if (window.RWRelay) window.RWRelay.initFromStorage();
+                        localStorage.setItem(RELAY_STATUS_KEY, 'ok');
+                        setRelayTestStatus('ok');
+                        setDeviceStateSynced(true);
+                        setDeviceStateErrorType(null);
+                        break;
+                    }
                     case 'setKeys': {
-                        // data = { channelId, passphrase }
+                        // data = { channelId, passphrase } — loaded/entered, unverified
                         localStorage.setItem(RELAY_KEY, JSON.stringify(data));
                         if (window.RWRelay) window.RWRelay.initFromStorage();
                         localStorage.removeItem(RELAY_STATUS_KEY);
                         setRelayTestStatus(null);
-                        setDeviceStateSynced(true);
-                        setDeviceStateErrorType(null);
+                        setDeviceStateSynced(false);
+                        setDeviceStateErrorType('unverified');
                         break;
                     }
                     case 'clearKeys': {
@@ -8045,8 +8065,10 @@
                                                             ? React.createElement(React.Fragment, null,
                                                                 React.createElement('p', { style: { fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' } }, 'Status'),
                                                                 React.createElement('div', { style: { display: 'flex', gap: '8px', alignItems: 'stretch', marginBottom: '12px' } },
-                                                                    React.createElement('div', { className: 'rounded p-3 text-sm', style: { flex: '1', background: relayTestStatus === 'revoked' ? 'var(--bg-danger, #fef2f2)' : 'var(--bg-success)', border: `1px solid ${relayTestStatus === 'revoked' ? 'var(--border-danger, #fca5a5)' : 'var(--border-success, #86efac)'}` } },
-                                                                        React.createElement('p', { className: 'font-semibold' }, relayTestStatus === 'revoked' ? '⚠ These keys have been revoked' : '✅ Encryption keys are set up'),
+                                                                    React.createElement('div', { className: 'rounded p-3 text-sm', style: { flex: '1',
+                                                                        background: relayTestStatus === 'revoked' ? 'var(--bg-danger, #fef2f2)' : relayTestStatus === 'ok' ? 'var(--bg-success)' : '#fffbeb',
+                                                                        border: `1px solid ${relayTestStatus === 'revoked' ? 'var(--border-danger, #fca5a5)' : relayTestStatus === 'ok' ? 'var(--border-success, #86efac)' : '#fcd34d'}` } },
+                                                                        React.createElement('p', { className: 'font-semibold' }, relayTestStatus === 'revoked' ? '⚠ These keys have been revoked' : relayTestStatus === 'ok' ? '✅ Encryption keys are set up' : '⏳ Keys loaded — not yet verified'),
                                                                         React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
                                                                     ),
                                                                     React.createElement('button', {
@@ -8079,7 +8101,7 @@
                                                                         const arr = new Uint8Array(32);
                                                                         crypto.getRandomValues(arr);
                                                                         for (let i = 0; i < 32; i++) passphrase += chars[arr[i] % chars.length];
-                                                                        await relayOp('setKeys', { channelId, passphrase });
+                                                                        await relayOp('generate', { channelId, passphrase });
                                                                         setRelayManualCreds(false);
                                                                         setRelaySetupOpen(false);
                                                                         setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
@@ -15534,11 +15556,11 @@
                         <div className="text-right flex items-center gap-2 justify-end pr-3">
                             {window.RWRelay && window.RWRelay.isConfigured() && (
                                 <div
-                                    className={`sync-indicator ${deviceStateSynced ? 'sync-indicator-synced' : deviceStateErrorType ? 'sync-indicator-error' : 'sync-indicator-unsynced'}`}
-                                    title={deviceStateSynced ? 'All changes synced to mobile' : deviceStateErrorType === 'revoked' ? 'Relay error — credentials have been revoked. Open Relay Setup to generate new keys.' : deviceStateErrorType === 'error' ? 'Relay error — could not sync. Will retry on next change.' : 'Syncing changes...'}
+                                    className={`sync-indicator ${deviceStateSynced ? 'sync-indicator-synced' : deviceStateErrorType === 'unverified' ? 'sync-indicator-unverified' : deviceStateErrorType ? 'sync-indicator-error' : 'sync-indicator-unsynced'}`}
+                                    title={deviceStateSynced ? 'All changes synced to mobile' : deviceStateErrorType === 'revoked' ? 'Relay error — credentials have been revoked. Open Relay Setup to generate new keys.' : deviceStateErrorType === 'unverified' ? 'Relay keys loaded — not yet verified. Use Test Connection or wait for first sync.' : deviceStateErrorType === 'error' ? 'Relay error — could not sync. Will retry on next change.' : 'Syncing changes...'}
                                     onClick={() => setRelaySetupOpen(true)}
                                 >
-                                    <img className="sync-tower" src={`icons/sync-tower-${deviceStateSynced ? 'green' : 'red'}.svg`} alt="" />
+                                    <img className="sync-tower" src={`icons/sync-tower-${deviceStateSynced ? 'green' : deviceStateErrorType === 'unverified' ? 'neutral' : 'red'}.svg`} alt="" />
                                     <div className="sync-arc sync-arc-1"></div>
                                     <div className="sync-arc sync-arc-2"></div>
                                 </div>
