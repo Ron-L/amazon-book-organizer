@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -798,10 +798,11 @@
                 switch (op) {
                     case 'generate': {
                         // data = { channelId, passphrase } — freshly generated, known-good
+                        // Footer = green (keys will work), but Test button = untested (no relay contact yet)
                         localStorage.setItem(RELAY_KEY, JSON.stringify(data));
                         if (window.RWRelay) window.RWRelay.initFromStorage();
-                        localStorage.setItem(RELAY_STATUS_KEY, 'ok');
-                        setRelayTestStatus('ok');
+                        localStorage.removeItem(RELAY_STATUS_KEY);
+                        setRelayTestStatus(null);
                         setDeviceStateSynced(true);
                         setDeviceStateErrorType(null);
                         break;
@@ -8066,11 +8067,11 @@
                                                                 React.createElement('p', { style: { fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' } }, 'Status'),
                                                                 React.createElement('div', { style: { display: 'flex', gap: '8px', alignItems: 'stretch', marginBottom: '12px' } },
                                                                     React.createElement('div', { className: 'rounded p-3 text-sm', style: { flex: '1',
-                                                                        background: relayTestStatus === 'revoked' ? 'var(--bg-danger, #fef2f2)' : relayTestStatus === 'ok' ? 'var(--bg-success)' : '#f3f4f6',
-                                                                        border: `1px solid ${relayTestStatus === 'revoked' ? 'var(--border-danger, #fca5a5)' : relayTestStatus === 'ok' ? 'var(--border-success, #86efac)' : '#d1d5db'}` } },
+                                                                        background: relayTestStatus === 'revoked' ? 'var(--bg-danger, #fef2f2)' : (relayTestStatus === 'ok' || deviceStateSynced) ? 'var(--bg-success)' : '#f3f4f6',
+                                                                        border: `1px solid ${relayTestStatus === 'revoked' ? 'var(--border-danger, #fca5a5)' : (relayTestStatus === 'ok' || deviceStateSynced) ? 'var(--border-success, #86efac)' : '#d1d5db'}` } },
                                                                         React.createElement('p', { className: 'font-semibold', style: { display: 'flex', alignItems: 'center', gap: '6px' } },
                                                                             relayTestStatus === 'revoked' ? '⚠ These keys have been revoked'
-                                                                            : relayTestStatus === 'ok' ? '✅ Encryption keys are set up'
+                                                                            : (relayTestStatus === 'ok' || deviceStateSynced) ? '✅ Encryption keys are set up'
                                                                             : React.createElement(React.Fragment, null,
                                                                                 React.createElement('img', { src: 'icons/status-unknown.svg', alt: '', style: { width: '16px', height: '16px', flexShrink: 0 } }),
                                                                                 'Keys loaded — not yet verified'
