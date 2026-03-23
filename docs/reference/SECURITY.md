@@ -1,7 +1,7 @@
 # ReaderWrangler Security Model
 
 **Created**: 2026-03-21
-**Last Updated**: 2026-03-21
+**Last Updated**: 2026-03-23
 
 ---
 
@@ -87,7 +87,7 @@ The Cloudflare Worker (relay) handles only opaque encrypted blobs:
 - **Cannot** derive the encryption key (would need the passphrase)
 - **Cannot** distinguish one user's data from another beyond the channelId
 
-The Worker's only job is: store opaque bytes at a key, return opaque bytes for a key, enforce TTL expiration.
+The Worker's only job is: store opaque bytes at a key, return opaque bytes for a key, enforce TTL expiration, rate-limit writes, and enforce channel blocklists.
 
 ---
 
@@ -153,14 +153,15 @@ Credentials exist in these places:
 | channelId leaked alone | Attacker can write/overwrite relay data (DoS) but **cannot decrypt** existing data | Rate limiting + revocation (see RELAY-SECURITY-PLAN.md) |
 | Source code inspected | No risk — source contains no credentials. Algorithm is public; security rests on the passphrase. | By design. |
 
-### Revocation
+### Revocation (v6.9.0)
 
-See [RELAY-SECURITY-PLAN.md](../design/RELAY-SECURITY-PLAN.md) Phase 1A for the self-service revocation design:
+Self-service credential revocation is available in the app:
 
-- User clicks "Revoke & Delete" in Relay Setup
-- App computes `SHA-256(passphrase + channelId)` as proof of ownership
-- Worker deletes all data and blocklists the channelId
-- User generates new credentials
+- User clicks "Revoke keys & delete data" in Relay Setup → Danger Zone
+- App computes `SHA-256(passphrase + channelId)` as proof of ownership (the relay never sees the passphrase itself)
+- Worker verifies the proof, deletes all data (manifest, chunks, device state), and permanently blocklists the channelId
+- All subsequent requests using the revoked channelId receive HTTP 403
+- User generates new credentials to continue syncing
 
 **After revocation**, the user must:
 
@@ -223,7 +224,7 @@ The fetcher script reads these globals, derives the encryption key, encrypts the
 
 | Dependency | What it sees | Trust level |
 |------------|-------------|-------------|
-| **GitHub Pages** (readerwrangler.com) | Serves static files (HTML, JS, CSS). No server-side code. Cannot see user data. Users can also run the app locally (see Section 9). | High — static hosting only |
+| **GitHub Pages** (readerwrangler.com) | Serves static files (HTML, JS, CSS). No server-side code. Cannot see user data. Users can also run the app locally (see Section 10). | High — static hosting only |
 | **Cloudflare Workers** (relay) | Stores and retrieves encrypted blobs. Cannot decrypt. Sees channelId in URL. | High — code is ours, runs on Cloudflare's infrastructure |
 | **Cloudflare KV** | Stores encrypted blobs with TTL. Cannot decrypt. | High — managed by Cloudflare |
 | **Amazon.com** | The bookmarklet runs on amazon.com to fetch library data. Amazon sees normal page requests. | N/A — Amazon is the data source |
@@ -261,23 +262,78 @@ ReaderWrangler uses [GoatCounter](https://www.goatcounter.com/) for privacy-focu
 
 ---
 
-## 8. Threat Summary
+## 8. Relay Operational Security (v6.9.0)
+
+The relay Worker includes server-side protections against abuse and monitoring for security events.
+
+### Rate Limiting
+
+Write operations (upload chunks, upload manifest, update device state) are rate-limited per channelId:
+
+- **Limit**: 200 write operations per hour per channel
+- **Window**: Sliding 1-hour window using KV counters with TTL
+- **Enforcement**: HTTP 429 response when limit exceeded
+- **Auto-blocklist**: A channel exceeding 2,000 writes in a window is permanently blocklisted (same effect as revocation)
+- **Read operations**: Not rate-limited (reads are cheap and don't modify state)
+
+### Blocklist
+
+Revoked and abuse-flagged channels are permanently blocked:
+
+- KV key: `blocklist:{channelId}` with no TTL
+- Checked on all 7 relay handlers (upload, download, status, device-state read/write, cleanup, revoke)
+- Returns HTTP 403 for all operations on blocked channels
+- Entries include timestamp and reason (`user-revoked` or `rate-limit-exceeded`)
+
+### Email Alerts
+
+Security-relevant events trigger email alerts to the site operator via [Resend](https://resend.com/):
+
+| Event | Alert sent |
+|-------|-----------|
+| Channel revoked by user | Yes |
+| Channel auto-blocklisted (rate limit abuse) | Yes |
+| Rate limit exceeded (per-event) | No (would be noisy) |
+
+Alerts are sent to `contact@readerwrangler.com` and include the channelId and timestamp. They do **not** include any user data, passphrase material, or encrypted content.
+
+**Configuration**: Resend API key and alert recipient are stored as Cloudflare Worker secrets (`RESEND_API_KEY`, `ALERT_TO_EMAIL`). Alert failures are logged but do not block the primary operation — a failed alert does not prevent a revocation from completing.
+
+### Error Reporting Approach
+
+ReaderWrangler uses two complementary channels for error visibility:
+
+| Channel | Scope | Examples |
+|---------|-------|---------|
+| **Resend email alerts** | Relay security events | Revocation, auto-blocklist |
+| **GoatCounter events** | App-level usage patterns | Import/export frequency, integrity check results |
+
+There is no application-level error reporting service (e.g., Sentry). Errors in the browser app are visible only in the user's browser console. This is a deliberate trade-off: no error telemetry means no risk of accidentally capturing user data in error payloads, but it also means the operator has limited visibility into client-side failures.
+
+### Recommended Additions (Future)
+
+- **Cloudflare Dashboard Notifications**: Configure Cloudflare's built-in alerts for Worker error rate spikes, KV storage limits, and billing thresholds. These complement Resend alerts with infrastructure-level monitoring.
+- **Phase 2**: Edge-level protections (Cloudflare WAF rules, IP-based rate limiting) for defense-in-depth beyond the application-level checks.
+
+---
+
+## 9. Threat Summary
 
 | Threat | Impact | Likelihood | Mitigation | Status |
 |--------|--------|------------|------------|--------|
 | Backup file accidentally shared | Full data + credential exposure | Low | User education; `.gitignore` excludes backups | Active |
 | Bookmarklet code shared | Credential exposure | Low | User education | Active |
 | Browser profile access (physical/malware) | Full data exposure | Medium | OS-level security; browser sandboxing | Inherent to web apps |
-| channelId leaked (without passphrase) | DoS — attacker can overwrite relay data | Low | Rate limiting, revocation | Planned (Phase 1) |
-| Both credentials leaked | Full relay data compromise | Very low | Self-service revocation, data wipe | Planned (Phase 1A) |
+| channelId leaked (without passphrase) | DoS — attacker can overwrite relay data | Low | Rate limiting (200 writes/hr), revocation, blocklist | Active (v6.9.0) |
+| Both credentials leaked | Full relay data compromise | Very low | Self-service revocation, data wipe, email alerts | Active (v6.9.0) |
 | Relay Worker compromise (Cloudflare breach) | Attacker sees encrypted blobs | Very low | Data is AES-256-GCM encrypted; useless without passphrase | By design |
-| Cost abuse (flooding relay with writes) | Increased Cloudflare bill (site operator only — no cost to users) | Low | Rate limiting (Phase 1B), edge blocking (Phase 2A) | Planned |
+| Cost abuse (flooding relay with writes) | Increased Cloudflare bill (site operator only — no cost to users) | Low | Rate limiting (200 writes/hr, auto-blocklist at 2000), email alerts | Active (v6.9.0) |
 | MITM on relay traffic | Cannot decrypt — HTTPS + AES-256-GCM | Very low | TLS (Cloudflare) + client-side encryption | Active |
 | Brute-force passphrase from ciphertext | Decrypt relay data | Negligible | PBKDF2 100K iterations; passphrase is high-entropy random | By design |
 
 ---
 
-## 9. Non-Issues
+## 10. Non-Issues
 
 These are things that might look like security concerns but are not:
 
