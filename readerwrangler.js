@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.9.0-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8066,21 +8066,31 @@
                                                                 React.createElement('p', { style: { fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' } }, 'Status'),
                                                                 React.createElement('div', { style: { display: 'flex', gap: '8px', alignItems: 'stretch', marginBottom: '12px' } },
                                                                     React.createElement('div', { className: 'rounded p-3 text-sm', style: { flex: '1',
-                                                                        background: relayTestStatus === 'revoked' ? 'var(--bg-danger, #fef2f2)' : relayTestStatus === 'ok' ? 'var(--bg-success)' : '#fffbeb',
-                                                                        border: `1px solid ${relayTestStatus === 'revoked' ? 'var(--border-danger, #fca5a5)' : relayTestStatus === 'ok' ? 'var(--border-success, #86efac)' : '#fcd34d'}` } },
-                                                                        React.createElement('p', { className: 'font-semibold' }, relayTestStatus === 'revoked' ? '⚠ These keys have been revoked' : relayTestStatus === 'ok' ? '✅ Encryption keys are set up' : '⏳ Keys loaded — not yet verified'),
+                                                                        background: relayTestStatus === 'revoked' ? 'var(--bg-danger, #fef2f2)' : relayTestStatus === 'ok' ? 'var(--bg-success)' : '#f3f4f6',
+                                                                        border: `1px solid ${relayTestStatus === 'revoked' ? 'var(--border-danger, #fca5a5)' : relayTestStatus === 'ok' ? 'var(--border-success, #86efac)' : '#d1d5db'}` } },
+                                                                        React.createElement('p', { className: 'font-semibold', style: { display: 'flex', alignItems: 'center', gap: '6px' } },
+                                                                            relayTestStatus === 'revoked' ? '⚠ These keys have been revoked'
+                                                                            : relayTestStatus === 'ok' ? '✅ Encryption keys are set up'
+                                                                            : React.createElement(React.Fragment, null,
+                                                                                React.createElement('img', { src: 'icons/status-unknown.svg', alt: '', style: { width: '16px', height: '16px', flexShrink: 0 } }),
+                                                                                'Keys loaded — not yet verified'
+                                                                            )
+                                                                        ),
                                                                         React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
                                                                     ),
                                                                     React.createElement('button', {
                                                                         onClick: () => relayOp('test', { channelId: stored.channelId }),
                                                                         disabled: relayTestStatus === 'testing',
                                                                         className: 'px-3 rounded text-sm',
-                                                                        style: { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' },
-                                                                        title: relayTestStatus === 'ok' ? '✅ Connected' : relayTestStatus === 'revoked' ? '⚠ Revoked — generate new keys' : relayTestStatus === 'error' ? '⚠ Could not reach relay — check your internet connection' : 'Check if the relay can be reached with these keys'
-                                                                    }, relayTestStatus === 'testing' ? 'Testing…' : 'Test connection')
-                                                                ),
-                                                                (relayTestStatus === 'ok' || relayTestStatus === 'error') && React.createElement('p', { className: 'text-sm', style: { color: relayTestStatus === 'ok' ? '#16a34a' : '#dc2626', marginTop: '-8px', marginBottom: '8px' } },
-                                                                    relayTestStatus === 'ok' ? '✅ Connected' : '⚠ Could not reach relay — check your internet connection'
+                                                                        style: relayTestStatus === 'ok'
+                                                                            ? { background: 'var(--bg-success)', color: '#16a34a', border: '1px solid var(--border-success, #86efac)', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', fontWeight: '600' }
+                                                                            : relayTestStatus === 'revoked'
+                                                                            ? { background: 'var(--bg-danger, #fef2f2)', color: '#dc2626', border: '1px solid var(--border-danger, #fca5a5)', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', fontWeight: '600' }
+                                                                            : relayTestStatus === 'error'
+                                                                            ? { background: 'var(--bg-danger, #fef2f2)', color: '#dc2626', border: '1px solid var(--border-danger, #fca5a5)', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }
+                                                                            : { background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', cursor: relayTestStatus === 'testing' ? 'default' : 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' },
+                                                                        title: relayTestStatus === 'ok' ? 'Connection verified — click to re-test' : relayTestStatus === 'revoked' ? 'These keys have been revoked — generate new keys' : relayTestStatus === 'error' ? 'Could not reach relay — click to retry' : 'Check if the relay can be reached with these keys'
+                                                                    }, relayTestStatus === 'testing' ? 'Testing…' : relayTestStatus === 'ok' ? '✅ Confirmed' : relayTestStatus === 'revoked' ? '⚠ Revoked' : relayTestStatus === 'error' ? '⚠ Failed' : 'Test connection')
                                                                 )
                                                             )
                                                             : React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Encryption keys secure your data between ReaderWrangler pages via Cloudflare. They are NOT your Amazon password. Choose one of the methods below to generate or load them.'),
