@@ -50,7 +50,7 @@ temp/
 MEMORY.md
 
 # Credentials
-readerwrangler-credentials.json
+readerwrangler-credentials*.json
 
 # Claude Skills (generated files - source .md files are tracked)
 SKILL.md
