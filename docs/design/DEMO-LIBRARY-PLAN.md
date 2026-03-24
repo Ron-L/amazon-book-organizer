@@ -254,10 +254,116 @@ Which features each part of the demo showcases:
 - [x] Test: load whitelist via console script on amazon.com, run library fetcher → verify only 119 books
 - [x] Test: run collections fetcher with whitelist → verify filtered output
 
-### Phase 3: Training Docs
-- [ ] Update `VIDEO-PRODUCTION-PLAN.md` — full rewrite of Content Update Tracker + video scripts to reflect current app (v6.5.0) and demo library workflow
-- [ ] Update `BOOK-EXPLORER-VIDEO-SCENARIOS.md` — add relay import, Views/Folders split, tag views, mobile pairing, copies scenarios
-- [ ] Update `ENHANCED-GETTING-STARTED-UX.md` — align with current Welcome screen + Relay Setup flow
+### Phase 3: Training Videos, Site Restructure & Docs
+
+**Scope:** Delete obsolete docs, restructure the website for user onboarding (landing page + sub-pages + app Help menu), produce 9 videos (sizzle reel + 8 tutorials), create a unified video production guide.
+
+**Design decisions (2026-03-23):**
+- `index.html` becomes a slim landing page (hook → convert). Detail content moves to sub-pages.
+- `README.md` diverges from `index.html` — serves GitHub repo browsers, stays self-contained.
+- `tutorials.html` (NEW) — single hub for all video content, linked from landing page footer and app Help menu.
+- `features.html` (NEW) — feature deep-dive, version history, competitive positioning. Absorbs content removed from index.html.
+- App Help menu adds "Watch Tutorials" link to tutorials.html. "How To Use" quickstart dialog stays (low maintenance, useful as quick reminder).
+
+---
+
+#### 3A: Delete Obsolete Docs
+- [ ] Delete `docs/design/ENHANCED-GETTING-STARTED-UX.md` — v3.5.1 fossil, describes file-picker onboarding that no longer exists
+- [ ] Delete `docs/design/VIDEO-PRODUCTION-PLAN.md` — replaced by VIDEO-PRODUCTION-GUIDE.md
+- [ ] Delete `docs/design/BOOK-EXPLORER-VIDEO-SCENARIOS.md` — absorbed into VIDEO-PRODUCTION-GUIDE.md
+
+#### 3B: Create VIDEO-PRODUCTION-GUIDE.md
+- [ ] Create `docs/design/VIDEO-PRODUCTION-GUIDE.md` — single source of truth for all video production
+  - Production tools: OBS (screen recording), CapCut Desktop (editing), Google Cloud TTS (narration)
+  - Music: Uppbeat free tier or Pixabay, 120-140 BPM, beat-synced cuts
+  - Voice selection: Journey-D vs Journey-F (TBD after testing)
+  - Demo library integration: all videos use `readerwrangler-demo-library.json` as starting state
+  - File organization: scripts/, audio/, videos/
+  - Per-video sections with: script, screen direction, scene prep, timing notes
+- [ ] **Video 0: Sizzle Reel (20-30 sec)** — shot list, transition notes, music brief, text overlays, no voiceover
+  - Rapid cuts (1-3 sec each, 12-15 shots), zoom in/out transitions (0.25s)
+  - Structure: pain (Amazon chaos) → solution (organized RW) → features (rapid montage) → brand close
+- [ ] **Video 1: Quick Start (3 min)** — update existing script for demo library workflow
+  - Integrate demo library as alternate path ("try instantly" vs "connect Amazon")
+  - Update screen direction for v6.8+ Relay Setup (accordion, Test Connection)
+- [ ] **Video 2: Setting Up the Relay (1-2 min)** — full script needed
+  - Relay Setup accordion UI, Generate Credentials, Test Connection, bookmarklet drag, verified key states
+- [ ] **Video 3: Fetching Your Library (2-3 min)** — full script needed
+  - 5 fetcher phases, incremental behavior, orphan scan, multi-state dialog
+  - Scene prep: whitelist-filtered fetch of 119 demo books
+- [ ] **Video 4: Organizing with Folders (3-4 min)** — full script needed
+  - Inbox → Auto-Organize → manual refinement → nested folders → copies → trash
+  - Absorbs scenarios from BOOK-EXPLORER-VIDEO-SCENARIOS.md: folder creation, drag-drop, Ctrl+Drag copies, subfolder nesting, folder properties, delete/trash/restore, purchased book warning
+- [ ] **Video 5: Views & Filters (2-3 min)** — full script needed
+  - Views vs Folders, All Books, tag views, pin/unpin, filter panel, ownership badges, search, multi-column sort
+  - Absorbs scenarios: Views navigation, cover badges, filter panel, multi-column sort
+- [ ] **Video 6: Wishlist & Discovery (2-3 min)** — full script needed
+  - Wishlist bookmarklet on product/series/author pages, price goals, deals filter
+- [ ] **Video 7: Mobile Sync (1-2 min)** — full script needed
+  - QR code in Relay Setup Step 3, phone scan, mobile PWA, browse organized library
+- [ ] **Video 8: Power Features (2-3 min)** — full script needed
+  - Undo/redo, keyboard shortcuts, Save/Restore Backup, Auto-Organize wizard, Data Status, Hide/Unhide
+  - Absorbs scenarios: keyboard shortcuts workflow, clipboard operations, menu bar
+
+#### 3C: Restructure index.html (Landing Page)
+- [ ] Slim hero: logo, tagline, single CTA ("Get Started — it's free"), demo library secondary link
+- [ ] Sizzle reel embed (or hero screenshot placeholder until video exists)
+- [ ] 3 value prop cards: "Unbury your next great read" / "Amazon won't organize" / "Your data stays yours"
+- [ ] How It Works: 3 steps with icons (Install bookmarklet → Import → Organize; optional 4th: Mobile)
+- [ ] CTA repeat + "Or try the demo library first"
+- [ ] Trust strip: free, open source, encrypted, no account — single line with icons
+- [ ] Footer: links to tutorials.html, features.html, security.html, GitHub, Report an Issue, legal
+- [ ] **Remove from index.html:** Key Features grid, "What Makes RW Different", Recent Features, Coming Soon, obsolete video/walkthrough section
+- [ ] **Fix or replace:** "See the Difference" before/after screenshots (currently have obsolete overlay)
+
+#### 3D: Create tutorials.html
+- [ ] Page header + nav back to main site
+- [ ] Sizzle reel embedded at top
+- [ ] Video 1 (Quick Start) embedded with written summary below
+- [ ] Videos 2-8 as cards: thumbnail, title, duration, 1-line description → expand to embedded video
+- [ ] Written Quick Reference: 3-step "How It Works" + demo library instructions (for non-video users)
+- [ ] Footer (same as index.html)
+
+#### 3E: Create features.html
+- [ ] Page header + nav back to main site
+- [ ] Key Features grid (moved from index.html)
+- [ ] "What Makes ReaderWrangler Different?" (moved from index.html)
+- [ ] Recent Features / version history (moved from index.html)
+- [ ] Current Support / browser compatibility
+- [ ] Coming Soon (brief)
+- [ ] Footer (same as index.html)
+
+#### 3F: Update App Help Menu
+- [ ] Add "Watch Tutorials" menu item → opens tutorials.html in new tab
+- [ ] Keep existing items: Getting Started (Relay Setup), How To Use (in-app dialog), Keyboard Shortcuts, About
+
+#### 3G: Update README.md
+- [ ] Trim Recent Features to last 5 major versions
+- [ ] Replace walkthrough video link/image with link to tutorials.html
+- [ ] Note: README.md no longer mirrors index.html — serves GitHub repo browsers only
+
+#### 3H: Capture Updated Screenshots
+- [ ] Before screenshot: Amazon "Your Books" page showing flat unorganized grid
+- [ ] After screenshot: ReaderWrangler with organized demo library (target folder structure)
+- [ ] Replace `images/before.png`, `images/after.png`
+- [ ] New `images/walkthrough-preview.png` (thumbnail for sizzle reel or Video 1)
+- [ ] Remove obsolete overlay CSS from index.html once screenshots are updated
+
+#### 3I: Record & Produce Videos
+- [ ] Set up OBS for screen recording (resolution, frame rate, capture area)
+- [ ] Test TTS voices: Journey-D and Journey-F with Video 1 script → select voice
+- [ ] Record sizzle reel screen captures → edit in CapCut with music
+- [ ] Record + produce Video 1 (Quick Start)
+- [ ] Record + produce Videos 2-8
+- [ ] Upload to YouTube (for searchability) and embed on tutorials.html
+- [ ] Select and license music track from Uppbeat or Pixabay
+
+#### 3J: Final Integration
+- [ ] Update DEMO-LIBRARY-PLAN.md — mark Phase 3 complete
+- [ ] Verify all cross-links: index.html ↔ tutorials.html ↔ features.html ↔ app Help menu
+- [ ] Commit, push to prod
+
+---
 
 ### Phase 4: In-App Integration (future)
 - [ ] "Load Demo Library" one-click button on Welcome screen

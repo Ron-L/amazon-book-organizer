@@ -6,54 +6,30 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 ---
 
-### 🔒 Priority 0: Security
+### 📖 Priority 4: Launch Documentation & Onboarding
 
-**0. 🔒 Relay Security Hardening** - See [docs/design/RELAY-SECURITY-PLAN.md](docs/design/RELAY-SECURITY-PLAN.md)
-   - ~~Phase 1A: Self-service credential revocation~~ ✅ v6.9.0
-   - ~~Phase 1B: Rate limiting~~ ✅ v6.9.0
-   - ~~Phase 1C: Email alerts~~ ✅ v6.9.0
-   - Phase 2A: Edge blocking (Cloudflare WAF rules for non-browser clients)
+See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for full checklist.
 
----
+**1. ✅ Demo Backup File** (shipped v6.8.1)
+   - 119-book curated demo library for instant trial without Amazon account
 
-### 📖 Priority 4: Launch Documentation
+**2. ✅ Whitelist Filter** (shipped v6.8.1)
+   - Fetcher filter for controlled demo recordings
 
-**1. 📦 Demo Backup File** - HIGH/LOW (30 min)
-   - Create a curated backup JSON with classic/public-domain books for new users to try the app instantly
-   - Steps: Back up real library → delete down to classics → save demo backup → restore real backup
-   - Include: varied authors, series with positions, tags, ratings, read statuses, a few notes, books in folders + Inbox
-   - Strip: `"relay"` credentials block from the JSON before publishing
-   - Host on GitHub repo or landing page with simple instructions: "Download → File > Restore Backup → Explore"
-   - Problem: New users must run the full fetcher pipeline before they can evaluate the app
-   - Impact: Dramatically lowers trial friction — try the app in 30 seconds
+**3. 🎬 Training Videos, Site Restructure & Docs** - HIGH/HIGH (40-60 hours) — **IN PROGRESS**
+   - Delete 3 obsolete design docs (ENHANCED-GETTING-STARTED-UX, VIDEO-PRODUCTION-PLAN, BOOK-EXPLORER-VIDEO-SCENARIOS)
+   - Create VIDEO-PRODUCTION-GUIDE.md — sizzle reel + 8 tutorial video scripts, scene prep, production setup
+   - Restructure index.html → slim landing page (hook → convert)
+   - Create tutorials.html — video tutorial hub (sizzle reel + 8 videos embedded)
+   - Create features.html — feature deep-dive, version history, competitive positioning
+   - Add "Watch Tutorials" to app Help menu
+   - Capture updated before/after screenshots
+   - Record and produce 9 videos (OBS + CapCut + Google TTS)
+   - README.md diverges from index.html (GitHub audience only)
 
-**2. 📖 Quick Start Video & Written Guide** - HIGH/LOW (2-4 hours) - See [docs/design/VIDEO-PRODUCTION-PLAN.md](docs/design/VIDEO-PRODUCTION-PLAN.md)
-
-**3. 📚 Comprehensive Documentation Hub** - HIGH/MEDIUM (8-12 hours)
-   - Troubleshooting guide (What if scrape fails partway? How to recover?)
-   - FAQ (Multiple Amazon accounts? Kindle Unlimited books? Mobile support?)
-   - Keyboard shortcuts reference
-   - Data management guide (backup, export, import, JSON format)
-   - Technical details (How bookmarklet handles anti-scraping)
-   - Problem: Users get stuck, have questions, can't find answers
-   - Impact: Reduces support burden, improves user confidence
-
-**4. User Guide: consolidate or make accessible from app** - MEDIUM/MEDIUM (4-6 hours)
-   - USER-GUIDE.md exists on GitHub but is not accessible from the app
-   - Help > How To Use references "User Guide documentation" that users can't reach
-   - Decision needed: (a) add Help > User Guide as in-app HTML (2 sources of truth), or (b) delete USER-GUIDE.md and put all guidance in-app, or (c) serve USER-GUIDE.md as a linked page from the app
-   - USER-GUIDE.md is significantly out of date — predates relay, mobile sync, tag virtual folders, and other v5.5/v6 features
-   - Update FAQ answers that reference file picker workflow (now relay-based)
-   - Document relay setup and mobile pairing
-   - Problem: Documentation describes a different product than what users experience and is inaccessible from the app
-   - Impact: Users can actually find and follow the guide
-
-**5. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
-   - Prerequisites: Mobile sync (Milestone 2) complete
-   - Fill in USER-GUIDE.md FAQ disaster recovery placeholders
-   - Document: phone exposes relay credentials in settings (so user can recover them)
-   - Document: desktop Relay Setup "enter existing credentials" path (restore access to backend state)
-   - Document: backup files include relay credentials (File > Export)
+**4. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
+   - Document relay credential recovery paths
+   - Document backup files include relay credentials
    - Problem: Users have no guidance for recovering from data loss
    - Impact: Confidence that data is recoverable
 
