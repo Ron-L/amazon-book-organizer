@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8183,8 +8183,8 @@
                                                             React.createElement('button', {
                                                                 onClick: async () => {
                                                                     const confirmed = await showConfirmDialog(
-                                                                        'Revoke credentials & delete data',
-                                                                        'This will permanently delete all data on the relay and block these credentials from future use. You will need to generate new credentials to continue syncing.',
+                                                                        'Revoke credentials & wipe relay',
+                                                                        'This will erase the temporary copy on the relay and block these credentials from future use. Your Amazon library and local ReaderWrangler data are not affected. You will need to generate new credentials to continue syncing.',
                                                                         'Revoke & delete',
                                                                         'Cancel'
                                                                     );
@@ -8201,8 +8201,8 @@
                                                                 },
                                                                 className: 'px-3 py-1.5 rounded text-sm',
                                                                 style: { background: 'var(--bg-surface)', color: 'var(--text-danger, #dc2626)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' },
-                                                                title: 'Permanently deletes all relay data and blocks these credentials from future use'
-                                                            }, 'Revoke credentials & delete data')
+                                                                title: 'Erases the temporary copy on the relay and blocks these credentials from future use'
+                                                            }, 'Revoke credentials & wipe relay')
                                                         )
                                                     )
                                             ))),
@@ -8360,7 +8360,7 @@
                                             <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Keeping your credentials secure</p>
                                             <p>Your credentials protect the library data stored on the relay — book titles, organization, and metadata. If someone obtained your credentials (for example, by accessing a shared backup file), they could read that data, or corrupt it so that your next relay import corrupts your Inbox.</p>
                                             <p style={{ marginTop: '8px' }}>However, they could <strong>not</strong> access your Amazon account (these credentials are relay-only) or do anything persistent if you regenerate credentials (the old channel becomes inaccessible).</p>
-                                            <p style={{ marginTop: '8px' }}>If you think your credentials may have been exposed (e.g. shared a backup file or posted it publicly): open Relay Setup Step 1, use "Revoke credentials &amp; delete data" to wipe the relay and block the old credentials, then generate fresh credentials. You will need to reinstall the bookmarklet and re-pair your phone afterward.</p>
+                                            <p style={{ marginTop: '8px' }}>If you think your credentials may have been exposed (e.g. shared a backup file or posted it publicly): open Relay Setup Step 1, use "Revoke credentials &amp; wipe relay" to block the old credentials and erase the temporary copy on the relay. This does not affect your Amazon library or your local ReaderWrangler data — only the relay's copy is removed. You will need to generate fresh credentials, reinstall the bookmarklet, and re-pair your phone afterward.</p>
                                         </div>
                                     </div>
                                 </div>
