@@ -305,37 +305,49 @@ Which features each part of the demo showcases:
   - Undo/redo, keyboard shortcuts, Save/Restore Backup, Auto-Organize wizard, Data Status, Hide/Unhide
   - Absorbs scenarios: keyboard shortcuts workflow, clipboard operations, menu bar
 
-#### 3C: Restructure index.html (Landing Page)
-- [ ] Slim hero: logo, tagline, single CTA ("Get Started — it's free"), demo library secondary link
-- [ ] Sizzle reel embed (or hero screenshot placeholder until video exists)
-- [ ] 3 value prop cards: "Unbury your next great read" / "Amazon won't organize" / "Your data stays yours"
-- [ ] How It Works: 3 steps with icons (Install bookmarklet → Import → Organize; optional 4th: Mobile)
-- [ ] CTA repeat + "Or try the demo library first"
-- [ ] Trust strip: free, open source, encrypted, no account — single line with icons
-- [ ] Footer: links to tutorials.html, features.html, security.html, GitHub, Report an Issue, legal
-- [ ] **Remove from index.html:** Key Features grid, "What Makes RW Different", Recent Features, Coming Soon, obsolete video/walkthrough section
-- [ ] **Fix or replace:** "See the Difference" before/after screenshots (currently have obsolete overlay)
+#### 3C: Restructure index.html (Landing Page) ✅
+- [x] Slim hero: logo, tagline, single CTA ("Get Started — it's free"), demo library secondary link
+- [x] Sizzle reel embed (or hero screenshot placeholder until video exists)
+- [x] 3 value prop cards: "Unbury your next great read" / "Amazon won't organize" / "Your data stays yours"
+- [x] How It Works: 3 steps with icons (Import → Organize → Browse Anywhere); rewritten for accuracy
+- [x] ~~CTA repeat + "Or try the demo library first"~~ — removed by design (redundant, covered by hero + demo section)
+- [x] Trust strip: free, open source, encrypted, no account — single line with icons
+- [x] Footer: links to tutorials.html, features.html, security.html, GitHub, Report an Issue, legal
+- [x] **Remove from index.html:** Key Features grid, "What Makes RW Different", Recent Features, Coming Soon, obsolete video/walkthrough section
+- [x] **Fix or replace:** "See the Difference" before/after — img-comparison-slider in place (screenshot update is 3H)
+- [x] Trust strip tooltips: detailed hover text on all 6 items + cursor:help
+- [x] Nav bar Launch button tooltip: "The app walks you through setup — relay, bookmarklet, and first import"
+- [x] Demo Library buttons: stacked Step 1 / Step 2 layout with tooltips (replaces side-by-side)
+- [x] Dead CSS cleanup: removed .cta-repeat, .demo-steps-grid, .demo-step-action across all 4 themes + mobile breakpoint
+- [x] Empty library welcome screen (readerwrangler.js): updated bookmarklet flow to match actual button labels, added Launch App step, "(securely sends to relay)" moved to tooltips
+- [x] How It Works CTA: "Launch ReaderWrangler →" with tooltip after step 3
 
-#### 3D: Create tutorials.html
-- [ ] Page header + nav back to main site
-- [ ] Sizzle reel embedded at top
-- [ ] Video 1 (Quick Start) embedded with written summary below
-- [ ] Videos 2-8 as cards: thumbnail, title, duration, 1-line description → expand to embedded video
-- [ ] Written Quick Reference: 3-step "How It Works" + demo library instructions (for non-video users)
+#### 3D: Create tutorials.html ✅
+- [x] Page header + nav back to main site (brand links to index.html, Tutorials active state)
+- [x] Sizzle reel placeholder at top (TODO comment for YouTube embed swap)
+- [x] Video 1 (Quick Start) featured layout with written summary
+- [x] Videos 2-8 as cards: thumbnail, title, duration, 1-line description in responsive grid
+- [x] Written Quick Reference: 3-step How It Works + demo library Step 1/Step 2 buttons
+- [x] Footer (matches index.html, minus self-link)
+- [x] 4 theme variants: light, dark, hc-light, hc-dark
+- [x] Mobile responsive (single column at 768px, nav hidden)
+- [x] GoatCounter analytics
+
+#### 3E: Create features.html ✅
+- [x] Page header + nav back to main site (brand links to index.html, Home replaces self-link)
+- [x] Key Features grid (5 cards, moved from index.html)
+- [x] "What Makes ReaderWrangler Different?" (5 differentiator cards, moved from index.html)
+- [x] Recent Features — curated "best of" list (9 items, version numbers removed, reworded for new users)
+- [x] Current Support / browser compatibility
+- [x] Coming Soon (5 items: reading progress, recommendations, series manager, accessibility, faster loading)
+- [x] Footer (matches index.html, minus self-link)
+- [x] 4 theme variants: light, dark, hc-light, hc-dark
+- [x] Mobile responsive + GoatCounter analytics
 - [ ] Footer (same as index.html)
 
-#### 3E: Create features.html
-- [ ] Page header + nav back to main site
-- [ ] Key Features grid (moved from index.html)
-- [ ] "What Makes ReaderWrangler Different?" (moved from index.html)
-- [ ] Recent Features / version history (moved from index.html)
-- [ ] Current Support / browser compatibility
-- [ ] Coming Soon (brief)
-- [ ] Footer (same as index.html)
-
-#### 3F: Update App Help Menu
-- [ ] Add "Watch Tutorials" menu item → opens tutorials.html in new tab
-- [ ] Keep existing items: Getting Started (Relay Setup), How To Use (in-app dialog), Keyboard Shortcuts, About
+#### 3F: Update App Help Menu ✅
+- [x] Add "Watch Tutorials" menu item → opens tutorials.html in new tab (between How To Use and Keyboard Shortcuts)
+- [x] Keep existing items: Getting Started (Relay Setup), How To Use (in-app dialog), Keyboard Shortcuts, About
 
 #### 3G: Update README.md
 - [ ] Trim Recent Features to last 5 major versions
@@ -348,6 +360,7 @@ Which features each part of the demo showcases:
 - [ ] Replace `images/before.png`, `images/after.png`
 - [ ] New `images/walkthrough-preview.png` (thumbnail for sizzle reel or Video 1)
 - [ ] Remove obsolete overlay CSS from index.html once screenshots are updated
+- [ ] Update `images/bookmarklet-install.gif` — re-record using clean ReaderWrangler Chrome profile
 
 #### 3I: Record & Produce Videos
 - [ ] Set up OBS for screen recording (resolution, frame rate, capture area)
