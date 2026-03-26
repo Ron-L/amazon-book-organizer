@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8229,7 +8229,7 @@
                                                     )
                                                 ),
                                                 React.createElement('div', { style: { textAlign: 'center', margin: '12px 0' } },
-                                                    React.createElement('img', { src: 'images/bookmarklet-install.gif', alt: 'Drag bookmarklet to bookmarks bar', style: { maxWidth: '100%', height: 'auto', borderRadius: '6px', border: '1px solid var(--border-default)' } })
+                                                    React.createElement('img', { src: `images/bookmarklet-install.gif?v=${ORGANIZER_VERSION}`, alt: 'Drag bookmarklet to bookmarks bar', style: { maxWidth: '100%', height: 'auto', borderRadius: '6px', border: '1px solid var(--border-default)' } })
                                                 ),
                                                 React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)' } }, 'Your credentials are baked into the bookmarklet. If you regenerate credentials, you must drag the new bookmarklet to your bookmarks bar to replace the old one.'),
                                                 isLocalhost && React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)', fontStyle: 'italic' } }, 'Developer mode: showing all 3 environments.'),
@@ -8348,7 +8348,7 @@
                                             <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Step 2: Bookmarklet</p>
                                             <p>The bookmarklet is a small button you drag to your browser's bookmarks bar. It runs on Amazon pages to fetch your library data, encrypts it with your credentials, and sends it to the relay. No browser extension needed — it runs right in your browser tab.</p>
                                             <div style={{ margin: '10px 0', textAlign: 'center' }}>
-                                                <img src="images/bookmarklet-install.gif" alt="Drag bookmarklet to bookmarks bar" style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px', border: '1px solid var(--border-default)' }} />
+                                                <img src={`images/bookmarklet-install.gif?v=${ORGANIZER_VERSION}`} alt="Drag bookmarklet to bookmarks bar" style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px', border: '1px solid var(--border-default)' }} />
                                             </div>
                                             <p>Your credentials are baked into the bookmarklet. If you regenerate credentials, you need to drag the new bookmarklet to replace the old one.</p>
                                         </div>
