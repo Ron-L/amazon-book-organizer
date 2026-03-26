@@ -125,77 +125,16 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ## Recent Features
 
-**v6.9 - Relay Security + Usage Monitoring** (March 2026)
-- Self-service credential revocation with cryptographic proof of ownership
-- Per-channel rate limiting (200 writes/hour) with automatic abuse blocking at 10x threshold
-- Email alerts for security events: revocations, auto-blocks, rate limit violations
-- Relay Setup redesigned: freely navigable steps, Test Connection button, verified/unverified key states, inline feedback
-- Cloudflare free tier usage monitoring: cron-based threshold alerts (25/50/75/90%) and daily summary emails
-
-**v6.8.1 - Demo Library + UX Fixes** (March 2026)
-- Download the [Demo Library](https://raw.githubusercontent.com/Ron-L/readerwrangler/refs/heads/main/readerwrangler-demo-library.json) — 100+ classic books ready to organize, no Amazon account needed
-- Stale folder selection now resets to All Books on load instead of showing an empty pane
-- Relay Setup: removed redundant credentials-only Backup button; organizational backup covers it
-
-**v6.8 - Relay Setup Redesign + Error Handling** (March 2026)
-- Relay Setup steps are now freely navigable — no sequential lock, steps start collapsed, animated accordion
-- Pulsing green tower icon in Encryption Keys header confirms relay is configured at a glance
-- "Test Connection" button verifies the relay is reachable without leaving the dialog
-- Bookmarklet now shows an error card instead of failing silently when the server is unreachable
-- Fetcher load failures show a styled Retry/Close dialog instead of a native alert
-- "Show All" filter indicator only appears when folders are actually hidden by the active filter
-- New folder created while filters are hiding it now triggers a helpful dialog
-
-**v6.6 - Drag & Copy Fixes** (March 2026)
-- Ctrl+Drag now reliably copies books between folders (book stays in source, appears in target) — fixed three layered Windows/Chrome drag API bugs
-- Copy shows a toast explaining the hardlink model: *"same book, two folders — ratings, notes, and edits apply to both"*
-- Backup restore no longer lands books in Trash after a prior soft-delete
-- All Books now correctly excludes Trash; tooltip clarified to "Every unique book…"
-- Books dragged to Inbox now land in Inbox correctly with full undo support
-
-**v6.5 - Folder & Tag View Descriptions + Sidebar Tooltips** (March 2026)
-- Add a description to any folder or tag view via right-click → Properties; shown as a tooltip on hover — empty = no tooltip
-- Built-in tooltips on all system sidebar entries: Views, Folders, All Books, Inbox, and Trash
-
-**v6.4 - Views / Folders Navigation Split** (March 2026)
-- Left panel reorganized into two named sections: *Views* (All Books + pinned tag virtual folders) and *Folders* (Inbox + personal folder tree) — with tooltips explaining the distinction
-- Views section has a collapse/expand chevron; entire panel scrolls as one unified zone
-- Right pane shows Name + Books columns only when browsing Views or Folders (no irrelevant book columns)
-
-**v6.3 - Data Integrity + UX Polish** (March 2026)
-- Automatic data integrity checks on load and after each import — homeless books placed in Inbox, stale folder references cleaned up, results shown in Data Status
-- Race condition protection: atomic IndexedDB writes, write mutex, operation guard
-- Drag books to Trash; Hide available in Trash view
-- New Folder button moved to My Library; folder +/× buttons no longer hidden behind book count
-
-**v6.2 - Delete Warning + Fetcher UX** (March 2026)
-- Purchased book delete warning with Hide Instead option — prevents confusion when books reappear after fetch
-- Fetcher progress shows full scan vs. incremental mode with persistent info banner
-
-**v6.0 - Cloud Relay + Trash Bin** (March 2026)
-- Encrypted cloud relay replaces file-based transfer — one-click import, no downloads needed
-- Trash Bin with two-stage delete: soft delete to Trash, permanent delete from library and relay
-- Orphan detection flags books removed from Amazon (Prime rotation, refunds)
-- Wishlist deduplication and duplicate review in Data Status
-
-**v5.5 - Mobile Viewer** (February 2026)
-- Browse your organized library on your phone — dashboard shelves, folder navigation, tag views, search & sort
-
-**v5.5 - Tag Virtual Folders** (February 2026)
-- Pin any tag as a virtual folder alongside real folders; drag-to-tag, manual ordering, move/copy between views
-
-**v5.5 - Dark Mode + High Contrast Themes** (February 2026)
-- Four themes: Light, Dark, High Contrast Light, High Contrast Dark
-- Auto-detects OS preference, 25 semantic CSS variables, every UI element themed
-
-**v5.1 - Auto-Organize Wizard** (February 2026)
-- One-click folder creation by author and series from your Inbox
-- Preview mode, configurable thresholds, and single Ctrl+Z to undo the whole operation
-
-**v5.0 - Book Explorer** (February 2026)
-- Complete redesign: two-pane Windows Explorer-style interface with folder tree + content view
-- Nested folders, list and cover grid views, drag-and-drop, context menus, Cut/Copy/Paste
-- Menu bar + compact toolbar — 32% more screen space for books
+- **Video Tutorials** — Quick-start guides and feature walkthroughs to get you up and running.
+- **Demo Library** — Download 100+ classic books and explore every feature without connecting your Amazon account.
+- **Folder & Tag Descriptions** — Add a description to any folder or tag view; shown as a tooltip on hover.
+- **Views / Folders Split** — Two ways to see your books: by folder structure or by tag views. All Books, pinned tags, and folders in one sidebar.
+- **Encrypted Cloud Relay + Trash Bin** — End-to-end encrypted sync between the bookmarklet and the app. Trash Bin gives you a safety net before permanently deleting books. Orphan detection flags books removed from Amazon.
+- **Mobile Viewer** — Pair your phone with a QR code and browse your organized library anywhere — shelves, folders, tag views, search & sort.
+- **Tag Virtual Folders** — Pin any tag as a virtual folder; drag books to tag them, reorder views, move and copy between tag folders.
+- **Dark Mode + High Contrast Themes** — Four themes (light, dark, high-contrast light, high-contrast dark) with automatic OS detection.
+- **Auto-Organize Wizard** — One click to build an Author / Series / Books folder hierarchy, with preview and undo.
+- **Book Explorer** — Two-pane Windows Explorer-style interface with folder tree, list and cover grid views, drag-and-drop, and Cut/Copy/Paste.
 
 See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
@@ -203,8 +142,11 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ## Coming Soon!
 
-- **Public launch** — Share ReaderWrangler with the world
-- **Full keyboard accessibility** — Focus trapping, keyboard menu navigation, focus indicators
+- **Reading progress** — See how far you are in each book
+- **Book recommendations** — Discover similar books already in your library
+- **Series manager** — Clean up inconsistent series names and merge duplicates
+- **Keyboard accessibility** — Full keyboard navigation for every feature
+- **Faster app loading** — Reducing the initial load time
 
 Have a feature request? [Let us know on GitHub!](https://github.com/Ron-L/ReaderWrangler/issues)
 
@@ -226,12 +168,7 @@ Questions or issues? Check the [documentation](CONTRIBUTING.md) or [open an issu
 
 ## See ReaderWrangler in Action
 
-Watch this 10-minute walkthrough to see all the features in action
-
-<a href="https://readerwrangler.com/images/walk-through.mp4">
-  <img src="images/walkthrough-preview.png" alt="ReaderWrangler 10-minute walkthrough" width="100%">
-  <p align="center">▶️ Click to watch full 10-minute walkthrough (opens video in new tab)</p>
-</a>
+Visit the [Tutorial Hub](https://readerwrangler.com/tutorials.html) for video walkthroughs — from a 30-second sizzle reel to detailed tutorials on every feature.
 
 ---
 
