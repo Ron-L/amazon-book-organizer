@@ -343,18 +343,19 @@ Which features each part of the demo showcases:
 - [x] Footer (matches index.html, minus self-link)
 - [x] 4 theme variants: light, dark, hc-light, hc-dark
 - [x] Mobile responsive + GoatCounter analytics
-- [ ] Footer (same as index.html)
 
 #### 3F: Update App Help Menu ✅
-- [x] Add "Watch Tutorials" menu item → opens tutorials.html in new tab (between How To Use and Keyboard Shortcuts)
-- [x] Keep existing items: Getting Started (Relay Setup), How To Use (in-app dialog), Keyboard Shortcuts, About
+- [x] Add "Help & Tutorials" menu item → opens tutorials.html in new tab (between How To Use and Keyboard Shortcuts)
+- [x] Keys→Credentials rename across all user-facing text in readerwrangler.js and bookmarklet-nav-hub.js
+- [x] Security wording: "here in the ReaderWrangler app", corruption risk + "could not" reassurances, "wipe relay" clarity
 
-#### 3G: Update README.md
-- [ ] Trim Recent Features to last 5 major versions
-- [ ] Replace walkthrough video link/image with link to tutorials.html
-- [ ] Note: README.md no longer mirrors index.html — serves GitHub repo browsers only
+#### 3G: Update README.md ✅
+- [x] Replace 14 versioned Recent Features with 10 curated items matching features.html
+- [x] Replace stale walkthrough video embed with link to tutorials.html
+- [x] Update Coming Soon from 2 to 5 items matching features.html
+- [x] Add SYNC comments in README.md and features.html + CLAUDE.md Release Checklist reminder
 
-#### 3H: Capture Updated Screenshots
+#### 3H: Capture Updated Screenshots (1920x1080, matching video resolution)
 - [ ] Before screenshot: Amazon "Your Books" page showing flat unorganized grid
 - [ ] After screenshot: ReaderWrangler with organized demo library (target folder structure)
 - [ ] Replace `images/before.png`, `images/after.png`
