@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ReaderWrangler features - organize your Amazon Kindle library with folders, tags, filters, mobile sync, and more. Free, private, no installation required.">
+    <title>Features - ReaderWrangler</title>
+
+    <link rel="canonical" href="https://readerwrangler.com/features.html">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+
+    <!-- Google Fonts - match index.html -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <!-- Theme detection (runs before paint to prevent flash) -->
+    <script>
+        (function() {
+            var stored = localStorage.getItem('readerwrangler-theme');
+            var theme = stored;
+            if (!stored || stored === 'auto') {
+                theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (theme && theme !== 'light') {
+                document.documentElement.dataset.theme = theme;
+            }
+        })();
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #334155;
+            background: #ffffff;
+            line-height: 1.6;
+        }
+
+        /* ===== Nav Bar ===== */
+        .nav-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.97);
+            border-bottom: 1px solid #e2e8f0;
+            backdrop-filter: blur(8px);
+        }
+
+        .nav-bar-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .nav-bar-brand img {
+            height: 24px;
+        }
+
+        .nav-bar-brand span {
+            font-weight: 700;
+            font-size: 1em;
+            color: #1e293b;
+        }
+
+        .nav-bar-buttons {
+            margin-left: auto;
+        }
+
+        .nav-btn {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .nav-btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .nav-btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .nav-bar-links {
+            display: flex;
+            gap: 20px;
+            margin-left: 24px;
+        }
+
+        .nav-bar-links a {
+            font-size: 0.85em;
+            color: #64748b;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .nav-bar-links a:hover {
+            color: #3b82f6;
+        }
+
+        .nav-bar-links a.active {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+
+        /* ===== Page Header ===== */
+        .page-header {
+            text-align: center;
+            padding: 48px 20px 32px;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        }
+
+        .page-header h1 {
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-size: 2.2em;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            font-size: 1.1em;
+            color: #64748b;
+        }
+
+        /* ===== Sections ===== */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .container h2 {
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-size: 1.6em;
+            color: #3b82f6;
+            margin-bottom: 24px;
+        }
+
+        /* ===== Feature Cards Grid ===== */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 16px;
+        }
+
+        .feature-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .feature-card h3 {
+            font-size: 1.05em;
+            color: #1e293b;
+            margin-bottom: 12px;
+        }
+
+        .feature-card ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-card ul li {
+            font-size: 0.9em;
+            color: #475569;
+            line-height: 1.7;
+            padding-left: 16px;
+            position: relative;
+        }
+
+        .feature-card ul li::before {
+            content: "\2022";
+            color: #3b82f6;
+            position: absolute;
+            left: 0;
+        }
+
+        .feature-card p {
+            font-size: 0.9em;
+            color: #475569;
+            line-height: 1.7;
+        }
+
+        /* ===== Differentiators ===== */
+        .diff-intro {
+            font-size: 1.05em;
+            color: #475569;
+            line-height: 1.7;
+            margin-bottom: 24px;
+        }
+
+        /* ===== Support Section ===== */
+        .support-info {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .support-info p {
+            font-size: 0.95em;
+            color: #475569;
+        }
+
+        .support-info p + p {
+            margin-top: 8px;
+        }
+
+        /* ===== Version History ===== */
+        .version-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .version-list li {
+            font-size: 0.9em;
+            color: #475569;
+            line-height: 1.8;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .version-list li:last-child {
+            border-bottom: none;
+        }
+
+        .version-list li strong {
+            color: #1e293b;
+        }
+
+        .changelog-link {
+            margin-top: 16px;
+            font-size: 0.9em;
+        }
+
+        .changelog-link a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .changelog-link a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== Coming Soon ===== */
+        .coming-soon-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .coming-soon-list li {
+            font-size: 0.95em;
+            color: #475569;
+            line-height: 1.8;
+            padding: 4px 0;
+        }
+
+        .coming-soon-list li strong {
+            color: #1e293b;
+        }
+
+        .coming-soon-cta {
+            margin-top: 16px;
+            font-size: 0.9em;
+            color: #64748b;
+        }
+
+        .coming-soon-cta a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+
+        .coming-soon-cta a:hover {
+            text-decoration: underline;
+        }
+
+        /* ===== Footer ===== */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 40px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .footer-links a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 0.95em;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        .notice {
+            font-size: 0.85em;
+            color: #94a3b8;
+            line-height: 1.8;
+        }
+
+        /* ===== Dark Theme ===== */
+        [data-theme="dark"] body {
+            color: #e2e8f0;
+            background-color: #0f172a;
+        }
+
+        [data-theme="dark"] .page-header {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        }
+
+        [data-theme="dark"] .page-header h1 {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .page-header p {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .nav-bar {
+            background: rgba(15, 23, 42, 0.97);
+            border-bottom-color: #334155;
+        }
+
+        [data-theme="dark"] .nav-bar-brand span {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .nav-bar-brand img {
+            filter: invert(1) hue-rotate(180deg);
+        }
+
+        [data-theme="dark"] .nav-bar-links a {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .nav-bar-links a:hover,
+        [data-theme="dark"] .nav-bar-links a.active {
+            color: #60a5fa;
+        }
+
+        [data-theme="dark"] .container h2 {
+            color: #60a5fa;
+        }
+
+        [data-theme="dark"] .feature-card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        [data-theme="dark"] .feature-card h3 {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .feature-card ul li,
+        [data-theme="dark"] .feature-card p {
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .diff-intro {
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .support-info {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        [data-theme="dark"] .support-info p {
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .version-list li {
+            color: #cbd5e1;
+            border-bottom-color: #1e293b;
+        }
+
+        [data-theme="dark"] .version-list li strong {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .changelog-link a {
+            color: #60a5fa;
+        }
+
+        [data-theme="dark"] .coming-soon-list li {
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .coming-soon-list li strong {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .coming-soon-cta {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .coming-soon-cta a {
+            color: #60a5fa;
+        }
+
+        [data-theme="dark"] footer {
+            background: #0f172a;
+            border-top-color: #334155;
+        }
+
+        [data-theme="dark"] footer a {
+            color: #60a5fa;
+        }
+
+        [data-theme="dark"] .notice {
+            color: #64748b;
+        }
+
+        /* ===== High Contrast Light Theme ===== */
+        [data-theme="hc-light"] .page-header h1 {
+            color: #000000;
+        }
+
+        [data-theme="hc-light"] .page-header p {
+            color: #333333;
+        }
+
+        [data-theme="hc-light"] .nav-bar {
+            border-bottom: 2px solid #999999;
+        }
+
+        [data-theme="hc-light"] .nav-bar-brand span {
+            color: #000000;
+        }
+
+        [data-theme="hc-light"] .nav-btn-primary {
+            background: #0044cc;
+        }
+
+        [data-theme="hc-light"] .nav-btn-primary:hover {
+            background: #003399;
+        }
+
+        [data-theme="hc-light"] .nav-bar-links a.active {
+            color: #0044cc;
+        }
+
+        [data-theme="hc-light"] .container h2 {
+            color: #0044cc;
+        }
+
+        [data-theme="hc-light"] .feature-card {
+            border: 1px solid #999999;
+        }
+
+        [data-theme="hc-light"] .feature-card h3 {
+            color: #000000;
+        }
+
+        [data-theme="hc-light"] .feature-card ul li,
+        [data-theme="hc-light"] .feature-card p {
+            color: #333333;
+        }
+
+        [data-theme="hc-light"] .feature-card ul li::before {
+            color: #0044cc;
+        }
+
+        [data-theme="hc-light"] .diff-intro {
+            color: #333333;
+        }
+
+        [data-theme="hc-light"] .support-info {
+            border: 1px solid #999999;
+        }
+
+        [data-theme="hc-light"] .support-info p {
+            color: #333333;
+        }
+
+        [data-theme="hc-light"] .version-list li {
+            color: #333333;
+        }
+
+        [data-theme="hc-light"] .version-list li strong {
+            color: #000000;
+        }
+
+        [data-theme="hc-light"] .changelog-link a,
+        [data-theme="hc-light"] .coming-soon-cta a {
+            color: #0044cc;
+        }
+
+        [data-theme="hc-light"] footer a {
+            color: #0044cc;
+        }
+
+        [data-theme="hc-light"] .notice {
+            color: #666666;
+        }
+
+        /* ===== High Contrast Dark Theme ===== */
+        [data-theme="hc-dark"] body {
+            color: #ffffff;
+            background-color: #000000;
+        }
+
+        [data-theme="hc-dark"] .page-header {
+            background: linear-gradient(180deg, #0a0a0a 0%, #000000 100%);
+        }
+
+        [data-theme="hc-dark"] .page-header h1 {
+            color: #ffffff;
+        }
+
+        [data-theme="hc-dark"] .page-header p {
+            color: #cccccc;
+        }
+
+        [data-theme="hc-dark"] .nav-bar {
+            background: rgba(0, 0, 0, 0.97);
+            border-bottom: 2px solid #666666;
+        }
+
+        [data-theme="hc-dark"] .nav-bar-brand span {
+            color: #ffffff;
+        }
+
+        [data-theme="hc-dark"] .nav-bar-brand img {
+            filter: invert(1) hue-rotate(180deg);
+        }
+
+        [data-theme="hc-dark"] .nav-btn-primary {
+            background: #4da6ff;
+            color: #000000;
+        }
+
+        [data-theme="hc-dark"] .nav-btn-primary:hover {
+            background: #80c0ff;
+        }
+
+        [data-theme="hc-dark"] .nav-bar-links a {
+            color: #cccccc;
+        }
+
+        [data-theme="hc-dark"] .nav-bar-links a:hover,
+        [data-theme="hc-dark"] .nav-bar-links a.active {
+            color: #4da6ff;
+        }
+
+        [data-theme="hc-dark"] .container h2 {
+            color: #4da6ff;
+        }
+
+        [data-theme="hc-dark"] .feature-card {
+            background: #1a1a1a;
+            border-color: #666666;
+        }
+
+        [data-theme="hc-dark"] .feature-card h3 {
+            color: #ffffff;
+        }
+
+        [data-theme="hc-dark"] .feature-card ul li,
+        [data-theme="hc-dark"] .feature-card p {
+            color: #e0e0e0;
+        }
+
+        [data-theme="hc-dark"] .feature-card ul li::before {
+            color: #4da6ff;
+        }
+
+        [data-theme="hc-dark"] .diff-intro {
+            color: #e0e0e0;
+        }
+
+        [data-theme="hc-dark"] .support-info {
+            background: #1a1a1a;
+            border-color: #666666;
+        }
+
+        [data-theme="hc-dark"] .support-info p {
+            color: #e0e0e0;
+        }
+
+        [data-theme="hc-dark"] .version-list li {
+            color: #e0e0e0;
+            border-bottom-color: #333333;
+        }
+
+        [data-theme="hc-dark"] .version-list li strong {
+            color: #ffffff;
+        }
+
+        [data-theme="hc-dark"] .changelog-link a,
+        [data-theme="hc-dark"] .coming-soon-cta a {
+            color: #4da6ff;
+        }
+
+        [data-theme="hc-dark"] .coming-soon-list li {
+            color: #e0e0e0;
+        }
+
+        [data-theme="hc-dark"] .coming-soon-list li strong {
+            color: #ffffff;
+        }
+
+        [data-theme="hc-dark"] .coming-soon-cta {
+            color: #cccccc;
+        }
+
+        [data-theme="hc-dark"] footer {
+            background: #0a0a0a;
+            border-top-color: #666666;
+        }
+
+        [data-theme="hc-dark"] footer a {
+            color: #4da6ff;
+        }
+
+        [data-theme="hc-dark"] .notice {
+            color: #999999;
+        }
+
+        /* ===== Mobile ===== */
+        @media (max-width: 768px) {
+            .nav-bar {
+                display: none;
+            }
+
+            .page-header {
+                padding: 32px 12px 24px;
+            }
+
+            .page-header h1 {
+                font-size: 1.6em;
+            }
+
+            .container {
+                padding: 24px 12px;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Nav Bar -->
+    <div class="nav-bar">
+        <a href="index.html" class="nav-bar-brand">
+            <img src="icons/logo-transparent-32.png" alt="">
+            <span>ReaderWrangler&#8482;</span>
+        </a>
+        <div class="nav-bar-buttons">
+            <a href="readerwrangler.html" class="nav-btn nav-btn-primary" title="The app walks you through setup &#8212; relay, bookmarklet, and first import">Launch ReaderWrangler</a>
+        </div>
+        <div class="nav-bar-links">
+            <a href="index.html">Home</a>
+            <a href="tutorials.html">Tutorials</a>
+            <a href="security.html">Security</a>
+        </div>
+    </div>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>Features</h1>
+        <p>Everything you need to organize your Amazon Kindle library</p>
+    </div>
+
+    <!-- Key Features -->
+    <div class="container">
+        <h2>Key Features</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>Works With Your Amazon Library</h3>
+                <ul>
+                    <li>See all your Kindle books in one visual dashboard</li>
+                    <li>Covers, ratings, reviews, and descriptions all in one place</li>
+                    <li>No manual CSV exports or local ebook files required</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3>Library Management</h3>
+                <ul>
+                    <li>View your entire ebook library with titles, authors, covers, descriptions, and ratings</li>
+                    <li>Advanced filtering by author, series, genre, and reading status</li>
+                    <li>Smart search across titles and authors</li>
+                    <li>Wishlist &#8212; add books from Amazon to track what you want to buy</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3>Organization (Desktop)</h3>
+                <ul>
+                    <li>Drag-and-drop interface for organizing books into folders</li>
+                    <li>Multi-select with Ctrl/Shift for bulk operations</li>
+                    <li>Nested folder hierarchy with Auto-Organize</li>
+                    <li>Tags &amp; Tag Views &#8212; label books across folders; pin tags as virtual folders</li>
+                    <li>Hide books &#8212; soft-delete books you don't want to see</li>
+                    <li>Context menu &#8212; right-click for quick actions</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3>Data &amp; Privacy</h3>
+                <ul>
+                    <li>End-to-end encrypted relay keeps your data secure</li>
+                    <li>Your library saves automatically in your browser</li>
+                    <li>Export a backup file to save your organization</li>
+                    <li>Or <a href="security.html" style="color: #3b82f6;">run it locally</a> &#8212; download the source and open in your browser</li>
+                </ul>
+            </div>
+
+            <div class="feature-card">
+                <h3>Mobile Viewer</h3>
+                <ul>
+                    <li>Browse your organized library on any phone</li>
+                    <li>Dashboard shelves, folder navigation, tag views</li>
+                    <li>Search, sort, and view full book details</li>
+                    <li>Add to home screen for app-like experience</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- What Makes RW Different -->
+    <div class="container">
+        <h2>What Makes ReaderWrangler Different?</h2>
+        <p class="diff-intro">ReaderWrangler is the <strong>only tool specifically designed for Amazon Kindle libraries</strong>. While other excellent ebook management tools exist, they all require local ebook files&#8212;meaning you need to download, export, or manually manage files on your computer. ReaderWrangler takes a completely different approach.</p>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <h3>The Only Tool for Amazon Kindle Libraries</h3>
+                <p>All other ebook organizers require local files. ReaderWrangler works with your Amazon library directly&#8212;no files to download, no exports to manage.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3>Zero Installation Required</h3>
+                <p>While competitors require Docker, Python, CLI tools, or desktop applications, ReaderWrangler is just a bookmarklet and a webpage. Visit, drag, click, organize. That's it.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3>Your Data Stays Secure</h3>
+                <p>Your library is encrypted end-to-end and transferred through a secure relay. Your encryption keys never leave your devices&#8212;no accounts, no cloud storage, no tracking.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3>No Technical Knowledge Needed</h3>
+                <p>No command line. No configuration files. No server setup. If you can drag a bookmark and click a button, you can use ReaderWrangler.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3>Complementary, Not Competitive</h3>
+                <p>ReaderWrangler doesn't replace file-based ebook managers&#8212;it complements them. Use tools like Calibre for your local files, and ReaderWrangler for your Amazon Kindle library.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Support -->
+    <div class="container">
+        <h2>Current Support</h2>
+        <div class="support-info">
+            <p><strong>Platform:</strong> Amazon Kindle&#8482; Library</p>
+            <p><strong>Tested browsers:</strong> Chrome, Edge, Firefox. Safari is untested.</p>
+        </div>
+    </div>
+
+    <!-- Recent Features — SYNC: Keep in sync with README.md "Recent Features" section -->
+    <div class="container">
+        <h2>Recent Features</h2>
+        <ul class="version-list">
+            <li><strong>Video Tutorials</strong> &#8212; Quick-start guides and feature walkthroughs to get you up and running.</li>
+            <li><strong>Demo Library</strong> &#8212; Download 100+ classic books and explore every feature without connecting your Amazon account.</li>
+            <li><strong>Folder &amp; Tag Descriptions</strong> &#8212; Add a description to any folder or tag view; shown as a tooltip on hover.</li>
+            <li><strong>Views / Folders Split</strong> &#8212; Two ways to see your books: by folder structure or by tag views. All Books, pinned tags, and folders in one sidebar.</li>
+            <li><strong>Encrypted Cloud Relay + Trash Bin</strong> &#8212; End-to-end encrypted sync between the bookmarklet and the app. Trash Bin gives you a safety net before permanently deleting books. Orphan detection flags books removed from Amazon.</li>
+            <li><strong>Mobile Viewer</strong> &#8212; Pair your phone with a QR code and browse your organized library anywhere &#8212; shelves, folders, tag views, search &amp; sort.</li>
+            <li><strong>Tag Virtual Folders</strong> &#8212; Pin any tag as a virtual folder; drag books to tag them, reorder views, move and copy between tag folders.</li>
+            <li><strong>Dark Mode + High Contrast Themes</strong> &#8212; Four themes (light, dark, high-contrast light, high-contrast dark) with automatic OS detection.</li>
+            <li><strong>Auto-Organize Wizard</strong> &#8212; One click to build an Author / Series / Books folder hierarchy, with preview and undo.</li>
+            <li><strong>Book Explorer</strong> &#8212; Two-pane Windows Explorer-style interface with folder tree, list and cover grid views, drag-and-drop, and Cut/Copy/Paste.</li>
+        </ul>
+        <p class="changelog-link">See <a href="CHANGELOG.md">CHANGELOG.md</a> for complete version history.</p>
+    </div>
+
+    <!-- Coming Soon — SYNC: Keep in sync with README.md "Coming Soon" section -->
+    <div class="container">
+        <h2>Coming Soon</h2>
+        <ul class="coming-soon-list">
+            <li><strong>Reading progress</strong> &#8212; See how far you are in each book</li>
+            <li><strong>Book recommendations</strong> &#8212; Discover similar books already in your library</li>
+            <li><strong>Series manager</strong> &#8212; Clean up inconsistent series names and merge duplicates</li>
+            <li><strong>Keyboard accessibility</strong> &#8212; Full keyboard navigation for every feature</li>
+            <li><strong>Faster app loading</strong> &#8212; Reducing the initial load time</li>
+        </ul>
+        <p class="coming-soon-cta">Have a feature request? <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank">Let us know on GitHub!</a></p>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-links">
+            <a href="index.html">Home</a>
+            <a href="tutorials.html">Tutorials</a>
+            <a href="security.html">Security</a>
+            <a href="https://github.com/Ron-L/readerwrangler" target="_blank">GitHub</a>
+            <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank">Report an Issue</a>
+            <a href="CHANGELOG.md">Changelog</a>
+        </div>
+        <div class="notice">
+            <p>Amazon, Kindle, and Amazon Kindle are trademarks of Amazon.com, Inc.</p>
+            <p>ReaderWrangler&#8482; is not affiliated with, endorsed by, or sponsored by Amazon.</p>
+            <p style="margin-top: 15px;">As an Amazon Associate, I earn from qualifying purchases.</p>
+        </div>
+    </footer>
+
+    <script data-goatcounter="https://readerwrangler.goatcounter.com/count"
+            async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

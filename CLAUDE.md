@@ -25,6 +25,18 @@
 
 ---
 
+## Preferences
+
+* User-facing copy: no technical jargon ("IndexedDB", "JSON", "localStorage")
+* Backup terminology: "Save/Restore" not "Import/Export"
+* "Toast" = small floating text near status bar, not overlay dialog
+* UX analysis before implementing — evaluate the design, don't just code it
+* Don't go down rabbit holes — stop after 1 investigation step and check in
+* Don't use AskUserQuestion multi-choice format — use normal conversation
+* Discussion ≠ approval to act — "proceed" applies only to the specific item discussed
+
+---
+
 ## Versioning (Semver Pre-release)
 
 Standard semver with pre-release suffix for test iterations:
@@ -51,6 +63,7 @@ Standard semver with pre-release suffix for test iterations:
 - Update APP_VERSION
 - Update `softwareVersion` in index.html Schema.org structured data to match
 - Update CHANGELOG.md, README.md (and its mirror index.html) sections Recent Features and Coming Soon!
+- Sync "Recent Features" and "Coming Soon" lists between README.md and features.html
 - Update TODO.md (remove completed tasks)
 - After push: "Ready for post-mortem?"
 

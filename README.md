@@ -123,6 +123,7 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 
 ---
 
+<!-- SYNC: Keep "Recent Features" in sync with features.html -->
 ## Recent Features
 
 - **Video Tutorials** — Quick-start guides and feature walkthroughs to get you up and running.
@@ -140,6 +141,7 @@ See [CHANGELOG.md](CHANGELOG.md) for complete version history.
 
 ---
 
+<!-- SYNC: Keep "Coming Soon" in sync with features.html -->
 ## Coming Soon!
 
 - **Reading progress** — See how far you are in each book
