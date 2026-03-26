@@ -33,23 +33,96 @@ Nine videos total: one sizzle reel (hook) + eight tutorials (teach). All videos 
 
 ### Tools
 
-| Tool | Purpose | Cost |
-|------|---------|------|
-| **OBS Studio** | Screen recording | Free |
-| **CapCut Desktop** | Video editing (rapid cuts, zoom transitions, beat sync, text overlays) | Free |
-| **Google Cloud TTS** | Narration (Neural2/Journey voices) | Free tier: 1M chars/month |
+| Tool | Purpose | Cost | Get It |
+|------|---------|------|--------|
+| **OBS Studio** | Screen recording | Free | https://obsproject.com/download |
+| **CapCut Desktop** | Video editing (rapid cuts, zoom transitions, beat sync, text overlays) | Free | https://www.capcut.com/download |
+| **Google Cloud TTS** | Narration (Neural2/Journey voices) | Free tier: 1M chars/month | https://cloud.google.com/text-to-speech |
+| **Window Resizer** | Chrome extension — resize browser to exact pixel dimensions | Free | Chrome Web Store → search "Window Resizer" |
+
+**About CapCut:** Made by ByteDance (TikTok's parent company). It's a full desktop video editor — not just for TikTok. Key features for our use:
+- **Beat markers:** Drop in a music track and CapCut auto-detects beats. Snap your cuts to beat hits for professional-feeling sizzle reels.
+- **Zoom transitions:** Built-in presets for zoom in/out between shots (0.2-0.3s).
+- **Text overlays:** Clean animated text for feature callouts and keyboard shortcut indicators.
+- **Speed ramp:** Slow-motion for key moments (bookmarklet drag), time-lapse for waiting (fetcher phases).
+- **Export:** Local MP4 file at any resolution. No watermark on free tier. No account required for basic editing.
+
+**Step-by-step: Install CapCut**
+1. Go to https://www.capcut.com/download
+2. Download the Windows installer
+3. Run installer — accept defaults
+4. Launch CapCut → "New Project" → set project to 1920x1080, 60fps
+5. Import your OBS recordings and audio files into the media panel
+6. Drag clips to the timeline to start editing
 
 ### Screen Recording Settings (OBS)
 
-- Resolution: 1920x1080 (or match monitor)
+- Resolution: 1920x1080
 - Frame rate: 60fps (allows smooth slow-motion in post)
 - Format: MKV (remux to MP4 after recording — prevents corruption on crash)
 - Capture: Window capture (ReaderWrangler browser tab) or Display capture for cross-app scenes
 - Mouse: Show cursor, no click highlights (add in post with CapCut if needed)
 
-### Voice Selection
+**Step-by-step: Install and Configure OBS**
+1. Download from https://obsproject.com/download → run installer
+2. On first launch, run the Auto-Configuration Wizard → choose "Optimize for recording"
+3. Settings → Video:
+   - Base (Canvas) Resolution: `1920x1080`
+   - Output (Scaled) Resolution: `1920x1080`
+   - FPS: 60
+4. Settings → Output → Recording:
+   - Recording Format: `MKV` (remux to MP4 later via File → Remux Recordings)
+   - Encoder: Use hardware encoder if available (NVENC for NVIDIA, AMF for AMD)
+   - Quality: "High Quality, Medium File Size" or CRF 18-20
+5. Add a Source: click `+` → "Window Capture" → select your Chrome window
+6. **Important:** After recording, always do File → Remux Recordings → select the .mkv → remux to .mp4. MKV protects against corruption if OBS crashes mid-recording; MP4 is what you'll import into CapCut.
 
-**Google Cloud TTS Journey voices** — designed for long-form tutorial narration:
+### Chrome Window Setup (5120x1440 Ultrawide Monitor)
+
+Your videos need to be 1920x1080 for YouTube. On a 5120x1440 ultrawide, your Chrome window is far too wide. Here's how to get an exact 1920x1080 recording area.
+
+**Recommended approach: Chrome DevTools Device Toolbar (no extension needed)**
+
+1. Open ReaderWrangler in Chrome
+2. Press `F12` to open DevTools
+3. In DevTools, click the **Toggle Device Toolbar** icon — it's the phone/tablet icon in the top-left of the DevTools panel (or press `Ctrl+Shift+M`)
+4. At the top of the page, you'll see a dimensions bar showing something like "Responsive ▼ 1280 × 720"
+5. Click "Responsive" dropdown → choose "Edit" → Add Custom Device:
+   - Name: `Video Recording 1080p`
+   - Width: `1920`
+   - Height: `1080`
+   - Device Pixel Ratio: `1`
+   - User Agent: leave default
+6. Select your new "Video Recording 1080p" preset from the dropdown
+7. The viewport is now exactly 1920x1080 pixels — verify by looking at the dimension readout
+8. In OBS, use **Window Capture** on this Chrome window. The content area is pixel-perfect.
+
+**Alternative approach: Window Resizer extension (simpler, no DevTools visible)**
+
+1. Install "Window Resizer" from Chrome Web Store
+2. Click the extension icon → Configure → add preset: 1920x1080
+3. Click the extension → select 1920x1080 → Chrome resizes instantly
+4. In OBS, use Window Capture on the resized Chrome window
+
+**How exact does the size need to be?**
+For YouTube, the final output just needs to be 1920x1080. If your source is off by a few pixels (1922x1081), OBS scales it and nobody will notice. But the DevTools approach gives you exact pixels with zero effort — and on your 5120x1440 ultrawide you'll have plenty of room for DevTools docked to the right alongside the 1920x1080 viewport.
+
+**Tips for your ultrawide:**
+- Dock DevTools to the right side — your viewport sits on the left at 1920px wide, DevTools fills the remaining space
+- You can close DevTools after setting the viewport size — the size persists until you close the tab
+- If using Window Resizer: your window will be roughly 37% of your screen width, leaving room for OBS controls alongside
+
+### Voice Selection (Google Cloud Text-to-Speech)
+
+**Why Google Cloud TTS?**
+1. **Free tier covers all production needs:** 1M characters/month = 5+ hours of narration. Our 8 tutorials total ~12,450 characters (1.2% of free tier).
+2. **Professional quality:** Neural2 and Journey voices are nearly indistinguishable from human narration.
+3. **Voice consistency:** Same voice guaranteed across all videos, forever. No scheduling voice actors.
+4. **Journey voices:** Specifically designed for long-form tutorial narration (not just assistant/chatbot).
+5. **Service stability:** Google Cloud isn't going anywhere.
+6. **Affordable if exceeded:** $16 per 1M additional characters (won't happen at our scale).
+
+**Recommended Voices:**
 - `en-US-Journey-D` (male, warm, conversational)
 - `en-US-Journey-F` (female, friendly, clear)
 
@@ -57,27 +130,79 @@ Nine videos total: one sizzle reel (hook) + eight tutorials (teach). All videos 
 
 **Selected Voice:** [TBD after testing]
 
-**Demo/Testing:** https://cloud.google.com/text-to-speech#demo
+**Step-by-step: Try the Voices**
+1. Go to https://cloud.google.com/text-to-speech#demo
+2. Paste the first paragraph of the Video 1 script into the text box
+3. Language: English (US), Voice: select `en-US-Journey-D`
+4. Click "Speak It" — listen to the result
+5. Switch to `en-US-Journey-F` and compare
+6. Pick the one that sounds warm and instructional, not robotic or overly peppy
+7. Document your choice in "Selected Voice" above
 
-**TTS Script Formatting:**
+**Step-by-step: Set Up Production Access**
+1. Go to https://console.cloud.google.com/ → sign in with your Google account
+2. Create a new project (e.g., "ReaderWrangler Videos")
+3. Enable the "Cloud Text-to-Speech API" (search in the API Library)
+4. Go to APIs & Services → Credentials → Create Credentials → API Key
+5. Save the API key securely (you'll use it to generate audio files)
+6. Free tier: first 1M characters/month are free — no credit card required to start
+7. To generate audio: use the API Explorer at https://cloud.google.com/text-to-speech/docs/reference/rest/v1/text/synthesize or a simple script (see below)
+
+**Quick Audio Generation (command line):**
+```bash
+curl -X POST "https://texttospeech.googleapis.com/v1/text:synthesize?key=YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": {"text": "Your script text here."},
+    "voice": {"languageCode": "en-US", "name": "en-US-Journey-D"},
+    "audioConfig": {"audioEncoding": "MP3", "speakingRate": 0.9}
+  }' | jq -r '.audioContent' | base64 --decode > narration.mp3
+```
+Or use the interactive console at https://console.cloud.google.com/speech/text-to-speech to paste scripts and download audio files directly (no command line needed).
+
+**TTS Script Formatting Tips:**
 - Use periods for natural pauses (not commas only)
 - Add `...` for longer dramatic pauses
 - Use contractions ("you'll" not "you will")
 - Break long sentences into shorter ones
 - Speed: 0.9x for instructional content (slower = clearer)
+- Test each script in the demo page before generating final audio
 
 ### Music
 
-For sizzle reel only (tutorials use voiceover, not music).
+For sizzle reel only (tutorials use voiceover, not music). Tutorial videos may optionally use very quiet background music under the narration — but start without it and add only if the result feels flat.
 
-| Source | Cost | Notes |
-|--------|------|-------|
-| **Uppbeat** | Free tier (credit required) | Curated for creators, easy BPM filtering |
-| **Pixabay Music** | Free, no attribution | Large library |
+**Sizzle Reel Music Specs:**
+- **BPM:** 120-140 (fast enough to feel energetic, not so fast it's frantic)
+- **Genre:** Modern electronic, lo-fi, or upbeat indie — something that says "tech product" not "nightclub"
+- **Structure:** Should build energy over 20-30 seconds. Ideally has a recognizable beat drop around 10-15s for the "hero shot" moment.
+- **Duration:** Find a 30-60 second track and trim to fit. Most music sites let you preview before downloading.
 
-**Sizzle reel music specs:** 120-140 BPM, modern/electronic, builds energy. CapCut has beat markers that auto-snap cuts to the beat.
+**Where to Find Free Music:**
 
-**Selected Track:** [TBD]
+| Source | Cost | BPM Filter? | License | Best For | URL |
+|--------|------|-------------|---------|----------|-----|
+| **Uppbeat** | Free tier (credit in description required) | Yes — filter by BPM range | Free with attribution | Curated quality, easy search | https://uppbeat.io |
+| **Pixabay Music** | Free, no attribution needed | Sort by mood/genre | CC0-like, fully free | Quick no-hassle picks | https://pixabay.com/music/ |
+| **YouTube Audio Library** | Free, no attribution for most | Sort by genre/mood/duration | Free (check per-track) | Huge library, reliable | https://studio.youtube.com/channel/UC/music (or YouTube Studio → Audio Library) |
+| **Mixkit** | Free, no attribution | By genre | Free license | Clean UI, good filtering | https://mixkit.co/free-stock-music/ |
+
+**Step-by-step: Find a Sizzle Reel Track**
+1. Go to **Uppbeat** (best filtering) → https://uppbeat.io
+2. Browse → filter by: Mood = "Energetic" or "Inspiring", BPM = 120-140
+3. Preview a few tracks — listen for a clear beat you can cut to
+4. Download the track (free tier requires creating an account)
+5. Note the license: free tier requires credit in YouTube description (e.g., "Music from Uppbeat: [link]")
+6. Import into CapCut → right-click the audio track → "Beat" → "Auto" — CapCut detects beats and adds markers
+7. Snap your video cuts to the beat markers
+
+**Alternative: Pixabay** (no account needed)
+1. Go to https://pixabay.com/music/
+2. Search "electronic upbeat" or "technology"
+3. Preview and download — no sign-up, no attribution required
+4. Tracks download as MP3
+
+**Selected Track:** [TBD — document track name, source, BPM, and license requirements here]
 
 ### Character Count Tracking (TTS Free Tier)
 
@@ -1242,22 +1367,101 @@ If the dot turns yellow or red... click it to see what needs attention.
 - Transition to next scene: 0.5 sec
 
 ### Scene Prep Checklist (Generic)
+
+Run through this before every recording session:
+
+- [ ] Chrome viewport set to 1920x1080 (DevTools device toolbar or Window Resizer)
 - [ ] Demo library loaded (Inbox or organized, per video)
 - [ ] Clean browser profile (no personal bookmarks visible)
-- [ ] Browser at 100% zoom
+- [ ] Browser at 100% zoom (Ctrl+0 to reset)
+- [ ] DevTools closed or docked out of viewport (if using device toolbar, it persists after closing)
 - [ ] No active dialogs or modals
 - [ ] Clipboard cleared (Esc key)
 - [ ] Console clean (no error spam)
-- [ ] OBS recording confirmed (check red dot)
+- [ ] OBS recording started and confirmed (check red dot in system tray)
+- [ ] OBS source is Window Capture on the correct Chrome window
 - [ ] Correct browser tab in focus
+- [ ] Mic muted (we use TTS narration, not live voice)
+
+### Post-Production Workflow (CapCut)
+
+**Step-by-step: Edit a Tutorial Video**
+1. Open CapCut → New Project → 1920x1080, 60fps
+2. Import: drag your OBS .mp4 recording(s) + TTS .mp3 audio into the media panel
+3. Drag the screen recording to the video track (V1)
+4. Drag the TTS audio to the audio track (A1)
+5. Align narration to screen actions:
+   - Play through and use the split tool (Ctrl+B) to cut the video at transition points
+   - Drag clips to align with narration timing (refer to Timing Notes in each video section)
+   - Use speed ramp (right-click clip → Speed → Custom) for slow-motion on key moments
+6. Add text overlays: Text → Add Text → type keyboard shortcut or feature name
+   - Use clean sans-serif font, white text, dark semi-transparent background
+   - Position in bottom-left or top-center — avoid covering the UI being demonstrated
+7. Add transitions between scenes: Transitions → pick "Zoom In" or "Fade" → drag between clips
+8. For sizzle reel: right-click audio track → Beat → Auto → snap cuts to markers
+9. Preview the full video (Spacebar)
+10. Export: Export → Resolution 1920x1080, Frame Rate 60, Format MP4, Quality "Recommended"
+11. Save the .mp4 to `video-production/final/`
+
+---
+
+## Screenshot Capture (Before/After)
+
+Before recording videos, capture updated before/after screenshots for use in tutorials.html, README, and video thumbnails.
+
+### Before Screenshot (Amazon)
+1. Go to amazon.com → Your Books / Kindle Library
+2. Set Chrome viewport to 1920x1080 (same as video recording setup)
+3. Scroll to show a large grid of disorganized covers
+4. Take screenshot: `Win+Shift+S` → select the viewport area → save as `images/before.png`
+
+### After Screenshot (ReaderWrangler)
+1. Load the demo library and organize into the target folder structure (see Demo Library Integration section above)
+2. Expand a few folders in the sidebar to show hierarchy
+3. Select a folder with 10-15 books visible in cover view
+4. Several tag views should be pinned (Fantasy, Thriller, Science Fiction)
+5. Take screenshot: same method → save as `images/after.png`
+
+### Additional Screenshots
+- Relay Setup dialog (all 3 steps visible)
+- Fetcher progress panel on Amazon page
+- Mobile phone showing the organized library
+- Cover view with rating stars and ownership badges visible
+
+---
+
+## Features to Cover in Future Video Updates
+
+These features exist in the app but aren't prominently covered in the current video scripts. Add coverage as videos are updated:
+
+- [ ] Cut/Copy/Paste books (Ctrl+X/C/V, Ctrl+Drag to copy)
+- [ ] Delete key removes selected books (with last-copy protection)
+- [ ] Right-click context menu details (Move to/Copy to submenus, Open in Amazon, Copy Titles)
+- [ ] Ownership badges (KU/Prime/Sample/Borrowed) — covered lightly in Video 5, could be expanded
+- [ ] Wishlist price display (price tags on covers, price goals, Deals filter)
+- [ ] Series page bulk import (whole series with gap detection)
+- [ ] Author bibliography import (all Kindle books by author)
+- [ ] Bulk set price goal (right-click → Set Price Goal presets or custom)
+- [ ] Book description view (double-click detail modal)
 
 ---
 
 ## Next Steps
 
-1. Test TTS voices with Video 1 script — select voice
-2. Select music track for sizzle reel
-3. Set up OBS recording environment
-4. Record sizzle reel screen captures
-5. Record Video 1 (Quick Start)
-6. Iterate on remaining videos based on learnings
+### First-Time Setup (do once)
+1. Install OBS Studio (see step-by-step above)
+2. Install CapCut Desktop (see step-by-step above)
+3. Install Window Resizer Chrome extension (optional, if not using DevTools approach)
+4. Set up Google Cloud TTS account and get API key (see step-by-step above)
+5. Configure Chrome viewport to 1920x1080 (see Chrome Window Setup above)
+6. Configure OBS: canvas 1920x1080, 60fps, MKV format, Window Capture source
+
+### Production Order
+1. Test TTS voices with Video 1 script → select voice → document above
+2. Select music track for sizzle reel → document above
+3. Capture before/after screenshots (see Screenshot Capture above)
+4. Record sizzle reel screen captures → edit in CapCut with beat sync
+5. Record Video 1 (Quick Start) → generate TTS audio → edit in CapCut
+6. Review Video 1, iterate on workflow and pacing
+7. Record Videos 2-8 in order, applying lessons learned
+8. Upload all to YouTube, embed on tutorials.html
