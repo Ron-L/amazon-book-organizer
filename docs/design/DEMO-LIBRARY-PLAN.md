@@ -355,18 +355,18 @@ Which features each part of the demo showcases:
 - [x] Update Coming Soon from 2 to 5 items matching features.html
 - [x] Add SYNC comments in README.md and features.html + CLAUDE.md Release Checklist reminder
 
-#### 3H: Capture Updated Screenshots (1920x1080, matching video resolution)
-- [ ] Before screenshot: Amazon "Your Books" page showing flat unorganized grid
-- [ ] After screenshot: ReaderWrangler with organized demo library (target folder structure)
-- [ ] Replace `images/before.png`, `images/after.png`
-- [ ] New `images/walkthrough-preview.png` (thumbnail for sizzle reel or Video 1)
-- [ ] Remove obsolete overlay CSS from index.html once screenshots are updated
-- [ ] Update `images/bookmarklet-install.gif` — re-record using clean ReaderWrangler Chrome profile
+#### 3H: Capture Updated Screenshots (1920x1080, matching video resolution) ✅
+- [x] Before screenshot: Inbox at smallest cover size, 119 books — wall of chaos
+- [x] After screenshot: organized folders with genre + author structure, Fredrik Backman selected
+- [x] Replace `images/before.png`, `images/after.png`
+- [x] Fix img-comparison-slider: add image scaling, widen container to 1400px, remove obsolete overlay
+- [x] Update `images/bookmarklet-install.gif` — re-recorded, added ORGANIZER_VERSION cache-buster
 
 #### 3I: Record & Produce Videos
 - [ ] Set up OBS for screen recording (resolution, frame rate, capture area)
 - [ ] Test TTS voices: Journey-D and Journey-F with Video 1 script → select voice
 - [ ] Record sizzle reel screen captures → edit in CapCut with music
+- [ ] New `images/walkthrough-preview.png` (thumbnail from sizzle reel or Video 1)
 - [ ] Record + produce Video 1 (Quick Start)
 - [ ] Record + produce Videos 2-8
 - [ ] Upload to YouTube (for searchability) and embed on tutorials.html
