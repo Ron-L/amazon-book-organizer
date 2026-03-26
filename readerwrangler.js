@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10175,6 +10175,10 @@
                                     <div
                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__all__')}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            setFolderContextMenu({ folderId: '__all__', x: e.clientX, y: e.clientY, source: 'left' });
+                                        }}
                                         title="Every unique book in your library, organized or not. You can't move books out of here — use folders to arrange them.">
                                         <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
                                         <span className="flex-1 pointer-events-none font-semibold">{FOLDER_ALL_BOOKS.name}</span>
@@ -10406,6 +10410,10 @@
                                     <div
                                         className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                         onClick={() => navigateToFolder('__inbox__')}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            setFolderContextMenu({ folderId: '__inbox__', x: e.clientX, y: e.clientY, source: 'left' });
+                                        }}
                                         title="This is where ReaderWrangler puts newly imported books. Drag them into folders to organize your library."
                                         onDragOver={(e) => {
                                             e.preventDefault();
@@ -13556,6 +13564,83 @@
                                             }}>
                                             <span>🗑️</span>
                                             <span>Empty Trash</span>
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        }
+
+                        // v6.10.0-alpha.7 - All Books context menu: Select All
+                        if (folderContextMenu.folderId === '__all__') {
+                            const menuWidth = 180;
+                            const menuX = Math.max(10, Math.min(folderContextMenu.x, window.innerWidth - menuWidth - 10));
+                            const menuY = Math.max(10, Math.min(folderContextMenu.y, window.innerHeight - 80));
+                            return (
+                                <>
+                                    <div className="fixed inset-0 z-50" onClick={() => setFolderContextMenu(null)} />
+                                    <div
+                                        className="fixed bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[180px] z-50"
+                                        role="menu" aria-label="All Books options"
+                                        style={{ left: `${menuX}px`, top: `${menuY}px` }}
+                                        onClick={(e) => e.stopPropagation()}>
+                                        <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                            role="menuitem"
+                                            onClick={() => {
+                                                navigateToFolder('__all__');
+                                                const allVisibleBookIds = getFolderBookIds('__all__')
+                                                    .map(id => books.find(b => b.id === id))
+                                                    .filter(book => filterBookForExplorer(book))
+                                                    .map(book => book.id);
+                                                setExplorerSelectedBooks(new Set(allVisibleBookIds));
+                                                setExplorerSelectedFolders(new Set());
+                                                setFolderContextMenu(null);
+                                            }}>
+                                            <span>☑️</span><span>Select All</span>
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        }
+
+                        // v6.10.0-alpha.7 - Inbox context menu: Auto-Organize + Select All
+                        if (folderContextMenu.folderId === '__inbox__') {
+                            const menuWidth = 180;
+                            const menuX = Math.max(10, Math.min(folderContextMenu.x, window.innerWidth - menuWidth - 10));
+                            const menuY = Math.max(10, Math.min(folderContextMenu.y, window.innerHeight - 120));
+                            return (
+                                <>
+                                    <div className="fixed inset-0 z-50" onClick={() => setFolderContextMenu(null)} />
+                                    <div
+                                        className="fixed bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[180px] z-50"
+                                        role="menu" aria-label="Inbox options"
+                                        style={{ left: `${menuX}px`, top: `${menuY}px` }}
+                                        onClick={(e) => e.stopPropagation()}>
+                                        <div
+                                            className={`px-4 py-2 ${books.length > 0 ? 'hover:bg-gray-100 cursor-pointer' : 'opacity-50 cursor-not-allowed'} flex items-center gap-3`}
+                                            role="menuitem"
+                                            onClick={() => {
+                                                if (books.length === 0) return;
+                                                setWizardModalOpen(true);
+                                                setFolderContextMenu(null);
+                                            }}>
+                                            <span>✨</span><span>Auto-Organize…</span>
+                                        </div>
+                                        <div className="border-t border-gray-200 my-1" role="separator"></div>
+                                        <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                            role="menuitem"
+                                            onClick={() => {
+                                                navigateToFolder('__inbox__');
+                                                const allVisibleBookIds = getFolderBookIds('__inbox__')
+                                                    .map(id => books.find(b => b.id === id))
+                                                    .filter(book => filterBookForExplorer(book))
+                                                    .map(book => book.id);
+                                                setExplorerSelectedBooks(new Set(allVisibleBookIds));
+                                                setExplorerSelectedFolders(new Set());
+                                                setFolderContextMenu(null);
+                                            }}>
+                                            <span>☑️</span><span>Select All</span>
                                         </div>
                                     </div>
                                 </>
