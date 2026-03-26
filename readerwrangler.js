@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -770,6 +770,7 @@
             const [relayTestRan, setRelayTestRan] = useState(false); // v6.9.0 - true after user clicks Test in current dialog session
             useEffect(() => { if (relaySetupOpen) setRelayTestRan(false); }, [relaySetupOpen]); // Reset when dialog opens
             const [relaySetupSection, setRelaySetupSection] = useState(null); // which accordion section is open: 'credentials'|'bookmarklet'|'mobile'|null
+            const [relayHelpOpen, setRelayHelpOpen] = useState(false); // v6.10.0 - Help overlay in Relay Setup
             const [relayTestStatus, setRelayTestStatus] = useState(() => { // v6.9.0 - Persisted: null|'testing'|'ok'|'error'|'revoked'
                 try { return localStorage.getItem(RELAY_STATUS_KEY) || null; } catch { return null; }
             });
@@ -4836,8 +4837,8 @@
             }, [modalBook]);
             // v5.2.0-alpha.18 - Track whether any modal/dialog overlay is open
             useEffect(() => {
-                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || showBulkEditModal || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData);
-            }, [modalBook, showBulkPriceModal, showBulkEditModal, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || showBulkEditModal || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || relayHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData);
+            }, [modalBook, showBulkPriceModal, showBulkEditModal, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, relayHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             // v5.4.2 - ESC closes innermost modal (layered dismissal)
             // aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen handled separately in handleEscKey
@@ -4866,12 +4867,13 @@
                     if (lastCopyDialogData) { setLastCopyDialogData(null); return; }
                     if (resetConfirmOpen) { setResetConfirmOpen(false); return; }
                     if (statusModalOpen) { setStatusModalOpen(false); return; }
+                    if (relaySetupOpen && relayHelpOpen) { setRelayHelpOpen(false); return; }
                     if (relaySetupOpen && relayManualCreds) { setRelayManualCreds(false); return; }
                     if (relaySetupOpen) { setRelaySetupOpen(false); setRelaySetupSection(null); return; }
                 };
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
-            }, [modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, relaySetupOpen, relayManualCreds, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+            }, [modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, relaySetupOpen, relayManualCreds, relayHelpOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             // v5.4.6 - ENTER saves edit mode when no input is focused
             useEffect(() => {
@@ -6522,14 +6524,7 @@
                                         )}
                                         {menuName === 'Help' && (
                                             <>
-                                                {/* v6.0.0 - Getting Started opens Relay Setup */}
-                                                <button onClick={() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); setOpenMenuBar(null); }} style={{
-                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
-                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
-                                                    transition: 'background 0.1s', color: 'var(--text-primary)'
-                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
-                                                    Getting Started
-                                                </button>
+                                                {/* v6.10.0 - Combined Getting Started + How To Use */}
                                                 <button onClick={() => { setHowToDialogOpen(true); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                     border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
@@ -7983,7 +7978,10 @@
                             <div className="bg-white rounded-lg shadow-2xl max-w-lg w-full" role="dialog" aria-modal="true" aria-labelledby="modal-relay-setup" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
                                 <div className="flex justify-between items-start p-4 rounded-t-lg border-b" style={{ background: 'var(--bg-chrome)', borderColor: 'var(--border-default)', flexShrink: 0 }}>
                                     <h2 id="modal-relay-setup" className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src="icons/sync-tower-neutral.svg" alt="" style={{ width: '14px', height: '22px' }} /> Relay Setup</h2>
-                                    <button onClick={() => { setRelaySetupOpen(false); setRelaySetupSection(null); }} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <button onClick={() => setRelayHelpOpen(true)} style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid var(--border-default)', background: 'var(--bg-surface)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }} title="Learn about the relay, encryption keys, and bookmarklet" aria-label="Help">?</button>
+                                        <button onClick={() => { setRelaySetupOpen(false); setRelaySetupSection(null); }} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
+                                    </div>
                                 </div>
                                 <div style={{ overflowY: 'auto', flex: 1 }}>
                                     {(() => {
@@ -8307,6 +8305,53 @@
                         </div>
                     )}
 
+                    {/* v6.10.0 - Relay Setup Help Overlay */}
+                    {relayHelpOpen && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setRelayHelpOpen(false); backdropMouseDownRef.current = null; }}>
+                            <div className="rounded-lg shadow-2xl max-w-lg w-full" role="dialog" aria-modal="true" aria-labelledby="modal-relay-help" onClick={(e) => e.stopPropagation()} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+                                <div className="flex justify-between items-start p-4 rounded-t-lg border-b" style={{ background: 'var(--bg-chrome)', borderColor: 'var(--border-default)', flexShrink: 0 }}>
+                                    <h2 id="modal-relay-help" className="text-lg font-bold">Understanding Relay Setup</h2>
+                                    <button onClick={() => setRelayHelpOpen(false)} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
+                                </div>
+                                <div style={{ overflowY: 'auto', flex: 1, padding: '20px' }}>
+                                    <div style={{ fontSize: '13px', lineHeight: '1.7', color: 'var(--text-secondary)' }}>
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>What is the relay?</p>
+                                            <p>The relay is a Cloudflare server that temporarily holds your encrypted data while it moves between the Amazon fetcher bookmarklet, this app, and your phone. The relay can never read your data — everything is encrypted in your browser before it leaves.</p>
+                                        </div>
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Step 1: Encryption Keys</p>
+                                            <p>These are <em>not</em> your Amazon password. They are a randomly generated channel ID and passphrase that secure the bridge between the bookmarklet and this app. All your devices need the same keys to communicate.</p>
+                                            <ul style={{ paddingLeft: '18px', marginTop: '6px', listStyleType: 'disc' }}>
+                                                <li><strong>Generate keys</strong> — creates a new random channel and passphrase</li>
+                                                <li><strong>Enter keys manually</strong> — type in keys from another device</li>
+                                                <li><strong>Load keys from backup</strong> — restore keys from a saved backup file</li>
+                                                <li><strong>Test connection</strong> — verifies the relay can be reached with your keys</li>
+                                            </ul>
+                                        </div>
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Step 2: Bookmarklet</p>
+                                            <p>The bookmarklet is a small button you drag to your browser's bookmarks bar. It runs on Amazon pages to fetch your library data, encrypts it with your keys, and sends it to the relay. No browser extension needed — it runs right in your browser tab.</p>
+                                            <p style={{ marginTop: '6px' }}>Your encryption keys are baked into the bookmarklet. If you regenerate keys, you need to drag the new bookmarklet to replace the old one.</p>
+                                        </div>
+                                        <div style={{ marginBottom: '20px' }}>
+                                            <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Step 3: Mobile Pairing</p>
+                                            <p>The QR code shares your encryption keys with your phone. Once paired, your phone can fetch your organized library from the relay and display it — folders, covers, tags, and all.</p>
+                                        </div>
+                                        <div style={{ padding: '12px', borderRadius: '6px', background: 'var(--bg-muted)', border: '1px solid var(--border-default)' }}>
+                                            <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>When to regenerate keys</p>
+                                            <ul style={{ paddingLeft: '18px', listStyleType: 'disc' }}>
+                                                <li>If you think your passphrase was exposed</li>
+                                                <li>If you want to start fresh with a new relay channel</li>
+                                                <li>After regenerating, you must reinstall the bookmarklet and re-pair your phone</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {resetConfirmOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setResetConfirmOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-md w-full" role="dialog" aria-modal="true" aria-labelledby="modal-reset-confirm" onClick={(e) => e.stopPropagation()}>
@@ -8464,13 +8509,20 @@
                                 <div className="p-6 space-y-4">
                                     <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-gray-700">
                                         <p className="font-semibold mb-2">Getting Started:</p>
-                                        <ol className="list-decimal list-inside space-y-1 ml-2">
-                                            <li><a href="#" onClick={(e) => { e.preventDefault(); setHowToDialogOpen(false); setRelaySetupOpen(true); setRelaySetupSection('credentials'); }} style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}>Set up the relay</a> to get your encryption keys and bookmarklet</li>
-                                            <li>Use the bookmarklet to import your Kindle library from Amazon</li>
-                                            <li>Organize books into folders, tags, and collections — your way, right here</li>
-                                            <li>Open readerwrangler.com on your phone to pair and browse on the go</li>
+                                        <ol className="list-decimal list-inside space-y-2 ml-2">
+                                            <li><a href="#" onClick={(e) => { e.preventDefault(); setHowToDialogOpen(false); setRelaySetupOpen(true); setRelaySetupSection('credentials'); }} style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}>Set up the relay</a> (File &rsaquo; Relay Setup)
+                                                <ol style={{ listStyleType: 'lower-alpha', paddingLeft: '20px', marginTop: '4px', lineHeight: '1.7' }}>
+                                                    <li>Generate your encryption keys</li>
+                                                    <li>Drag the bookmarklet to your bookmarks bar</li>
+                                                    <li>Optionally pair your phone with the QR code</li>
+                                                </ol>
+                                            </li>
+                                            <li>Use the bookmarklet on Amazon to fetch your library and collections</li>
+                                            <li>Back here: File &rsaquo; Import from Relay to bring your books in</li>
+                                            <li>Organize books into folders, tags, and collections — your way</li>
                                         </ol>
                                     </div>
+                                    <p className="text-xs" style={{ color: '#6b7280' }}>Repeat steps 2–3 occasionally to add newly purchased books.</p>
                                 </div>
                             </div>
                         </div>
