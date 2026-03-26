@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.9.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6537,6 +6537,13 @@
                                                 }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     How To Use
                                                 </button>
+                                                <button onClick={() => { window.open('tutorials.html', '_blank'); setOpenMenuBar(null); }} style={{
+                                                    width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
+                                                    border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
+                                                    transition: 'background 0.1s', color: 'var(--text-primary)'
+                                                }} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
+                                                    Watch Tutorials
+                                                </button>
                                                 <button onClick={() => { setShortcutsDialogOpen(true); setOpenMenuBar(null); }} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                     border: 'none', background: 'var(--bg-surface)', cursor: 'pointer',
@@ -6622,14 +6629,16 @@
                                     <ul style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.8', paddingLeft: '20px', listStyleType: 'disc', margin: '0' }}>
                                         <li>Fetch your books and collections from Amazon:
                                             <ul style={{ paddingLeft: '18px', listStyleType: 'circle', marginTop: '2px', marginBottom: '4px' }}>
-                                                <li>Click the bookmarklet and select "Go to Library Page"</li>
-                                                <li>Click the bookmarklet again and select "Import Library"</li>
-                                                <li>Click the bookmarklet and select "Go to Collections Page"</li>
-                                                <li>Click the bookmarklet again and select "Import Collections"</li>
+                                                <li>Click the bookmarklet and select "Go to Amazon Library Page"</li>
+                                                <li title="Securely sends to relay">Click the bookmarklet again and select "Download Library"</li>
+                                                <li>Click the bookmarklet and select "Go to Amazon Collections Page"</li>
+                                                <li title="Securely sends to relay">Click the bookmarklet again and select "Download Collections"</li>
+                                                <li>Click the bookmarklet and select "Launch App"</li>
                                             </ul>
-                                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Repeat occasionally to add newly purchased books.</span>
                                         </li>
+                                        <li>In the app: File › Import from Relay</li>
                                         <li>Organize your library, your way, right here</li>
+                                        <li><span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Repeat occasionally to add newly purchased books.</span></li>
                                     </ul>
                                 </div>
                             </div>
