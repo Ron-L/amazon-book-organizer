@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3489,7 +3489,7 @@
                     const result = await Promise.race([importWork(), timeout]);
 
                     if (result.empty) {
-                        await progress.finish('Relay Import', 'No library data found on the relay. This usually means the data has expired (relay data is kept for 10 days after each fetch). Run the fetcher bookmarklet on your Amazon library page to refresh it.\n\nIf you recently regenerated your encryption keys, update your bookmarklet via File → Relay Setup.');
+                        await progress.finish('Relay Import', 'No library data found on the relay. This usually means the data has expired (relay data is kept for 10 days after each fetch). Run the fetcher bookmarklet on your Amazon library page to refresh it.\n\nIf you recently regenerated your credentials, update your bookmarklet via File → Relay Setup.');
                         return;
                     }
 
@@ -7979,7 +7979,7 @@
                                 <div className="flex justify-between items-start p-4 rounded-t-lg border-b" style={{ background: 'var(--bg-chrome)', borderColor: 'var(--border-default)', flexShrink: 0 }}>
                                     <h2 id="modal-relay-setup" className="text-xl font-bold" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src="icons/sync-tower-neutral.svg" alt="" style={{ width: '14px', height: '22px' }} /> Relay Setup</h2>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <button onClick={() => setRelayHelpOpen(true)} style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid var(--border-default)', background: 'var(--bg-surface)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }} title="Learn about the relay, encryption keys, and bookmarklet" aria-label="Help">?</button>
+                                        <button onClick={() => setRelayHelpOpen(true)} style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid var(--border-default)', background: 'var(--bg-surface)', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }} title="Learn about the relay, credentials, and bookmarklet" aria-label="Help">?</button>
                                         <button onClick={() => { setRelaySetupOpen(false); setRelaySetupSection(null); }} className="text-2xl leading-none" style={{ color: 'var(--text-muted)' }} title="Close" aria-label="Close">×</button>
                                     </div>
                                 </div>
@@ -8026,13 +8026,13 @@
 
                                             // ─── Section 1: Credentials ───
                                             React.createElement('div', { style: { borderLeft: activeSection === 'credentials' ? '18px solid #667eea' : 'none' } },
-                                            sectionHeader('credentials', '1', 'Encryption Keys', false, false),
+                                            sectionHeader('credentials', '1', 'Credentials', false, false),
                                             React.createElement('div', { style: { maxHeight: activeSection === 'credentials' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
                                             React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
                                                 relayManualCreds
                                                     // ── Manual entry mode (replaces status area + button row) ──
                                                     ? React.createElement('div', { className: 'space-y-2' },
-                                                        React.createElement('p', { className: 'text-sm font-semibold' }, 'Enter encryption keys:'),
+                                                        React.createElement('p', { className: 'text-sm font-semibold' }, 'Enter credentials:'),
                                                         React.createElement('input', {
                                                             id: 'relay-manual-channel',
                                                             type: 'text',
@@ -8066,7 +8066,7 @@
                                                                 },
                                                                 className: 'px-3 py-1.5 rounded text-sm',
                                                                 style: { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer' }
-                                                            }, 'Save Encryption Keys')
+                                                            }, 'Save Credentials')
                                                         )
                                                     )
                                                     // ── Normal mode: status + test + create + revoke ──
@@ -8080,11 +8080,11 @@
                                                                         background: relayTestStatus === 'revoked' ? 'var(--bg-danger, #fef2f2)' : (relayTestStatus === 'ok' || deviceStateSynced) ? 'var(--bg-success)' : '#f3f4f6',
                                                                         border: `1px solid ${relayTestStatus === 'revoked' ? 'var(--border-danger, #fca5a5)' : (relayTestStatus === 'ok' || deviceStateSynced) ? 'var(--border-success, #86efac)' : '#d1d5db'}` } },
                                                                         React.createElement('p', { className: 'font-semibold', style: { display: 'flex', alignItems: 'center', gap: '6px' } },
-                                                                            relayTestStatus === 'revoked' ? '⚠ These keys have been revoked'
-                                                                            : (relayTestStatus === 'ok' || deviceStateSynced) ? '✅ Encryption keys are set up'
+                                                                            relayTestStatus === 'revoked' ? '⚠ These credentials have been revoked'
+                                                                            : (relayTestStatus === 'ok' || deviceStateSynced) ? '✅ Credentials are set up'
                                                                             : React.createElement(React.Fragment, null,
                                                                                 React.createElement('img', { src: 'icons/status-unknown.svg', alt: '', style: { width: '16px', height: '16px', flexShrink: 0 } }),
-                                                                                'Keys loaded — not yet verified'
+                                                                                'Credentials loaded — not yet verified'
                                                                             )
                                                                         ),
                                                                         React.createElement('p', { className: 'mt-1', style: { color: 'var(--text-secondary)' } }, `Channel: ${stored.channelId.slice(0, 8)}...${stored.channelId.slice(-4)}`)
@@ -8101,7 +8101,7 @@
                                                                             whiteSpace: 'nowrap',
                                                                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
                                                                         },
-                                                                        title: relayTestStatus === 'ok' ? 'Connection verified — click to re-test' : relayTestStatus === 'revoked' ? 'These keys have been revoked — generate new keys' : relayTestStatus === 'error' ? 'Could not reach relay — click to retry' : 'Check if the relay can be reached with these keys'
+                                                                        title: relayTestStatus === 'ok' ? 'Connection verified — click to re-test' : relayTestStatus === 'revoked' ? 'These credentials have been revoked — generate new credentials' : relayTestStatus === 'error' ? 'Could not reach relay — click to retry' : 'Check if the relay can be reached with these credentials'
                                                                     },
                                                                         React.createElement('span', null, relayTestStatus === 'testing' ? 'Testing…' : 'Test connection'),
                                                                         relayTestRan && relayTestStatus === 'ok' && React.createElement('span', { style: { fontSize: '11px', color: '#16a34a', fontWeight: '600' } }, '✅ Confirmed'),
@@ -8110,16 +8110,16 @@
                                                                     )
                                                                 )
                                                             )
-                                                            : React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Encryption keys secure your data between ReaderWrangler pages via Cloudflare. They are NOT your Amazon password. Choose one of the methods below to generate or load them.'),
+                                                            : React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Your credentials secure data between ReaderWrangler pages via Cloudflare. They are NOT your Amazon password. Choose one of the methods below to generate or load them.'),
 
                                                         // ── Set up keys group ──
                                                         React.createElement('div', { style: { marginTop: '4px' } },
-                                                            React.createElement('p', { style: { fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' } }, 'Set up keys'),
+                                                            React.createElement('p', { style: { fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' } }, 'Set up credentials'),
                                                             React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px' } },
                                                                 React.createElement('button', {
                                                                     onClick: async () => {
                                                                         if (hasCreds) {
-                                                                            const confirmed = await showConfirmDialog('Regenerate keys', 'This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone.', 'Regenerate', 'Cancel');
+                                                                            const confirmed = await showConfirmDialog('Regenerate credentials', 'This will invalidate your current bookmarklet and unpair any mobile devices. You will need to drag a new bookmarklet to your bookmarks bar and re-pair your phone.', 'Regenerate', 'Cancel');
                                                                             if (!confirmed) return;
                                                                         }
                                                                         const channelId = crypto.randomUUID();
@@ -8138,13 +8138,13 @@
                                                                         ? { background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' }
                                                                         : { background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', cursor: 'pointer', width: '100%' },
                                                                     title: hasCreds ? 'Generate a new channel ID and passphrase — invalidates current bookmarklet and mobile pairing' : 'Generate a new channel ID and passphrase for encrypting relay data'
-                                                                }, hasCreds ? 'Regenerate keys' : 'Generate keys'),
+                                                                }, hasCreds ? 'Regenerate credentials' : 'Generate credentials'),
                                                                 React.createElement('button', {
                                                                     onClick: () => setRelayManualCreds(true),
                                                                     className: 'px-3 py-1.5 rounded text-sm',
                                                                     style: { background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' },
                                                                     title: 'Type in a channel ID and passphrase from another device or source'
-                                                                }, 'Enter keys manually'),
+                                                                }, 'Enter credentials manually'),
                                                                 React.createElement('button', {
                                                                     onClick: () => {
                                                                         const input = document.createElement('input');
@@ -8163,7 +8163,7 @@
                                                                                         setRelaySetupOpen(false);
                                                                                         setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
                                                                                     } else {
-                                                                                        showInfoDialog('No keys found', 'No encryption keys found in this file.');
+                                                                                        showInfoDialog('No credentials found', 'No credentials found in this file.');
                                                                                     }
                                                                                 } catch { showInfoDialog('Invalid file', 'Could not read file. Make sure it is a ReaderWrangler backup (.json).'); }
                                                                             };
@@ -8173,8 +8173,8 @@
                                                                     },
                                                                     className: 'px-3 py-1.5 rounded text-sm',
                                                                     style: { background: 'var(--bg-surface)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' },
-                                                                    title: 'Load encryption keys from a ReaderWrangler backup file — your library data is not affected'
-                                                                }, 'Load keys from backup')
+                                                                    title: 'Load credentials from a ReaderWrangler backup file — your library data is not affected'
+                                                                }, 'Load credentials from backup')
                                                             )
                                                         ),
                                                         // ── Danger zone ──
@@ -8183,8 +8183,8 @@
                                                             React.createElement('button', {
                                                                 onClick: async () => {
                                                                     const confirmed = await showConfirmDialog(
-                                                                        'Revoke keys & delete data',
-                                                                        'This will permanently delete all data on the relay and block these credentials from future use. You will need to generate new keys to continue syncing.',
+                                                                        'Revoke credentials & delete data',
+                                                                        'This will permanently delete all data on the relay and block these credentials from future use. You will need to generate new credentials to continue syncing.',
                                                                         'Revoke & delete',
                                                                         'Cancel'
                                                                     );
@@ -8194,7 +8194,7 @@
                                                                         await relayOp('clearKeys');
                                                                         setRelaySetupOpen(false);
                                                                         setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);
-                                                                        showToast('Relay credentials revoked. Generate new keys to continue syncing.');
+                                                                        showToast('Relay credentials revoked. Generate new credentials to continue syncing.');
                                                                     } catch (err) {
                                                                         showInfoDialog('Revocation failed', err.message);
                                                                     }
@@ -8202,7 +8202,7 @@
                                                                 className: 'px-3 py-1.5 rounded text-sm',
                                                                 style: { background: 'var(--bg-surface)', color: 'var(--text-danger, #dc2626)', border: '1px solid var(--border-default)', cursor: 'pointer', width: '100%' },
                                                                 title: 'Permanently deletes all relay data and blocks these credentials from future use'
-                                                            }, 'Revoke keys & delete data')
+                                                            }, 'Revoke credentials & delete data')
                                                         )
                                                     )
                                             ))),
@@ -8213,9 +8213,9 @@
                                             React.createElement('div', { style: { maxHeight: activeSection === 'bookmarklet' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
                                             React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
                                                 !hasCreds
-                                                    ? React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Complete Step 1 to generate your encryption keys. Your personal bookmarklet will be ready to drag to your bookmarks bar.')
+                                                    ? React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Complete Step 1 to generate your credentials. Your personal bookmarklet will be ready to drag to your bookmarks bar.')
                                                     : React.createElement(React.Fragment, null,
-                                                React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Drag the bookmarklet to your bookmarks bar. It has your encryption keys baked in. It lets you fetch your books from Amazon and securely transfer them to ReaderWrangler.'),
+                                                React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Drag the bookmarklet to your bookmarks bar. It has your credentials baked in. It lets you fetch your books from Amazon and securely transfer them to ReaderWrangler.'),
                                                 React.createElement('div', { className: 'rounded p-3', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' } },
                                                     ...bookmarklets.map((bm) =>
                                                         React.createElement('div', { key: bm.env, style: { textAlign: 'center' } },
@@ -8231,7 +8231,7 @@
                                                 React.createElement('div', { style: { textAlign: 'center', margin: '12px 0' } },
                                                     React.createElement('img', { src: 'images/bookmarklet-install.gif', alt: 'Drag bookmarklet to bookmarks bar', style: { maxWidth: '100%', height: 'auto', borderRadius: '6px', border: '1px solid var(--border-default)' } })
                                                 ),
-                                                React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)' } }, 'Your encryption keys are baked into the bookmarklet. If you regenerate keys, you must drag the new bookmarklet to your bookmarks bar to replace the old one.'),
+                                                React.createElement('p', { className: 'text-xs mt-2', style: { color: 'var(--text-muted)' } }, 'Your credentials are baked into the bookmarklet. If you regenerate credentials, you must drag the new bookmarklet to your bookmarks bar to replace the old one.'),
                                                 isLocalhost && React.createElement('p', { className: 'text-xs', style: { color: 'var(--text-muted)', fontStyle: 'italic' } }, 'Developer mode: showing all 3 environments.'),
                                                 React.createElement('div', { className: 'mt-3 p-3 rounded text-sm', style: { background: 'var(--bg-surface)', border: '1px solid var(--border-default)' } },
                                                     React.createElement('p', { className: 'font-semibold text-xs mb-1' }, 'How to use:'),
@@ -8251,7 +8251,7 @@
                                             React.createElement('div', { style: { maxHeight: activeSection === 'mobile' ? '2000px' : '0', overflow: 'hidden', transition: 'max-height 0.35s ease' } },
                                             React.createElement('div', { style: { padding: '16px', borderBottom: '1px solid var(--border-default)' } },
                                                 !hasCreds
-                                                    ? React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Encryption keys are required for mobile pairing — complete Step 1 first.')
+                                                    ? React.createElement('p', { className: 'text-sm', style: { color: 'var(--text-secondary)' } }, 'Credentials are required for mobile pairing — complete Step 1 first.')
                                                     : React.createElement(React.Fragment, null,
                                                 React.createElement('p', { className: 'text-sm mb-3', style: { color: 'var(--text-secondary)' } }, 'Pair your phone with this app to browse your organized library on the go. See your folders, covers, and notes from anywhere — perfect for picking your next read at the bookstore or library.'),
                                                 React.createElement('div', { className: 'rounded p-4', style: { background: 'var(--bg-muted)', border: '1px solid var(--border-default)', textAlign: 'center' } },
@@ -8335,26 +8335,26 @@
                                             </div>
                                         </div>
                                         <div style={{ marginBottom: '20px' }}>
-                                            <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Step 1: Encryption Keys</p>
-                                            <p>These are <em>not</em> your Amazon password. They are a channel ID and passphrase randomly generated by this app that secure the bridge between the bookmarklet and this app. All your devices need the same keys to communicate.</p>
+                                            <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Step 1: Credentials</p>
+                                            <p>These are <em>not</em> your Amazon password. They are a channel ID and passphrase randomly generated by this app that secure the bridge between the bookmarklet and this app, and between this app and the mobile viewer. All your devices need the same credentials to communicate.</p>
                                             <ul style={{ paddingLeft: '18px', marginTop: '6px', listStyleType: 'disc' }}>
-                                                <li><strong>Generate keys</strong> — creates a new random channel and passphrase</li>
-                                                <li><strong>Enter keys manually</strong> — type in keys from another device</li>
-                                                <li><strong>Load keys from backup</strong> — restore keys from a saved backup file</li>
-                                                <li><strong>Test connection</strong> — verifies the relay can be reached with your keys</li>
+                                                <li><strong>Generate credentials</strong> — creates a new random channel and passphrase</li>
+                                                <li><strong>Enter credentials manually</strong> — type in credentials from another device</li>
+                                                <li><strong>Load credentials from backup</strong> — restore credentials from a saved backup file</li>
+                                                <li><strong>Test connection</strong> — verifies the relay can be reached with your credentials</li>
                                             </ul>
                                         </div>
                                         <div style={{ marginBottom: '20px' }}>
                                             <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Step 2: Bookmarklet</p>
-                                            <p>The bookmarklet is a small button you drag to your browser's bookmarks bar. It runs on Amazon pages to fetch your library data, encrypts it with your keys, and sends it to the relay. No browser extension needed — it runs right in your browser tab.</p>
+                                            <p>The bookmarklet is a small button you drag to your browser's bookmarks bar. It runs on Amazon pages to fetch your library data, encrypts it with your credentials, and sends it to the relay. No browser extension needed — it runs right in your browser tab.</p>
                                             <div style={{ margin: '10px 0', textAlign: 'center' }}>
                                                 <img src="images/bookmarklet-install.gif" alt="Drag bookmarklet to bookmarks bar" style={{ maxWidth: '100%', height: 'auto', borderRadius: '6px', border: '1px solid var(--border-default)' }} />
                                             </div>
-                                            <p>Your encryption keys are baked into the bookmarklet. If you regenerate keys, you need to drag the new bookmarklet to replace the old one.</p>
+                                            <p>Your credentials are baked into the bookmarklet. If you regenerate credentials, you need to drag the new bookmarklet to replace the old one.</p>
                                         </div>
                                         <div style={{ marginBottom: '20px' }}>
                                             <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Step 3: Mobile Pairing</p>
-                                            <p>The QR code shares your encryption keys with your phone. Once paired, your phone fetches your organized library from the relay and displays it — folders, covers, tags, and all.</p>
+                                            <p>The QR code shares your credentials with your phone. Once paired, your phone fetches your organized library from the relay and displays it — folders, covers, tags, and all.</p>
                                         </div>
                                         <div style={{ padding: '12px', borderRadius: '6px', background: 'var(--bg-muted)', border: '1px solid var(--border-default)' }}>
                                             <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Keeping your credentials secure</p>
@@ -8527,7 +8527,7 @@
                                         <ol className="list-decimal list-inside space-y-2 ml-2">
                                             <li><a href="#" onClick={(e) => { e.preventDefault(); setHowToDialogOpen(false); setRelaySetupOpen(true); setRelaySetupSection('credentials'); }} style={{ color: '#2563eb', textDecoration: 'underline', cursor: 'pointer' }}>Set up the relay</a> (File &rsaquo; Relay Setup)
                                                 <ol style={{ listStyleType: 'lower-alpha', paddingLeft: '20px', marginTop: '4px', lineHeight: '1.7' }}>
-                                                    <li>Generate your encryption keys</li>
+                                                    <li>Generate your credentials</li>
                                                     <li>Drag the bookmarklet to your bookmarks bar</li>
                                                     <li>Optionally pair your phone with the QR code</li>
                                                 </ol>
@@ -15653,7 +15653,7 @@
                             {window.RWRelay && window.RWRelay.isConfigured() && (
                                 <div
                                     className={`sync-indicator ${deviceStateSynced ? 'sync-indicator-synced' : deviceStateErrorType === 'unverified' ? 'sync-indicator-unverified' : deviceStateErrorType ? 'sync-indicator-error' : 'sync-indicator-unsynced'}`}
-                                    title={deviceStateSynced ? 'All changes synced to mobile' : deviceStateErrorType === 'revoked' ? 'Relay error — credentials have been revoked. Open Relay Setup to generate new keys.' : deviceStateErrorType === 'unverified' ? 'Relay keys loaded — not yet verified. Use Test Connection or wait for first sync.' : deviceStateErrorType === 'error' ? 'Relay error — could not sync. Will retry on next change.' : 'Syncing changes...'}
+                                    title={deviceStateSynced ? 'All changes synced to mobile' : deviceStateErrorType === 'revoked' ? 'Relay error — credentials have been revoked. Open Relay Setup to generate new credentials.' : deviceStateErrorType === 'unverified' ? 'Relay credentials loaded — not yet verified. Use Test Connection or wait for first sync.' : deviceStateErrorType === 'error' ? 'Relay error — could not sync. Will retry on next change.' : 'Syncing changes...'}
                                     onClick={() => setRelaySetupOpen(true)}
                                 >
                                     <img className="sync-tower" src={`icons/sync-tower-${deviceStateSynced ? 'green' : deviceStateErrorType === 'unverified' ? 'neutral' : 'red'}.svg`} alt="" />

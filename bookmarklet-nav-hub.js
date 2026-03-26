@@ -251,8 +251,8 @@
             🎯 Launch App
         </button>
         <button id="launchIntro" style="${primaryButtonStyle} width: 100%;"
-            title="View the getting started guide">
-            ℹ️ Launch Intro for Help
+            title="View help guides and tutorial videos">
+            ℹ️ Help & Tutorials
         </button>
     `;
 
@@ -376,7 +376,7 @@
     if (launchIntroBtn) {
         launchIntroBtn.onclick = () => {
             dialog.remove();
-            window.location.href = finalBaseUrl + 'index.html';
+            window.location.href = finalBaseUrl + 'tutorials.html';
         };
     }
 
