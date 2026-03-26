@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8358,8 +8358,9 @@
                                         </div>
                                         <div style={{ padding: '12px', borderRadius: '6px', background: 'var(--bg-muted)', border: '1px solid var(--border-default)' }}>
                                             <p style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '6px' }}>Keeping your credentials secure</p>
-                                            <p>Your credentials protect the library data stored on the relay — book titles, organization, and metadata. If someone obtained your credentials (for example, by accessing a shared backup file), they could read that data.</p>
-                                            <p style={{ marginTop: '8px' }}>If you think your credentials may have been exposed (e.g. shared a backup file or posted it publicly): open Relay Setup Step 1, use "Revoke keys &amp; delete data" to wipe the relay and block the old credentials, then generate fresh keys. You will need to reinstall the bookmarklet and re-pair your phone afterward.</p>
+                                            <p>Your credentials protect the library data stored on the relay — book titles, organization, and metadata. If someone obtained your credentials (for example, by accessing a shared backup file), they could read that data, or corrupt it so that your next relay import corrupts your Inbox.</p>
+                                            <p style={{ marginTop: '8px' }}>However, they could <strong>not</strong> access your Amazon account (these credentials are relay-only) or do anything persistent if you regenerate credentials (the old channel becomes inaccessible).</p>
+                                            <p style={{ marginTop: '8px' }}>If you think your credentials may have been exposed (e.g. shared a backup file or posted it publicly): open Relay Setup Step 1, use "Revoke credentials &amp; delete data" to wipe the relay and block the old credentials, then generate fresh credentials. You will need to reinstall the bookmarklet and re-pair your phone afterward.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -8533,7 +8534,7 @@
                                                 </ol>
                                             </li>
                                             <li>Use the bookmarklet on Amazon to fetch your library and collections</li>
-                                            <li>Back here: File &rsaquo; Import from Relay to bring your books in</li>
+                                            <li>Back here in the ReaderWrangler app: File &rsaquo; Import from Relay to bring your books in</li>
                                             <li>Organize books into folders, tags, and collections — your way</li>
                                         </ol>
                                     </div>
