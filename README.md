@@ -126,15 +126,16 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 <!-- SYNC: Keep "Recent Features" in sync with features.html -->
 ## Recent Features
 
+- **Saved Filter Views** — Save any filter combination as a named View in the sidebar. Single tag, multi-tag, or complex filters — save it and access it with one click.
 - **Share Book** — Share book recommendations with friends via link, email, or native share. Every link includes your Amazon affiliate tag.
-- **Tag from Collections** — One-click wizard converts your Kindle Collections into editable tags. "New books only" filter for painless repeat imports.
+- **Tag from Collections** — One-click wizard converts your Kindle Collections into editable tags. "New books only" filter for painless repeat imports. Detects when books leave a Kindle Collection.
 - **Video Tutorials** — Quick-start guides and feature walkthroughs to get you up and running.
 - **Demo Library** — Download 100+ classic books and explore every feature without connecting your Amazon account.
 - **Folder & Tag Descriptions** — Add a description to any folder or tag view; shown as a tooltip on hover.
-- **Views / Folders Split** — Two ways to see your books: by folder structure or by tag views. All Books, pinned tags, and folders in one sidebar.
+- **Views / Folders Split** — Two ways to see your books: by folder structure or by saved filter views. All Books, saved views, and folders in one sidebar.
 - **Encrypted Cloud Relay + Trash Bin** — End-to-end encrypted sync between the bookmarklet and the app. Trash Bin gives you a safety net before permanently deleting books. Orphan detection flags books removed from Amazon.
 - **Mobile Viewer** — Pair your phone with a QR code and browse your organized library anywhere — shelves, folders, tag views, search & sort.
-- **Tag Virtual Folders** — Pin any tag as a virtual folder; drag books to tag them, reorder views, move and copy between tag folders.
+- **Tags & Views** — Create tags, pin them as sidebar views, drag books to tag them. Save any filter combination as a reusable view.
 - **Dark Mode + High Contrast Themes** — Four themes (light, dark, high-contrast light, high-contrast dark) with automatic OS detection.
 - **Auto-Organize Wizard** — One click to build an Author / Series / Books folder hierarchy, with preview and undo.
 - **Book Explorer** — Two-pane Windows Explorer-style interface with folder tree, list and cover grid views, drag-and-drop, and Cut/Copy/Paste.

@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [6.10.0] - 2026-03-27
 
 ### Added
+- **Saved Filter Views** — Save any combination of active filters as a named View in the sidebar. Single-tag, multi-tag, or complex filter combos (tags + read status + rating + etc.) all work. "Save as View" button appears on the Active Filters banner. Tag Manager pin icon redesigned for discoverability. Replaces the old tag-only pin system with a general-purpose saved view system.
 - **Share Book** — Share book recommendations via Copy Amazon Link, Email to a Friend (with Gmail fallback), or native Web Share API. Works with single or multiple books. Accessible from right-click context menu and book detail dialog.
-- **Tag from Collections** — Wizard to convert Kindle Collections into editable tags. Includes collection/book selection, "New books only" filter for repeat imports, and smart duplicate handling.
+- **Tag from Collections** — Wizard to convert Kindle Collections into editable tags. Tracks wizard-assigned vs user-assigned tags (`collectionTags`). "Removed from Kindle" section detects when books leave a Kindle Collection and offers to remove or keep the tag. "New books only" filter for repeat imports.
 - **Context menus for Inbox and All Books** — Right-click Inbox for Auto-Organize and Select All; right-click All Books for Select All. Prevents Chrome default context menu on system folders.
 - **Before/after screenshot update** — New 1920x1080 screenshots with wider comparison slider (1400px) and image scaling fix.
 
