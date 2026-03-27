@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.16";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.17";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1012,6 +1012,58 @@
             const getViewId = (folderId) => isViewFolder(folderId) ? folderId.slice(7, -2) : null;
             const getView = (folderId) => { const vid = getViewId(folderId); return vid ? savedViews.find(v => v.id === vid) : null; };
             const getViewTagId = (folderId) => { const v = getView(folderId); return v?.filters?.tags?.[0] || null; };
+
+            // v6.10.0-alpha.17 - Build filter object from current active filters
+            const buildCurrentFilters = () => {
+                const f = {};
+                if (tagFilter && tagFilter.length > 0) f.tags = [...tagFilter];
+                if (readStatusFilter) f.readStatus = readStatusFilter;
+                if (selectedCollections.length > 0) f.collections = [...selectedCollections];
+                if (ownershipFilter) f.ownership = ownershipFilter;
+                if (selectedSeries.length > 0) f.series = [...selectedSeries];
+                if (minAmazonRating) f.minAmazonRating = minAmazonRating;
+                if (minMyRating) f.minMyRating = minMyRating;
+                if (datePreset) {
+                    f.datePreset = datePreset;
+                    if (datePreset === 'custom') { if (dateFrom) f.dateFrom = dateFrom; if (dateTo) f.dateTo = dateTo; }
+                }
+                if (searchTerm) f.search = searchTerm;
+                if (dealsFilterActive) f.deals = true;
+                return f;
+            };
+
+            // v6.10.0-alpha.17 - Auto-name a view from its filters
+            const autoNameView = (filters) => {
+                const parts = [];
+                if (filters.tags?.length > 0) parts.push(filters.tags.map(t => tagRegistry[t]?.label || t).join(', '));
+                if (filters.readStatus) parts.push(filters.readStatus === 'READ' ? 'Read' : filters.readStatus === 'UNREAD' ? 'Unread' : filters.readStatus);
+                if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
+                if (filters.collections?.length > 0) parts.push(filters.collections.join(', '));
+                if (filters.series?.length > 0) parts.push(filters.series.map(s => s === 'NOT_IN_SERIES' ? 'Not in series' : s).join(', '));
+                if (filters.minAmazonRating) parts.push(`${filters.minAmazonRating}+★`);
+                if (filters.minMyRating) parts.push(`My ${filters.minMyRating === 'unrated' ? 'Unrated' : filters.minMyRating + '+★'}`);
+                if (filters.datePreset) parts.push(filters.datePreset === 'last30' ? 'Last 30 Days' : filters.datePreset === 'last90' ? 'Last 90 Days' : filters.datePreset === 'lastYear' ? 'Last Year' : filters.datePreset);
+                if (filters.search) parts.push(`"${filters.search}"`);
+                if (filters.deals) parts.push('Deals');
+                if (parts.length === 0) return 'New View';
+                if (parts.length <= 2) return parts.join(' + ');
+                return `${parts[0]} + ${parts.length - 1} more`;
+            };
+
+            // v6.10.0-alpha.17 - Create a saved view from filters and add to savedViews
+            const createSavedView = (filters, position) => {
+                const viewId = `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+                const name = autoNameView(filters);
+                const newView = { id: viewId, name, filters, position };
+                setSavedViews(prev => [...prev, newView]);
+                // Trigger inline rename
+                const folderId = `__view_${viewId}__`;
+                setTimeout(() => {
+                    setEditingFolderId(folderId);
+                    setEditingFolderName(name);
+                }, 100);
+                return viewId;
+            };
 
             // Get books for a folder (handles All Books and My Library virtual folders)
             const getFolderBookIds = (folderId) => {
@@ -7799,6 +7851,18 @@
                     {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel, v4.15.6.m - use datePreset, v4.27.0 - add tagFilter, v5.0.0-alpha.175.41 - add selectedCollections, v5.0.0-alpha.175.42 - add minAmazonRating, v5.0.0-alpha.175.43 - add minMyRating, v5.0.0-alpha.175.44 - add selectedSeries, v5.0.0-alpha.175.47 - restored after Phase 7 cleanup, v5.0.0-alpha.175.49.2 - Clear All button floats near filters instead of far right) */}
                     {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || ownershipFilter || seriesFilter || datePreset || (tagFilter && tagFilter.length > 0) || selectedCollections.length > 0 || minAmazonRating || minMyRating || selectedSeries.length > 0) && (
                         <div className="bg-blue-100 border border-blue-300 rounded-lg px-4 py-2 mb-4 flex items-center gap-2 flex-wrap text-sm">
+                            {/* v6.10.0-alpha.17 - Drag handle to save current filters as a view */}
+                            <span
+                                className="cursor-grab active:cursor-grabbing text-blue-400 hover:text-blue-700 select-none"
+                                title="Drag to Views in sidebar to save this filter as a view"
+                                draggable={true}
+                                onDragStart={(e) => {
+                                    const filters = buildCurrentFilters();
+                                    e.dataTransfer.effectAllowed = 'copy';
+                                    e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
+                                    e.dataTransfer.setData('text/plain', autoNameView(filters));
+                                }}
+                                style={{ fontSize: '16px', lineHeight: 1 }}>⠿</span>
                             <span className="font-semibold">🔍 Active:</span>
                                 {searchTerm && <span>Search: "{searchTerm}"</span>}
                                 {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
@@ -10820,8 +10884,36 @@
                                 {/* v6.4.0 - Single scroll zone: Views + Folders + all contents */}
                                 <div className="flex-1 overflow-y-auto folder-scroll-container" style={{ contain: 'layout style paint' }}>
                                 <div className="p-2">
-                                    {/* v6.4.0 - VIEWS section header */}
-                                    <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
+                                    {/* v6.4.0 - VIEWS section header, v6.10.0-alpha.17 - Drop zone for filter-view drag */}
+                                    <div
+                                        className="flex items-center justify-between px-2 pt-1 pb-0.5 rounded transition-colors"
+                                        style={sidebarFolderDragTarget?.type === 'filter-view-header' ? { background: 'rgba(59,130,246,0.12)' } : {}}
+                                        onDragOver={(e) => {
+                                            const types = Array.from(e.dataTransfer.types);
+                                            if (types.includes('application/x-filter-view')) {
+                                                e.preventDefault();
+                                                e.dataTransfer.dropEffect = 'copy';
+                                                if (sidebarFolderDragTarget?.type !== 'filter-view-header') {
+                                                    setSidebarFolderDragTarget({ type: 'filter-view-header' });
+                                                }
+                                                // Auto-expand views section on drag hover
+                                                if (viewsSectionCollapsed) setViewsSectionCollapsed(false);
+                                            }
+                                        }}
+                                        onDragLeave={(e) => {
+                                            if (!e.currentTarget.contains(e.relatedTarget)) setSidebarFolderDragTarget(null);
+                                        }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            setSidebarFolderDragTarget(null);
+                                            const filterDropData = e.dataTransfer.getData('application/x-filter-view');
+                                            if (filterDropData) {
+                                                const filters = JSON.parse(filterDropData);
+                                                const maxPos = savedViews.reduce((max, v) => Math.max(max, v.position), -1);
+                                                createSavedView(filters, maxPos + 1);
+                                                showToast(`View saved`, e.clientX, e.clientY);
+                                            }
+                                        }}>
                                         <span
                                             className={`text-xs font-semibold uppercase tracking-wide cursor-pointer ${selectedFolderId === '__views__' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                                             onClick={() => navigateToFolder('__views__')}
@@ -10879,11 +10971,12 @@
                                                         const types = Array.from(e.dataTransfer.types);
                                                         const isViewDrag = types.includes('application/x-tagview-reorder');
                                                         const isBookDrag = types.includes('application/x-readerwrangler');
+                                                        const isFilterDrag = types.includes('application/x-filter-view');
                                                         if (isBookDrag && viewTagId) {
                                                             e.dataTransfer.dropEffect = ctrlKeyRef.current ? 'copy' : 'move';
                                                             setFolderDropHighlight(e.currentTarget);
-                                                        } else if (isViewDrag) {
-                                                            e.dataTransfer.dropEffect = 'move';
+                                                        } else if (isViewDrag || isFilterDrag) {
+                                                            e.dataTransfer.dropEffect = isFilterDrag ? 'copy' : 'move';
                                                             const rect = e.currentTarget.getBoundingClientRect();
                                                             const position = (e.clientY - rect.top) < rect.height / 2 ? 'before' : 'after';
                                                             const current = sidebarFolderDragTarget;
@@ -10916,6 +11009,22 @@
                                                                 newPos = next ? (sv.position + next.position) / 2 : sv.position + 1;
                                                             }
                                                             setSavedViews(prev => prev.map(v => v.id === draggedViewId ? { ...v, position: newPos } : v));
+                                                            return;
+                                                        }
+                                                        // v6.10.0-alpha.17 - Filter view drop → create new saved view at position
+                                                        const filterDropData = e.dataTransfer.getData('application/x-filter-view');
+                                                        if (filterDropData) {
+                                                            const filters = JSON.parse(filterDropData);
+                                                            let newPos;
+                                                            if (target?.position === 'before') {
+                                                                const prev = viewIndex > 0 ? sortedViewList[viewIndex - 1] : null;
+                                                                newPos = prev ? (prev.position + sv.position) / 2 : sv.position - 1;
+                                                            } else {
+                                                                const next = viewIndex < sortedViewList.length - 1 ? sortedViewList[viewIndex + 1] : null;
+                                                                newPos = next ? (sv.position + next.position) / 2 : sv.position + 1;
+                                                            }
+                                                            createSavedView(filters, newPos);
+                                                            showToast(`View saved`, e.clientX, e.clientY);
                                                             return;
                                                         }
                                                         // Book drop → add tag (only for tag-based views)
@@ -10967,7 +11076,9 @@
                                                     }}
                                                     title={sv.description || `${viewTagId ? 'Tag view' : 'View'}: ${viewLabel} (${bookCount} books)`}>
                                                     <span className="pointer-events-none">
-                                                        <TagIconSVG size={16} color="#d97706" />
+                                                        {viewTagId && Object.keys(sv.filters).length === 1 && sv.filters.tags?.length === 1
+                                                            ? <TagIconSVG size={16} color="#d97706" />
+                                                            : <span style={{ fontSize: '14px' }}>🔍</span>}
                                                     </span>
                                                     {editingFolderId === viewFolderId ? (
                                                         <input
@@ -11002,6 +11113,35 @@
                                             );
                                         });
                                     })()}
+                                    {/* v6.10.0-alpha.17 - Drop zone for creating new views from filter bar drag */}
+                                    <div
+                                        className="w-full px-2 py-1 rounded transition-colors"
+                                        style={sidebarFolderDragTarget?.type === 'filter-view-append' ? { borderBottom: '3px solid var(--border-focus)', background: 'rgba(59,130,246,0.08)' } : { minHeight: '4px' }}
+                                        onDragOver={(e) => {
+                                            const types = Array.from(e.dataTransfer.types);
+                                            if (types.includes('application/x-filter-view')) {
+                                                e.preventDefault();
+                                                e.dataTransfer.dropEffect = 'copy';
+                                                if (sidebarFolderDragTarget?.type !== 'filter-view-append') {
+                                                    setSidebarFolderDragTarget({ type: 'filter-view-append' });
+                                                }
+                                            }
+                                        }}
+                                        onDragLeave={(e) => {
+                                            if (!e.currentTarget.contains(e.relatedTarget)) setSidebarFolderDragTarget(null);
+                                        }}
+                                        onDrop={(e) => {
+                                            e.preventDefault();
+                                            setSidebarFolderDragTarget(null);
+                                            const filterDropData = e.dataTransfer.getData('application/x-filter-view');
+                                            if (filterDropData) {
+                                                const filters = JSON.parse(filterDropData);
+                                                const maxPos = savedViews.reduce((max, v) => Math.max(max, v.position), -1);
+                                                createSavedView(filters, maxPos + 1);
+                                                showToast(`View saved`, e.clientX, e.clientY);
+                                            }
+                                        }}
+                                    />
                                     </>}
                                     {/* v6.4.0 - FOLDERS section header */}
                                     <div className="flex items-center justify-between px-2 pt-2 pb-0.5 mt-1 border-t border-gray-100">
