@@ -7851,18 +7851,6 @@
                     {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel, v4.15.6.m - use datePreset, v4.27.0 - add tagFilter, v5.0.0-alpha.175.41 - add selectedCollections, v5.0.0-alpha.175.42 - add minAmazonRating, v5.0.0-alpha.175.43 - add minMyRating, v5.0.0-alpha.175.44 - add selectedSeries, v5.0.0-alpha.175.47 - restored after Phase 7 cleanup, v5.0.0-alpha.175.49.2 - Clear All button floats near filters instead of far right) */}
                     {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || ownershipFilter || seriesFilter || datePreset || (tagFilter && tagFilter.length > 0) || selectedCollections.length > 0 || minAmazonRating || minMyRating || selectedSeries.length > 0) && (
                         <div className="bg-blue-100 border border-blue-300 rounded-lg px-4 py-2 mb-4 flex items-center gap-2 flex-wrap text-sm">
-                            {/* v6.10.0-alpha.17 - Drag handle to save current filters as a view */}
-                            <span
-                                className="cursor-grab active:cursor-grabbing text-blue-400 hover:text-blue-700 select-none"
-                                title="Drag to Views in sidebar to save this filter as a view"
-                                draggable={true}
-                                onDragStart={(e) => {
-                                    const filters = buildCurrentFilters();
-                                    e.dataTransfer.effectAllowed = 'copy';
-                                    e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
-                                    e.dataTransfer.setData('text/plain', autoNameView(filters));
-                                }}
-                                style={{ fontSize: '16px', lineHeight: 1 }}>⠿</span>
                             <span className="font-semibold">🔍 Active:</span>
                                 {searchTerm && <span>Search: "{searchTerm}"</span>}
                                 {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
@@ -7898,6 +7886,18 @@
                                 {/* v5.0.0-alpha.175.44 - Phase 5.5: Series filter */}
                                 {minMyRating && selectedSeries.length > 0 && <span>|</span>}
                                 {selectedSeries.length > 0 && <span>Series: {selectedSeries.map(s => s === 'NOT_IN_SERIES' ? 'Not in series' : s).join(', ')}</span>}
+                            {/* v6.10.0-alpha.17 - Drag handle to save current filters as a view */}
+                            <span
+                                className="cursor-grab active:cursor-grabbing text-blue-400 hover:text-blue-700 select-none"
+                                title="Drag to Views in sidebar to save this filter as a view"
+                                draggable={true}
+                                onDragStart={(e) => {
+                                    const filters = buildCurrentFilters();
+                                    e.dataTransfer.effectAllowed = 'copy';
+                                    e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
+                                    e.dataTransfer.setData('text/plain', autoNameView(filters));
+                                }}
+                                style={{ fontSize: '16px', lineHeight: 1, marginLeft: '8px' }}>⠿</span>
                             <button
                                 onClick={() => {
                                     setSearchTerm('');
@@ -7916,7 +7916,7 @@
                                     setSelectedSeries([]); // v5.0.0-alpha.175.44 - Clear Series filter
                                 }}
                                 className="text-blue-700 hover:text-white hover:bg-blue-600 font-semibold text-sm whitespace-nowrap px-2 py-1 rounded border border-blue-400 bg-white"
-                                style={{ marginLeft: '12px' }}>
+                                style={{ marginLeft: '4px' }}>
                                 Clear All ×
                             </button>
                         </div>
