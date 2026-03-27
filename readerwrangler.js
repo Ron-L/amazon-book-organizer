@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.17";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.18";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4610,7 +4610,7 @@
                     showInfoDialog('Backup Restored', `${mergedBooks.length} books restored.\n\nSet up the relay (File → Relay Setup) to keep your library in sync.`);
                 }
 
-                // Reset all filters when loading new library (v3.8.0.g, updated v3.8.0.k)
+                // Reset all filters when loading new library (v3.8.0.g, updated v3.8.0.k, v6.10.0-alpha.18)
                 setSearchTerm('');
                 setReadStatusFilter('');
                 setCollectionFilter('');
@@ -4619,6 +4619,13 @@
                 setSeriesFilter('');
                 setDateFrom('');
                 setDateTo('');
+                setDatePreset(''); // v6.10.0-alpha.18
+                setTagFilter([]); // v6.10.0-alpha.18
+                setSelectedCollections([]); // v6.10.0-alpha.18
+                setMinAmazonRating(''); // v6.10.0-alpha.18
+                setMinMyRating(''); // v6.10.0-alpha.18
+                setSelectedSeries([]); // v6.10.0-alpha.18
+                setDealsFilterActive(false); // v6.10.0-alpha.18
                 setShowHidden(true); // v4.8.0 - Default to showing all books on load
                 localStorage.setItem(FILTERS_KEY, JSON.stringify({
                     searchTerm: '',
@@ -4627,9 +4634,15 @@
                     ratingFilter: '',
                     ownershipFilter: '',
                     seriesFilter: '',
+                    datePreset: '',
                     dateFrom: '',
                     dateTo: '',
-                    showHidden: true // v4.8.0 - Default to showing all books
+                    showHidden: true, // v4.8.0 - Default to showing all books
+                    tagFilter: [],
+                    selectedCollections: [],
+                    minAmazonRating: '',
+                    minMyRating: '',
+                    selectedSeries: []
                 }));
                 console.log('🔍 Filters cleared for new library');
 
