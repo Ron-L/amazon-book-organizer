@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.15";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.16";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -558,7 +558,7 @@
             const [datePreset, setDatePreset] = useState(''); // Date filter preset: '' | 'last30' | 'last90' | 'lastYear' | '2025' | '2024' | '2023' | 'custom' (NEW v4.15.6)
             const [tagFilter, setTagFilter] = useState([]); // v4.27.0 - Filter by tags (array of tag names, OR logic)
             const [tagRegistry, setTagRegistry] = useState({}); // v4.27.0 - Central tag registry {tagName: {label, count}}
-            const [pinnedTagFolders, setPinnedTagFolders] = useState([]); // v5.5.15-alpha.8 - Tag virtual folders [{tagId, position}]
+            const [savedViews, setSavedViews] = useState([]); // v6.10.0-alpha.16 - Saved filter views [{id, name, filters, position, bookOrder?, description?}]
             const [selectedTags, setSelectedTags] = useState(new Set()); // v5.5.15-alpha.24 - Tag selection for bulk delete (unified, replaces selectedOrphans)
             const [tagSortColumn, setTagSortColumn] = useState('name'); // v5.5.15-alpha.24 - Tag Manager sort column ('name' | 'count')
             const [tagSortAsc, setTagSortAsc] = useState(true); // v5.5.15-alpha.24 - Tag Manager sort direction
@@ -1007,19 +1007,25 @@
                 }, 500);
             };
 
+            // v6.10.0-alpha.16 - Saved View helpers
+            const isViewFolder = (folderId) => folderId?.startsWith('__view_') && folderId?.endsWith('__');
+            const getViewId = (folderId) => isViewFolder(folderId) ? folderId.slice(7, -2) : null;
+            const getView = (folderId) => { const vid = getViewId(folderId); return vid ? savedViews.find(v => v.id === vid) : null; };
+            const getViewTagId = (folderId) => { const v = getView(folderId); return v?.filters?.tags?.[0] || null; };
+
             // Get books for a folder (handles All Books and My Library virtual folders)
             const getFolderBookIds = (folderId) => {
                 if (folderId === '__all__') return [...books.filter(b => !b.isDeleted).map(b => b.id)].reverse(); // v6.6.0 - Newest first, excludes trashed books
                 if (folderId === '__trash__') return books.filter(b => b.isDeleted).sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0)).map(b => b.id);
                 if (folderId === '__library__') return []; // v5.0.0-alpha.63 - Folders section shows folders, not books
                 if (folderId === '__views__') return []; // v6.4.0 - Views section shows views, not books
-                // v5.5.15-alpha.21 - Tag virtual folder: return books with this tag
-                // v5.5.15-alpha.31 - Respect bookOrder for manual ordering
-                if (folderId?.startsWith('__tag_') && folderId?.endsWith('__')) {
-                    const tagId = folderId.slice(6, -2);
+                // v6.10.0-alpha.16 - Saved view: return books matching view filters
+                if (isViewFolder(folderId)) {
+                    const view = getView(folderId);
+                    const tagId = view?.filters?.tags?.[0];
+                    if (!tagId) return [];
                     const taggedBookIds = books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
-                    const pinnedEntry = pinnedTagFolders.find(p => p.tagId === tagId);
-                    const bookOrder = pinnedEntry?.bookOrder || [];
+                    const bookOrder = view?.bookOrder || [];
                     if (bookOrder.length === 0) return taggedBookIds;
                     // Return in manual order, with unordered books appended
                     const orderedSet = new Set(bookOrder);
@@ -1240,7 +1246,7 @@
                     }
                 });
                 return items;
-            }, [bookMap, books, folders, pinnedTagFolders, selectedFolderId, searchTerm, readStatusFilter,
+            }, [bookMap, books, folders, savedViews, selectedFolderId, searchTerm, readStatusFilter,
                 collectionFilter, selectedCollections, minAmazonRating, minMyRating,
                 ratingFilter, ownershipFilter, showHidden, seriesFilter, selectedSeries,
                 dateFrom, dateTo, dealsFilterActive, tagFilter, explorerSort,
@@ -1301,11 +1307,10 @@
                 if (folderId === '__library__') return [FOLDER_LIBRARY];
                 if (folderId === '__views__') return [FOLDER_VIEWS]; // v6.4.0
                 if (folderId === '__trash__') return [FOLDER_TRASH]; // v6.0.0-alpha.50
-                // v5.5.15-alpha.21 - Tag virtual folder breadcrumb
-                if (folderId?.startsWith('__tag_') && folderId?.endsWith('__')) {
-                    const tagId = folderId.slice(6, -2);
-                    const tagLabel = tagRegistry[tagId]?.label || tagId;
-                    return [{ id: folderId, name: tagLabel, virtual: true }];
+                // v6.10.0-alpha.16 - Saved view breadcrumb
+                if (isViewFolder(folderId)) {
+                    const view = getView(folderId);
+                    return [{ id: folderId, name: view?.name || getViewId(folderId), virtual: true }];
                 }
 
                 const path = [];
@@ -1795,14 +1800,14 @@
             // v5.5.15-alpha.31 - Reorder books within a tag view's bookOrder
             // v5.6.3-alpha.1 - Fix: include unordered books (newly tagged) in bookOrder before reordering
             const reorderBooksInTagView = (tagId, bookIdsToMove, targetIndex) => {
-                setPinnedTagFolders(prev => prev.map(p => {
-                    if (p.tagId !== tagId) return p;
+                setSavedViews(prev => prev.map(v => {
+                    if (v.id !== tagId) return v;
                     // Build full working list: ordered + unordered (mirrors getFolderBookIds render logic)
                     const taggedBookIds = books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
                     let bookOrder;
-                    if (p.bookOrder && p.bookOrder.length > 0) {
-                        const orderedSet = new Set(p.bookOrder);
-                        const ordered = p.bookOrder.filter(id => taggedBookIds.includes(id));
+                    if (v.bookOrder && v.bookOrder.length > 0) {
+                        const orderedSet = new Set(v.bookOrder);
+                        const ordered = v.bookOrder.filter(id => taggedBookIds.includes(id));
                         const unordered = taggedBookIds.filter(id => !orderedSet.has(id));
                         bookOrder = [...ordered, ...unordered];
                     } else {
@@ -1814,7 +1819,7 @@
                     const adjustedIndex = targetIndex - removedBefore;
                     const orderedToMove = bookIdsToMove.filter(id => bookOrder.includes(id));
                     remaining.splice(adjustedIndex, 0, ...orderedToMove);
-                    return { ...p, bookOrder: remaining };
+                    return { ...v, bookOrder: remaining };
                 }));
                 console.log(`🏷️ Reordered ${bookIdsToMove.length} book(s) in tag view`);
             };
@@ -2451,20 +2456,35 @@
                                     setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
                                     setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
                                     setTagRegistry(state.organization.tagRegistry || {}); // v4.27.0
-                                    // v5.5.15-alpha.26 - Migrate tag positions for interleaved display
-                                    const loadedPinnedTags = state.organization.pinnedTagFolders || [];
+                                    // v6.10.0-alpha.16 - Load savedViews (or migrate from pinnedTagFolders)
                                     const loadedFolders = state.organization.folders || [];
-                                    if (loadedPinnedTags.length > 0 && loadedFolders.length > 0) {
+                                    const loadedTagReg = state.organization.tagRegistry || {};
+                                    let loadedViews = state.organization.savedViews || [];
+                                    if (loadedViews.length === 0 && state.organization.pinnedTagFolders) {
+                                        // Migrate from old pinnedTagFolders format
+                                        const oldPinned = state.organization.pinnedTagFolders;
+                                        loadedViews = oldPinned.map(p => ({
+                                            id: p.tagId,
+                                            name: loadedTagReg[p.tagId]?.label || p.tagId,
+                                            filters: { tags: [p.tagId] },
+                                            position: p.position,
+                                            ...(p.bookOrder ? { bookOrder: p.bookOrder } : {}),
+                                            ...(p.description ? { description: p.description } : {})
+                                        }));
+                                        console.log(`🔄 Migrated ${oldPinned.length} pinnedTagFolders → savedViews`);
+                                    }
+                                    // Position migration for interleaved display
+                                    if (loadedViews.length > 0 && loadedFolders.length > 0) {
                                         const rootCount = loadedFolders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
                                         const maxFolderDisplayPos = rootCount > 0 ? (rootCount - 1) * 2 : -1;
-                                        const maxTagPos = Math.max(...loadedPinnedTags.map(p => p.position));
-                                        if (maxTagPos <= maxFolderDisplayPos) {
+                                        const maxViewPos = Math.max(...loadedViews.map(v => v.position));
+                                        if (maxViewPos <= maxFolderDisplayPos) {
                                             const offset = maxFolderDisplayPos + 1;
-                                            loadedPinnedTags.forEach(p => { p.position += offset; });
-                                            console.log(`🏷️ Migrated tag positions for interleaved display (offset +${offset})`);
+                                            loadedViews.forEach(v => { v.position += offset; });
+                                            console.log(`🏷️ Migrated view positions for interleaved display (offset +${offset})`);
                                         }
                                     }
-                                    setPinnedTagFolders(loadedPinnedTags);
+                                    setSavedViews(loadedViews);
                                     setFolders(loadedFolders); // v5.0.0
                                     setDataSource(state.organization.dataSource || 'enriched');
                                     effectiveLastSync = state.lastSyncTime || Date.now();
@@ -2522,7 +2542,7 @@
                                 blankImageBooks: Array.from(blankImageBooks),
                                 hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
                                 tagRegistry,  // v4.27.0 - Tag registry
-                                pinnedTagFolders  // v5.5.15-alpha.8 - Tag virtual folders
+                                savedViews  // v6.10.0-alpha.16 - Saved filter views
                             },
                             lastSyncTime: lastSyncTime || Date.now(),
                             savedAt: Date.now()
@@ -2532,7 +2552,7 @@
                         console.warn('Could not auto-save organization:', e);
                     }
                 }
-            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, pinnedTagFolders]);
+            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedViews]);
 
             // v6.0.0 Phase 2 - Debounced device-state push to relay (15s after last change)
             // Watches same dependencies as auto-save org + books for cross-device sync
@@ -2573,7 +2593,7 @@
                         clearTimeout(deviceStatePushTimerRef.current);
                     }
                 };
-            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, pinnedTagFolders, books]);
+            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedViews, books]);
 
             // v6.3.0 - Post-import/restore integrity check
             // Fires when integrityCheckPending is set by importFromRelay / importBackup.
@@ -3057,7 +3077,7 @@
                             const childFolders = selectedFolderId === '__library__'
                                 ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
                                 : selectedFolderId === '__views__'
-                                    ? [FOLDER_ALL_BOOKS, ...[...pinnedTagFolders].sort((a, b) => a.position - b.position).map(tv => ({ id: `__tag_${tv.tagId}__`, name: tagRegistry[tv.tagId]?.label || tv.tagId }))]
+                                    ? [FOLDER_ALL_BOOKS, ...[...savedViews].sort((a, b) => a.position - b.position).map(v => ({ id: `__view_${v.id}__`, name: v.name }))]
                                     : getChildFolders(selectedFolderId);
 
                             const allVisibleFolderIds = childFolders.map(f => f.id);
@@ -3191,9 +3211,9 @@
                             return;
                         }
 
-                        // Tag view: remove tag (existing behavior)
-                        if (selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__')) {
-                            const tagId = selectedFolderId.slice(6, -2);
+                        // Saved view with tag filter: remove tag (existing behavior)
+                        if (isViewFolder(selectedFolderId)) {
+                            const tagId = getViewTagId(selectedFolderId);
                             setBooks(prev => {
                                 const updated = prev.map(b => {
                                     if (bookIdsToDelete.includes(b.id) && (b.tags || []).includes(tagId)) {
@@ -3924,7 +3944,7 @@
                         },
                         exportDate: new Date().toISOString(),
                         tagRegistry,
-                        pinnedTagFolders,
+                        savedViews,
                         hiddenInstances: Array.from(hiddenInstances),
                         appVersion: ORGANIZER_VERSION
                     }
@@ -4039,7 +4059,7 @@
                             },
                             exportDate: new Date().toISOString(),
                             tagRegistry, // v5.0.0-alpha.175 - Tag registry
-                            pinnedTagFolders, // v5.5.15-alpha.8 - Tag virtual folders
+                            savedViews, // v6.10.0-alpha.16 - Saved filter views
                             hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
                             appVersion: ORGANIZER_VERSION
                         }
@@ -4128,7 +4148,7 @@
                     setExplorerSort([{ column: 'dateAdded', direction: 'desc' }]);
                     setFolderSortSettings({}); // v5.0.0-alpha.100 - Clear per-folder sort settings
                     setTagRegistry({}); // v5.0.0-alpha.175.28 - Clear tag registry on reset
-                    setPinnedTagFolders([]); // v5.5.15 - Clear pinned tag virtual folders on reset
+                    setSavedViews([]); // v6.10.0-alpha.16 - Clear saved views on reset
                     setExplorerView('list');
 
                     console.log('✅ Cleared library - app reset to initial state');
@@ -4584,19 +4604,30 @@
                 if (orgToRestore) {
                     setBlankImageBooks(new Set(orgToRestore.blankImageBooks || []));
                     setTagRegistry(orgToRestore.tagRegistry || {}); // v5.0.0-alpha.175.17
-                    // v5.5.15-alpha.26 - Migrate tag positions for interleaved display
-                    const restoredPinnedTags = (orgToRestore.pinnedTagFolders || []).map(p => ({...p}));
+                    // v6.10.0-alpha.16 - Restore savedViews (or migrate from pinnedTagFolders)
+                    const restoredTagReg = orgToRestore.tagRegistry || {};
+                    let restoredViews = (orgToRestore.savedViews || []).map(v => ({...v}));
+                    if (restoredViews.length === 0 && orgToRestore.pinnedTagFolders) {
+                        restoredViews = orgToRestore.pinnedTagFolders.map(p => ({
+                            id: p.tagId,
+                            name: restoredTagReg[p.tagId]?.label || p.tagId,
+                            filters: { tags: [p.tagId] },
+                            position: p.position,
+                            ...(p.bookOrder ? { bookOrder: p.bookOrder } : {}),
+                            ...(p.description ? { description: p.description } : {})
+                        }));
+                    }
                     const restoredFolderList = orgToRestore.folders || [];
-                    if (restoredPinnedTags.length > 0 && restoredFolderList.length > 0) {
+                    if (restoredViews.length > 0 && restoredFolderList.length > 0) {
                         const rootCount = restoredFolderList.filter(f => f.parentId === null && f.id !== '__inbox__').length;
                         const maxFolderDisplayPos = rootCount > 0 ? (rootCount - 1) * 2 : -1;
-                        const maxTagPos = Math.max(...restoredPinnedTags.map(p => p.position));
-                        if (maxTagPos <= maxFolderDisplayPos) {
+                        const maxViewPos = Math.max(...restoredViews.map(v => v.position));
+                        if (maxViewPos <= maxFolderDisplayPos) {
                             const offset = maxFolderDisplayPos + 1;
-                            restoredPinnedTags.forEach(p => { p.position += offset; });
+                            restoredViews.forEach(v => { v.position += offset; });
                         }
                     }
-                    setPinnedTagFolders(restoredPinnedTags);
+                    setSavedViews(restoredViews);
 
                     // v5.0.0-alpha.99 - Restore folders from backup (if present)
                     if (orgToRestore.folders && Array.isArray(orgToRestore.folders)) {
@@ -10819,19 +10850,20 @@
                                         <span className="flex-1 pointer-events-none font-semibold">{FOLDER_ALL_BOOKS.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">({books.filter(b => !b.isDeleted).length})</span>
                                     </div>
-                                    {/* v6.4.0 - Pinned tag views render under VIEWS (previously interleaved with folders) */}
+                                    {/* v6.10.0-alpha.16 - Saved views render under VIEWS */}
                                     {(() => {
-                                        const sortedViews = [...pinnedTagFolders].sort((a, b) => a.position - b.position);
-                                        return sortedViews.map((tv, viewIndex) => {
-                                            const tagFolderId = `__tag_${tv.tagId}__`;
-                                            const tagLabel = tagRegistry[tv.tagId]?.label || tv.tagId;
-                                            const bookCount = getTagCount(tv.tagId);
+                                        const sortedViewList = [...savedViews].sort((a, b) => a.position - b.position);
+                                        return sortedViewList.map((sv, viewIndex) => {
+                                            const viewFolderId = `__view_${sv.id}__`;
+                                            const viewLabel = sv.name;
+                                            const viewTagId = sv.filters?.tags?.[0];
+                                            const bookCount = viewTagId ? getTagCount(viewTagId) : 0;
                                             return (
                                                 <div
-                                                    key={tagFolderId}
-                                                    data-folder-id={tagFolderId}
-                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === tagFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
-                                                    style={sidebarFolderDragTarget?.type === 'reorder' && sidebarFolderDragTarget?.folderId === tagFolderId
+                                                    key={viewFolderId}
+                                                    data-folder-id={viewFolderId}
+                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === viewFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                                    style={sidebarFolderDragTarget?.type === 'reorder' && sidebarFolderDragTarget?.folderId === viewFolderId
                                                         ? sidebarFolderDragTarget.position === 'before'
                                                             ? { borderTop: '3px solid var(--border-focus)' }
                                                             : { borderBottom: '3px solid var(--border-focus)' }
@@ -10839,24 +10871,24 @@
                                                     draggable={true}
                                                     onDragStart={(e) => {
                                                         e.dataTransfer.effectAllowed = 'move';
-                                                        e.dataTransfer.setData('application/x-tagview-reorder', JSON.stringify({ tagViewId: tagFolderId, tagId: tv.tagId }));
+                                                        e.dataTransfer.setData('application/x-tagview-reorder', JSON.stringify({ viewFolderId, viewId: sv.id }));
                                                     }}
                                                     onDragEnd={() => setSidebarFolderDragTarget(null)}
                                                     onDragOver={(e) => {
                                                         e.preventDefault();
                                                         const types = Array.from(e.dataTransfer.types);
-                                                        const isTagDrag = types.includes('application/x-tagview-reorder');
+                                                        const isViewDrag = types.includes('application/x-tagview-reorder');
                                                         const isBookDrag = types.includes('application/x-readerwrangler');
-                                                        if (isBookDrag) {
+                                                        if (isBookDrag && viewTagId) {
                                                             e.dataTransfer.dropEffect = ctrlKeyRef.current ? 'copy' : 'move';
                                                             setFolderDropHighlight(e.currentTarget);
-                                                        } else if (isTagDrag) {
+                                                        } else if (isViewDrag) {
                                                             e.dataTransfer.dropEffect = 'move';
                                                             const rect = e.currentTarget.getBoundingClientRect();
                                                             const position = (e.clientY - rect.top) < rect.height / 2 ? 'before' : 'after';
                                                             const current = sidebarFolderDragTarget;
-                                                            if (!current || current.folderId !== tagFolderId || current.position !== position) {
-                                                                setSidebarFolderDragTarget({ type: 'reorder', folderId: tagFolderId, position });
+                                                            if (!current || current.folderId !== viewFolderId || current.position !== position) {
+                                                                setSidebarFolderDragTarget({ type: 'reorder', folderId: viewFolderId, position });
                                                             }
                                                         }
                                                     }}
@@ -10870,32 +10902,32 @@
                                                         e.preventDefault();
                                                         const target = sidebarFolderDragTarget;
                                                         setSidebarFolderDragTarget(null);
-                                                        // Tag view reorder
-                                                        const tagDropData = e.dataTransfer.getData('application/x-tagview-reorder');
-                                                        if (tagDropData) {
-                                                            const { tagId: draggedTagId } = JSON.parse(tagDropData);
-                                                            if (draggedTagId === tv.tagId) return;
+                                                        // View reorder
+                                                        const viewDropData = e.dataTransfer.getData('application/x-tagview-reorder');
+                                                        if (viewDropData) {
+                                                            const { viewId: draggedViewId } = JSON.parse(viewDropData);
+                                                            if (draggedViewId === sv.id) return;
                                                             let newPos;
                                                             if (target?.position === 'before') {
-                                                                const prev = viewIndex > 0 ? sortedViews[viewIndex - 1] : null;
-                                                                newPos = prev ? (prev.position + tv.position) / 2 : tv.position - 1;
+                                                                const prev = viewIndex > 0 ? sortedViewList[viewIndex - 1] : null;
+                                                                newPos = prev ? (prev.position + sv.position) / 2 : sv.position - 1;
                                                             } else {
-                                                                const next = viewIndex < sortedViews.length - 1 ? sortedViews[viewIndex + 1] : null;
-                                                                newPos = next ? (tv.position + next.position) / 2 : tv.position + 1;
+                                                                const next = viewIndex < sortedViewList.length - 1 ? sortedViewList[viewIndex + 1] : null;
+                                                                newPos = next ? (sv.position + next.position) / 2 : sv.position + 1;
                                                             }
-                                                            setPinnedTagFolders(prev => prev.map(p => p.tagId === draggedTagId ? { ...p, position: newPos } : p));
+                                                            setSavedViews(prev => prev.map(v => v.id === draggedViewId ? { ...v, position: newPos } : v));
                                                             return;
                                                         }
-                                                        // Book drop → add tag
+                                                        // Book drop → add tag (only for tag-based views)
                                                         const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
-                                                        if (bookDataStr) {
+                                                        if (bookDataStr && viewTagId) {
                                                             const { sourceFolder, bookIds } = JSON.parse(bookDataStr);
-                                                            const destTagId = tv.tagId;
+                                                            const destTagId = viewTagId;
                                                             const destTagLabel = tagRegistry[destTagId]?.label || destTagId;
                                                             const isCopy = ctrlKeyRef.current;
-                                                            const isFromTagView = sourceFolder?.startsWith('__tag_') && sourceFolder?.endsWith('__');
-                                                            const sourceTagId = isFromTagView ? sourceFolder.slice(6, -2) : null;
-                                                            const isMove = isFromTagView && !isCopy && sourceTagId !== destTagId;
+                                                            const isFromView = isViewFolder(sourceFolder);
+                                                            const sourceTagId = isFromView ? getViewTagId(sourceFolder) : null;
+                                                            const isMove = isFromView && !isCopy && sourceTagId && sourceTagId !== destTagId;
                                                             const bookIdSet = new Set(bookIds);
                                                             const addedDest = books.filter(b => bookIdSet.has(b.id) && !(b.tags || []).includes(destTagId)).map(b => b.id);
                                                             const removedSource = isMove ? books.filter(b => bookIdSet.has(b.id) && (b.tags || []).includes(sourceTagId)).map(b => b.id) : [];
@@ -10928,16 +10960,16 @@
                                                             }
                                                         }
                                                     }}
-                                                    onClick={() => { if (editingFolderId !== tagFolderId) navigateToFolder(tagFolderId); }}
+                                                    onClick={() => { if (editingFolderId !== viewFolderId) navigateToFolder(viewFolderId); }}
                                                     onContextMenu={(e) => {
                                                         e.preventDefault();
-                                                        setFolderContextMenu({ folderId: tagFolderId, x: e.clientX, y: e.clientY, source: 'left' });
+                                                        setFolderContextMenu({ folderId: viewFolderId, x: e.clientX, y: e.clientY, source: 'left' });
                                                     }}
-                                                    title={tv.description || `Tag view: ${tagLabel} (${bookCount} books)`}>
+                                                    title={sv.description || `${viewTagId ? 'Tag view' : 'View'}: ${viewLabel} (${bookCount} books)`}>
                                                     <span className="pointer-events-none">
                                                         <TagIconSVG size={16} color="#d97706" />
                                                     </span>
-                                                    {editingFolderId === tagFolderId ? (
+                                                    {editingFolderId === viewFolderId ? (
                                                         <input
                                                             type="text"
                                                             className="flex-1 px-1 py-0 border border-blue-400 rounded text-sm focus:outline-none"
@@ -10945,7 +10977,11 @@
                                                             onChange={(e) => setEditingFolderName(e.target.value)}
                                                             onBlur={() => {
                                                                 if (editingFolderName.trim()) {
-                                                                    setTagRegistry(prev => ({ ...prev, [tv.tagId]: { ...prev[tv.tagId], label: editingFolderName.trim() } }));
+                                                                    // Update both the view name and tagRegistry label
+                                                                    setSavedViews(prev => prev.map(v => v.id === sv.id ? { ...v, name: editingFolderName.trim() } : v));
+                                                                    if (viewTagId) {
+                                                                        setTagRegistry(prev => ({ ...prev, [viewTagId]: { ...prev[viewTagId], label: editingFolderName.trim() } }));
+                                                                    }
                                                                 }
                                                                 setEditingFolderId(null);
                                                                 setEditingFolderName('');
@@ -10959,7 +10995,7 @@
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
                                                     ) : (
-                                                        <span className="flex-1 pointer-events-none">{tagLabel}</span>
+                                                        <span className="flex-1 pointer-events-none">{viewLabel}</span>
                                                     )}
                                                     <span className="text-xs text-gray-500 pointer-events-none">({bookCount})</span>
                                                 </div>
@@ -11223,7 +11259,7 @@
                                                             if (isBookDrag) {
                                                                 // v5.5.15-alpha.34 - 1I: Disallow drag from tag view to real folder
                                                                 const srcFolder = explorerDragData?.sourceFolder;
-                                                                if (srcFolder?.startsWith('__tag_') && srcFolder?.endsWith('__')) {
+                                                                if (isViewFolder(srcFolder)) {
                                                                     e.dataTransfer.dropEffect = 'none';
                                                                     return;
                                                                 }
@@ -11306,7 +11342,7 @@
                                                             const tagData = e.dataTransfer.getData('application/x-tagview-reorder');
                                                             if (tagData && folder.parentId === null) {
                                                                 try {
-                                                                    const { tagId: draggedTagId } = JSON.parse(tagData);
+                                                                    const { viewId: draggedViewId } = JSON.parse(tagData);
                                                                     const target = sidebarFolderDragTarget;
                                                                     setSidebarFolderDragTarget(null);
                                                                     const myIndex = mergedItems.findIndex(m => m.id === folder.id);
@@ -11319,8 +11355,8 @@
                                                                         const next = myIndex < mergedItems.length - 1 ? mergedItems[myIndex + 1] : null;
                                                                         newPos = next ? (folderDisplayPos + next.displayPos) / 2 : folderDisplayPos + 1;
                                                                     }
-                                                                    setPinnedTagFolders(prev => prev.map(p =>
-                                                                        p.tagId === draggedTagId ? { ...p, position: newPos } : p
+                                                                    setSavedViews(prev => prev.map(v =>
+                                                                        v.id === draggedViewId ? { ...v, position: newPos } : v
                                                                     ));
                                                                 } catch (err) {
                                                                     console.error('Tag view on folder drop error:', err);
@@ -11410,7 +11446,7 @@
                                                                 return;
                                                             }
                                                             // v5.5.15-alpha.34 - 1I: Disallow drag from tag view to real folder
-                                                            if (sourceFolder?.startsWith('__tag_') && sourceFolder?.endsWith('__')) {
+                                                            if (isViewFolder(sourceFolder)) {
                                                                 showToast('Can\'t move from tag view to folder. Use folders to organize.', e.clientX, e.clientY);
                                                                 setFolderDropHighlight(null);
                                                                 setExplorerSelectedBooks(new Set());
@@ -11830,7 +11866,7 @@
                             />
 
                             {/* Right pane: Book list — v5.5.15-alpha.36 subtle tint for tag views */}
-                            <div className={`flex-1 overflow-hidden flex flex-col ${selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__') ? 'tag-view-tint' : 'folder-view-tint'}`}>
+                            <div className={`flex-1 overflow-hidden flex flex-col ${isViewFolder(selectedFolderId) ? 'tag-view-tint' : 'folder-view-tint'}`}>
                                 <div className="p-3 border-b border-gray-200 flex items-center justify-between">
                                     <div className="font-medium text-gray-700 flex items-center">
                                         {/* v5.0.0-alpha.80 - Breadcrumb navigation, v5.0.0-alpha.83 - Drop target for folder reparenting */}
@@ -11940,7 +11976,7 @@
                                                     : selectedFolderId === '__library__'
                                                         ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
                                                         : selectedFolderId === '__views__'
-                                                            ? [FOLDER_ALL_BOOKS, ...pinnedTagFolders]
+                                                            ? [FOLDER_ALL_BOOKS, ...savedViews]
                                                             : getChildFolders(selectedFolderId);
                                                 const folderCount = childFolders.length;
                                                 const allBookIds = getFolderBookIds(selectedFolderId);
@@ -12530,13 +12566,13 @@
                                                 {(() => {
                                                     // Get child folders (only for user folders, not All Books)
                                                     if (selectedFolderId === '__all__') return null;
-                                                    // v6.4.0 - Views section shows All Books + pinned tags
+                                                    // v6.10.0-alpha.16 - Views section shows All Books + saved views
                                                     if (selectedFolderId === '__views__') {
                                                         const viewItems = [
                                                             { ...FOLDER_ALL_BOOKS },
-                                                            ...[...pinnedTagFolders].sort((a, b) => a.position - b.position).map(tv => ({
-                                                                id: `__tag_${tv.tagId}__`,
-                                                                name: tagRegistry[tv.tagId]?.label || tv.tagId,
+                                                            ...[...savedViews].sort((a, b) => a.position - b.position).map(sv => ({
+                                                                id: `__view_${sv.id}__`,
+                                                                name: sv.name,
                                                                 virtual: true, icon: '🏷️'
                                                             }))
                                                         ];
@@ -13039,10 +13075,10 @@
                                                                 if (bookDataStr && explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && selectedFolderId !== '__views__') {
                                                                     const dragData = JSON.parse(bookDataStr);
                                                                     if (dragData.sourceFolder === selectedFolderId) {
-                                                                        // v5.5.15-alpha.31 - Route to tag view reorder for tag views
-                                                                        if (selectedFolderId.startsWith('__tag_') && selectedFolderId.endsWith('__')) {
-                                                                            const tagId = selectedFolderId.slice(6, -2);
-                                                                            reorderBooksInTagView(tagId, dragData.bookIds, index);
+                                                                        // v6.10.0-alpha.16 - Route to view reorder for saved views
+                                                                        if (isViewFolder(selectedFolderId)) {
+                                                                            const tagId = getViewTagId(selectedFolderId);
+                                                                            if (tagId) reorderBooksInTagView(tagId, dragData.bookIds, index);
                                                                         } else {
                                                                             reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                         }
@@ -13254,15 +13290,15 @@
                                             {/* v5.0.0-alpha.54 - Folder tiles (before books) */}
                                             {(() => {
                                                 if (selectedFolderId === '__all__') return null;
-                                                // v6.4.0 - Views section shows All Books + pinned tags as tiles
+                                                // v6.10.0-alpha.16 - Views section shows All Books + saved views as tiles
                                                 if (selectedFolderId === '__views__') {
                                                     const viewItems = [
                                                         { ...FOLDER_ALL_BOOKS },
-                                                        ...[...pinnedTagFolders].sort((a, b) => a.position - b.position).map(tv => ({
-                                                            id: `__tag_${tv.tagId}__`,
-                                                            name: tagRegistry[tv.tagId]?.label || tv.tagId,
+                                                        ...[...savedViews].sort((a, b) => a.position - b.position).map(sv => ({
+                                                            id: `__view_${sv.id}__`,
+                                                            name: sv.name,
                                                             virtual: true, icon: '🏷️',
-                                                            description: tv.description
+                                                            description: sv.description
                                                         }))
                                                     ];
                                                     return viewItems.map(view => (
@@ -13618,10 +13654,10 @@
                                                             if (bookDataStr && explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && selectedFolderId !== '__views__') {
                                                                 const dragData = JSON.parse(bookDataStr);
                                                                 if (dragData.sourceFolder === selectedFolderId) {
-                                                                    // v5.5.15-alpha.31 - Route to tag view reorder for tag views
-                                                                    if (selectedFolderId.startsWith('__tag_') && selectedFolderId.endsWith('__')) {
-                                                                        const tagId = selectedFolderId.slice(6, -2);
-                                                                        reorderBooksInTagView(tagId, dragData.bookIds, index);
+                                                                    // v6.10.0-alpha.16 - Route to view reorder for saved views
+                                                                    if (isViewFolder(selectedFolderId)) {
+                                                                        const tagId = getViewTagId(selectedFolderId);
+                                                                        if (tagId) reorderBooksInTagView(tagId, dragData.bookIds, index);
                                                                     } else {
                                                                         reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                     }
@@ -13808,7 +13844,7 @@
                                         // v5.5.15-alpha.24 - Unified Tag Manager: single sorted table, no orphan section
                                         const allTags = Object.entries(tagRegistry).map(([tagId, data]) => ({
                                             tagId, label: data.label, count: getTagCount(tagId),
-                                            isPinned: pinnedTagFolders.some(p => p.tagId === tagId)
+                                            isPinned: savedViews.some(v => v.filters?.tags?.includes(tagId))
                                         }));
                                         const sorted = [...allTags].sort((a, b) => {
                                             let cmp;
@@ -13903,7 +13939,7 @@
                                                     return updated;
                                                 });
                                                 setTagFilter(prev => prev.filter(t => !toDelete.has(t)));
-                                                setPinnedTagFolders(prev => prev.filter(p => !toDelete.has(p.tagId)));
+                                                setSavedViews(prev => prev.filter(v => !v.filters?.tags?.some(t => toDelete.has(t))));
                                                 setSelectedTags(new Set());
                                             }
                                         };
@@ -13912,21 +13948,24 @@
                                         const handleBulkPinToggle = () => {
                                             if (selectedTags.size === 0) return;
                                             const selectedIds = [...selectedTags];
-                                            const allPinned = selectedIds.every(id => pinnedTagFolders.some(p => p.tagId === id));
+                                            const allPinned = selectedIds.every(id => savedViews.some(v => v.filters?.tags?.includes(id)));
                                             if (allPinned) {
-                                                // Unpin all selected
-                                                setPinnedTagFolders(prev => prev.filter(p => !selectedTags.has(p.tagId)));
+                                                // Unpin all selected — remove views that are single-tag views for selected tags
+                                                setSavedViews(prev => prev.filter(v => {
+                                                    const vTagId = v.filters?.tags?.[0];
+                                                    return !vTagId || !selectedTags.has(vTagId) || Object.keys(v.filters).length > 1 || v.filters.tags.length > 1;
+                                                }));
                                             } else {
-                                                // Pin all unpinned selected — position after all folders and existing tags
+                                                // Pin all unpinned selected — create saved views
                                                 const rootFolderCount = folders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
                                                 const maxFolderDisplayPos = rootFolderCount > 0 ? (rootFolderCount - 1) * 2 : -1;
-                                                const maxTagPos = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
-                                                const maxPos = Math.max(maxFolderDisplayPos, maxTagPos);
+                                                const maxViewPos = savedViews.reduce((max, v) => Math.max(max, v.position), -1);
+                                                const maxPos = Math.max(maxFolderDisplayPos, maxViewPos);
                                                 let nextPos = maxPos + 1;
-                                                setPinnedTagFolders(prev => {
-                                                    const alreadyPinned = new Set(prev.map(p => p.tagId));
+                                                setSavedViews(prev => {
+                                                    const alreadyPinned = new Set(prev.flatMap(v => v.filters?.tags || []));
                                                     const toAdd = selectedIds.filter(id => !alreadyPinned.has(id))
-                                                        .map(id => ({ tagId: id, position: nextPos++ }));
+                                                        .map(id => ({ id, name: tagRegistry[id]?.label || id, filters: { tags: [id] }, position: nextPos++ }));
                                                     return [...prev, ...toAdd];
                                                 });
                                             }
@@ -13951,8 +13990,8 @@
                                                         {selectedTags.size > 0 ? (
                                                             <button onClick={handleBulkPinToggle}
                                                                     className="p-0.5 rounded hover:bg-gray-200"
-                                                                    title={[...selectedTags].every(id => pinnedTagFolders.some(p => p.tagId === id)) ? 'Unpin all selected' : 'Pin all selected as views'}>
-                                                                {[...selectedTags].every(id => pinnedTagFolders.some(p => p.tagId === id))
+                                                                    title={[...selectedTags].every(id => savedViews.some(v => v.filters?.tags?.includes(id))) ? 'Unpin all selected' : 'Pin all selected as views'}>
+                                                                {[...selectedTags].every(id => savedViews.some(v => v.filters?.tags?.includes(id)))
                                                                     ? <TagIconSVG size={14} color="#d97706" />
                                                                     : <FolderIconSVG size={14} color="#eab308" opacity={0.6} />
                                                                 }
@@ -14002,20 +14041,20 @@
                                                                 <td className="py-1.5 w-7" onClick={(e) => e.stopPropagation()}>
                                                                     <button
                                                                         onClick={() => {
-                                                                            const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
+                                                                            const isPinned = savedViews.some(v => v.filters?.tags?.includes(tagId));
                                                                             if (isPinned) {
-                                                                                setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
+                                                                                setSavedViews(prev => prev.filter(v => !(v.filters?.tags?.[0] === tagId && Object.keys(v.filters).length === 1 && v.filters.tags.length === 1)));
                                                                             } else {
                                                                                 const rfCount = folders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
                                                                                 const maxFDP = rfCount > 0 ? (rfCount - 1) * 2 : -1;
-                                                                                const maxTP = pinnedTagFolders.reduce((max, p) => Math.max(max, p.position), -1);
-                                                                                const maxPos = Math.max(maxFDP, maxTP);
-                                                                                setPinnedTagFolders(prev => [...prev, { tagId, position: maxPos + 1 }]);
+                                                                                const maxVP = savedViews.reduce((max, v) => Math.max(max, v.position), -1);
+                                                                                const maxPos = Math.max(maxFDP, maxVP);
+                                                                                setSavedViews(prev => [...prev, { id: tagId, name: tagRegistry[tagId]?.label || tagId, filters: { tags: [tagId] }, position: maxPos + 1 }]);
                                                                             }
                                                                         }}
                                                                         className="p-0.5 rounded hover:bg-gray-200"
-                                                                        title={pinnedTagFolders.some(p => p.tagId === tagId) ? 'Unpin from folder pane' : 'Pin as folder view'}>
-                                                                        {pinnedTagFolders.some(p => p.tagId === tagId)
+                                                                        title={savedViews.some(v => v.filters?.tags?.includes(tagId)) ? 'Unpin from folder pane' : 'Pin as folder view'}>
+                                                                        {savedViews.some(v => v.filters?.tags?.includes(tagId))
                                                                             ? <TagIconSVG size={16} color="#d97706" />
                                                                             : <FolderIconSVG size={16} color="#eab308" opacity={0.4} />
                                                                         }
@@ -14088,7 +14127,7 @@
                                                                                     return updated;
                                                                                 });
                                                                                 setTagFilter(prev => prev.filter(t => t !== tagId));
-                                                                                setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
+                                                                                setSavedViews(prev => prev.filter(v => !v.filters?.tags?.includes(tagId)));
                                                                                 setSelectedTags(prev => { const next = new Set(prev); next.delete(tagId); return next; });
                                                                             }
                                                                         }}
@@ -14854,9 +14893,9 @@
                         );
                     })()}
 
-                    {/* v5.5.15-alpha.27 - Tag View Context Menu */}
-                    {folderContextMenu && folderContextMenu.folderId?.startsWith('__tag_') && folderContextMenu.folderId?.endsWith('__') && (() => {
-                        const tagId = folderContextMenu.folderId.slice(6, -2);
+                    {/* v6.10.0-alpha.16 - Saved View Context Menu */}
+                    {folderContextMenu && isViewFolder(folderContextMenu.folderId) && (() => {
+                        const tagId = getViewTagId(folderContextMenu.folderId);
                         const tag = tagRegistry[tagId];
                         if (!tag) return null;
                         const tagLabel = tag.label || tagId;
@@ -14908,7 +14947,8 @@
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
                                     role="menuitem"
                                     onClick={() => {
-                                        setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
+                                        const viewId = getViewId(folderContextMenu.folderId);
+                                        setSavedViews(prev => prev.filter(v => v.id !== viewId));
                                         if (selectedFolderId === folderContextMenu.folderId) {
                                             navigateToFolder('__all__');
                                         }
@@ -14944,8 +14984,9 @@
                                                 return updated;
                                             });
                                             setTagFilter(prev => prev.filter(t => t !== tagId));
-                                            setPinnedTagFolders(prev => prev.filter(p => p.tagId !== tagId));
-                                            if (selectedFolderId === `__tag_${tagId}__`) {
+                                            // Cascading delete: remove saved views that reference this tag
+                                            setSavedViews(prev => prev.filter(v => !v.filters?.tags?.includes(tagId)));
+                                            if (selectedFolderId === `__view_${tagId}__`) {
                                                 navigateToFolder('__all__');
                                             }
                                         }
@@ -14962,7 +15003,7 @@
                                     role="menuitem"
                                     onClick={() => {
                                         setFolderPropertiesEditedName(tagLabel);
-                                        setFolderPropertiesEditedDescription(pinnedTagFolders.find(p => p.tagId === tagId)?.description || ''); // v6.5.0
+                                        setFolderPropertiesEditedDescription(getView(folderContextMenu.folderId)?.description || ''); // v6.5.0
                                         setFolderPropertiesDialog({ folderId: folderContextMenu.folderId });
                                         setDialogDrag({
                                             isDragging: false,
@@ -15025,9 +15066,9 @@
                         // v6.0.0-alpha.53 - Inbox is a real folder, allow Cut/Move/Paste for books
                         const isSpecialFolder = ['__all__', '__library__'].includes(selectedFolderId);
                         const isTrashView = selectedFolderId === '__trash__';
-                        // v5.5.15-alpha.35 - 1J: Detect tag view for "Remove from [tag]" context menu
-                        const isTagViewCtx = selectedFolderId?.startsWith('__tag_') && selectedFolderId?.endsWith('__');
-                        const tagViewCtxId = isTagViewCtx ? selectedFolderId.slice(6, -2) : null;
+                        // v6.10.0-alpha.16 - Detect saved view for "Remove from [tag]" context menu
+                        const isTagViewCtx = isViewFolder(selectedFolderId);
+                        const tagViewCtxId = isTagViewCtx ? getViewTagId(selectedFolderId) : null;
                         const tagViewCtxLabel = isTagViewCtx ? (tagRegistry[tagViewCtxId]?.label || tagViewCtxId) : null;
 
                         // Move books to target folder
@@ -16114,15 +16155,15 @@
 
                     {/* Folder Properties Dialog - v5.0.0-alpha.142 */}
                     {folderPropertiesDialog && (() => {
-                        // v5.5.15-alpha.27 - Tag View Properties
-                        const isTagViewProp = folderPropertiesDialog.folderId?.startsWith('__tag_') && folderPropertiesDialog.folderId?.endsWith('__');
+                        // v6.10.0-alpha.16 - Saved View Properties
+                        const isTagViewProp = isViewFolder(folderPropertiesDialog.folderId);
                         if (isTagViewProp) {
-                            const tagId = folderPropertiesDialog.folderId.slice(6, -2);
-                            const tag = tagRegistry[tagId];
+                            const tagId = getViewTagId(folderPropertiesDialog.folderId);
+                            const tag = tagId ? tagRegistry[tagId] : null;
                             if (!tag) return null;
                             const tagLabel = tag.label || tagId;
                             const bookCount = getTagCount(tagId);
-                            const isPinned = pinnedTagFolders.some(p => p.tagId === tagId);
+                            const isPinned = savedViews.some(v => v.filters?.tags?.includes(tagId));
                             const tagBooks = books.filter(b => b.tags?.includes(tagId));
                             const ownedBooks = tagBooks.filter(b => !b.onWishlist).length;
                             const wishlistBooks = tagBooks.filter(b => b.onWishlist).length;
@@ -16136,8 +16177,8 @@
                                     ...prev,
                                     [tagId]: { ...prev[tagId], label: folderPropertiesEditedName.trim() }
                                 }));
-                                setPinnedTagFolders(prev => prev.map(p =>
-                                    p.tagId === tagId ? { ...p, description: folderPropertiesEditedDescription.trim() || undefined } : p
+                                setSavedViews(prev => prev.map(v =>
+                                    v.id === tagId ? { ...v, name: folderPropertiesEditedName.trim(), description: folderPropertiesEditedDescription.trim() || undefined } : v
                                 ));
                                 setFolderPropertiesDialog(null);
                                 console.log(`💾 Updated tag "${tagLabel}" → "${folderPropertiesEditedName.trim()}"`);
