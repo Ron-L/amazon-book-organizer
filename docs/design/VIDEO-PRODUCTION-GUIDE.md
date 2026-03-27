@@ -128,7 +128,7 @@ For YouTube, the final output just needs to be 1920x1080. If your source is off 
 
 **Test both with Video 1 script.** Pick the voice that sounds warm and encouraging, not overly energetic. Use consistently across ALL videos.
 
-**Selected Voice:** [TBD after testing]
+**Selected Voice:** [Autonoe (Female)]
 
 **Step-by-step: Try the Voices**
 1. Go to https://cloud.google.com/text-to-speech#demo
@@ -346,7 +346,7 @@ Brand new users who need to get started fast
 
 **[SCENE 1: The Problem — 0:00-0:20]**
 
-Have hundreds of Kindle books... but can never find what to read next?
+Have hundreds of Kindle books... but can never find what to read next??
 
 Amazon shows your entire library. But it won't let you organize it.
 
@@ -412,9 +412,11 @@ Create another folder... "Finished Reading."
 
 Drag more books over.
 
-Want to find all your fantasy books at once? Click Views in the sidebar.
+Notice the tags on your books? When you imported your library, your Kindle Collections came along automatically.
 
-ReaderWrangler automatically tagged your books from Amazon metadata. Fantasy, thriller, science fiction... it's all there.
+But you can go further. Create your own tags — like "Fantasy" — and assign them to books.
+
+Now pin that tag to your Views panel... and it becomes a one-click filter in your sidebar. All your fantasy books, instantly.
 
 ---
 
@@ -478,15 +480,16 @@ A hundred classic books appear in your Inbox... ready to organize right now. You
 - Inbox badge count shows 119
 
 **[SCENE 5: 2:00-2:45]**
-- Inbox selected, books visible in right pane (list view)
+- Inbox selected, books visible in right pane
 - Right-click Folders label → New Folder
 - Type "Next to Read" → Enter
 - Drag 3-4 books from right pane into folder
 - Create "Finished Reading" folder
 - Drag more books
-- Click Views section label in sidebar
-- Card grid shows tag views: Fantasy, Thriller, Science Fiction...
-- Click "Fantasy" tag view → right pane shows all fantasy books
+- Click a book → show tags section in book dialog (point out any imported Collections tags)
+- Create new tag "Fantasy", assign to 2-3 books
+- Right-click "Fantasy" tag → Pin to Views
+- Click "Fantasy" in Views sidebar → right pane shows tagged books
 
 **[SCENE 6: 2:45-3:00]**
 - Zoom out to show organized sidebar and full cover pane
