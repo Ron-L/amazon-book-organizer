@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9407,7 +9407,7 @@
                                                             const mailtoUrl = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
                                                             console.log('📧 Share Email (dialog):', { subject: shareData.emailSubject, bodyLength: shareData.emailBody.length, mailtoLength: mailtoUrl.length });
                                                             console.log('📧 mailto URL:', mailtoUrl);
-                                                            const a = document.createElement('a'); a.href = mailtoUrl; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                                                            window.open(mailtoUrl, '_blank');
                                                             setShareDropdownOpen(false);
                                                         }}>
                                                         <span>✉️</span><span>Email to a Friend</span>
@@ -14964,7 +14964,7 @@
                                                                     const mailtoUrl = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
                                                                     console.log('📧 Share Email (context menu):', { subject: shareData.emailSubject, bodyLength: shareData.emailBody.length, mailtoLength: mailtoUrl.length });
                                                                     console.log('📧 mailto URL:', mailtoUrl);
-                                                                    const a = document.createElement('a'); a.href = mailtoUrl; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                                                                    window.open(mailtoUrl, '_blank');
                                                                 }
                                                                 setExplorerBookContextMenu(null);
                                                                 setContextSubmenu(null);
