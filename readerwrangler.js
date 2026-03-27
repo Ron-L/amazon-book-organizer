@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.15";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -497,6 +497,10 @@
             const [tfcCheckedCollections, setTfcCheckedCollections] = useState(new Set()); // checked collection names
             const [tfcUncheckedBooks, setTfcUncheckedBooks] = useState({}); // {collectionName: Set of unchecked bookIds}
             const [tfcNewBooksOnly, setTfcNewBooksOnly] = useState(false); // "New books only" toggle
+            // v6.10.0-alpha.15 - Removal tracking for Tag from Collections
+            const [tfcSelectedRemoval, setTfcSelectedRemoval] = useState(null); // selected removal group tag label
+            const [tfcCheckedRemovals, setTfcCheckedRemovals] = useState(new Set()); // removal group labels checked for removal
+            const [tfcUncheckedRemovalBooks, setTfcUncheckedRemovalBooks] = useState({}); // {tagLabel: Set of bookIds to keep}
             const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
             const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
             const editBookSeriesFilterRef = useRef(false); // true = filter by typed text, false = show all
@@ -6489,7 +6493,7 @@
                                                 }} onMouseEnter={e => books.length > 0 && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     ✨ Auto-Organize…
                                                 </button>
-                                                {/* v6.10.0-alpha.14 - Tag from Collections wizard */}
+                                                {/* v6.10.0-alpha.14 - Tag from Collections wizard (v6.10.0-alpha.15 - removal tracking) */}
                                                 <button onClick={() => {
                                                     // Initialize wizard state from current books
                                                     const collectionsMap = {};
@@ -6506,19 +6510,39 @@
                                                     setTfcCheckedCollections(new Set(Object.keys(collectionsMap)));
                                                     setTfcUncheckedBooks({});
                                                     setTfcSelectedCollection(Object.keys(collectionsMap)[0] || null);
+                                                    // v6.10.0-alpha.15 - Compute removals: books with collectionTags that no longer match collections
+                                                    const removalGroups = {};
+                                                    books.forEach(b => {
+                                                        const cTags = b.collectionTags || [];
+                                                        if (cTags.length === 0) return;
+                                                        const currentCollNames = (b.collections || []).map(c => c.name.toLowerCase().replace(/\s+/g, '-'));
+                                                        cTags.forEach(tagId => {
+                                                            if (!currentCollNames.includes(tagId)) {
+                                                                const tagData = tagRegistry[tagId];
+                                                                const label = tagData ? tagData.label : tagId;
+                                                                if (!removalGroups[label]) removalGroups[label] = { tagId, books: [] };
+                                                                removalGroups[label].books.push(b);
+                                                            }
+                                                        });
+                                                    });
+                                                    // Check all removals by default (user confirms removal)
+                                                    setTfcCheckedRemovals(new Set(Object.keys(removalGroups)));
+                                                    setTfcUncheckedRemovalBooks({});
+                                                    setTfcSelectedRemoval(null);
                                                     setTagFromCollectionsOpen(true);
                                                     setOpenMenuBar(null);
                                                 }} disabled={(() => {
                                                     const hasCollections = books.some(b => (b.collections || []).length > 0);
-                                                    return !hasCollections;
+                                                    const hasCollectionTags = books.some(b => (b.collectionTags || []).length > 0);
+                                                    return !hasCollections && !hasCollectionTags;
                                                 })()} style={{
                                                     width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                     border: 'none', background: 'var(--bg-surface)',
-                                                    cursor: books.some(b => (b.collections || []).length > 0) ? 'pointer' : 'not-allowed',
+                                                    cursor: (() => { const e = books.some(b => (b.collections || []).length > 0) || books.some(b => (b.collectionTags || []).length > 0); return e ? 'pointer' : 'not-allowed'; })(),
                                                     transition: 'background 0.1s',
-                                                    color: books.some(b => (b.collections || []).length > 0) ? 'var(--text-primary)' : 'var(--text-muted)',
-                                                    opacity: books.some(b => (b.collections || []).length > 0) ? 1 : 0.5
-                                                }} onMouseEnter={e => books.some(b => (b.collections || []).length > 0) && (e.currentTarget.style.background = 'var(--bg-hover)')} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
+                                                    color: (() => { const e = books.some(b => (b.collections || []).length > 0) || books.some(b => (b.collectionTags || []).length > 0); return e ? 'var(--text-primary)' : 'var(--text-muted)'; })(),
+                                                    opacity: (() => { const e = books.some(b => (b.collections || []).length > 0) || books.some(b => (b.collectionTags || []).length > 0); return e ? 1 : 0.5; })()
+                                                }} onMouseEnter={e => { const en = books.some(b => (b.collections || []).length > 0) || books.some(b => (b.collectionTags || []).length > 0); en && (e.currentTarget.style.background = 'var(--bg-hover)'); }} onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
                                                     🏷️ Tag from Collections…
                                                 </button>
                                                 <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
@@ -9091,7 +9115,7 @@
                         </div>
                     )}
 
-                    {/* v6.10.0-alpha.14 - Tag from Collections Wizard */}
+                    {/* v6.10.0-alpha.14 - Tag from Collections Wizard (v6.10.0-alpha.15 - collectionTags + removal) */}
                     {tagFromCollectionsOpen && (() => {
                         // Build collections data from current books
                         const collectionsMap = {};
@@ -9104,13 +9128,37 @@
                         // Filter out empty collections
                         const collectionNames = Object.keys(collectionsMap).filter(name => collectionsMap[name].length > 0).sort();
 
-                        // Get books for the selected collection, applying "New books only" filter
-                        const selectedBooks = tfcSelectedCollection ? (collectionsMap[tfcSelectedCollection] || []) : [];
-                        const visibleBooks = tfcNewBooksOnly
-                            ? selectedBooks.filter(b => !b.collectionTagSeen)
-                            : selectedBooks;
+                        // Build removal groups: books with collectionTags that no longer match their collections
+                        const removalGroups = {};
+                        books.forEach(b => {
+                            const cTags = b.collectionTags || [];
+                            if (cTags.length === 0) return;
+                            const currentCollIds = (b.collections || []).map(c => c.name.toLowerCase().replace(/\s+/g, '-'));
+                            cTags.forEach(tagId => {
+                                if (!currentCollIds.includes(tagId)) {
+                                    const tagData = tagRegistry[tagId];
+                                    const label = tagData ? tagData.label : tagId;
+                                    if (!removalGroups[label]) removalGroups[label] = { tagId, books: [] };
+                                    removalGroups[label].books.push(b);
+                                }
+                            });
+                        });
+                        const removalLabels = Object.keys(removalGroups).sort();
 
-                        // Compute summary
+                        // Determine what the right pane shows: collection or removal group
+                        const isViewingRemoval = tfcSelectedRemoval && removalGroups[tfcSelectedRemoval];
+                        const isViewingCollection = tfcSelectedCollection && !isViewingRemoval;
+
+                        // Get books for the selected collection, applying "New books only" filter
+                        const selectedCollBooks = isViewingCollection ? (collectionsMap[tfcSelectedCollection] || []) : [];
+                        const visibleBooks = isViewingCollection
+                            ? (tfcNewBooksOnly ? selectedCollBooks.filter(b => !b.collectionTagSeen) : selectedCollBooks)
+                            : [];
+
+                        // Get books for the selected removal group
+                        const removalBooks = isViewingRemoval ? removalGroups[tfcSelectedRemoval].books : [];
+
+                        // Compute addition summary
                         const checkedCollectionNames = collectionNames.filter(name => tfcCheckedCollections.has(name));
                         let totalNewTags = 0;
                         let totalBooksToTag = 0;
@@ -9119,19 +9167,23 @@
                             const filtered = tfcNewBooksOnly ? collBooks.filter(b => !b.collectionTagSeen) : collBooks;
                             const uncheckedSet = tfcUncheckedBooks[name] || new Set();
                             const checkedBooks = filtered.filter(b => !uncheckedSet.has(b.id));
-                            // Check if tag already exists
                             const tagId = name.toLowerCase().replace(/\s+/g, '-');
                             const tagExists = tagRegistry[tagId] && tagRegistry[tagId].label.toLowerCase() === name.toLowerCase();
                             if (!tagExists) totalNewTags++;
-                            // Count books that don't already have this tag
                             const booksNeedingTag = checkedBooks.filter(b => !(b.tags || []).includes(tagId));
                             totalBooksToTag += booksNeedingTag.length;
                         });
 
-                        // How many new books exist for selected collection (for right pane count)
-                        const newBooksInSelected = tfcSelectedCollection
-                            ? (collectionsMap[tfcSelectedCollection] || []).filter(b => !b.collectionTagSeen).length
-                            : 0;
+                        // Compute removal summary
+                        let totalBooksToUntag = 0;
+                        removalLabels.forEach(label => {
+                            if (!tfcCheckedRemovals.has(label)) return;
+                            const group = removalGroups[label];
+                            const uncheckedSet = tfcUncheckedRemovalBooks[label] || new Set();
+                            totalBooksToUntag += group.books.filter(b => !uncheckedSet.has(b.id)).length;
+                        });
+
+                        const hasChanges = totalNewTags > 0 || totalBooksToTag > 0 || totalBooksToUntag > 0;
 
                         return (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setTagFromCollectionsOpen(false); backdropMouseDownRef.current = null; }}>
@@ -9184,57 +9236,132 @@
 
                                 {/* Two-pane body */}
                                 <div className="flex" style={{ height: '400px' }}>
-                                    {/* Left pane: Collections list */}
+                                    {/* Left pane: Collections list + Removal section */}
                                     <div className="w-2/5 border-r border-gray-300 overflow-y-auto">
-                                        {collectionNames.length === 0 ? (
+                                        {collectionNames.length === 0 && removalLabels.length === 0 ? (
                                             <div className="text-center text-gray-500 py-8 px-4">
                                                 <p>No collections found</p>
                                                 <p className="text-sm text-gray-400 mt-2">Import your Kindle library to see collections</p>
                                             </div>
                                         ) : (
-                                            collectionNames.map(name => {
-                                                const collBooks = collectionsMap[name] || [];
-                                                const newCount = collBooks.filter(b => !b.collectionTagSeen).length;
-                                                const displayCount = tfcNewBooksOnly ? newCount : collBooks.length;
-                                                const isSelected = tfcSelectedCollection === name;
-                                                const isChecked = tfcCheckedCollections.has(name);
-                                                // Check if tag already exists
-                                                const tagId = name.toLowerCase().replace(/\s+/g, '-');
-                                                const tagExists = tagRegistry[tagId] && tagRegistry[tagId].label.toLowerCase() === name.toLowerCase();
+                                            <>
+                                                {collectionNames.map(name => {
+                                                    const collBooks = collectionsMap[name] || [];
+                                                    const newCount = collBooks.filter(b => !b.collectionTagSeen).length;
+                                                    const displayCount = tfcNewBooksOnly ? newCount : collBooks.length;
+                                                    const isSelected = isViewingCollection && tfcSelectedCollection === name;
+                                                    const isChecked = tfcCheckedCollections.has(name);
+                                                    const tagId = name.toLowerCase().replace(/\s+/g, '-');
+                                                    const tagExists = tagRegistry[tagId] && tagRegistry[tagId].label.toLowerCase() === name.toLowerCase();
 
-                                                return (
-                                                    <div
-                                                        key={name}
-                                                        className={`flex items-center px-3 py-2 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-l-2 border-blue-600' : 'hover:bg-gray-50 border-l-2 border-transparent'}`}
-                                                        onClick={() => setTfcSelectedCollection(name)}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isChecked}
-                                                            onChange={(e) => {
-                                                                e.stopPropagation();
-                                                                const newSet = new Set(tfcCheckedCollections);
-                                                                if (e.target.checked) newSet.add(name); else newSet.delete(name);
-                                                                setTfcCheckedCollections(newSet);
-                                                            }}
-                                                            onClick={(e) => e.stopPropagation()}
-                                                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
-                                                        />
-                                                        <span className="ml-2 flex-1 text-sm text-gray-900 truncate">{name}</span>
-                                                        <span className="text-xs text-gray-500 ml-1 flex-shrink-0">
-                                                            ({displayCount}{tfcNewBooksOnly && newCount === 0 ? ' new' : ''})
-                                                        </span>
-                                                        {tagExists && <span className="text-xs text-green-600 ml-1 flex-shrink-0">(tag exists)</span>}
-                                                    </div>
-                                                );
-                                            })
+                                                    return (
+                                                        <div
+                                                            key={name}
+                                                            className={`flex items-center px-3 py-2 cursor-pointer transition-colors ${isSelected ? 'bg-blue-50 border-l-2 border-blue-600' : 'hover:bg-gray-50 border-l-2 border-transparent'}`}
+                                                            onClick={() => { setTfcSelectedCollection(name); setTfcSelectedRemoval(null); }}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isChecked}
+                                                                onChange={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const newSet = new Set(tfcCheckedCollections);
+                                                                    if (e.target.checked) newSet.add(name); else newSet.delete(name);
+                                                                    setTfcCheckedCollections(newSet);
+                                                                }}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+                                                            />
+                                                            <span className="ml-2 flex-1 text-sm text-gray-900 truncate">{name}</span>
+                                                            <span className="text-xs text-gray-500 ml-1 flex-shrink-0">
+                                                                ({displayCount}{tfcNewBooksOnly && newCount === 0 ? ' new' : ''})
+                                                            </span>
+                                                            {tagExists && <span className="text-xs text-green-600 ml-1 flex-shrink-0">(tag exists)</span>}
+                                                        </div>
+                                                    );
+                                                })}
+
+                                                {/* Removed from Kindle section */}
+                                                {removalLabels.length > 0 && (
+                                                    <>
+                                                        <div className="px-3 py-2 bg-amber-50 border-t border-b border-amber-200 text-xs font-semibold text-amber-800 mt-1">
+                                                            Removed from Kindle
+                                                        </div>
+                                                        {removalLabels.map(label => {
+                                                            const group = removalGroups[label];
+                                                            const isSelected = isViewingRemoval && tfcSelectedRemoval === label;
+                                                            const isChecked = tfcCheckedRemovals.has(label);
+                                                            const uncheckedSet = tfcUncheckedRemovalBooks[label] || new Set();
+                                                            const activeCount = group.books.filter(b => !uncheckedSet.has(b.id)).length;
+
+                                                            return (
+                                                                <div
+                                                                    key={'removal-' + label}
+                                                                    className={`flex items-center px-3 py-2 cursor-pointer transition-colors ${isSelected ? 'bg-amber-50 border-l-2 border-amber-600' : 'hover:bg-gray-50 border-l-2 border-transparent'}`}
+                                                                    onClick={() => { setTfcSelectedRemoval(label); setTfcSelectedCollection(null); }}>
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        checked={isChecked}
+                                                                        onChange={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const newSet = new Set(tfcCheckedRemovals);
+                                                                            if (e.target.checked) newSet.add(label); else newSet.delete(label);
+                                                                            setTfcCheckedRemovals(newSet);
+                                                                        }}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500 flex-shrink-0"
+                                                                    />
+                                                                    <span className="ml-2 flex-1 text-sm text-amber-900 truncate">⚠️ {label}</span>
+                                                                    <span className="text-xs text-amber-700 ml-1 flex-shrink-0">({isChecked ? activeCount : group.books.length})</span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </>
+                                                )}
+                                            </>
                                         )}
                                     </div>
 
-                                    {/* Right pane: Books in selected collection */}
+                                    {/* Right pane: Books in selected collection or removal group */}
                                     <div className="w-3/5 overflow-y-auto">
-                                        {!tfcSelectedCollection ? (
+                                        {!isViewingCollection && !isViewingRemoval ? (
                                             <div className="text-center text-gray-500 py-8">
                                                 <p>Select a collection to see its books</p>
+                                            </div>
+                                        ) : isViewingRemoval ? (
+                                            /* Removal group view */
+                                            <div className="p-2">
+                                                <div className="px-3 py-1 text-xs text-amber-700 border-b border-amber-200 mb-1">
+                                                    No longer in "{tfcSelectedRemoval}" on Kindle ({removalBooks.length} book{removalBooks.length !== 1 ? 's' : ''})
+                                                </div>
+                                                <div className="px-3 py-1.5 text-xs text-gray-500 mb-1">
+                                                    Checked = remove tag. Unchecked = keep tag (becomes yours).
+                                                </div>
+                                                {removalBooks.map(book => {
+                                                    const uncheckedSet = tfcUncheckedRemovalBooks[tfcSelectedRemoval] || new Set();
+                                                    const isUnchecked = uncheckedSet.has(book.id);
+
+                                                    return (
+                                                        <label
+                                                            key={book.id}
+                                                            className="flex items-center px-3 py-1.5 rounded cursor-pointer transition-colors hover:bg-amber-50">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={!isUnchecked}
+                                                                onChange={(e) => {
+                                                                    setTfcUncheckedRemovalBooks(prev => {
+                                                                        const newMap = { ...prev };
+                                                                        const set = new Set(newMap[tfcSelectedRemoval] || []);
+                                                                        if (e.target.checked) set.delete(book.id); else set.add(book.id);
+                                                                        newMap[tfcSelectedRemoval] = set;
+                                                                        return newMap;
+                                                                    });
+                                                                }}
+                                                                className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500 flex-shrink-0"
+                                                            />
+                                                            <span className="ml-2 text-sm text-gray-900 truncate">{book.title}</span>
+                                                        </label>
+                                                    );
+                                                })}
                                             </div>
                                         ) : visibleBooks.length === 0 ? (
                                             <div className="text-center text-gray-500 py-8 px-4">
@@ -9242,6 +9369,7 @@
                                                 {tfcNewBooksOnly && <p className="text-sm text-gray-400 mt-2">All books in this collection were seen in a previous run</p>}
                                             </div>
                                         ) : (
+                                            /* Collection view */
                                             <div className="p-2">
                                                 <div className="px-3 py-1 text-xs text-gray-500 border-b border-gray-200 mb-1">
                                                     Books in "{tfcSelectedCollection}" ({visibleBooks.length})
@@ -9289,15 +9417,20 @@
                                 {/* Footer: Summary + buttons */}
                                 <div className="p-4 bg-gray-50 border-t-2 border-gray-300 rounded-b-lg">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-sm text-gray-700">
-                                            {totalNewTags > 0 || totalBooksToTag > 0 ? (
+                                        <div className="text-sm text-gray-700">
+                                            {hasChanges ? (
                                                 <>
-                                                    Will create {totalNewTags} new tag{totalNewTags !== 1 ? 's' : ''} and tag {totalBooksToTag} book{totalBooksToTag !== 1 ? 's' : ''}
+                                                    {(totalNewTags > 0 || totalBooksToTag > 0) && (
+                                                        <div>Will create {totalNewTags} new tag{totalNewTags !== 1 ? 's' : ''} and tag {totalBooksToTag} book{totalBooksToTag !== 1 ? 's' : ''}</div>
+                                                    )}
+                                                    {totalBooksToUntag > 0 && (
+                                                        <div className="text-amber-700">Will remove tags from {totalBooksToUntag} book{totalBooksToUntag !== 1 ? 's' : ''}</div>
+                                                    )}
                                                 </>
                                             ) : (
                                                 <span className="text-gray-500">No changes to apply</span>
                                             )}
-                                        </span>
+                                        </div>
                                         <div className="flex gap-3">
                                             <button
                                                 onClick={() => setTagFromCollectionsOpen(false)}
@@ -9310,10 +9443,20 @@
                                                     const newTagRegistry = { ...tagRegistry };
                                                     let tagsCreated = 0;
                                                     let booksTagged = 0;
+                                                    let booksUntagged = 0;
 
-                                                    // Collect all book updates
-                                                    const bookUpdates = {}; // bookId -> { tags: [...], collectionTagSeen: true }
+                                                    // Collect all book updates: { addTags, addCollectionTags, removeTags, removeCollectionTags, promoteCollectionTags }
+                                                    const bookUpdates = {};
+                                                    const ensureUpdate = (id) => {
+                                                        if (!bookUpdates[id]) bookUpdates[id] = {
+                                                            addTags: [], addCollectionTags: [],
+                                                            removeTags: [], removeCollectionTags: [],
+                                                            promoteCollectionTags: [], collectionTagSeen: true
+                                                        };
+                                                        return bookUpdates[id];
+                                                    };
 
+                                                    // --- Tag additions ---
                                                     checkedCollectionNames.forEach(name => {
                                                         const tagId = name.toLowerCase().replace(/\s+/g, '-');
                                                         const tagLabel = name;
@@ -9331,21 +9474,39 @@
                                                         // Tag each checked book that doesn't already have this tag
                                                         checkedBooks.forEach(b => {
                                                             if (!(b.tags || []).includes(tagId)) {
-                                                                if (!bookUpdates[b.id]) bookUpdates[b.id] = { addTags: [], collectionTagSeen: true };
-                                                                bookUpdates[b.id].addTags.push(tagId);
+                                                                const upd = ensureUpdate(b.id);
+                                                                upd.addTags.push(tagId);
+                                                                upd.addCollectionTags.push(tagId);
                                                                 booksTagged++;
                                                             }
                                                         });
                                                     });
 
-                                                    // Mark ALL visible books as seen (even unchecked ones — user saw them and made a decision)
+                                                    // --- Tag removals ---
+                                                    removalLabels.forEach(label => {
+                                                        const group = removalGroups[label];
+                                                        const isChecked = tfcCheckedRemovals.has(label);
+                                                        const uncheckedSet = tfcUncheckedRemovalBooks[label] || new Set();
+
+                                                        group.books.forEach(b => {
+                                                            const upd = ensureUpdate(b.id);
+                                                            if (isChecked && !uncheckedSet.has(b.id)) {
+                                                                // Confirmed removal: remove from both tags and collectionTags
+                                                                upd.removeTags.push(group.tagId);
+                                                                upd.removeCollectionTags.push(group.tagId);
+                                                                booksUntagged++;
+                                                            } else {
+                                                                // Declined removal: promote to user-owned (remove from collectionTags only)
+                                                                upd.promoteCollectionTags.push(group.tagId);
+                                                            }
+                                                        });
+                                                    });
+
+                                                    // Mark ALL visible books as seen (even unchecked ones)
                                                     collectionNames.forEach(name => {
                                                         const collBooks = collectionsMap[name] || [];
                                                         const filtered = tfcNewBooksOnly ? collBooks.filter(b => !b.collectionTagSeen) : collBooks;
-                                                        filtered.forEach(b => {
-                                                            if (!bookUpdates[b.id]) bookUpdates[b.id] = { addTags: [], collectionTagSeen: true };
-                                                            bookUpdates[b.id].collectionTagSeen = true;
-                                                        });
+                                                        filtered.forEach(b => ensureUpdate(b.id));
                                                     });
 
                                                     // Apply tag registry
@@ -9354,12 +9515,18 @@
                                                     // Apply book updates
                                                     setBooks(prev => {
                                                         const updated = prev.map(b => {
-                                                            const update = bookUpdates[b.id];
-                                                            if (!update) return b;
-                                                            const newTags = update.addTags.length > 0
-                                                                ? [...(b.tags || []), ...update.addTags]
-                                                                : (b.tags || []);
-                                                            return { ...b, tags: newTags, collectionTagSeen: true };
+                                                            const upd = bookUpdates[b.id];
+                                                            if (!upd) return b;
+                                                            // Tags: add new, remove confirmed
+                                                            let newTags = [...(b.tags || [])];
+                                                            upd.addTags.forEach(t => { if (!newTags.includes(t)) newTags.push(t); });
+                                                            upd.removeTags.forEach(t => { newTags = newTags.filter(x => x !== t); });
+                                                            // CollectionTags: add wizard-assigned, remove confirmed + promoted
+                                                            let newCTags = [...(b.collectionTags || [])];
+                                                            upd.addCollectionTags.forEach(t => { if (!newCTags.includes(t)) newCTags.push(t); });
+                                                            upd.removeCollectionTags.forEach(t => { newCTags = newCTags.filter(x => x !== t); });
+                                                            upd.promoteCollectionTags.forEach(t => { newCTags = newCTags.filter(x => x !== t); });
+                                                            return { ...b, tags: newTags, collectionTags: newCTags, collectionTagSeen: true };
                                                         });
                                                         saveBooksToIndexedDB(updated);
                                                         return updated;
@@ -9369,24 +9536,30 @@
                                                     setTagRegistry(prev => {
                                                         const counts = {};
                                                         books.forEach(b => {
-                                                            const update = bookUpdates[b.id];
-                                                            const tags = update && update.addTags.length > 0
-                                                                ? [...(b.tags || []), ...update.addTags]
-                                                                : (b.tags || []);
+                                                            const upd = bookUpdates[b.id];
+                                                            let tags = [...(b.tags || [])];
+                                                            if (upd) {
+                                                                upd.addTags.forEach(t => { if (!tags.includes(t)) tags.push(t); });
+                                                                upd.removeTags.forEach(t => { tags = tags.filter(x => x !== t); });
+                                                            }
                                                             tags.forEach(t => { counts[t] = (counts[t] || 0) + 1; });
                                                         });
                                                         const updated = { ...prev };
                                                         Object.keys(updated).forEach(id => {
-                                                            if (counts[id] !== undefined) updated[id] = { ...updated[id], count: counts[id] };
+                                                            updated[id] = { ...updated[id], count: counts[id] || 0 };
                                                         });
                                                         return updated;
                                                     });
 
                                                     setTagFromCollectionsOpen(false);
-                                                    showToast(`Created ${tagsCreated} tag${tagsCreated !== 1 ? 's' : ''}, tagged ${booksTagged} book${booksTagged !== 1 ? 's' : ''}`);
+                                                    const parts = [];
+                                                    if (tagsCreated > 0) parts.push(`created ${tagsCreated} tag${tagsCreated !== 1 ? 's' : ''}`);
+                                                    if (booksTagged > 0) parts.push(`tagged ${booksTagged} book${booksTagged !== 1 ? 's' : ''}`);
+                                                    if (booksUntagged > 0) parts.push(`removed tags from ${booksUntagged} book${booksUntagged !== 1 ? 's' : ''}`);
+                                                    showToast(parts.length > 0 ? parts.join(', ') : 'No changes made');
                                                 }}
-                                                disabled={totalNewTags === 0 && totalBooksToTag === 0}
-                                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${totalNewTags === 0 && totalBooksToTag === 0 ? 'bg-blue-300 text-white cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
+                                                disabled={!hasChanges}
+                                                className={`px-4 py-2 rounded-lg font-medium transition-colors ${!hasChanges ? 'bg-blue-300 text-white cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
                                                 Apply
                                             </button>
                                         </div>
