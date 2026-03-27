@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9404,7 +9404,10 @@
                                                     <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
                                                         onClick={() => {
                                                             const shareData = getShareData(modalBook);
-                                                            (() => { const a = document.createElement('a'); a.href = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`; a.click(); })();
+                                                            const mailtoUrl = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
+                                                            console.log('📧 Share Email (dialog):', { subject: shareData.emailSubject, bodyLength: shareData.emailBody.length, mailtoLength: mailtoUrl.length });
+                                                            console.log('📧 mailto URL:', mailtoUrl);
+                                                            const a = document.createElement('a'); a.href = mailtoUrl; document.body.appendChild(a); a.click(); document.body.removeChild(a);
                                                             setShareDropdownOpen(false);
                                                         }}>
                                                         <span>✉️</span><span>Email to a Friend</span>
@@ -14958,7 +14961,10 @@
                                                                     showToast('Select up to 20 books to share by email');
                                                                 } else {
                                                                     const shareData = getShareData(selectedBooksArray);
-                                                                    (() => { const a = document.createElement('a'); a.href = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`; a.click(); })();
+                                                                    const mailtoUrl = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
+                                                                    console.log('📧 Share Email (context menu):', { subject: shareData.emailSubject, bodyLength: shareData.emailBody.length, mailtoLength: mailtoUrl.length });
+                                                                    console.log('📧 mailto URL:', mailtoUrl);
+                                                                    const a = document.createElement('a'); a.href = mailtoUrl; document.body.appendChild(a); a.click(); document.body.removeChild(a);
                                                                 }
                                                                 setExplorerBookContextMenu(null);
                                                                 setContextSubmenu(null);
