@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.13";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -490,6 +490,7 @@
             // v5.4.6 - Book dialog edit mode
             const [isEditingBook, setIsEditingBook] = useState(false);
             const [shareDropdownOpen, setShareDropdownOpen] = useState(false); // v6.10.0-alpha.9 - Share dropdown in book dialog
+            const [shareEmailFallback, setShareEmailFallback] = useState(null); // v6.10.0-alpha.13 - { subject, body } when mailto: fails
             const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
             const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
             const editBookSeriesFilterRef = useRef(false); // true = filter by typed text, false = show all
@@ -981,6 +982,19 @@
                     webShareText: `Check out: ${bookArray.map(b => b.title).join(', ')}`,
                     webShareUrl: urls[0] || null,
                 };
+            };
+
+            // v6.10.0-alpha.13 - Open share email: try mailto:, detect failure, offer fallback
+            const openShareEmail = (shareData) => {
+                const mailtoUrl = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
+                // Try mailto: — if no handler, window stays focused and we show fallback
+                const w = window.open(mailtoUrl, '_self');
+                setTimeout(() => {
+                    // If we're still here after 500ms, mailto: didn't work
+                    if (document.hasFocus()) {
+                        setShareEmailFallback({ subject: shareData.emailSubject, body: shareData.emailBody });
+                    }
+                }, 500);
             };
 
             // Get books for a folder (handles All Books and My Library virtual folders)
@@ -9404,10 +9418,7 @@
                                                     <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
                                                         onClick={() => {
                                                             const shareData = getShareData(modalBook);
-                                                            const mailtoUrl = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
-                                                            console.log('📧 Share Email (dialog):', { subject: shareData.emailSubject, bodyLength: shareData.emailBody.length, mailtoLength: mailtoUrl.length });
-                                                            console.log('📧 mailto URL:', mailtoUrl);
-                                                            window.open(mailtoUrl, '_blank');
+                                                            openShareEmail(shareData);
                                                             setShareDropdownOpen(false);
                                                         }}>
                                                         <span>✉️</span><span>Email to a Friend</span>
@@ -14961,10 +14972,7 @@
                                                                     showToast('Select up to 20 books to share by email');
                                                                 } else {
                                                                     const shareData = getShareData(selectedBooksArray);
-                                                                    const mailtoUrl = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
-                                                                    console.log('📧 Share Email (context menu):', { subject: shareData.emailSubject, bodyLength: shareData.emailBody.length, mailtoLength: mailtoUrl.length });
-                                                                    console.log('📧 mailto URL:', mailtoUrl);
-                                                                    window.open(mailtoUrl, '_blank');
+                                                                    openShareEmail(shareData);
                                                                 }
                                                                 setExplorerBookContextMenu(null);
                                                                 setContextSubmenu(null);
@@ -15890,6 +15898,44 @@
                             </>
                         );
                     })()}
+
+                    {/* v6.10.0-alpha.13 - Share Email Fallback Dialog */}
+                    {shareEmailFallback && (
+                        <>
+                            <div className="fixed inset-0 bg-black bg-opacity-50 z-50" onClick={() => setShareEmailFallback(null)} />
+                            <div className="fixed z-50 bg-white rounded-lg shadow-xl p-6 max-w-md"
+                                style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}>
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">No Email App Detected</h3>
+                                <p className="text-sm text-gray-600 mb-4">Your browser couldn't open an email app. Choose how to share:</p>
+                                <div className="flex flex-col gap-2">
+                                    <button
+                                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"
+                                        onClick={() => {
+                                            const gmailUrl = `https://mail.google.com/mail/?view=cm&su=${encodeURIComponent(shareEmailFallback.subject)}&body=${encodeURIComponent(shareEmailFallback.body)}`;
+                                            window.open(gmailUrl, '_blank');
+                                            setShareEmailFallback(null);
+                                        }}>
+                                        Open in Gmail
+                                    </button>
+                                    <button
+                                        className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium"
+                                        onClick={() => {
+                                            const clipText = `Subject: ${shareEmailFallback.subject}\n\n${shareEmailFallback.body}`;
+                                            navigator.clipboard.writeText(clipText);
+                                            showToast('Email content copied — paste into your email app');
+                                            setShareEmailFallback(null);
+                                        }}>
+                                        Copy to Clipboard
+                                    </button>
+                                    <button
+                                        className="w-full px-4 py-2 text-gray-500 hover:text-gray-700 text-sm"
+                                        onClick={() => setShareEmailFallback(null)}>
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     {/* Affiliate Disclosure Footer (v4.4.0) */}
                     {/* v4.16.0.j - Restructured to include clipboard message on left */}
