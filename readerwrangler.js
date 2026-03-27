@@ -1052,6 +1052,10 @@
 
             // v6.10.0-alpha.17 - Create a saved view from filters and add to savedViews
             const createSavedView = (filters, position) => {
+                // Duplicate check: reject if an identical filter combination already exists
+                const filterKey = JSON.stringify(filters, Object.keys(filters).sort());
+                const duplicate = savedViews.find(v => JSON.stringify(v.filters, Object.keys(v.filters || {}).sort()) === filterKey);
+                if (duplicate) return null; // caller should show toast
                 const viewId = `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
                 const name = autoNameView(filters);
                 const newView = { id: viewId, name, filters, position };
@@ -10910,8 +10914,11 @@
                                             if (filterDropData) {
                                                 const filters = JSON.parse(filterDropData);
                                                 const maxPos = savedViews.reduce((max, v) => Math.max(max, v.position), -1);
-                                                createSavedView(filters, maxPos + 1);
-                                                showToast(`View saved`, e.clientX, e.clientY);
+                                                if (createSavedView(filters, maxPos + 1)) {
+                                                    showToast(`View saved`, e.clientX, e.clientY);
+                                                } else {
+                                                    showToast(`This filter combination is already saved as a view`, e.clientX, e.clientY);
+                                                }
                                             }
                                         }}>
                                         <span
@@ -11023,8 +11030,11 @@
                                                                 const next = viewIndex < sortedViewList.length - 1 ? sortedViewList[viewIndex + 1] : null;
                                                                 newPos = next ? (sv.position + next.position) / 2 : sv.position + 1;
                                                             }
-                                                            createSavedView(filters, newPos);
-                                                            showToast(`View saved`, e.clientX, e.clientY);
+                                                            if (createSavedView(filters, newPos)) {
+                                                                showToast(`View saved`, e.clientX, e.clientY);
+                                                            } else {
+                                                                showToast(`This filter combination is already saved as a view`, e.clientX, e.clientY);
+                                                            }
                                                             return;
                                                         }
                                                         // Book drop → add tag (only for tag-based views)
@@ -11088,9 +11098,10 @@
                                                             onChange={(e) => setEditingFolderName(e.target.value)}
                                                             onBlur={() => {
                                                                 if (editingFolderName.trim()) {
-                                                                    // Update both the view name and tagRegistry label
                                                                     setSavedViews(prev => prev.map(v => v.id === sv.id ? { ...v, name: editingFolderName.trim() } : v));
-                                                                    if (viewTagId) {
+                                                                    // Only sync to tagRegistry for single-tag-only views (don't rename the tag for multi-filter views)
+                                                                    const isSingleTagView = viewTagId && Object.keys(sv.filters).length === 1 && sv.filters.tags?.length === 1;
+                                                                    if (isSingleTagView) {
                                                                         setTagRegistry(prev => ({ ...prev, [viewTagId]: { ...prev[viewTagId], label: editingFolderName.trim() } }));
                                                                     }
                                                                 }
@@ -11137,8 +11148,11 @@
                                             if (filterDropData) {
                                                 const filters = JSON.parse(filterDropData);
                                                 const maxPos = savedViews.reduce((max, v) => Math.max(max, v.position), -1);
-                                                createSavedView(filters, maxPos + 1);
-                                                showToast(`View saved`, e.clientX, e.clientY);
+                                                if (createSavedView(filters, maxPos + 1)) {
+                                                    showToast(`View saved`, e.clientX, e.clientY);
+                                                } else {
+                                                    showToast(`This filter combination is already saved as a view`, e.clientX, e.clientY);
+                                                }
                                             }
                                         }}
                                     />
