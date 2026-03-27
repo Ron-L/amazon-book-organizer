@@ -9404,7 +9404,7 @@
                                                     <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
                                                         onClick={() => {
                                                             const shareData = getShareData(modalBook);
-                                                            window.location.href = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
+                                                            (() => { const a = document.createElement('a'); a.href = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`; a.click(); })();
                                                             setShareDropdownOpen(false);
                                                         }}>
                                                         <span>✉️</span><span>Email to a Friend</span>
@@ -14958,7 +14958,7 @@
                                                                     showToast('Select up to 20 books to share by email');
                                                                 } else {
                                                                     const shareData = getShareData(selectedBooksArray);
-                                                                    window.location.href = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
+                                                                    (() => { const a = document.createElement('a'); a.href = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`; a.click(); })();
                                                                 }
                                                                 setExplorerBookContextMenu(null);
                                                                 setContextSubmenu(null);
