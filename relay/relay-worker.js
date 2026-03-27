@@ -282,14 +282,22 @@ async function handleRevoke(request, env, channelId) {
   // Store revocation proof (permanent — allows future audit)
   await env.RELAY_KV.put(`relay:${channelId}:revocation-proof`, proof);
 
-  // Delete all data for this channel
+  // Delete all data for this channel (read manifest first for precise chunk count)
+  const manifestStr = await env.RELAY_KV.get(`relay:${channelId}:manifest`);
   const deletes = [
     env.RELAY_KV.delete(`relay:${channelId}:manifest`),
     env.RELAY_KV.delete(`relay:${channelId}:device-state`)
   ];
-  // Delete chunks 0-99 (best effort — covers any realistic chunk count)
-  for (let i = 0; i < 100; i++) {
-    deletes.push(env.RELAY_KV.delete(`relay:${channelId}:chunk:${i}`));
+  if (manifestStr) {
+    try {
+      const manifest = JSON.parse(manifestStr);
+      for (let i = 0; i < (manifest.chunkCount || 1); i++) {
+        deletes.push(env.RELAY_KV.delete(`relay:${channelId}:chunk:${i}`));
+      }
+    } catch {
+      // If manifest isn't parseable, delete chunk:0 as best effort
+      deletes.push(env.RELAY_KV.delete(`relay:${channelId}:chunk:0`));
+    }
   }
   await Promise.all(deletes);
 
