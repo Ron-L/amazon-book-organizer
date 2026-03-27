@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.10.0] - 2026-03-27
+
+### Added
+- **Share Book** — Share book recommendations via Copy Amazon Link, Email to a Friend (with Gmail fallback), or native Web Share API. Works with single or multiple books. Accessible from right-click context menu and book detail dialog.
+- **Tag from Collections** — Wizard to convert Kindle Collections into editable tags. Includes collection/book selection, "New books only" filter for repeat imports, and smart duplicate handling.
+- **Context menus for Inbox and All Books** — Right-click Inbox for Auto-Organize and Select All; right-click All Books for Select All. Prevents Chrome default context menu on system folders.
+- **Before/after screenshot update** — New 1920x1080 screenshots with wider comparison slider (1400px) and image scaling fix.
+
+### Fixed
+- **Relay: smart chunk deletion on revoke** — Revoke now reads the manifest to delete only actual chunks instead of brute-force deleting 0-99. Reduces KV deletes from ~102 to ~5 per revoke (95% reduction), preventing free tier quota exhaustion.
+
 ## [6.9.0] - 2026-03-23
 
 ### Added
