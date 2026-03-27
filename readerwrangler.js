@@ -11098,12 +11098,8 @@
                                                             onChange={(e) => setEditingFolderName(e.target.value)}
                                                             onBlur={() => {
                                                                 if (editingFolderName.trim()) {
-                                                                    setSavedViews(prev => prev.map(v => v.id === sv.id ? { ...v, name: editingFolderName.trim() } : v));
-                                                                    // Only sync to tagRegistry for single-tag-only views (don't rename the tag for multi-filter views)
-                                                                    const isSingleTagView = viewTagId && Object.keys(sv.filters).length === 1 && sv.filters.tags?.length === 1;
-                                                                    if (isSingleTagView) {
-                                                                        setTagRegistry(prev => ({ ...prev, [viewTagId]: { ...prev[viewTagId], label: editingFolderName.trim() } }));
-                                                                    }
+                                                                    const newName = editingFolderName.trim();
+                                                                    setSavedViews(prev => prev.map(v => v.id === sv.id ? { ...v, name: newName } : v));
                                                                 }
                                                                 setEditingFolderId(null);
                                                                 setEditingFolderName('');
