@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -489,6 +489,7 @@
             const [editingTagId, setEditingTagId] = useState(null); // v4.27.0 Phase 3 - Currently renaming tag
             // v5.4.6 - Book dialog edit mode
             const [isEditingBook, setIsEditingBook] = useState(false);
+            const [shareDropdownOpen, setShareDropdownOpen] = useState(false); // v6.10.0-alpha.9 - Share dropdown in book dialog
             const [editBookFields, setEditBookFields] = useState({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
             const [editBookSeriesDropdownOpen, setEditBookSeriesDropdownOpen] = useState(false);
             const editBookSeriesFilterRef = useRef(false); // true = filter by typed text, false = show all
@@ -929,6 +930,57 @@
                     return delta >= 0 ? `$${delta.toFixed(2)} under` : `$${Math.abs(delta).toFixed(2)} over`;
                 }
                 return '';
+            };
+
+            // v6.10.0-alpha.9 - Share book helper: generates share data for single or multiple books
+            const getShareData = (booksOrBook) => {
+                const bookArray = Array.isArray(booksOrBook) ? booksOrBook : [booksOrBook];
+                const count = bookArray.length;
+                const book = bookArray[0];
+
+                if (count === 1) {
+                    const url = book.asin ? getAmazonUrl(book.asin) : null;
+                    const ratingText = book.rating ? `⭐ ${book.rating} on Amazon` : '';
+                    const descSnippet = book.description
+                        ? book.description.substring(0, 150).trim() + '…'
+                        : '';
+
+                    return {
+                        count: 1,
+                        urls: url ? [url] : [],
+                        emailSubject: `You might like "${book.title}" by ${book.author}`,
+                        emailBody: [
+                            'I came across this book and thought you might enjoy it:\n',
+                            `"${book.title}" by ${book.author}`,
+                            ratingText,
+                            descSnippet ? `\n${descSnippet}` : '',
+                            url ? `\nView on Amazon: ${url}` : '',
+                        ].filter(Boolean).join('\n'),
+                        webShareTitle: `${book.title} by ${book.author}`,
+                        webShareText: book.rating
+                            ? `⭐ ${book.rating} on Amazon — ${descSnippet || book.title}`
+                            : descSnippet || book.title,
+                        webShareUrl: url,
+                    };
+                }
+
+                // Multiple books
+                const urls = bookArray.filter(b => b.asin).map(b => getAmazonUrl(b.asin));
+                const bookLines = bookArray.map(b => {
+                    const rating = b.rating ? ` · ⭐ ${b.rating}` : '';
+                    const link = b.asin ? `\nView on Amazon: ${getAmazonUrl(b.asin)}` : '';
+                    return `"${b.title}" by ${b.author}${rating}${link}`;
+                }).join('\n\n');
+
+                return {
+                    count,
+                    urls,
+                    emailSubject: 'Check out these book recommendations',
+                    emailBody: `I came across these books and thought you might enjoy them:\n\n${bookLines}`,
+                    webShareTitle: 'Book recommendations',
+                    webShareText: `Check out: ${bookArray.map(b => b.title).join(', ')}`,
+                    webShareUrl: urls[0] || null,
+                };
             };
 
             // Get books for a folder (handles All Books and My Library virtual folders)
@@ -4645,6 +4697,7 @@
                 setIsEditingBook(false);
                 setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
                 setEditBookSeriesDropdownOpen(false);
+                setShareDropdownOpen(false);
                 setContextSubmenu(null);
                 setTagInputValue('');
             };
@@ -9322,6 +9375,58 @@
                                             ✏️
                                         </button>
                                     )}
+                                    {/* v6.10.0-alpha.9 - Share button with dropdown */}
+                                    <div className="relative">
+                                        <button onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShareDropdownOpen(prev => !prev);
+                                        }} className="text-gray-400 hover:text-gray-600 text-lg transition-colors" title="Share this book" aria-label="Share this book">
+                                            📤
+                                        </button>
+                                        {shareDropdownOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-40" onClick={() => setShareDropdownOpen(false)} />
+                                                <div className="absolute right-0 top-full mt-1 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[180px] z-50"
+                                                    role="menu" aria-label="Share options"
+                                                    onClick={(e) => e.stopPropagation()}>
+                                                    <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
+                                                        onClick={() => {
+                                                            if (!modalBook.asin) {
+                                                                showToast('No Amazon link available for this book');
+                                                            } else {
+                                                                navigator.clipboard.writeText(getAmazonUrl(modalBook.asin));
+                                                                showToast('Link copied!');
+                                                            }
+                                                            setShareDropdownOpen(false);
+                                                        }}>
+                                                        <span>🔗</span><span>Copy Amazon Link</span>
+                                                    </div>
+                                                    <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
+                                                        onClick={() => {
+                                                            const shareData = getShareData(modalBook);
+                                                            window.location.href = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
+                                                            setShareDropdownOpen(false);
+                                                        }}>
+                                                        <span>✉️</span><span>Email to a Friend</span>
+                                                    </div>
+                                                    {navigator.share && (
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
+                                                            onClick={() => {
+                                                                const shareData = getShareData(modalBook);
+                                                                navigator.share({
+                                                                    title: shareData.webShareTitle,
+                                                                    text: shareData.webShareText,
+                                                                    url: shareData.webShareUrl || undefined
+                                                                }).catch(() => {});
+                                                                setShareDropdownOpen(false);
+                                                            }}>
+                                                            <span>📤</span><span>Share…</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                     <button onClick={closeBookModal} className="text-gray-500 hover:text-gray-700 text-2xl" title="Close" aria-label="Close">×</button>
                                 </div>
 
@@ -14350,7 +14455,7 @@
                         // v5.0.0-alpha.166 - Phase 2: Full implementation with Move to / Copy to submenus
 
                         // Calculate menu position to avoid going off-screen
-                        const menuHeight = 566; // v5.4.7 - Increased for Edit submenu
+                        const menuHeight = 600; // v6.10.0-alpha.9 - Increased for Share submenu
                         const menuWidth = 220;
                         const viewportHeight = window.innerHeight;
                         const viewportWidth = window.innerWidth;
@@ -14379,6 +14484,10 @@
                         const editItemOffset = 280;
                         const editSubmenuHeight = 165;
                         const editSubmenuOverflows = top + editItemOffset + editSubmenuHeight > viewportHeight;
+                        // v6.10.0-alpha.9 - Share submenu is ~2nd item (~70px from menu top)
+                        const shareItemOffset = 70;
+                        const shareSubmenuHeight = navigator.share ? 130 : 90;
+                        const shareSubmenuOverflows = top + shareItemOffset + shareSubmenuHeight > viewportHeight;
 
                         // v5.0.0-alpha.166 - Phase 2: Helper functions for Move to / Copy to
 
@@ -14790,6 +14899,93 @@
                                                     <span>Open in Amazon</span>
                                                 </div>
                                             )}
+
+                                            {/* v6.10.0-alpha.9 - Share submenu */}
+                                            <div
+                                                className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                                role="menuitem" aria-haspopup="true"
+                                                onMouseEnter={() => setContextSubmenu('share')}
+                                                onMouseLeave={(e) => {
+                                                    setTimeout(() => {
+                                                        const activeSubmenu = document.querySelector('.context-submenu:hover');
+                                                        const activeTrigger = document.querySelector('.submenu-trigger:hover');
+                                                        if (!activeSubmenu && !activeTrigger) {
+                                                            setContextSubmenu(null);
+                                                        }
+                                                    }, 600);
+                                                }}>
+                                                <span>📤</span>
+                                                <span>Share</span>
+                                                <span className="ml-auto">▶</span>
+
+                                                {contextSubmenu === 'share' && (
+                                                    <div
+                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[180px] z-[70]"
+                                                        role="menu" aria-label="Share options"
+                                                        style={{
+                                                            [submenuOnLeft ? 'right' : 'left']: '100%',
+                                                            [shareSubmenuOverflows ? 'bottom' : 'top']: '0'
+                                                        }}
+                                                        onMouseEnter={() => setContextSubmenu('share')}
+                                                        onMouseLeave={() => setContextSubmenu(null)}
+                                                        onClick={(e) => e.stopPropagation()}>
+                                                        {/* Copy Amazon Link(s) */}
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
+                                                            onClick={() => {
+                                                                const booksWithAsin = selectedBooksArray.filter(b => b.asin);
+                                                                if (booksWithAsin.length === 0) {
+                                                                    showToast(count === 1 ? 'No Amazon link available for this book' : 'No Amazon links available for selected books');
+                                                                } else if (count === 1) {
+                                                                    navigator.clipboard.writeText(getAmazonUrl(booksWithAsin[0].asin));
+                                                                    showToast('Link copied!');
+                                                                } else if (booksWithAsin.length === count) {
+                                                                    navigator.clipboard.writeText(booksWithAsin.map(b => getAmazonUrl(b.asin)).join('\n'));
+                                                                    showToast(`${count} Amazon links copied!`);
+                                                                } else {
+                                                                    navigator.clipboard.writeText(booksWithAsin.map(b => getAmazonUrl(b.asin)).join('\n'));
+                                                                    showToast(`${booksWithAsin.length} of ${count} links copied (${count - booksWithAsin.length} books have no Amazon link)`);
+                                                                }
+                                                                setExplorerBookContextMenu(null);
+                                                                setContextSubmenu(null);
+                                                            }}>
+                                                            <span>🔗</span>
+                                                            <span>Copy Amazon Link{count !== 1 ? 's' : ''}</span>
+                                                        </div>
+                                                        {/* Email to a Friend */}
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
+                                                            onClick={() => {
+                                                                if (count > 20) {
+                                                                    showToast('Select up to 20 books to share by email');
+                                                                } else {
+                                                                    const shareData = getShareData(selectedBooksArray);
+                                                                    window.location.href = `mailto:?subject=${encodeURIComponent(shareData.emailSubject)}&body=${encodeURIComponent(shareData.emailBody)}`;
+                                                                }
+                                                                setExplorerBookContextMenu(null);
+                                                                setContextSubmenu(null);
+                                                            }}>
+                                                            <span>✉️</span>
+                                                            <span>Email to a Friend</span>
+                                                        </div>
+                                                        {/* Web Share API (progressive enhancement) */}
+                                                        {navigator.share && (
+                                                            <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
+                                                                onClick={() => {
+                                                                    const shareData = getShareData(selectedBooksArray);
+                                                                    navigator.share({
+                                                                        title: shareData.webShareTitle,
+                                                                        text: shareData.webShareText,
+                                                                        url: shareData.webShareUrl || undefined
+                                                                    }).catch(() => {}); // User cancelled
+                                                                    setExplorerBookContextMenu(null);
+                                                                    setContextSubmenu(null);
+                                                                }}>
+                                                                <span>📤</span>
+                                                                <span>Share…</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
 
                                             {/* Copy Title(s) */}
                                             <div
