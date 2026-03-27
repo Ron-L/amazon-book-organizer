@@ -10961,7 +10961,7 @@
                                                 <div
                                                     key={viewFolderId}
                                                     data-folder-id={viewFolderId}
-                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === viewFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === viewFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                                     style={sidebarFolderDragTarget?.type === 'reorder' && sidebarFolderDragTarget?.folderId === viewFolderId
                                                         ? sidebarFolderDragTarget.position === 'before'
                                                             ? { borderTop: '3px solid var(--border-focus)' }
@@ -11119,7 +11119,23 @@
                                                     ) : (
                                                         <span className="flex-1 pointer-events-none">{viewLabel}</span>
                                                     )}
-                                                    <span className="text-xs text-gray-500 pointer-events-none">({bookCount})</span>
+                                                    <span className="text-xs text-gray-500 pointer-events-none group-hover:hidden">({bookCount})</span>
+                                                    {/* v6.10.0-alpha.17 - Delete button on hover (overlays count, same as folders) */}
+                                                    <div className="hidden group-hover:flex items-center gap-0.5">
+                                                        <button
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                const viewId = getViewId(viewFolderId);
+                                                                if (await showConfirmDialog('Delete View', `Remove "${viewLabel}" from Views?`)) {
+                                                                    setSavedViews(prev => prev.filter(v => v.id !== viewId));
+                                                                    if (selectedFolderId === viewFolderId) navigateToFolder('__all__');
+                                                                }
+                                                            }}
+                                                            className="text-gray-400 hover:text-red-500 p-0.5 rounded hover:bg-red-50"
+                                                            title="Delete view">
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             );
                                         });
