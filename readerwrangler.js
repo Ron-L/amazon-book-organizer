@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.26";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.27";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1106,19 +1106,9 @@
                 if (folderId === '__trash__') return books.filter(b => b.isDeleted).sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0)).map(b => b.id);
                 if (folderId === '__library__') return []; // v5.0.0-alpha.63 - Folders section shows folders, not books
                 if (folderId === '__views__') return []; // v6.4.0 - Views section shows views, not books
-                // v6.10.0-alpha.16 - Saved view: return books matching view filters
+                // v6.10.0-alpha.27 - Saved view: return all books, filters are applied via filter bar state
                 if (isViewFolder(folderId)) {
-                    const view = getView(folderId);
-                    const tagId = view?.filters?.tags?.[0];
-                    if (!tagId) return [];
-                    const taggedBookIds = books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
-                    const bookOrder = view?.bookOrder || [];
-                    if (bookOrder.length === 0) return taggedBookIds;
-                    // Return in manual order, with unordered books appended
-                    const orderedSet = new Set(bookOrder);
-                    const ordered = bookOrder.filter(id => taggedBookIds.includes(id));
-                    const unordered = taggedBookIds.filter(id => !orderedSet.has(id));
-                    return [...ordered, ...unordered];
+                    return [...books.filter(b => !b.isDeleted).map(b => b.id)].reverse();
                 }
                 const folder = folders.find(f => f.id === folderId);
                 return folder?.bookIds || [];
@@ -2057,8 +2047,32 @@
             // v5.0.0-alpha.175.48 - Removed settings state (dead code, cacheExpirationDays not used)
             const dragThreshold = 50;
 
+            // v6.10.0-alpha.27 - Apply a saved view's filters to the filter bar
+            const applyViewFilters = (filters) => {
+                // Clear all filters first, then apply the view's saved filters
+                setTagFilter(filters.tags || []);
+                setReadStatusFilter(filters.readStatus || '');
+                setSelectedCollections(filters.collections || []);
+                setOwnershipFilter(filters.ownership || '');
+                setSelectedSeries(filters.series || []);
+                setMinAmazonRating(filters.minAmazonRating || '');
+                setMinMyRating(filters.minMyRating || '');
+                setDatePreset(filters.datePreset || '');
+                setDateFrom(filters.datePreset === 'custom' ? (filters.dateFrom || '') : '');
+                setDateTo(filters.datePreset === 'custom' ? (filters.dateTo || '') : '');
+                setSearchTerm(filters.search || '');
+                setDealsFilterActive(filters.deals || false);
+            };
+
             // v5.0.0-alpha.92 - Navigation history functions
             const navigateToFolder = (folderId, addToHistory = true) => {
+                // v6.10.0-alpha.27 - Apply saved view filters when navigating to a view
+                if (isViewFolder(folderId)) {
+                    const view = getView(folderId);
+                    if (view?.filters) {
+                        applyViewFilters(view.filters);
+                    }
+                }
                 setSelectedFolderId(folderId);
                 // v5.0.0-alpha.161 - Clear right panel selections when navigating
                 setExplorerSelectedFolders(new Set());
@@ -3068,6 +3082,7 @@
                 if (syncStatus === 'loading') return;
                 const VIRTUAL_IDS = new Set(['__all__', '__library__', '__views__', '__trash__', '__inbox__']);
                 if (VIRTUAL_IDS.has(selectedFolderId)) return;
+                if (isViewFolder(selectedFolderId)) return; // v6.10.0-alpha.27 - View folders are valid
                 const exists = folders.some(f => f.id === selectedFolderId);
                 if (!exists) setSelectedFolderId('__all__');
             }, [syncStatus, folders, selectedFolderId]);
