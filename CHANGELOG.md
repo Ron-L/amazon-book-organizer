@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tag from Collections** — Wizard to convert Kindle Collections into editable tags. Tracks wizard-assigned vs user-assigned tags (`collectionTags`). "Removed from Kindle" section detects when books leave a Kindle Collection and offers to remove or keep the tag. "New books only" filter for repeat imports.
 - **Context menus for Inbox and All Books** — Right-click Inbox for Auto-Organize and Select All; right-click All Books for Select All. Prevents Chrome default context menu on system folders.
 - **Before/after screenshot update** — New 1920x1080 screenshots with wider comparison slider (1400px) and image scaling fix.
+- **Data freshness monitoring** — Two-level freshness detection: (1) age-based — status bar shows Fresh/Stale/Obsolete based on when data was last imported, (2) relay-aware — app polls the relay every 10 minutes and shows "Update available" in the status bar when newer fetched data exists. Data Status modal shows relay state with one-click Import. Dismissed notifications stay dismissed until a genuinely new fetch is available.
 
 ### Fixed
 - **Saved View navigation** — Clicking a saved view reset to All Books immediately. Root cause: the folder validation logic didn't recognize `__view_*__` folder IDs as valid, resetting them on the next render cycle.
