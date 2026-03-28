@@ -151,9 +151,10 @@ The organized state shown at the end of tutorials (after Auto-Organize + manual 
   └── 🗑️ Trash
 ```
 
-**Tag Views (pinned):**
-- `Next` — books tagged as next to read (applied during tutorial)
-- `TimeTravel` — Jodi Taylor + H.G. Wells + Connecticut Yankee (applied during tutorial)
+**Saved Filter Views:**
+- `Next` — books tagged as next to read (created during tutorial via drag-to-Views)
+- `TimeTravel` — Jodi Taylor + H.G. Wells + Connecticut Yankee (multi-tag view created during tutorial)
+- `Unread Fantasy` — Tags: Fantasy + Read Status: Unread (multi-filter view demo)
 
 ---
 
@@ -170,18 +171,20 @@ Which features each part of the demo showcases:
 | Manual folder creation + drag | Tutorial 3: Organizing |
 | Nested sub-folders | Tutorial 3: Non-Fiction → Founding Docs |
 | Copies (Niven/Pournelle, Butcher anthologies) | Tutorial 3: Organizing |
-| Tag views | Tutorial 4: Tags & Views |
-| Filter panel (by series, ownership, etc.) | Tutorial 4: Tags & Views |
-| Covers vs list view | Tutorial 2 or 3 |
+| Tag from Collections | Tutorial 3: Organizing |
+| Saved Filter Views (drag-to-create, lens model) | Tutorial 4: Views & Filters |
+| Filter panel (by series, ownership, etc.) | Tutorial 4: Views & Filters |
+| Covers vs list view | Tutorial 2 or 4 |
 | Book detail modal (double-click) | Tutorial 2 |
 | Read status / ownership badges | Tutorial 2 |
 | Physical book badges | Tutorial 2 |
 | Undo/redo | Tutorial 3 |
 | Folder descriptions (tooltips) | Tutorial 3 |
+| Share Book | Tutorial 7: Power Features |
 | Mobile pairing + QR scan | Tutorial 5: Mobile |
 | Orphan detection | Tutorial 6: Maintenance |
 | Trash + restore | Tutorial 6: Maintenance |
-| Backup / Restore | Tutorial 6: Maintenance |
+| Backup / Restore | Tutorial 7: Power Features |
 
 ---
 
@@ -205,21 +208,25 @@ Which features each part of the demo showcases:
 
 ### Tutorial 3: Organizing (8-10 min)
 - Run Auto-Organize → review result
+- Tag from Collections: convert Kindle Collections to editable tags (one-way flow explained)
 - Manual refinements: merge folders, rename, create Classics folder
 - Drag books with active filter (demonstrates Show All)
 - Create Niven/Pournelle copies
 - Create Butcher anthology copies
 - Create Non-Fiction → Founding Documents subfolder
 - Add folder descriptions
-- **Ends:** Full folder structure as per Target above
+- **Ends:** Full folder structure as per Target above, tags from Collections applied
 
-### Tutorial 4: Tags & Views (4-5 min)
-- Tag a few books "Next"
-- Pin "Next" as a tag view
-- Create "TimeTravel" tag, pin it
-- Use filter panel: filter by series, by ownership type
-- Show All Books view vs folder view
-- **Ends:** Views section populated, filters demonstrated
+### Tutorial 4: Views & Filters (4-5 min)
+- Views vs Folders concept
+- All Books view
+- Filter bar: search, read status, tags, ownership, More panel
+- Save filter combo as a View (drag from Active Filters banner)
+- Saved view as lens: grayed filter bar, purple banner, filter restore on exit
+- Tag Manager: drag tags to Views (single and multi-tag)
+- Cover view and badges
+- Multi-column sorting, personal ratings, manual ordering
+- **Ends:** Views section populated with saved filter views, filters demonstrated
 
 ### Tutorial 5: Mobile (3-4 min)
 - Open app on phone

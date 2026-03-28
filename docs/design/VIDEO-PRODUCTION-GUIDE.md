@@ -16,11 +16,11 @@ Nine videos total: one sizzle reel (hook) + eight tutorials (teach). All videos 
 | 1 | Quick Start | 3 min | Brand new users | Script complete (needs demo library update) |
 | 2 | Setting Up the Relay | 1-2 min | New users who skipped Quick Start | Script ready |
 | 3 | Fetching Your Library | 2-3 min | Users who want to understand the fetcher | Script ready |
-| 4 | Organizing with Folders | 3-4 min | Users who imported and need to organize | Script ready |
-| 5 | Views & Filters | 3-4 min | Users with large libraries | Script ready |
+| 4 | Organizing with Folders | 3-4 min | Users who imported and need to organize | Script updated (added Tag from Collections) |
+| 5 | Views & Filters | 3-4 min | Users with large libraries | Script updated (saved filter views, lens model) |
 | 6 | Wishlist & Discovery | 2-3 min | Users who want to track books before buying | Script ready |
 | 7 | Mobile Sync | 1-2 min | Users who read on phone | Script ready |
-| 8 | Power Features | 2-3 min | Advanced users | Script ready |
+| 8 | Power Features | 2-3 min | Advanced users | Script updated (added Share Book) |
 
 **Where videos are published:**
 - `tutorials.html` — embedded on the tutorial hub page
@@ -209,15 +209,15 @@ For sizzle reel only (tutorials use voiceover, not music). Tutorial videos may o
 | Video | ~Characters |
 |-------|-------------|
 | 0 (Sizzle) | 0 (no voiceover) |
-| 1 (Quick Start) | ~1,850 |
+| 1 (Quick Start) | ~1,850 (Scene 5 updated) |
 | 2 (Relay Setup) | ~900 |
 | 3 (Fetching) | ~1,400 |
-| 4 (Organizing) | ~2,200 |
-| 5 (Views & Filters) | ~2,400 |
+| 4 (Organizing) | ~2,800 (+Tag from Collections scene) |
+| 5 (Views & Filters) | ~2,600 (rewritten for saved filter views) |
 | 6 (Wishlist) | ~1,400 |
 | 7 (Mobile) | ~800 |
-| 8 (Power Features) | ~1,500 |
-| **Total** | **~12,450 / 1,000,000** (1.2%) |
+| 8 (Power Features) | ~1,700 (+Share Book scene) |
+| **Total** | **~13,450 / 1,000,000** (1.3%) |
 
 ### File Organization
 
@@ -412,11 +412,11 @@ Create another folder... "Finished Reading."
 
 Drag more books over.
 
-Notice the tags on your books? When you imported your library, your Kindle Collections came along automatically.
+Notice the tags on your books? When you imported your library, your Kindle Collections came along as tags automatically.
 
 But you can go further. Create your own tags — like "Fantasy" — and assign them to books.
 
-Now pin that tag to your Views panel... and it becomes a one-click filter in your sidebar. All your fantasy books, instantly.
+Now set up a filter for that tag. See the drag handle on the filter banner? Drag it to the Views section... and it becomes a saved view in your sidebar. Click it anytime to see all your fantasy books instantly.
 
 ---
 
@@ -488,8 +488,9 @@ A hundred classic books appear in your Inbox... ready to organize right now. You
 - Drag more books
 - Click a book → show tags section in book dialog (point out any imported Collections tags)
 - Create new tag "Fantasy", assign to 2-3 books
-- Right-click "Fantasy" tag → Pin to Views
-- Click "Fantasy" in Views sidebar → right pane shows tagged books
+- Use Tags filter dropdown → select "Fantasy" — filter banner appears
+- Drag handle (⠿) from filter banner to Views section in sidebar
+- New "Fantasy" view appears — click it → right pane shows tagged books, filter bar grayed out
 
 **[SCENE 6: 2:45-3:00]**
 - Zoom out to show organized sidebar and full cover pane
@@ -728,7 +729,7 @@ You'll see "Import from Relay" right there in the dialog. One click to bring eve
 ## Video 4: Organizing with Folders
 
 ### Target Length
-3-4 minutes
+3.5-4 minutes
 
 ### Audience
 Users who imported books and need to organize them
@@ -761,7 +762,21 @@ Don't like what happened? Press Control-Z. The entire operation undoes in one st
 
 ---
 
-**[SCENE 3: Manual Refinement — 0:50-1:30]**
+**[SCENE 3: Tag from Collections — 0:50-1:20]**
+
+Auto-Organize handled your folders. Now let's talk about tags.
+
+Your Kindle Collections came with your books. But Collections are read-only — they're a snapshot from Amazon. You can't edit them here... and Amazon won't let you organize them there either.
+
+But you can turn them into tags. Open File... Tag from Collections. The wizard shows your Kindle Collections and lets you convert them into editable tags within the app.
+
+Now they're yours to work with. Rename them. Merge them. Add books. Remove books. Tags pick up where Kindle Collections left off.
+
+One thing to keep in mind. ReaderWrangler is your personal organizer. Changes you make here — tags, folders, views — stay in the app. Nothing is sent back to Amazon or your Kindle. It's a one-way flow: Amazon to you.
+
+---
+
+**[SCENE 4: Manual Refinement — 1:20-2:00]**
 
 Auto-Organize gives you a great starting point. Now make it yours.
 
@@ -775,7 +790,7 @@ Drag the Jack Ryan series books in.
 
 ---
 
-**[SCENE 4: Copies — 1:30-2:00]**
+**[SCENE 5: Copies — 2:00-2:30]**
 
 Some books belong in more than one place. Larry Niven and Jerry Pournelle wrote books together.
 
@@ -787,7 +802,7 @@ This works great for anthologies too. Jim Butcher's anthologies contain Dresden 
 
 ---
 
-**[SCENE 5: Folder Properties — 2:00-2:20]**
+**[SCENE 6: Folder Properties — 2:30-2:50]**
 
 Right-click any folder... and choose Properties.
 
@@ -797,7 +812,7 @@ Try "All Sanderson books by publication order." Now when you hover over that fol
 
 ---
 
-**[SCENE 6: Deleting and the Trash Bin — 2:20-2:55]**
+**[SCENE 7: Deleting and the Trash Bin — 2:50-3:25]**
 
 See a book you don't want? Select it and press Delete.
 
@@ -813,7 +828,7 @@ When you're sure... right-click Trash and choose Empty Trash. That's permanent.
 
 ---
 
-**[SCENE 7: Wrap Up — 2:50-3:05]**
+**[SCENE 8: Wrap Up — 3:25-3:35]**
 
 From a flat pile of 119 books... to a structured library in minutes.
 
@@ -836,27 +851,34 @@ Remember... Control-Z undoes anything. Experiment freely.
 - Briefly show Ctrl+Z undo — tree collapses back
 - Redo with Ctrl+Y — tree restores
 
-**[SCENE 3: 0:50-1:30]**
+**[SCENE 3: 0:50-1:20]**
+- File → Tag from Collections
+- Wizard dialog opens — shows list of Kindle Collections with book counts
+- Select a few collections → click Apply
+- Show tags appearing on books (open a book detail to confirm)
+- Brief pause on the wizard UI
+
+**[SCENE 4: 1:20-2:00]**
 - Right-click Folders label → New Folder → "Thrillers"
 - Drag "Lee Child" folder into Thrillers
 - Drag "Tom Clancy" folder into Thrillers
 - Right-click Tom Clancy → Create Subfolder → "Jack Ryan"
 - Drag Jack Ryan books into the subfolder
 
-**[SCENE 4: 1:30-2:00]**
+**[SCENE 5: 2:00-2:30]**
 - Navigate to Larry Niven folder — show "Lucifer's Hammer"
 - Ctrl+Drag "Lucifer's Hammer" to Jerry Pournelle folder
 - Toast appears: "Copied to 'Jerry Pournelle'..."
 - Navigate to Pournelle folder — show book appears there too
 - Repeat concept with Butcher anthology → Dresden Files folder
 
-**[SCENE 5: 2:00-2:20]**
+**[SCENE 6: 2:30-2:50]**
 - Right-click folder → Properties
 - Type a description
 - Click Save
 - Hover over folder — tooltip appears
 
-**[SCENE 6: 2:20-2:50]**
+**[SCENE 7: 2:50-3:25]**
 - Select a book → press Delete
 - Confirmation dialog → Delete
 - Trash badge appears with count
@@ -865,7 +887,7 @@ Remember... Control-Z undoes anything. Experiment freely.
 - Select a purchased book → Delete → warning dialog with "Hide Instead" option
 - Right-click Trash → Empty Trash → permanent confirmation
 
-**[SCENE 7: 2:50-3:05]**
+**[SCENE 8: 3:25-3:35]**
 - Zoom out to show full organized sidebar
 - Fade to logo
 
@@ -881,7 +903,8 @@ Users with large libraries who want to find books quickly
 
 ### Scene Prep
 - Demo library organized into target folder structure
-- Several tag views already visible in Views section
+- A few tags already assigned (from Tag from Collections or manual tagging)
+- No saved views yet (we'll create them during the video)
 - Cover view available for badge demo
 
 ### Script (TTS-Optimized)
@@ -892,7 +915,7 @@ ReaderWrangler has two ways to see your books. Folders... and Views.
 
 Folders are your personal organization. You put books where you want them.
 
-Views are automatic. They show your books through a different lens... like genre tags from Amazon. A book can appear in many views without being duplicated.
+Views are like a lens. They show books that match a set of filters... across your entire library. A book can appear in many views without being duplicated.
 
 Hover over Views in the sidebar... the tooltip says it: "Different ways to see the same books — not separate copies."
 
@@ -906,21 +929,37 @@ You can search, filter, and sort... but you can't drag books out. All Books is a
 
 ---
 
-**[SCENE 3: Tag Views — 0:40-1:10]**
+**[SCENE 3: The Filter Bar — 0:40-1:15]**
 
-Below All Books... you'll see tag views. Fantasy. Thriller. Science Fiction.
+The toolbar has powerful filters. Type in the search box to find any book by title or author.
 
-These come from Amazon's own genre categories... imported automatically.
+Use the dropdown filters for read status... tags... and ownership type. The ownership filter includes "Removed from Amazon"... for books that have left your library... like expired Kindle Unlimited or Prime Reading titles.
 
-Click Fantasy... and every book tagged Fantasy appears. Even if they're in different folders.
+Click "More" for advanced filters. Filter by Amazon rating... your personal rating... series... date added... or collections. You'll find special values like "Unrated"... "Not in Series"... and "Last 30 days" for recent additions.
 
-Want to create your own? Tag a few books as "Next to Read." Then pin that tag in the Views section. Now you have a virtual folder of everything you want to read next... across all your folders.
-
-Pinned views stay until you unpin them. They're always there when you come back.
+Active filters show a blue banner with a count: "12 of 119 books." Click "Clear All" to reset.
 
 ---
 
-**[SCENE 4: Cover View and Badges — 1:10-1:45]**
+**[SCENE 4: Saving a Filter View — 1:15-1:55]**
+
+Here's where it gets powerful. Set up a filter you use often. Say... tags: Fantasy... plus read status: Unread. Your unread fantasy books.
+
+See the drag handle on the blue filter banner? Drag it to the Views section in the sidebar.
+
+A new view appears... named automatically. "Fantasy, Unread." You can rename it if you like.
+
+Now click that view. Notice what happens. The filter bar grays out... and a purple banner appears showing the view name. The view is a frozen lens... it always shows exactly what you saved.
+
+Click any folder to leave the view... and your previous filters are restored. The view didn't overwrite anything.
+
+You can also create views from the Tag Manager. Open it from the toolbar... and drag any tag — or select several and drag them together — to the Views section. Great for building quick single-tag views... or combining multiple tags into one view.
+
+Remember those Kindle Collections you converted to tags? Save any of them as a view... or combine several into one.
+
+---
+
+**[SCENE 5: Cover View and Badges — 1:55-2:25]**
 
 Switch to cover view using the grid icon in the toolbar.
 
@@ -936,21 +975,7 @@ Both views honor all your active filters... so everything you see updates togeth
 
 ---
 
-**[SCENE 5: The Filter Panel — 1:45-2:20]**
-
-The toolbar has powerful filters. Type in the search box to find any book by title or author.
-
-Use the dropdown filters for read status... tags... and ownership type. The ownership filter includes "Removed from Amazon"... for books that have left your library... like expired Kindle Unlimited or Prime Reading titles.
-
-Click "More" for advanced filters. Filter by Amazon rating... your personal rating... series... date added... or collections. You'll find special values like "Unrated"... "Not in Series"... and "Last 30 days" for recent additions.
-
-Active filters show a count: "12 of 119 books." Click "Clear All" to reset.
-
-Want to see books you've hidden? Toggle "Show Hidden" from the View menu. Hidden books appear at reduced opacity so you can tell them apart.
-
----
-
-**[SCENE 6: Multi-Column Sorting and Personal Ratings — 2:20-2:55]**
+**[SCENE 6: Multi-Column Sorting and Personal Ratings — 2:25-3:00]**
 
 Click any column header to sort. Click "Series" to group by series.
 
@@ -979,22 +1004,7 @@ One more trick. You can drag books up and down within a folder to set a manual o
 - Try dragging a book — show it's disabled
 - Hover over All Books — tooltip: "Every book in your library..."
 
-**[SCENE 3: 0:40-1:10]**
-- Click ▼ chevron to expand Views section
-- Click "Fantasy" tag view — right pane filters
-- Show same book appearing in Fantasy view AND in a folder
-- Tag a book: right-click → Tags → add "Next"
-- Pin "Next" tag → appears in Views section
-
-**[SCENE 4: 1:10-1:40]**
-- Click grid icon (⊞) in toolbar → covers view
-- Zoom in on a few covers showing badges:
-  - Gold star (rating)
-  - Green checkmark (read)
-  - "KU" badge (Kindle Unlimited)
-  - Price tag (wishlist)
-
-**[SCENE 5: 1:45-2:20]**
+**[SCENE 3: 0:40-1:15]**
 - Type in search box → results narrow in real-time
 - Use Read Status dropdown → "Read"
 - Use Tags dropdown → select "Fantasy"
@@ -1003,10 +1013,28 @@ One more trick. You can drag books up and down within a folder to set a manual o
 - Show special values: "Unrated", "Not in Series", "Last 30 days"
 - Blue banner: "12 of 119 books"
 - Click "Clear All ×"
-- View menu → "Show Hidden" → hidden books appear at reduced opacity
-- Toggle off again
 
-**[SCENE 6: 2:20-2:55]**
+**[SCENE 4: 1:15-1:55]**
+- Set up filters: Tags → Fantasy, Read Status → Unread
+- Blue banner appears with drag handle (⠿)
+- Drag handle to Views section in sidebar — drop
+- New view "Fantasy, Unread" appears in sidebar
+- Click the new view — filter bar grays out, purple "View: Fantasy, Unread" banner appears
+- Click Inbox — filter bar restores to normal, previous filters return
+- Open Tag Manager from toolbar
+- Select two tags → drag handle to Views section
+- New combined view appears
+- Close Tag Manager
+
+**[SCENE 5: 1:55-2:25]**
+- Click grid icon (⊞) in toolbar → covers view
+- Zoom in on a few covers showing badges:
+  - Gold star (rating)
+  - Green checkmark (read)
+  - "KU" badge (Kindle Unlimited)
+  - Price tag (wishlist)
+
+**[SCENE 6: 2:25-3:00]**
 - Click "Series" column header → sorts
 - Shift+Click "#" column → secondary sort added
 - Status bar shows "Series ▲ → # ▲"
@@ -1279,7 +1307,17 @@ Preview shows exactly what will happen before you commit. And the entire operati
 
 ---
 
-**[SCENE 5: Data Status — 2:00-2:20]**
+**[SCENE 5: Share Book — 2:00-2:20]**
+
+Found a book you want to recommend? Right-click it... and choose Share.
+
+You can copy the Amazon link... email it to a friend... or use your device's share menu if it has one.
+
+Select multiple books and share them all at once. A quick way to send a reading list to someone.
+
+---
+
+**[SCENE 6: Data Status — 2:20-2:40]**
 
 The colored dot next to the File menu is your Data Status indicator.
 
@@ -1323,6 +1361,13 @@ If the dot turns yellow or red... click it to see what needs attention.
 - Ctrl+Y — restored
 
 **[SCENE 5: 2:00-2:20]**
+- Right-click a book → Share submenu
+- Show options: Copy Amazon Link, Email to a Friend
+- Click Copy Amazon Link — toast confirms
+- Select 3 books → right-click → Share → Email to a Friend
+- Email compose opens with book links
+
+**[SCENE 6: 2:20-2:40]**
 - Point to status dot (green) next to File menu
 - Click it — Data Status dialog opens
 - Show book count, folder count, integrity check results
