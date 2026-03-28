@@ -1055,16 +1055,13 @@
 
             // v6.10.0-alpha.17 - Create a saved view from filters and add to savedViews
             const createSavedView = (filters, position) => {
-                console.log('🔍 VIEW createSavedView called:', { filters, position });
                 // Duplicate check: reject if an identical filter combination already exists
                 const filterKey = JSON.stringify(filters, Object.keys(filters).sort());
                 const duplicate = savedViews.find(v => {
                     const vKey = JSON.stringify(v.filters, Object.keys(v.filters || {}).sort());
-                    if (vKey === filterKey) console.log('🔍 VIEW duplicate match:', { existingView: v.name, existingFilters: v.filters, newFilters: filters });
                     return vKey === filterKey;
                 });
                 if (duplicate) {
-                    console.log('🔍 VIEW rejected as duplicate of:', duplicate.name);
                     // v6.10.0-alpha.23 - Show Tag Manager back if it was hidden during drag
                     if (tagManagerBackdropRef.current) {
                         tagManagerBackdropRef.current.style.visibility = '';
@@ -1075,11 +1072,7 @@
                 const viewId = `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
                 const name = autoNameView(filters);
                 const newView = { id: viewId, name, filters, position };
-                console.log('🔍 VIEW created:', { viewId, name, filters, position });
-                setSavedViews(prev => {
-                    console.log('🔍 VIEW state before add:', prev.map(v => ({ name: v.name, filters: v.filters })));
-                    return [...prev, newView];
-                });
+                setSavedViews(prev => [...prev, newView]);
                 // v6.10.0-alpha.23 - Show Tag Manager back if it was hidden during drag
                 // (onDragEnd won't fire because React re-render replaces the drag handle with 📌)
                 if (tagManagerBackdropRef.current) {
@@ -1901,7 +1894,6 @@
                     remaining.splice(adjustedIndex, 0, ...orderedToMove);
                     return { ...v, bookOrder: remaining };
                 }));
-                console.log(`🏷️ Reordered ${bookIdsToMove.length} book(s) in tag view`);
             };
 
             // v5.0.0-alpha.79 - Reorder folders within their parent (with undo)
@@ -2260,7 +2252,6 @@
                             .then(manifest => {
                                 relayLastCheckedRef.current = new Date().toISOString();
                                 if (manifest) {
-                                    console.log(`📡 Relay: Library data available (${manifest.bookCount} books, uploaded ${manifest.timestamp})`);
                                     setRelayManifest(manifest);
                                 }
                             })
@@ -2537,7 +2528,6 @@
                             }
                             if (explorerData.columnOrder) setColumnOrder(explorerData.columnOrder); // v5.0.0-alpha.172
                             if (explorerData.explorerGroupOn) setExplorerGroupOn(true); // v5.4.5
-                            console.log('📁 Restored Explorer settings from localStorage');
                         }
                         // v5.0.0-alpha.169.10 - Mark settings loaded (even if no saved data)
                         explorerSettingsLoadedRef.current = true;
@@ -2637,7 +2627,6 @@
                                         if (maxViewPos <= maxFolderDisplayPos) {
                                             const offset = maxFolderDisplayPos + 1;
                                             loadedViews.forEach(v => { v.position += offset; });
-                                            console.log(`🏷️ Migrated view positions for interleaved display (offset +${offset})`);
                                         }
                                     }
                                     setSavedViews(loadedViews);
@@ -2645,7 +2634,6 @@
                                     setDataSource(state.organization.dataSource || 'enriched');
                                     effectiveLastSync = state.lastSyncTime || Date.now();
                                     setLastSyncTime(effectiveLastSync);
-                                    console.log('✅ Restored organization from localStorage');
                                 } else {
                                     // No organization saved
                                     setDataSource('enriched');
@@ -2704,7 +2692,6 @@
                             savedAt: Date.now()
                         };
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-                        if (savedViews.length > 0) console.log('🔍 VIEW auto-save:', savedViews.map(v => ({ name: v.name, filters: v.filters })));
                     } catch (e) {
                         console.warn('Could not auto-save organization:', e);
                     }
@@ -2731,12 +2718,10 @@
                     if (dataOpInProgressRef.current) return; // v6.3.0 - Skip if import/restore in progress
                     deviceStatePushingRef.current = true;
                     try {
-                        console.log('📡 Device-state push: building payload...');
                         const payload = await buildDeviceStatePayload();
                         const jsonString = JSON.stringify(payload);
                         await window.RWRelay.putDeviceState(jsonString);
                         await relayOp('pushOk');
-                        console.log(`✅ Device-state pushed (${payload.books.totalBooks} books, ${(jsonString.length / 1024).toFixed(0)} KB)`);
                     } catch (err) {
                         console.error('❌ Device-state push failed:', err);
                         await relayOp('pushFail', { status: err.status });
@@ -3729,9 +3714,7 @@
                         if (!manifest) {
                             return { empty: true };
                         }
-                        const jsonString = await window.RWRelay.download((phase, detail) => {
-                            console.log(`📡 Relay import: ${detail}`);
-                        });
+                        const jsonString = await window.RWRelay.download();
                         const result = await loadLibrary(jsonString);
                         return result; // { totalBooks, newBookIds }
                     };
@@ -3873,7 +3856,6 @@
                             // v6.0.0 - Restore relay credentials from backup
                             if (parsedData.relay && parsedData.relay.channelId) {
                                 relayOp('setKeys', parsedData.relay);
-                                console.log('📡 Restored relay credentials from backup');
                             }
 
                             const syncTime = Date.now();
@@ -4748,7 +4730,6 @@
                     minMyRating: '',
                     selectedSeries: []
                 }));
-                console.log('🔍 Filters cleared for new library');
 
                 // v4.0.0.b: Check organization source - backup file takes priority, then localStorage
                 let orgToRestore = null;
@@ -4866,7 +4847,6 @@
                             );
                             setColumnWidths(sanitizedWidths);
                         }
-                        console.log('✅ Restored Explorer view settings from backup');
                     } else {
                         // No explorer settings in backup - preserve existing from localStorage (backward compatibility)
                         console.log('📁 No explorer settings in backup - keeping existing preferences');
@@ -8027,7 +8007,6 @@
                                 draggable={true}
                                 onDragStart={(e) => {
                                     const filters = buildCurrentFilters();
-                                    console.log('🔍 VIEW filter bar dragStart:', { filters });
                                     e.dataTransfer.effectAllowed = 'copy';
                                     e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
                                     e.dataTransfer.setData('text/plain', autoNameView(filters));
@@ -11266,7 +11245,6 @@
                                                             onBlur={() => {
                                                                 if (editingFolderName.trim()) {
                                                                     const newName = editingFolderName.trim();
-                                                                    console.log('🔍 VIEW rename onBlur:', { viewId: sv.id, oldName: sv.name, newName, filters: sv.filters });
                                                                     setSavedViews(prev => prev.map(v => v.id === sv.id ? { ...v, name: newName } : v));
                                                                 }
                                                                 setEditingFolderId(null);
@@ -11291,11 +11269,7 @@
                                                                 e.stopPropagation();
                                                                 const viewId = getViewId(viewFolderId);
                                                                 if (await showConfirmDialog('Delete View', `Remove "${viewLabel}" from Views?`)) {
-                                                                    console.log('🔍 VIEW delete:', { viewId, viewLabel });
-                                                                    setSavedViews(prev => {
-                                                                        console.log('🔍 VIEW state before delete:', prev.map(v => ({ id: v.id, name: v.name, filters: v.filters })));
-                                                                        return prev.filter(v => v.id !== viewId);
-                                                                    });
+                                                                    setSavedViews(prev => prev.filter(v => v.id !== viewId));
                                                                     if (selectedFolderId === viewFolderId) navigateToFolder('__all__');
                                                                 }
                                                             }}
@@ -14402,7 +14376,6 @@
                                                                             const tagsToView = (selectedTags.has(tagId) && selectedTags.size > 1)
                                                                                 ? [...selectedTags] : [tagId];
                                                                             const filters = { tags: tagsToView };
-                                                                            console.log('🔍 VIEW Tag Manager dragStart:', { tagId, tagsToView, selectedTags: [...selectedTags], filters });
                                                                             e.dataTransfer.effectAllowed = 'copy';
                                                                             e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
                                                                             e.dataTransfer.setData('text/plain', autoNameView(filters));
@@ -14416,7 +14389,6 @@
                                                                             }, 0);
                                                                         }}
                                                                         onDragEnd={() => {
-                                                                            console.log('🔍 VIEW Tag Manager dragEnd');
                                                                             // Show modal again via direct DOM, restore scroll
                                                                             if (tagManagerBackdropRef.current) {
                                                                                 tagManagerBackdropRef.current.style.visibility = '';
