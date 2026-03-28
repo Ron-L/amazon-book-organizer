@@ -676,6 +676,8 @@ Switch back to ReaderWrangler... open the File menu... and click Import from Rel
 
 A progress dialog shows how many new books were found. They land in your Inbox... ready to organize.
 
+The app keeps an eye on this... and lets you know when it's time to refresh.
+
 ---
 
 **[SCENE 4: Incremental Updates — 1:45-2:15]**
