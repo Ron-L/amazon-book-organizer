@@ -438,7 +438,7 @@ Don't want to connect your Amazon account yet? No problem.
 
 Download the Demo Library from the landing page... then use File... Restore Backup... to load it.
 
-A hundred classic books appear in your Inbox... ready to organize right now. You can connect your real library later.
+A hundred classic books appear in your Inbox. Now you can explore everything ReaderWrangler can do — folders, tags, views, filters — without connecting your Amazon account. When you're ready... connect your real library later.
 
 ---
 
