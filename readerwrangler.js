@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.27";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.28";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -559,6 +559,7 @@
             const [tagFilter, setTagFilter] = useState([]); // v4.27.0 - Filter by tags (array of tag names, OR logic)
             const [tagRegistry, setTagRegistry] = useState({}); // v4.27.0 - Central tag registry {tagName: {label, count}}
             const [savedViews, setSavedViews] = useState([]); // v6.10.0-alpha.16 - Saved filter views [{id, name, filters, position, bookOrder?, description?}]
+            const savedFilterStateRef = useRef(null); // v6.10.0-alpha.28 - Stashed user filters while viewing a saved view
             const [selectedTags, setSelectedTags] = useState(new Set()); // v5.5.15-alpha.24 - Tag selection for bulk delete (unified, replaces selectedOrphans)
             const [tagSortColumn, setTagSortColumn] = useState('name'); // v5.5.15-alpha.24 - Tag Manager sort column ('name' | 'count')
             const [tagSortAsc, setTagSortAsc] = useState(true); // v5.5.15-alpha.24 - Tag Manager sort direction
@@ -2066,11 +2067,23 @@
 
             // v5.0.0-alpha.92 - Navigation history functions
             const navigateToFolder = (folderId, addToHistory = true) => {
-                // v6.10.0-alpha.27 - Apply saved view filters when navigating to a view
-                if (isViewFolder(folderId)) {
+                // v6.10.0-alpha.28 - Save/restore user filters when entering/leaving views
+                const wasInView = isViewFolder(selectedFolderId);
+                const goingToView = isViewFolder(folderId);
+                if (goingToView) {
+                    // Entering a view (or view-to-view): stash filters only on first entry
+                    if (!wasInView) {
+                        savedFilterStateRef.current = buildCurrentFilters();
+                    }
                     const view = getView(folderId);
                     if (view?.filters) {
                         applyViewFilters(view.filters);
+                    }
+                } else if (wasInView) {
+                    // Leaving a view: restore stashed filters
+                    if (savedFilterStateRef.current) {
+                        applyViewFilters(savedFilterStateRef.current);
+                        savedFilterStateRef.current = null;
                     }
                 }
                 setSelectedFolderId(folderId);
@@ -2260,6 +2273,8 @@
             React.useEffect(() => {
                 // v4.15.6: Skip save during initial load to prevent overwriting
                 if (!filtersLoadedRef.current) return;
+                // v6.10.0-alpha.28: Don't persist view filters to localStorage — user's real filters are stashed
+                if (isViewFolder(selectedFolderId)) return;
                 try {
                     const filters = {
                         searchTerm,
@@ -6923,6 +6938,7 @@
                         </div>
                     ) : (<>
                     {/* v5.0.0-alpha.175.3 - Toolbar (Phase 3 foundation) */}
+                    {/* v6.10.0-alpha.28 - Gray out filter bar when viewing a saved view */}
                     <div style={{
                         height: '36px',
                         background: 'var(--bg-surface)',
@@ -6930,7 +6946,8 @@
                         display: 'flex',
                         alignItems: 'center',
                         padding: '0 12px',
-                        gap: '12px'
+                        gap: '12px',
+                        ...(isViewFolder(selectedFolderId) ? { opacity: 0.45, pointerEvents: 'none' } : {})
                     }}>
                         {/* v5.5.4 - Isolated SearchInput component for performance */}
                         <SearchInput
@@ -7921,8 +7938,8 @@
 
                     {/* Active Filters Banner (v3.8.0.k - moved below Filter Panel, v4.15.6.m - use datePreset, v4.27.0 - add tagFilter, v5.0.0-alpha.175.41 - add selectedCollections, v5.0.0-alpha.175.42 - add minAmazonRating, v5.0.0-alpha.175.43 - add minMyRating, v5.0.0-alpha.175.44 - add selectedSeries, v5.0.0-alpha.175.47 - restored after Phase 7 cleanup, v5.0.0-alpha.175.49.2 - Clear All button floats near filters instead of far right) */}
                     {(searchTerm || readStatusFilter || collectionFilter || ratingFilter || ownershipFilter || seriesFilter || datePreset || (tagFilter && tagFilter.length > 0) || selectedCollections.length > 0 || minAmazonRating || minMyRating || selectedSeries.length > 0) && (
-                        <div className="bg-blue-100 border border-blue-300 rounded-lg px-4 py-2 mb-4 flex items-center gap-2 flex-wrap text-sm">
-                            <span className="font-semibold">🔍 Active:</span>
+                        <div className={`${isViewFolder(selectedFolderId) ? 'bg-purple-100 border-purple-300' : 'bg-blue-100 border-blue-300'} border rounded-lg px-4 py-2 mb-4 flex items-center gap-2 flex-wrap text-sm`}>
+                            <span className="font-semibold">{isViewFolder(selectedFolderId) ? `📌 View: ${getView(selectedFolderId)?.name || 'Saved View'}` : '🔍 Active:'}</span>
                                 {searchTerm && <span>Search: "{searchTerm}"</span>}
                                 {searchTerm && (readStatusFilter || collectionFilter || ratingFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {readStatusFilter && <span>Read: {readStatusFilter}</span>}
@@ -7958,6 +7975,8 @@
                                 {minMyRating && selectedSeries.length > 0 && <span>|</span>}
                                 {selectedSeries.length > 0 && <span>Series: {selectedSeries.map(s => s === 'NOT_IN_SERIES' ? 'Not in series' : s).join(', ')}</span>}
                             {/* v6.10.0-alpha.17 - Drag handle to save current filters as a view */}
+                            {/* v6.10.0-alpha.28 - Hide drag handle and Clear All when in a saved view */}
+                            {!isViewFolder(selectedFolderId) && (<>
                             <span
                                 className="cursor-grab active:cursor-grabbing text-blue-400 hover:text-blue-700 select-none"
                                 title="Drag to Views in sidebar to save this filter as a view"
@@ -7991,6 +8010,7 @@
                                 style={{ marginLeft: '4px' }}>
                                 Clear All ×
                             </button>
+                            </>)}
                         </div>
                     )}
                     </>)}
