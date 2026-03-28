@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.18";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.19";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4587,11 +4587,13 @@
                     }
                 }
 
-                // Save to IndexedDB (returns merged books including preserved orphan wishlists)
-                // v5.0.0-alpha.173.1 - Pass preserveUserData=true for imports to merge with existing
+                // Save to IndexedDB
+                // v5.0.0-alpha.173.1 - preserveUserData=true for imports to merge with existing
+                // v6.10.0-alpha.19 - Backup restore uses false (clean replacement, no orphan merge)
                 // v6.3.0 - Capture existing IDs before merge so we can report new books to caller
+                const isBackupRestore = organizationFromFile !== null;
                 const existingIds = new Set((await loadBooksFromIndexedDB()).map(b => b.id));
-                const mergedBooks = await saveBooksToIndexedDB(processedBooks, true);
+                const mergedBooks = await saveBooksToIndexedDB(processedBooks, !isBackupRestore);
                 const newBookIds = mergedBooks.filter(b => !existingIds.has(b.id) && !b.isDeleted).map(b => b.id);
                 setBooks(mergedBooks);
 
