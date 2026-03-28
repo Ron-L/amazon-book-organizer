@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.24";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.25";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1089,12 +1089,14 @@
                         }
                     }, 50);
                 }
-                // Trigger inline rename
-                const folderId = `__view_${viewId}__`;
-                setTimeout(() => {
-                    setEditingFolderId(folderId);
-                    setEditingFolderName(name);
-                }, 100);
+                // Trigger inline rename (skip if Tag Manager is open — modal covers sidebar)
+                if (!tagManagementOpen) {
+                    const folderId = `__view_${viewId}__`;
+                    setTimeout(() => {
+                        setEditingFolderId(folderId);
+                        setEditingFolderName(name);
+                    }, 100);
+                }
                 return viewId;
             };
 
