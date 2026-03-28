@@ -13,11 +13,11 @@ Nine videos total: one sizzle reel (hook) + eight tutorials (teach). All videos 
 | # | Video | Length | Audience | Script Status |
 |---|-------|--------|----------|---------------|
 | 0 | Sizzle Reel | 20-30 sec | Everyone (landing page, social) | Shot list ready |
-| 1 | Quick Start | 3 min | Brand new users | Script complete (needs demo library update) |
+| 1 | Quick Start | 3 min | Brand new users | Script updated (demo library safe) |
 | 2 | Setting Up the Relay | 1-2 min | New users who skipped Quick Start | Script ready |
 | 3 | Fetching Your Library | 2-3 min | Users who want to understand the fetcher | Script ready |
 | 4 | Organizing with Folders | 3-4 min | Users who imported and need to organize | Script updated (added Tag from Collections) |
-| 5 | Views & Filters | 3-4 min | Users with large libraries | Script updated (saved filter views, lens model) |
+| 5 | Views & Filters | 3-4 min | Users who want to find books quickly | Script updated (saved filter views, lens model) |
 | 6 | Wishlist & Discovery | 2-3 min | Users who want to track books before buying | Script ready |
 | 7 | Mobile Sync | 1-2 min | Users who read on phone | Script ready |
 | 8 | Power Features | 2-3 min | Advanced users | Script updated (added Share Book) |
@@ -296,7 +296,7 @@ Rapid cuts (1-3 sec each), zoom in/out transitions (0.25s), no voiceover, music 
 
 | # | Duration | Shot | Text Overlay | Purpose |
 |---|----------|------|-------------|---------|
-| 1 | 1.5s | Amazon library page — flat grid, hundreds of tiny covers, no organization | — | The pain |
+| 1 | 1.5s | Amazon library page — a couple rows of book covers, no organization tools | — | The pain |
 | 2 | 0.5s | Hard cut to black | "Enough." | Emotional beat |
 | 3 | 1.5s | ReaderWrangler — organized folder tree with books flowing into view | — | The solution |
 | 4 | 1s | Cover view — grid of covers with rating stars, badges | — | Visual wow |
@@ -317,7 +317,7 @@ Rapid cuts (1-3 sec each), zoom in/out transitions (0.25s), no voiceover, music 
 - A few books tagged "Next"
 - Cover view active for visual impact
 - Browser at 100% zoom, clean profile (no personal bookmarks)
-- Amazon library page open in separate tab (for shot 1)
+- Amazon library page open in separate tab (for shot 1 — show only a couple rows, limit exposure)
 
 ### Editing Notes
 - Transitions: CapCut zoom in/out presets, 0.2-0.3s each
@@ -346,13 +346,13 @@ Brand new users who need to get started fast
 
 **[SCENE 1: The Problem — 0:00-0:20]**
 
-Have hundreds of Kindle books... but can never find what to read next??
+Got a Kindle library? Dozens of books... hundreds... maybe thousands?
 
-Amazon shows your entire library. But it won't let you organize it.
+Amazon shows them all. But it won't let you organize them.
 
 ReaderWrangler fixes that.
 
-In the next three minutes... you'll connect directly to your Amazon library... import your books... and start organizing them your way.
+In the next three minutes... you'll connect to your Amazon library... import your books... and start organizing them your way.
 
 ---
 
@@ -384,7 +384,7 @@ Then it adds genre tags automatically from Amazon's own categories.
 
 Finally it checks current prices.
 
-For a large library... this takes a few minutes. Go grab a coffee.
+For a big library... this can take a few minutes. Go grab a coffee.
 
 When it's done... your books are waiting in the relay, ready to import.
 
@@ -445,9 +445,18 @@ A hundred classic books appear in your Inbox. Now you can explore everything Rea
 ### Screen Direction
 
 **[SCENE 1: 0:00-0:20]**
-- Show Amazon "Your Books" page — flat unorganized grid of many covers
-- Text overlay: "2,500 books. 0 ways to organize them."
+- Show Amazon "Your Books" page — a couple rows of covers, no organization visible
+- Text overlay: "No folders. No tags. No way to organize."
 - Transition to clean ReaderWrangler app (empty state)
+
+**[ALT: Demo Library Quick Path — insert after Scene 1]**
+- Show landing page, scroll to or highlight "Demo Library" download link
+- Click download — file saves to Downloads
+- Switch to ReaderWrangler app
+- File menu → Restore Backup (highlight)
+- Select demo library file
+- Books populate Inbox — badge shows 100
+- Quick montage: click a folder, click a tag view, open filter dropdown — showing features available to explore
 
 **[SCENE 2: 0:20-0:50]**
 - Click File menu (highlight)
@@ -651,7 +660,7 @@ Phase 1 collects your book titles... authors... covers... and basic metadata. Yo
 
 Phase 2 fills in descriptions and customer reviews. If any were missed on a previous run... it catches them now.
 
-Phase 3 adds genre tags. Amazon categorizes every book... and ReaderWrangler imports those tags. It processes up to ten new books per run... so for a large library... this builds up over a few fetches.
+Phase 3 adds genre tags. Amazon categorizes every book... and ReaderWrangler imports those tags. It processes up to ten new books per run... so for a library with hundreds or thousands of books... this builds up over a few fetches.
 
 Phase 4 checks current prices for all your books. This runs every time... so your price data stays fresh.
 
@@ -899,7 +908,7 @@ Remember... Control-Z undoes anything. Experiment freely.
 3-4 minutes
 
 ### Audience
-Users with large libraries who want to find books quickly
+Users who want to find books quickly
 
 ### Scene Prep
 - Demo library organized into target folder structure
@@ -1460,7 +1469,7 @@ Before recording videos, capture updated before/after screenshots for use in tut
 ### Before Screenshot (Amazon)
 1. Go to amazon.com → Your Books / Kindle Library
 2. Set Chrome viewport to 1920x1080 (same as video recording setup)
-3. Scroll to show a large grid of disorganized covers
+3. Show a couple rows of covers — enough to convey "no organization," limit personal library exposure
 4. Take screenshot: `Win+Shift+S` → select the viewport area → save as `images/before.png`
 
 ### After Screenshot (ReaderWrangler)
