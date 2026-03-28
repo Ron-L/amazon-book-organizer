@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.22";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.23";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2126,10 +2126,10 @@
             // v5.5.15-alpha.24 - Last clicked tag for shift-click range selection in Tag Manager
             const lastClickedTagRef = useRef(null);
 
-            // v6.10.0-alpha.20 - Tag Manager drag-to-view: preserve state during modal hide
+            // v6.10.0-alpha.20 - Tag Manager drag-to-view: hide modal during drag via direct DOM
             const tagDragScrollRef = useRef(0); // scroll position before drag
-            const [tagDragHidden, setTagDragHidden] = useState(false); // hides modal visually (not unmounted) during drag
-            const tagManagerScrollRef = useRef(null); // ref to scrollable container
+            const tagManagerBackdropRef = useRef(null); // modal backdrop for direct DOM visibility toggle
+            const tagManagerScrollRef = useRef(null); // scrollable container for scroll position restore
 
             // v5.0.0-alpha.82 - Timeout for auto-expanding folder on drag hover
             const dragHoverExpandTimeoutRef = useRef(null);
@@ -14030,8 +14030,7 @@
 
                     {/* v4.27.0 Phase 3 - Tag Management Modal */}
                     {tagManagementOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-                             style={tagDragHidden ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+                        <div ref={tagManagerBackdropRef} className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
                              onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setTagManagementOpen(false); setEditingTagId(null); } backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col"
                                  onClick={(e) => e.stopPropagation()}>
@@ -14274,13 +14273,22 @@
                                                                                 e.dataTransfer.effectAllowed = 'copy';
                                                                                 e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
                                                                                 e.dataTransfer.setData('text/plain', autoNameView(filters));
-                                                                                // Save scroll position, then hide modal visually
+                                                                                // Save scroll position, then hide modal via direct DOM (no React re-render)
                                                                                 tagDragScrollRef.current = tagManagerScrollRef.current?.scrollTop || 0;
-                                                                                setTimeout(() => setTagDragHidden(true), 0);
+                                                                                setTimeout(() => {
+                                                                                    if (tagManagerBackdropRef.current) {
+                                                                                        tagManagerBackdropRef.current.style.visibility = 'hidden';
+                                                                                        tagManagerBackdropRef.current.style.pointerEvents = 'none';
+                                                                                    }
+                                                                                }, 0);
                                                                             }}
                                                                             onDragEnd={() => {
-                                                                                // Show modal again, restore scroll
-                                                                                setTagDragHidden(false);
+                                                                                console.log('🔍 VIEW Tag Manager dragEnd');
+                                                                                // Show modal again via direct DOM, restore scroll
+                                                                                if (tagManagerBackdropRef.current) {
+                                                                                    tagManagerBackdropRef.current.style.visibility = '';
+                                                                                    tagManagerBackdropRef.current.style.pointerEvents = '';
+                                                                                }
                                                                                 setTimeout(() => {
                                                                                     if (tagManagerScrollRef.current) {
                                                                                         tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
