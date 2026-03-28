@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.20";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.21";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -14188,7 +14188,8 @@
                                                                         className="rounded" />
                                                                 </td>
                                                                 <td className="py-1.5 w-7" onClick={(e) => e.stopPropagation()}>
-                                                                    {savedViews.some(v => v.filters?.tags?.includes(tagId)) ? (
+                                                                    {/* v6.10.0-alpha.20 - Pin indicator for tags with a dedicated single-tag view */}
+                                                                    {savedViews.some(v => v.filters?.tags?.length === 1 && v.filters.tags[0] === tagId && Object.keys(v.filters).length === 1) ? (
                                                                         <span className="text-xs" title="Already saved as a view">📌</span>
                                                                     ) : (
                                                                         <span
@@ -14208,25 +14209,27 @@
                                                                                 tagDragActiveRef.current = true;
                                                                                 tagDragSelectionRef.current = new Set(selectedTags);
                                                                                 tagDragScrollRef.current = tagManagerScrollRef.current?.scrollTop || 0;
+                                                                                // Register document-level dragend to reopen modal (element will be gone from DOM)
+                                                                                const reopenModal = () => {
+                                                                                    document.removeEventListener('dragend', reopenModal);
+                                                                                    tagDragActiveRef.current = false;
+                                                                                    setTagManagementOpen(true);
+                                                                                    if (tagDragSelectionRef.current) {
+                                                                                        setSelectedTags(tagDragSelectionRef.current);
+                                                                                        tagDragSelectionRef.current = null;
+                                                                                    }
+                                                                                    // Restore scroll after React re-renders the modal
+                                                                                    setTimeout(() => {
+                                                                                        if (tagManagerScrollRef.current) {
+                                                                                            tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
+                                                                                        }
+                                                                                    }, 50);
+                                                                                };
+                                                                                document.addEventListener('dragend', reopenModal);
                                                                                 // Hide modal after drag image is captured
                                                                                 setTimeout(() => {
                                                                                     if (tagDragActiveRef.current) setTagManagementOpen(false);
                                                                                 }, 0);
-                                                                            }}
-                                                                            onDragEnd={() => {
-                                                                                // Reopen modal with preserved state
-                                                                                tagDragActiveRef.current = false;
-                                                                                setTagManagementOpen(true);
-                                                                                if (tagDragSelectionRef.current) {
-                                                                                    setSelectedTags(tagDragSelectionRef.current);
-                                                                                    tagDragSelectionRef.current = null;
-                                                                                }
-                                                                                // Restore scroll after React re-renders the modal
-                                                                                setTimeout(() => {
-                                                                                    if (tagManagerScrollRef.current) {
-                                                                                        tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
-                                                                                    }
-                                                                                }, 50);
                                                                             }}
                                                                             style={{ fontSize: '14px', lineHeight: 1 }}>⠿</span>
                                                                     )}
