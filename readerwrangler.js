@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.25";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.26";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -14279,46 +14279,42 @@
                                                                 </td>
                                                                 {/* v6.10.0-alpha.22 - Drag handle (right side, between rename and delete) */}
                                                                 <td className="py-1.5 text-center w-8" onClick={(e) => e.stopPropagation()}>
-                                                                    {savedViews.some(v => v.filters?.tags?.length === 1 && v.filters.tags[0] === tagId && Object.keys(v.filters).length === 1) ? (
-                                                                        <span className="text-gray-300" style={{ fontSize: '14px' }} title="Already saved as a view">&nbsp;</span>
-                                                                    ) : (
-                                                                        <span
-                                                                            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-700 select-none"
-                                                                            title="Drag to Views in sidebar to save as a view"
-                                                                            draggable={true}
-                                                                            onDragStart={(e) => {
-                                                                                e.stopPropagation();
-                                                                                const tagsToView = (selectedTags.has(tagId) && selectedTags.size > 1)
-                                                                                    ? [...selectedTags] : [tagId];
-                                                                                const filters = { tags: tagsToView };
-                                                                                console.log('🔍 VIEW Tag Manager dragStart:', { tagId, tagsToView, selectedTags: [...selectedTags], filters });
-                                                                                e.dataTransfer.effectAllowed = 'copy';
-                                                                                e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
-                                                                                e.dataTransfer.setData('text/plain', autoNameView(filters));
-                                                                                // Save scroll position, then hide modal via direct DOM (no React re-render)
-                                                                                tagDragScrollRef.current = tagManagerScrollRef.current?.scrollTop || 0;
-                                                                                setTimeout(() => {
-                                                                                    if (tagManagerBackdropRef.current) {
-                                                                                        tagManagerBackdropRef.current.style.visibility = 'hidden';
-                                                                                        tagManagerBackdropRef.current.style.pointerEvents = 'none';
-                                                                                    }
-                                                                                }, 0);
-                                                                            }}
-                                                                            onDragEnd={() => {
-                                                                                console.log('🔍 VIEW Tag Manager dragEnd');
-                                                                                // Show modal again via direct DOM, restore scroll
+                                                                    <span
+                                                                        className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-700 select-none"
+                                                                        title="Drag to Views in sidebar to save as a view"
+                                                                        draggable={true}
+                                                                        onDragStart={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const tagsToView = (selectedTags.has(tagId) && selectedTags.size > 1)
+                                                                                ? [...selectedTags] : [tagId];
+                                                                            const filters = { tags: tagsToView };
+                                                                            console.log('🔍 VIEW Tag Manager dragStart:', { tagId, tagsToView, selectedTags: [...selectedTags], filters });
+                                                                            e.dataTransfer.effectAllowed = 'copy';
+                                                                            e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
+                                                                            e.dataTransfer.setData('text/plain', autoNameView(filters));
+                                                                            // Save scroll position, then hide modal via direct DOM (no React re-render)
+                                                                            tagDragScrollRef.current = tagManagerScrollRef.current?.scrollTop || 0;
+                                                                            setTimeout(() => {
                                                                                 if (tagManagerBackdropRef.current) {
-                                                                                    tagManagerBackdropRef.current.style.visibility = '';
-                                                                                    tagManagerBackdropRef.current.style.pointerEvents = '';
+                                                                                    tagManagerBackdropRef.current.style.visibility = 'hidden';
+                                                                                    tagManagerBackdropRef.current.style.pointerEvents = 'none';
                                                                                 }
-                                                                                setTimeout(() => {
-                                                                                    if (tagManagerScrollRef.current) {
-                                                                                        tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
-                                                                                    }
-                                                                                }, 50);
-                                                                            }}
-                                                                            style={{ fontSize: '14px', lineHeight: 1 }}>⠿</span>
-                                                                    )}
+                                                                            }, 0);
+                                                                        }}
+                                                                        onDragEnd={() => {
+                                                                            console.log('🔍 VIEW Tag Manager dragEnd');
+                                                                            // Show modal again via direct DOM, restore scroll
+                                                                            if (tagManagerBackdropRef.current) {
+                                                                                tagManagerBackdropRef.current.style.visibility = '';
+                                                                                tagManagerBackdropRef.current.style.pointerEvents = '';
+                                                                            }
+                                                                            setTimeout(() => {
+                                                                                if (tagManagerScrollRef.current) {
+                                                                                    tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
+                                                                                }
+                                                                            }, 50);
+                                                                        }}
+                                                                        style={{ fontSize: '14px', lineHeight: 1 }}>⠿</span>
                                                                 </td>
                                                                 <td className="py-1.5 text-center w-8" onClick={(e) => e.stopPropagation()}>
                                                                     <button
