@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.28";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.29";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -781,6 +781,8 @@
             const [relayImporting, setRelayImporting] = useState(false); // true while importing from relay
             const [relayManualCreds, setRelayManualCreds] = useState(false); // show manual credential entry in Relay Setup
             const [relayTestRan, setRelayTestRan] = useState(false); // v6.9.0 - true after user clicks Test in current dialog session
+            const dismissedRelayTimestampRef = useRef(null); // v6.10.0-alpha.29 - Track dismissed relay banner timestamp (Option B: dismiss until new data)
+            const relayLastCheckedRef = useRef(null); // v6.10.0-alpha.29 - Timestamp of last successful relay poll
             useEffect(() => { if (relaySetupOpen) setRelayTestRan(false); }, [relaySetupOpen]); // Reset when dialog opens
             const [relaySetupSection, setRelaySetupSection] = useState(null); // which accordion section is open: 'credentials'|'bookmarklet'|'mobile'|null
             const [relayHelpOpen, setRelayHelpOpen] = useState(false); // v6.10.0 - Help overlay in Relay Setup
@@ -2256,6 +2258,7 @@
                     if (window.RWRelay.isConfigured()) {
                         window.RWRelay.checkStatus()
                             .then(manifest => {
+                                relayLastCheckedRef.current = new Date().toISOString();
                                 if (manifest) {
                                     console.log(`📡 Relay: Library data available (${manifest.bookCount} books, uploaded ${manifest.timestamp})`);
                                     setRelayManifest(manifest);
@@ -2268,6 +2271,38 @@
                     }
                 }
             }, []);
+
+            // v6.10.0-alpha.29 - Poll relay for new data (two-level freshness)
+            React.useEffect(() => {
+                if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
+
+                const POLL_INTERVAL = 10 * 60 * 1000; // 10 minutes
+
+                const pollRelay = async () => {
+                    try {
+                        const manifest = await window.RWRelay.checkStatus();
+                        relayLastCheckedRef.current = new Date().toISOString();
+                        if (manifest && manifest.timestamp) {
+                            const relayTime = new Date(manifest.timestamp).getTime();
+                            const appTime = libraryStatus.loadDate
+                                ? new Date(libraryStatus.loadDate).getTime()
+                                : 0;
+
+                            // Only show banner if relay data is newer than app data
+                            // and not the same timestamp the user already dismissed
+                            if (relayTime > appTime && manifest.timestamp !== dismissedRelayTimestampRef.current) {
+                                setRelayManifest(manifest);
+                            }
+                        }
+                    } catch (err) {
+                        // Silent — polling is background, never interrupts the user
+                        console.warn('Relay poll failed:', err.message);
+                    }
+                };
+
+                const intervalId = setInterval(pollRelay, POLL_INTERVAL);
+                return () => clearInterval(intervalId);
+            }, [libraryStatus.loadDate]);
 
             // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d, v4.15.6)
             React.useEffect(() => {
@@ -6106,8 +6141,17 @@
                 ownershipFilter, seriesFilter, dateFrom, dateTo, tagFilter, dealsFilterActive]);
 
             // Calculate combined urgency from Library and Collections status
-            // Urgency is based ONLY on Load status (what's in the app right now)
+            // v6.10.0-alpha.29: Two-level freshness — relay data trumps age-based when newer data exists
             const getUrgencyInfo = () => {
+                // Stage 2: Relay has newer data — most actionable signal
+                if (relayManifest) {
+                    const isEmpty = libraryStatus.loadStatus === 'empty';
+                    return isEmpty
+                        ? { icon: '📡', text: 'Data waiting', color: 'text-purple-600', tooltip: 'Library data is ready to import from relay' }
+                        : { icon: '📡', text: 'Update available', color: 'text-purple-600', tooltip: 'Newer library data available on relay' };
+                }
+
+                // Stage 1: Age-based freshness (what's in the app right now)
                 const libLoad = libraryStatus.loadStatus;
                 const colLoad = collectionsStatus.loadStatus;
 
@@ -6880,7 +6924,7 @@
                                     background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white',
                                     border: 'none', borderRadius: '4px', cursor: 'pointer'
                                 }}>Import</button>
-                                <button onClick={() => setRelayManifest(null)} style={{
+                                <button onClick={() => { dismissedRelayTimestampRef.current = relayManifest.timestamp; setRelayManifest(null); }} style={{
                                     padding: '4px 12px', fontSize: '12px',
                                     background: 'var(--bg-surface)', color: 'var(--text-muted)',
                                     border: '1px solid var(--border-default)', borderRadius: '4px', cursor: 'pointer'
@@ -8065,6 +8109,41 @@
                                             </p>
                                         )}
                                     </div>
+
+                                    {/* v6.10.0-alpha.29 - Relay freshness section */}
+                                    {window.RWRelay && window.RWRelay.isConfigured() && (
+                                    <div className="border-b border-gray-200 pb-3">
+                                        {relayManifest ? (
+                                            <>
+                                                <p className="text-sm text-purple-700">
+                                                    📡 <strong>Relay:</strong> Newer data available
+                                                </p>
+                                                <p className="text-xs mt-1 text-purple-600">
+                                                    {relayManifest.bookCount} books · fetched {new Date(relayManifest.timestamp).toLocaleString()}
+                                                </p>
+                                                <button onClick={() => { setStatusModalOpen(false); importFromRelay(); }} className="mt-2 px-3 py-1 text-xs font-bold text-white rounded" style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)' }}>
+                                                    Import Now
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className="text-sm text-gray-700">
+                                                    📡 <strong>Relay:</strong> No newer data
+                                                </p>
+                                                {relayLastCheckedRef.current && (
+                                                    <p className="text-xs mt-1 text-gray-500">
+                                                        Last checked: {new Date(relayLastCheckedRef.current).toLocaleString()}
+                                                    </p>
+                                                )}
+                                                {(libraryStatus.loadStatus === 'stale' || libraryStatus.loadStatus === 'obsolete') && (
+                                                    <p className="text-xs mt-1 text-orange-600">
+                                                        Your library data is getting old. Run the fetcher to refresh it.
+                                                    </p>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                    )}
 
                                     {/* Organization stats */}
                                     <div className="border-b border-gray-200 pb-3">
