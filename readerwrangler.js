@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.21";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.22";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1052,14 +1052,23 @@
 
             // v6.10.0-alpha.17 - Create a saved view from filters and add to savedViews
             const createSavedView = (filters, position) => {
+                console.log('🔍 VIEW createSavedView called:', { filters, position });
                 // Duplicate check: reject if an identical filter combination already exists
                 const filterKey = JSON.stringify(filters, Object.keys(filters).sort());
-                const duplicate = savedViews.find(v => JSON.stringify(v.filters, Object.keys(v.filters || {}).sort()) === filterKey);
-                if (duplicate) return null; // caller should show toast
+                const duplicate = savedViews.find(v => {
+                    const vKey = JSON.stringify(v.filters, Object.keys(v.filters || {}).sort());
+                    if (vKey === filterKey) console.log('🔍 VIEW duplicate match:', { existingView: v.name, existingFilters: v.filters, newFilters: filters });
+                    return vKey === filterKey;
+                });
+                if (duplicate) { console.log('🔍 VIEW rejected as duplicate of:', duplicate.name); return null; }
                 const viewId = `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
                 const name = autoNameView(filters);
                 const newView = { id: viewId, name, filters, position };
-                setSavedViews(prev => [...prev, newView]);
+                console.log('🔍 VIEW created:', { viewId, name, filters, position });
+                setSavedViews(prev => {
+                    console.log('🔍 VIEW state before add:', prev.map(v => ({ name: v.name, filters: v.filters })));
+                    return [...prev, newView];
+                });
                 // Trigger inline rename
                 const folderId = `__view_${viewId}__`;
                 setTimeout(() => {
@@ -2119,8 +2128,7 @@
 
             // v6.10.0-alpha.20 - Tag Manager drag-to-view: preserve state during modal hide
             const tagDragScrollRef = useRef(0); // scroll position before drag
-            const tagDragSelectionRef = useRef(null); // selectedTags before drag
-            const tagDragActiveRef = useRef(false); // true while drag is in progress
+            const [tagDragHidden, setTagDragHidden] = useState(false); // hides modal visually (not unmounted) during drag
             const tagManagerScrollRef = useRef(null); // ref to scrollable container
 
             // v5.0.0-alpha.82 - Timeout for auto-expanding folder on drag hover
@@ -2610,6 +2618,7 @@
                             savedAt: Date.now()
                         };
                         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                        if (savedViews.length > 0) console.log('🔍 VIEW auto-save:', savedViews.map(v => ({ name: v.name, filters: v.filters })));
                     } catch (e) {
                         console.warn('Could not auto-save organization:', e);
                     }
@@ -7918,6 +7927,7 @@
                                 draggable={true}
                                 onDragStart={(e) => {
                                     const filters = buildCurrentFilters();
+                                    console.log('🔍 VIEW filter bar dragStart:', { filters });
                                     e.dataTransfer.effectAllowed = 'copy';
                                     e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
                                     e.dataTransfer.setData('text/plain', autoNameView(filters));
@@ -11120,6 +11130,7 @@
                                                             onBlur={() => {
                                                                 if (editingFolderName.trim()) {
                                                                     const newName = editingFolderName.trim();
+                                                                    console.log('🔍 VIEW rename onBlur:', { viewId: sv.id, oldName: sv.name, newName, filters: sv.filters });
                                                                     setSavedViews(prev => prev.map(v => v.id === sv.id ? { ...v, name: newName } : v));
                                                                 }
                                                                 setEditingFolderId(null);
@@ -11144,7 +11155,11 @@
                                                                 e.stopPropagation();
                                                                 const viewId = getViewId(viewFolderId);
                                                                 if (await showConfirmDialog('Delete View', `Remove "${viewLabel}" from Views?`)) {
-                                                                    setSavedViews(prev => prev.filter(v => v.id !== viewId));
+                                                                    console.log('🔍 VIEW delete:', { viewId, viewLabel });
+                                                                    setSavedViews(prev => {
+                                                                        console.log('🔍 VIEW state before delete:', prev.map(v => ({ id: v.id, name: v.name, filters: v.filters })));
+                                                                        return prev.filter(v => v.id !== viewId);
+                                                                    });
                                                                     if (selectedFolderId === viewFolderId) navigateToFolder('__all__');
                                                                 }
                                                             }}
@@ -14016,6 +14031,7 @@
                     {/* v4.27.0 Phase 3 - Tag Management Modal */}
                     {tagManagementOpen && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+                             style={tagDragHidden ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
                              onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) { setTagManagementOpen(false); setEditingTagId(null); } backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col"
                                  onClick={(e) => e.stopPropagation()}>
@@ -14162,6 +14178,7 @@
                                                         Books{sortArrow('count')}
                                                     </span>
                                                     <span className="w-8"></span>
+                                                    <span className="w-8"></span>
                                                     <span className="w-8 flex-shrink-0 text-center">
                                                         {selectedTags.size > 0 && (
                                                             <button onClick={handleBulkDelete}
@@ -14187,51 +14204,10 @@
                                                                         onChange={() => handleCheckboxChange(tagId)}
                                                                         className="rounded" />
                                                                 </td>
-                                                                <td className="py-1.5 w-7" onClick={(e) => e.stopPropagation()}>
-                                                                    {/* v6.10.0-alpha.20 - Pin indicator for tags with a dedicated single-tag view */}
-                                                                    {savedViews.some(v => v.filters?.tags?.length === 1 && v.filters.tags[0] === tagId && Object.keys(v.filters).length === 1) ? (
-                                                                        <span className="text-xs" title="Already saved as a view">📌</span>
-                                                                    ) : (
-                                                                        <span
-                                                                            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-700 select-none"
-                                                                            title="Drag to Views in sidebar to save as a view"
-                                                                            draggable={true}
-                                                                            onDragStart={(e) => {
-                                                                                e.stopPropagation();
-                                                                                // Determine which tags to drag: if this tag is in a multi-selection, drag all selected
-                                                                                const tagsToView = (selectedTags.has(tagId) && selectedTags.size > 1)
-                                                                                    ? [...selectedTags] : [tagId];
-                                                                                const filters = { tags: tagsToView };
-                                                                                e.dataTransfer.effectAllowed = 'copy';
-                                                                                e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
-                                                                                e.dataTransfer.setData('text/plain', autoNameView(filters));
-                                                                                // Save modal state and hide
-                                                                                tagDragActiveRef.current = true;
-                                                                                tagDragSelectionRef.current = new Set(selectedTags);
-                                                                                tagDragScrollRef.current = tagManagerScrollRef.current?.scrollTop || 0;
-                                                                                // Register document-level dragend to reopen modal (element will be gone from DOM)
-                                                                                const reopenModal = () => {
-                                                                                    document.removeEventListener('dragend', reopenModal);
-                                                                                    tagDragActiveRef.current = false;
-                                                                                    setTagManagementOpen(true);
-                                                                                    if (tagDragSelectionRef.current) {
-                                                                                        setSelectedTags(tagDragSelectionRef.current);
-                                                                                        tagDragSelectionRef.current = null;
-                                                                                    }
-                                                                                    // Restore scroll after React re-renders the modal
-                                                                                    setTimeout(() => {
-                                                                                        if (tagManagerScrollRef.current) {
-                                                                                            tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
-                                                                                        }
-                                                                                    }, 50);
-                                                                                };
-                                                                                document.addEventListener('dragend', reopenModal);
-                                                                                // Hide modal after drag image is captured
-                                                                                setTimeout(() => {
-                                                                                    if (tagDragActiveRef.current) setTagManagementOpen(false);
-                                                                                }, 0);
-                                                                            }}
-                                                                            style={{ fontSize: '14px', lineHeight: 1 }}>⠿</span>
+                                                                <td className="py-1.5 w-7 text-center">
+                                                                    {/* v6.10.0-alpha.21 - Pin indicator for tags with a dedicated single-tag view */}
+                                                                    {savedViews.some(v => v.filters?.tags?.length === 1 && v.filters.tags[0] === tagId && Object.keys(v.filters).length === 1) && (
+                                                                        <span className="text-xs" title="Saved as a view">📌</span>
                                                                     )}
                                                                 </td>
                                                                 <td className="py-1.5" onClick={editingTagId === tagId ? (e) => e.stopPropagation() : undefined}>
@@ -14279,6 +14255,40 @@
                                                                         title="Rename">
                                                                         <PencilIconSVG size={14} color="#9ca3af" />
                                                                     </button>
+                                                                </td>
+                                                                {/* v6.10.0-alpha.22 - Drag handle (right side, between rename and delete) */}
+                                                                <td className="py-1.5 text-center w-8" onClick={(e) => e.stopPropagation()}>
+                                                                    {savedViews.some(v => v.filters?.tags?.length === 1 && v.filters.tags[0] === tagId && Object.keys(v.filters).length === 1) ? (
+                                                                        <span className="text-gray-300" style={{ fontSize: '14px' }} title="Already saved as a view">&nbsp;</span>
+                                                                    ) : (
+                                                                        <span
+                                                                            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-700 select-none"
+                                                                            title="Drag to Views in sidebar to save as a view"
+                                                                            draggable={true}
+                                                                            onDragStart={(e) => {
+                                                                                e.stopPropagation();
+                                                                                const tagsToView = (selectedTags.has(tagId) && selectedTags.size > 1)
+                                                                                    ? [...selectedTags] : [tagId];
+                                                                                const filters = { tags: tagsToView };
+                                                                                console.log('🔍 VIEW Tag Manager dragStart:', { tagId, tagsToView, selectedTags: [...selectedTags], filters });
+                                                                                e.dataTransfer.effectAllowed = 'copy';
+                                                                                e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
+                                                                                e.dataTransfer.setData('text/plain', autoNameView(filters));
+                                                                                // Save scroll position, then hide modal visually
+                                                                                tagDragScrollRef.current = tagManagerScrollRef.current?.scrollTop || 0;
+                                                                                setTimeout(() => setTagDragHidden(true), 0);
+                                                                            }}
+                                                                            onDragEnd={() => {
+                                                                                // Show modal again, restore scroll
+                                                                                setTagDragHidden(false);
+                                                                                setTimeout(() => {
+                                                                                    if (tagManagerScrollRef.current) {
+                                                                                        tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
+                                                                                    }
+                                                                                }, 50);
+                                                                            }}
+                                                                            style={{ fontSize: '14px', lineHeight: 1 }}>⠿</span>
+                                                                    )}
                                                                 </td>
                                                                 <td className="py-1.5 text-center w-8" onClick={(e) => e.stopPropagation()}>
                                                                     <button
