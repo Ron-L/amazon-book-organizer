@@ -8,13 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [6.10.0] - 2026-03-27
 
 ### Added
-- **Saved Filter Views** — Save any combination of active filters as a named View in the sidebar. Single-tag, multi-tag, or complex filter combos (tags + read status + rating + etc.) all work. "Save as View" button appears on the Active Filters banner. Tag Manager pin icon redesigned for discoverability. Replaces the old tag-only pin system with a general-purpose saved view system.
+- **Saved Filter Views** — Save any combination of active filters as a named View in the sidebar. Single-tag, multi-tag, or complex filter combos (tags + read status + rating + etc.) all work. Drag the handle from the Active Filters banner or Tag Manager to the Views section. Views act as an independent lens: clicking a view applies its saved filters, grays out the filter bar, and shows a purple "View:" banner. Your personal filters are stashed on entry and restored when you navigate away. Tag Manager always shows drag handles for creating combination views. Replaces the old tag-only pin system with a general-purpose saved view system.
 - **Share Book** — Share book recommendations via Copy Amazon Link, Email to a Friend (with Gmail fallback), or native Web Share API. Works with single or multiple books. Accessible from right-click context menu and book detail dialog.
 - **Tag from Collections** — Wizard to convert Kindle Collections into editable tags. Tracks wizard-assigned vs user-assigned tags (`collectionTags`). "Removed from Kindle" section detects when books leave a Kindle Collection and offers to remove or keep the tag. "New books only" filter for repeat imports.
 - **Context menus for Inbox and All Books** — Right-click Inbox for Auto-Organize and Select All; right-click All Books for Select All. Prevents Chrome default context menu on system folders.
 - **Before/after screenshot update** — New 1920x1080 screenshots with wider comparison slider (1400px) and image scaling fix.
 
 ### Fixed
+- **Saved View navigation** — Clicking a saved view reset to All Books immediately. Root cause: the folder validation logic didn't recognize `__view_*__` folder IDs as valid, resetting them on the next render cycle.
+- **Backup restore merging old books** — Restoring a backup merged orphan wishlist books from the existing database instead of doing a clean replacement. Demo backup (118 books) would show 372 books (254 orphans from prior full library preserved).
+- **Missing filter clearing on backup restore** — Seven filter variables (tags, collections, ratings, series, date, deals) were not cleared on restore, causing stale filters to persist.
 - **Relay: smart chunk deletion on revoke** — Revoke now reads the manifest to delete only actual chunks instead of brute-force deleting 0-99. Reduces KV deletes from ~102 to ~5 per revoke (95% reduction), preventing free tier quota exhaustion.
 
 ## [6.9.0] - 2026-03-23
