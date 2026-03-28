@@ -20,7 +20,7 @@ Nine videos total: one sizzle reel (hook) + eight tutorials (teach). All videos 
 | 5 | Views & Filters | 3-4 min | Users who want to find books quickly | Script updated (saved filter views, lens model) |
 | 6 | Wishlist & Discovery | 2-3 min | Users who want to track books before buying | Script ready |
 | 7 | Mobile Sync | 1-2 min | Users who read on phone | Script ready |
-| 8 | Power Features | 2-3 min | Advanced users | Script updated (added Share Book) |
+| 8 | Power Features | 2-3 min | Advanced users | Script updated (Share Book, Data Status freshness) |
 
 **Where videos are published:**
 - `tutorials.html` — embedded on the tutorial hub page
@@ -216,8 +216,8 @@ For sizzle reel only (tutorials use voiceover, not music). Tutorial videos may o
 | 5 (Views & Filters) | ~2,600 (rewritten for saved filter views) |
 | 6 (Wishlist) | ~1,400 |
 | 7 (Mobile) | ~800 |
-| 8 (Power Features) | ~1,700 (+Share Book scene) |
-| **Total** | **~13,450 / 1,000,000** (1.3%) |
+| 8 (Power Features) | ~1,850 (+Share Book, expanded Data Status) |
+| **Total** | **~13,600 / 1,000,000** (1.4%) |
 
 ### File Organization
 
@@ -1326,15 +1326,19 @@ Select multiple books and share them all at once. A quick way to send a reading 
 
 ---
 
-**[SCENE 6: Data Status — 2:20-2:40]**
+**[SCENE 6: Data Status — 2:20-2:55]**
 
 The colored dot next to the File menu is your Data Status indicator.
 
-Green means everything is healthy. Click it for details.
+Green means your data is fresh. Click it for details.
 
-The status dialog shows your book count... folder count... tag count... and whether integrity checks found anything.
+The status dialog shows your library info... relay status... and integrity checks.
 
-If the dot turns yellow or red... click it to see what needs attention.
+If the dot turns purple... it means newer data is waiting on the relay. You can import it right from the status dialog.
+
+If it turns orange or red... your data is getting old. Time to run the fetcher again.
+
+The app checks the relay automatically... so you'll always know when fresh data is available.
 
 ---
 
@@ -1376,11 +1380,15 @@ If the dot turns yellow or red... click it to see what needs attention.
 - Select 3 books → right-click → Share → Email to a Friend
 - Email compose opens with book links
 
-**[SCENE 6: 2:20-2:40]**
-- Point to status dot (green) next to File menu
+**[SCENE 6: 2:20-2:55]**
+- Point to status dot (green ✅) next to File menu
 - Click it — Data Status dialog opens
-- Show book count, folder count, integrity check results
+- Show library info, relay section ("No newer data"), integrity
 - Close dialog
+- Cut to: status dot now purple 📡 ("Update available")
+- Click it — Data Status dialog shows "Relay: Newer data available" with Import Now button
+- Click Import Now — library updates
+- Status dot returns to green ✅
 
 ---
 
