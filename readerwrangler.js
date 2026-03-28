@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.23";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.24";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1060,7 +1060,15 @@
                     if (vKey === filterKey) console.log('🔍 VIEW duplicate match:', { existingView: v.name, existingFilters: v.filters, newFilters: filters });
                     return vKey === filterKey;
                 });
-                if (duplicate) { console.log('🔍 VIEW rejected as duplicate of:', duplicate.name); return null; }
+                if (duplicate) {
+                    console.log('🔍 VIEW rejected as duplicate of:', duplicate.name);
+                    // v6.10.0-alpha.23 - Show Tag Manager back if it was hidden during drag
+                    if (tagManagerBackdropRef.current) {
+                        tagManagerBackdropRef.current.style.visibility = '';
+                        tagManagerBackdropRef.current.style.pointerEvents = '';
+                    }
+                    return null;
+                }
                 const viewId = `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
                 const name = autoNameView(filters);
                 const newView = { id: viewId, name, filters, position };
@@ -1069,6 +1077,18 @@
                     console.log('🔍 VIEW state before add:', prev.map(v => ({ name: v.name, filters: v.filters })));
                     return [...prev, newView];
                 });
+                // v6.10.0-alpha.23 - Show Tag Manager back if it was hidden during drag
+                // (onDragEnd won't fire because React re-render replaces the drag handle with 📌)
+                if (tagManagerBackdropRef.current) {
+                    tagManagerBackdropRef.current.style.visibility = '';
+                    tagManagerBackdropRef.current.style.pointerEvents = '';
+                    // Restore scroll after React re-renders
+                    setTimeout(() => {
+                        if (tagManagerScrollRef.current) {
+                            tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
+                        }
+                    }, 50);
+                }
                 // Trigger inline rename
                 const folderId = `__view_${viewId}__`;
                 setTimeout(() => {
