@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "6.10.0-alpha.20";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2116,6 +2116,12 @@
 
             // v5.5.15-alpha.24 - Last clicked tag for shift-click range selection in Tag Manager
             const lastClickedTagRef = useRef(null);
+
+            // v6.10.0-alpha.20 - Tag Manager drag-to-view: preserve state during modal hide
+            const tagDragScrollRef = useRef(0); // scroll position before drag
+            const tagDragSelectionRef = useRef(null); // selectedTags before drag
+            const tagDragActiveRef = useRef(false); // true while drag is in progress
+            const tagManagerScrollRef = useRef(null); // ref to scrollable container
 
             // v5.0.0-alpha.82 - Timeout for auto-expanding folder on drag hover
             const dragHoverExpandTimeoutRef = useRef(null);
@@ -14018,7 +14024,7 @@
                                     <button onClick={() => { setTagManagementOpen(false); setEditingTagId(null); }}
                                             className="text-gray-400 hover:text-gray-600 text-2xl" title="Close">×</button>
                                 </div>
-                                <div className="flex-1 overflow-y-auto">
+                                <div className="flex-1 overflow-y-auto" ref={tagManagerScrollRef}>
                                     {Object.keys(tagRegistry).length === 0 ? (
                                         <p className="text-gray-500 text-center py-8 px-4">No tags created yet.</p>
                                     ) : (() => {
@@ -14125,32 +14131,7 @@
                                             }
                                         };
 
-                                        // Batch pin toggle: if any selected are unpinned, pin all. If all pinned, unpin all.
-                                        const handleBulkPinToggle = () => {
-                                            if (selectedTags.size === 0) return;
-                                            const selectedIds = [...selectedTags];
-                                            const allPinned = selectedIds.every(id => savedViews.some(v => v.filters?.tags?.includes(id)));
-                                            if (allPinned) {
-                                                // Unpin all selected — remove views that are single-tag views for selected tags
-                                                setSavedViews(prev => prev.filter(v => {
-                                                    const vTagId = v.filters?.tags?.[0];
-                                                    return !vTagId || !selectedTags.has(vTagId) || Object.keys(v.filters).length > 1 || v.filters.tags.length > 1;
-                                                }));
-                                            } else {
-                                                // Pin all unpinned selected — create saved views
-                                                const rootFolderCount = folders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
-                                                const maxFolderDisplayPos = rootFolderCount > 0 ? (rootFolderCount - 1) * 2 : -1;
-                                                const maxViewPos = savedViews.reduce((max, v) => Math.max(max, v.position), -1);
-                                                const maxPos = Math.max(maxFolderDisplayPos, maxViewPos);
-                                                let nextPos = maxPos + 1;
-                                                setSavedViews(prev => {
-                                                    const alreadyPinned = new Set(prev.flatMap(v => v.filters?.tags || []));
-                                                    const toAdd = selectedIds.filter(id => !alreadyPinned.has(id))
-                                                        .map(id => ({ id, name: tagRegistry[id]?.label || id, filters: { tags: [id] }, position: nextPos++ }));
-                                                    return [...prev, ...toAdd];
-                                                });
-                                            }
-                                        };
+                                        // v6.10.0-alpha.20 - Bulk pin toggle removed; drag-to-view replaces pin icon
 
                                         return (
                                             <>
@@ -14167,23 +14148,10 @@
                                                             }}
                                                             className="rounded" />
                                                     </span>
-                                                    <span className="w-7 flex-shrink-0 text-center">
-                                                        {selectedTags.size > 0 ? (
-                                                            <button onClick={handleBulkPinToggle}
-                                                                    className="p-0.5 rounded hover:bg-gray-200"
-                                                                    title={[...selectedTags].every(id => savedViews.some(v => v.filters?.tags?.includes(id))) ? 'Unpin all selected' : 'Pin all selected as views'}>
-                                                                {[...selectedTags].every(id => savedViews.some(v => v.filters?.tags?.includes(id)))
-                                                                    ? <TagIconSVG size={14} color="#d97706" />
-                                                                    : <FolderIconSVG size={14} color="#eab308" opacity={0.6} />
-                                                                }
-                                                            </button>
-                                                        ) : (
-                                                            <span className="cursor-pointer select-none hover:text-blue-600 text-xs"
-                                                                  onClick={() => toggleSort('pinned')}
-                                                                  title="Sort by pinned state">
-                                                                {sortArrow('pinned') || '⇅'}
-                                                            </span>
-                                                        )}
+                                                    <span className="w-7 flex-shrink-0 text-center cursor-pointer select-none hover:text-blue-600 text-xs"
+                                                          onClick={() => toggleSort('pinned')}
+                                                          title="Sort by view status">
+                                                        {sortArrow('pinned') || '📌'}
                                                     </span>
                                                     <span className="flex-1 cursor-pointer select-none hover:text-blue-600"
                                                           onClick={() => toggleSort('name')}>
@@ -14220,26 +14188,48 @@
                                                                         className="rounded" />
                                                                 </td>
                                                                 <td className="py-1.5 w-7" onClick={(e) => e.stopPropagation()}>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const isPinned = savedViews.some(v => v.filters?.tags?.includes(tagId));
-                                                                            if (isPinned) {
-                                                                                setSavedViews(prev => prev.filter(v => !(v.filters?.tags?.[0] === tagId && Object.keys(v.filters).length === 1 && v.filters.tags.length === 1)));
-                                                                            } else {
-                                                                                const rfCount = folders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
-                                                                                const maxFDP = rfCount > 0 ? (rfCount - 1) * 2 : -1;
-                                                                                const maxVP = savedViews.reduce((max, v) => Math.max(max, v.position), -1);
-                                                                                const maxPos = Math.max(maxFDP, maxVP);
-                                                                                setSavedViews(prev => [...prev, { id: tagId, name: tagRegistry[tagId]?.label || tagId, filters: { tags: [tagId] }, position: maxPos + 1 }]);
-                                                                            }
-                                                                        }}
-                                                                        className="p-0.5 rounded hover:bg-gray-200"
-                                                                        title={savedViews.some(v => v.filters?.tags?.includes(tagId)) ? 'Unpin from folder pane' : 'Pin as folder view'}>
-                                                                        {savedViews.some(v => v.filters?.tags?.includes(tagId))
-                                                                            ? <TagIconSVG size={16} color="#d97706" />
-                                                                            : <FolderIconSVG size={16} color="#eab308" opacity={0.4} />
-                                                                        }
-                                                                    </button>
+                                                                    {savedViews.some(v => v.filters?.tags?.includes(tagId)) ? (
+                                                                        <span className="text-xs" title="Already saved as a view">📌</span>
+                                                                    ) : (
+                                                                        <span
+                                                                            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-700 select-none"
+                                                                            title="Drag to Views in sidebar to save as a view"
+                                                                            draggable={true}
+                                                                            onDragStart={(e) => {
+                                                                                e.stopPropagation();
+                                                                                // Determine which tags to drag: if this tag is in a multi-selection, drag all selected
+                                                                                const tagsToView = (selectedTags.has(tagId) && selectedTags.size > 1)
+                                                                                    ? [...selectedTags] : [tagId];
+                                                                                const filters = { tags: tagsToView };
+                                                                                e.dataTransfer.effectAllowed = 'copy';
+                                                                                e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
+                                                                                e.dataTransfer.setData('text/plain', autoNameView(filters));
+                                                                                // Save modal state and hide
+                                                                                tagDragActiveRef.current = true;
+                                                                                tagDragSelectionRef.current = new Set(selectedTags);
+                                                                                tagDragScrollRef.current = tagManagerScrollRef.current?.scrollTop || 0;
+                                                                                // Hide modal after drag image is captured
+                                                                                setTimeout(() => {
+                                                                                    if (tagDragActiveRef.current) setTagManagementOpen(false);
+                                                                                }, 0);
+                                                                            }}
+                                                                            onDragEnd={() => {
+                                                                                // Reopen modal with preserved state
+                                                                                tagDragActiveRef.current = false;
+                                                                                setTagManagementOpen(true);
+                                                                                if (tagDragSelectionRef.current) {
+                                                                                    setSelectedTags(tagDragSelectionRef.current);
+                                                                                    tagDragSelectionRef.current = null;
+                                                                                }
+                                                                                // Restore scroll after React re-renders the modal
+                                                                                setTimeout(() => {
+                                                                                    if (tagManagerScrollRef.current) {
+                                                                                        tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
+                                                                                    }
+                                                                                }, 50);
+                                                                            }}
+                                                                            style={{ fontSize: '14px', lineHeight: 1 }}>⠿</span>
+                                                                    )}
                                                                 </td>
                                                                 <td className="py-1.5" onClick={editingTagId === tagId ? (e) => e.stopPropagation() : undefined}>
                                                                     {editingTagId === tagId ? (
