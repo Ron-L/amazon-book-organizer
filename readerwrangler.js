@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -559,8 +559,7 @@
             const [tagFilter, setTagFilter] = useState([]); // v4.27.0 - Filter by tags (array of tag names, OR logic)
             const [tagRegistry, setTagRegistry] = useState({}); // v4.27.0 - Central tag registry {tagName: {label, count}}
             const [savedViews, setSavedViews] = useState([]); // v6.10.0-alpha.16 - Saved filter views [{id, name, filters, position, bookOrder?, description?}]
-            const savedFilterStateRef = useRef(null); // v6.10.0-alpha.28 - Stashed user filters while viewing a saved view
-            const activeViewFiltersRef = useRef(null); // v6.11.0-alpha.1 - View filters to intersect when entered with active filters
+            // savedFilterStateRef removed in v6.11.0-alpha.3 — views no longer replace filter bar state
             const [selectedTags, setSelectedTags] = useState(new Set()); // v5.5.15-alpha.24 - Tag selection for bulk delete (unified, replaces selectedOrphans)
             const [tagSortColumn, setTagSortColumn] = useState('name'); // v5.5.15-alpha.24 - Tag Manager sort column ('name' | 'count')
             const [tagSortAsc, setTagSortAsc] = useState(true); // v5.5.15-alpha.24 - Tag Manager sort direction
@@ -1257,9 +1256,10 @@
                     tags: tagFilter
                 })) return false;
 
-                // v6.11.0-alpha.1 - When in a view entered with active filters, also apply view's filters
-                if (activeViewFiltersRef.current) {
-                    if (!bookMatchesFilters(book, activeViewFiltersRef.current)) return false;
+                // v6.11.0-alpha.3 - When in a view, also apply the view's own filters
+                if (isViewFolder(selectedFolderId)) {
+                    const view = getView(selectedFolderId);
+                    if (view?.filters && !bookMatchesFilters(book, view.filters)) return false;
                 }
 
                 return true;
@@ -2074,53 +2074,12 @@
             // v5.0.0-alpha.175.48 - Removed settings state (dead code, cacheExpirationDays not used)
             const dragThreshold = 50;
 
-            // v6.10.0-alpha.27 - Apply a saved view's filters to the filter bar
-            const applyViewFilters = (filters) => {
-                // Clear all filters first, then apply the view's saved filters
-                setTagFilter(filters.tags || []);
-                setReadStatusFilter(filters.readStatus || '');
-                setSelectedCollections(filters.collections || []);
-                setOwnershipFilter(filters.ownership || '');
-                setSelectedSeries(filters.series || []);
-                setMinAmazonRating(filters.minAmazonRating || '');
-                setMinMyRating(filters.minMyRating || '');
-                setDatePreset(filters.datePreset || '');
-                setDateFrom(filters.datePreset === 'custom' ? (filters.dateFrom || '') : '');
-                setDateTo(filters.datePreset === 'custom' ? (filters.dateTo || '') : '');
-                setSearchTerm(filters.search || '');
-                setDealsFilterActive(filters.deals || false);
-            };
+            // applyViewFilters removed in v6.11.0-alpha.3 — views no longer hijack the filter bar
 
             // v5.0.0-alpha.92 - Navigation history functions
             const navigateToFolder = (folderId, addToHistory = true) => {
-                // v6.10.0-alpha.28 - Save/restore user filters when entering/leaving views
-                // v6.11.0-alpha.1 - When filters are active, keep them and intersect with view
-                const wasInView = isViewFolder(selectedFolderId);
-                const goingToView = isViewFolder(folderId);
-                if (goingToView) {
-                    if (hasActiveFilters) {
-                        // Filters active: keep current filters, view acts as additional constraint
-                        // filterBookForExplorer will check view's filters via activeViewFiltersRef
-                        activeViewFiltersRef.current = getView(folderId)?.filters || null;
-                    } else {
-                        // No active filters: original behavior — stash and apply view's filters
-                        if (!wasInView) {
-                            savedFilterStateRef.current = buildCurrentFilters();
-                        }
-                        const view = getView(folderId);
-                        if (view?.filters) {
-                            applyViewFilters(view.filters);
-                        }
-                        activeViewFiltersRef.current = null;
-                    }
-                } else if (wasInView) {
-                    // Leaving a view: restore stashed filters if they were stashed
-                    if (savedFilterStateRef.current) {
-                        applyViewFilters(savedFilterStateRef.current);
-                        savedFilterStateRef.current = null;
-                    }
-                    activeViewFiltersRef.current = null;
-                }
+                // v6.11.0-alpha.3 - Views no longer replace filter bar state.
+                // View filters are applied additively by filterBookForExplorer.
                 setSelectedFolderId(folderId);
                 // v5.0.0-alpha.161 - Clear right panel selections when navigating
                 setExplorerSelectedFolders(new Set());
