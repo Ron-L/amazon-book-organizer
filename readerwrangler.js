@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -560,6 +560,7 @@
             const [tagRegistry, setTagRegistry] = useState({}); // v4.27.0 - Central tag registry {tagName: {label, count}}
             const [savedViews, setSavedViews] = useState([]); // v6.10.0-alpha.16 - Saved filter views [{id, name, filters, position, bookOrder?, description?}]
             const savedFilterStateRef = useRef(null); // v6.10.0-alpha.28 - Stashed user filters while viewing a saved view
+            const activeViewFiltersRef = useRef(null); // v6.11.0-alpha.1 - View filters to intersect when entered with active filters
             const [selectedTags, setSelectedTags] = useState(new Set()); // v5.5.15-alpha.24 - Tag selection for bulk delete (unified, replaces selectedOrphans)
             const [tagSortColumn, setTagSortColumn] = useState('name'); // v5.5.15-alpha.24 - Tag Manager sort column ('name' | 'count')
             const [tagSortAsc, setTagSortAsc] = useState(true); // v5.5.15-alpha.24 - Tag Manager sort direction
@@ -1241,7 +1242,7 @@
                 if (ratingFilter && !(book.rating >= parseFloat(ratingFilter))) return false;
 
                 // All standard filters via parameterized function
-                return bookMatchesFilters(book, {
+                if (!bookMatchesFilters(book, {
                     search: searchTerm,
                     readStatus: readStatusFilter,
                     collections: selectedCollections,
@@ -1254,7 +1255,14 @@
                     dateTo: dateTo,
                     deals: dealsFilterActive,
                     tags: tagFilter
-                });
+                })) return false;
+
+                // v6.11.0-alpha.1 - When in a view entered with active filters, also apply view's filters
+                if (activeViewFiltersRef.current) {
+                    if (!bookMatchesFilters(book, activeViewFiltersRef.current)) return false;
+                }
+
+                return true;
             };
 
             // Parse date string to Date object (moved before useMemo which depends on it)
@@ -2086,23 +2094,32 @@
             // v5.0.0-alpha.92 - Navigation history functions
             const navigateToFolder = (folderId, addToHistory = true) => {
                 // v6.10.0-alpha.28 - Save/restore user filters when entering/leaving views
+                // v6.11.0-alpha.1 - When filters are active, keep them and intersect with view
                 const wasInView = isViewFolder(selectedFolderId);
                 const goingToView = isViewFolder(folderId);
                 if (goingToView) {
-                    // Entering a view (or view-to-view): stash filters only on first entry
-                    if (!wasInView) {
-                        savedFilterStateRef.current = buildCurrentFilters();
-                    }
-                    const view = getView(folderId);
-                    if (view?.filters) {
-                        applyViewFilters(view.filters);
+                    if (hasActiveFilters) {
+                        // Filters active: keep current filters, view acts as additional constraint
+                        // filterBookForExplorer will check view's filters via activeViewFiltersRef
+                        activeViewFiltersRef.current = getView(folderId)?.filters || null;
+                    } else {
+                        // No active filters: original behavior — stash and apply view's filters
+                        if (!wasInView) {
+                            savedFilterStateRef.current = buildCurrentFilters();
+                        }
+                        const view = getView(folderId);
+                        if (view?.filters) {
+                            applyViewFilters(view.filters);
+                        }
+                        activeViewFiltersRef.current = null;
                     }
                 } else if (wasInView) {
-                    // Leaving a view: restore stashed filters
+                    // Leaving a view: restore stashed filters if they were stashed
                     if (savedFilterStateRef.current) {
                         applyViewFilters(savedFilterStateRef.current);
                         savedFilterStateRef.current = null;
                     }
+                    activeViewFiltersRef.current = null;
                 }
                 setSelectedFolderId(folderId);
                 // v5.0.0-alpha.161 - Clear right panel selections when navigating
