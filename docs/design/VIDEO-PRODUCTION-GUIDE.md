@@ -222,12 +222,22 @@ For sizzle reel only (tutorials use voiceover, not music). Tutorial videos may o
 ### File Organization
 
 ```
-video-production/
-├── scripts/          TTS-ready text files per video
-├── audio/            Generated narration audio files
-├── recordings/       Raw OBS screen recordings
-├── edits/            CapCut project files
-└── final/            Finished MP4s for upload
+tutorials/
+├── tutorial-1.mp4              Finished tutorial videos (future)
+├── tutorial-2.mp4
+├── ...
+└── work-products/
+    ├── demo-library/           Tools + files for Amazon page prep (see README.md)
+    │   ├── demo-whitelist.json
+    │   ├── demo-whitelist-loader.js
+    │   ├── demo-whitelist-cleanup-html.js
+    │   ├── demo-whitelist-yourbooks-filter.js
+    │   ├── yourbooks-raw.html
+    │   ├── yourbooks-raw_files/
+    │   └── amazon-yourbooks-demo.html
+    └── tutorial-1/             Per-tutorial production files
+        ├── narration/          WAV narration clips per scene
+        └── stills/             Static images (before/after screenshots)
 ```
 
 ---
@@ -1468,7 +1478,7 @@ Run through this before every recording session:
 8. For sizzle reel: right-click audio track → Beat → Auto → snap cuts to markers
 9. Preview the full video (Spacebar)
 10. Export: Export → Resolution 1920x1080, Frame Rate 60, Format MP4, Quality "Recommended"
-11. Save the .mp4 to `video-production/final/`
+11. Save the .mp4 to `tutorials/` (e.g., `tutorial-1.mp4`)
 
 ---
 
