@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.10.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1110,7 +1110,105 @@
                 return folder?.bookIds || [];
             };
 
+            // v6.11.0-alpha.1 - Parameterized filter: checks if a book matches a set of filter criteria
+            // Used by filterBookForExplorer (current state) and view match counting (arbitrary filters)
+            const bookMatchesFilters = (book, filters) => {
+                if (!book || !filters) return false;
+
+                // Text search
+                if (filters.search) {
+                    const term = filters.search.toLowerCase();
+                    if (!book.title.toLowerCase().includes(term) &&
+                        !book.author.toLowerCase().includes(term)) return false;
+                }
+
+                // Read status
+                if (filters.readStatus && book.readStatus !== filters.readStatus) return false;
+
+                // Collections (multi-select)
+                if (filters.collections?.length > 0) {
+                    const hasUncollected = filters.collections.includes('UNCOLLECTED');
+                    const otherCollections = filters.collections.filter(c => c !== 'UNCOLLECTED');
+                    const bookCollections = book.collections || [];
+                    const isInCollection = otherCollections.some(c => bookCollections.some(bc => bc.name === c));
+                    const isUncollected = bookCollections.length === 0;
+                    if (!((hasUncollected && isUncollected) || isInCollection)) return false;
+                }
+
+                // Amazon Rating
+                if (filters.minAmazonRating &&
+                    (book.rating === undefined || book.rating < parseFloat(filters.minAmazonRating))) return false;
+
+                // My Rating
+                if (filters.minMyRating) {
+                    if (filters.minMyRating === 'unrated') {
+                        if ((book.myRating || 0) !== 0) return false;
+                    } else {
+                        if ((book.myRating || 0) < parseFloat(filters.minMyRating)) return false;
+                    }
+                }
+
+                // Ownership
+                if (filters.ownership) {
+                    if (filters.ownership === 'wishlist') {
+                        if (!(book.onWishlist || book.ownershipType === 'wishlist')) return false;
+                    } else if (filters.ownership === 'orphan') {
+                        if (book.orphanStatus !== 'orphan') return false;
+                    } else {
+                        if ((book.ownershipType || 'purchased') !== filters.ownership) return false;
+                    }
+                }
+
+                // Series (multi-select)
+                if (filters.series?.length > 0) {
+                    const hasNotInSeries = filters.series.includes('NOT_IN_SERIES');
+                    const otherSeries = filters.series.filter(s => s !== 'NOT_IN_SERIES');
+                    const bookSeries = book.series || '';
+                    const isInSeries = otherSeries.includes(bookSeries);
+                    const isNotInSeries = !bookSeries || bookSeries.trim() === '';
+                    if (!((hasNotInSeries && isNotInSeries) || isInSeries)) return false;
+                }
+
+                // Date range (resolve presets to actual dates)
+                if (filters.datePreset || filters.dateFrom || filters.dateTo) {
+                    let fromDate = filters.dateFrom || '';
+                    let toDate = filters.dateTo || '';
+                    if (filters.datePreset && filters.datePreset !== 'custom') {
+                        const today = new Date();
+                        const fmt = (d) => d.toISOString().split('T')[0];
+                        toDate = fmt(today);
+                        if (filters.datePreset === 'last30') {
+                            const d = new Date(today); d.setDate(d.getDate() - 30); fromDate = fmt(d);
+                        } else if (filters.datePreset === 'last90') {
+                            const d = new Date(today); d.setDate(d.getDate() - 90); fromDate = fmt(d);
+                        } else if (filters.datePreset === 'lastYear') {
+                            const d = new Date(today); d.setFullYear(d.getFullYear() - 1); fromDate = fmt(d);
+                        } else if (filters.datePreset.startsWith('year')) {
+                            const year = parseInt(filters.datePreset.substring(4));
+                            fromDate = `${year}-01-01`; toDate = `${year}-12-31`;
+                        }
+                    }
+                    if (fromDate || toDate) {
+                        if (!book.acquired) return false;
+                        const bookDate = new Date(parseInt(book.acquired)).toISOString().split('T')[0];
+                        if (fromDate && bookDate < fromDate) return false;
+                        if (toDate && bookDate > toDate) return false;
+                    }
+                }
+
+                // Deals
+                if (filters.deals &&
+                    (book.priceTrigger == null || book.currentPrice == null || book.currentPrice > book.priceTrigger)) return false;
+
+                // Tags
+                if (filters.tags?.length > 0 &&
+                    !filters.tags.some(tag => book.tags?.includes(tag))) return false;
+
+                return true;
+            };
+
             // Filter a single book for Explorer view (applies all active filters)
+            // Delegates to bookMatchesFilters for shared logic; handles trash, hidden, and legacy filters here
             const filterBookForExplorer = (book) => {
                 if (!book) return false;
 
@@ -1118,119 +1216,45 @@
                 if (selectedFolderId === '__trash__') return book.isDeleted === true;
                 if (book.isDeleted) return false;
 
-                // Text search filter
-                const matchesSearch = !searchTerm ||
-                    book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    book.author.toLowerCase().includes(searchTerm.toLowerCase());
+                // Hidden filter (book-level, not part of saved view filters)
+                if (!showHidden && book.isHidden) return false;
 
-                // Read status filter
-                const matchesReadStatus = !readStatusFilter || book.readStatus === readStatusFilter;
-
-                // Collection filter
-                let matchesCollection = true;
+                // Legacy single-select collection filter (not stored in saved views)
                 if (collectionFilter) {
                     if (collectionFilter === 'UNCOLLECTED') {
-                        matchesCollection = !book.collections || book.collections.length === 0;
+                        if (book.collections && book.collections.length > 0) return false;
                     } else {
-                        matchesCollection = book.collections &&
-                            book.collections.some(c => c.name === collectionFilter);
+                        if (!book.collections || !book.collections.some(c => c.name === collectionFilter)) return false;
                     }
                 }
 
-                // Collections filter (v5.0.0-alpha.175.41 - Phase 5.2: Multi-select)
-                let matchesCollections = true;
-                if (selectedCollections.length > 0) {
-                    const hasUncollected = selectedCollections.includes('UNCOLLECTED');
-                    const otherCollections = selectedCollections.filter(c => c !== 'UNCOLLECTED');
-
-                    const bookCollections = book.collections || [];
-                    const isInCollection = otherCollections.some(c =>
-                        bookCollections.some(bc => bc.name === c)
-                    );
-                    const isUncollected = bookCollections.length === 0;
-
-                    matchesCollections = (hasUncollected && isUncollected) || isInCollection;
-                }
-
-                // Amazon Rating filter (v5.0.0-alpha.175.42 - Phase 5.3: Minimum rating)
-                const matchesAmazonRating = !minAmazonRating ||
-                    (book.rating !== undefined && book.rating >= parseFloat(minAmazonRating));
-
-                // My Rating filter (v5.0.0-alpha.175.43 - Phase 5.4: Personal rating with Unrated option)
-                let matchesMyRating = true;
-                if (minMyRating) {
-                    if (minMyRating === 'unrated') {
-                        matchesMyRating = (book.myRating || 0) === 0;
-                    } else {
-                        const minRating = parseFloat(minMyRating);
-                        matchesMyRating = (book.myRating || 0) >= minRating;
-                    }
-                }
-
-                // Rating filter
-                const matchesRating = !ratingFilter || (book.rating >= parseFloat(ratingFilter));
-
-                // Ownership type filter (v5.0.4 - wishlist checks both fields for backward compatibility)
-                // v6.0.0-alpha.46 - Added orphan filter for books flagged by orphan scan
-                const matchesOwnership = !ownershipFilter ||
-                    (ownershipFilter === 'wishlist'
-                        ? (book.onWishlist || book.ownershipType === 'wishlist')
-                        : ownershipFilter === 'orphan'
-                            ? book.orphanStatus === 'orphan'
-                            : (book.ownershipType || 'purchased') === ownershipFilter);
-
-                // Hidden filter (book-level for Explorer)
-                const matchesHidden = showHidden || !book.isHidden;
-
-                // Series filter
-                let matchesSeries = true;
+                // Legacy single-select series filter (not stored in saved views)
                 if (seriesFilter) {
                     if (seriesFilter === 'NOT_IN_SERIES') {
-                        matchesSeries = !book.series || book.series.trim() === '';
+                        if (book.series && book.series.trim() !== '') return false;
                     } else {
-                        matchesSeries = book.series && book.series === seriesFilter;
+                        if (book.series !== seriesFilter) return false;
                     }
                 }
 
-                // Date range filter
-                let matchesDateRange = true;
-                if (dateFrom || dateTo) {
-                    if (book.acquired) {
-                        const bookDate = new Date(parseInt(book.acquired)).toISOString().split('T')[0];
-                        const fromDate = dateFrom || '0000-01-01';
-                        const toDate = dateTo || new Date().toISOString().split('T')[0];
-                        if (bookDate < fromDate || bookDate > toDate) {
-                            matchesDateRange = false;
-                        }
-                    } else {
-                        matchesDateRange = false;
-                    }
-                }
+                // Legacy rating filter (not stored in saved views)
+                if (ratingFilter && !(book.rating >= parseFloat(ratingFilter))) return false;
 
-                // Deals filter (v5.0.0-alpha.163 - works for all books, not just wishlist)
-                const matchesDeals = !dealsFilterActive ||
-                    (book.priceTrigger != null && book.currentPrice != null && book.currentPrice <= book.priceTrigger);
-
-                // Tag filter
-                const matchesTags = !tagFilter || tagFilter.length === 0 ||
-                    tagFilter.some(tag => book.tags?.includes(tag));
-
-                // Series filter (v5.0.0-alpha.175.44 - Phase 5.5: Multi-select with NOT_IN_SERIES)
-                let matchesSeriesMulti = true;
-                if (selectedSeries.length > 0) {
-                    const hasNotInSeries = selectedSeries.includes('NOT_IN_SERIES');
-                    const otherSeries = selectedSeries.filter(s => s !== 'NOT_IN_SERIES');
-
-                    const bookSeries = book.series || '';
-                    const isInSeries = otherSeries.includes(bookSeries);
-                    const isNotInSeries = !bookSeries || bookSeries.trim() === '';
-
-                    matchesSeriesMulti = (hasNotInSeries && isNotInSeries) || isInSeries;
-                }
-
-                return matchesSearch && matchesReadStatus && matchesCollection && matchesCollections && matchesAmazonRating &&
-                    matchesMyRating && matchesRating && matchesOwnership && matchesHidden && matchesSeries &&
-                    matchesSeriesMulti && matchesDateRange && matchesDeals && matchesTags;
+                // All standard filters via parameterized function
+                return bookMatchesFilters(book, {
+                    search: searchTerm,
+                    readStatus: readStatusFilter,
+                    collections: selectedCollections,
+                    minAmazonRating: minAmazonRating,
+                    minMyRating: minMyRating,
+                    ownership: ownershipFilter,
+                    series: selectedSeries,
+                    datePreset: datePreset,
+                    dateFrom: dateFrom,
+                    dateTo: dateTo,
+                    deals: dealsFilterActive,
+                    tags: tagFilter
+                });
             };
 
             // Parse date string to Date object (moved before useMemo which depends on it)
@@ -11093,16 +11117,28 @@
                                         title="Every unique book in your library, organized or not. You can't move books out of here — use folders to arrange them.">
                                         <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
                                         <span className="flex-1 pointer-events-none font-semibold">{FOLDER_ALL_BOOKS.name}</span>
-                                        <span className="text-xs text-gray-500 pointer-events-none">({books.filter(b => !b.isDeleted).length})</span>
+                                        <span className="text-xs text-gray-500 pointer-events-none">({hasActiveFilters ? `${books.filter(b => !b.isDeleted && filterBookForExplorer(b)).length}/${books.filter(b => !b.isDeleted).length}` : books.filter(b => !b.isDeleted).length})</span>
                                     </div>
                                     {/* v6.10.0-alpha.16 - Saved views render under VIEWS */}
+                                    {/* v6.11.0-alpha.1 - Filter views when hasActiveFilters (like folders) */}
                                     {(() => {
                                         const sortedViewList = [...savedViews].sort((a, b) => a.position - b.position);
+                                        // When filters are active, compute which books pass current filters
+                                        // then check each view's filters against that list
+                                        const currentFilteredBooks = hasActiveFilters
+                                            ? books.filter(b => !b.isDeleted && filterBookForExplorer(b))
+                                            : null;
                                         return sortedViewList.map((sv, viewIndex) => {
                                             const viewFolderId = `__view_${sv.id}__`;
                                             const viewLabel = sv.name;
                                             const viewTagId = sv.filters?.tags?.[0];
-                                            const bookCount = viewTagId ? getTagCount(viewTagId) : 0;
+                                            // v6.11.0-alpha.1 - Use bookMatchesFilters for accurate count across all filter types
+                                            const totalViewBooks = books.filter(b => !b.isDeleted && bookMatchesFilters(b, sv.filters)).length;
+                                            const bookCount = hasActiveFilters && currentFilteredBooks
+                                                ? currentFilteredBooks.filter(b => bookMatchesFilters(b, sv.filters)).length
+                                                : totalViewBooks;
+                                            // Hide views with 0 matching books when filters are active
+                                            if (hasActiveFilters && bookCount === 0) return null;
                                             return (
                                                 <div
                                                     key={viewFolderId}
@@ -11230,7 +11266,7 @@
                                                         e.preventDefault();
                                                         setFolderContextMenu({ folderId: viewFolderId, x: e.clientX, y: e.clientY, source: 'left' });
                                                     }}
-                                                    title={sv.description || `${viewTagId ? 'Tag view' : 'View'}: ${viewLabel} (${bookCount} books)`}>
+                                                    title={sv.description || `${viewTagId ? 'Tag view' : 'View'}: ${viewLabel} (${hasActiveFilters ? `${bookCount} of ${totalViewBooks}` : bookCount} books)`}>
                                                     <span className="pointer-events-none">
                                                         {viewTagId && Object.keys(sv.filters).length === 1 && sv.filters.tags?.length === 1
                                                             ? <TagIconSVG size={16} color="#d97706" />
@@ -11261,7 +11297,7 @@
                                                     ) : (
                                                         <span className="flex-1 pointer-events-none">{viewLabel}</span>
                                                     )}
-                                                    <span className="text-xs text-gray-500 pointer-events-none group-hover:hidden">({bookCount})</span>
+                                                    <span className="text-xs text-gray-500 pointer-events-none group-hover:hidden">({hasActiveFilters ? `${bookCount}/${totalViewBooks}` : bookCount})</span>
                                                     {/* v6.10.0-alpha.17 - Delete button on hover (overlays count, same as folders) */}
                                                     <div className="hidden group-hover:flex items-center gap-0.5">
                                                         <button
@@ -11281,6 +11317,20 @@
                                                 </div>
                                             );
                                         });
+                                    })()}
+                                    {/* v6.11.0-alpha.1 - "X of Y views match" indicator when filters hide some views */}
+                                    {hasActiveFilters && savedViews.length > 0 && (() => {
+                                        const filteredBooks = books.filter(b => !b.isDeleted && filterBookForExplorer(b));
+                                        const matchingViewCount = savedViews.filter(sv =>
+                                            filteredBooks.some(b => bookMatchesFilters(b, sv.filters))
+                                        ).length;
+                                        if (matchingViewCount === savedViews.length) return null;
+                                        const text = matchingViewCount === 0 ? 'No views match' : `${matchingViewCount} of ${savedViews.length} views match`;
+                                        return (
+                                            <div className="mx-2 my-1 px-2 py-1 text-xs rounded border bg-amber-50 border-amber-200 text-amber-700">
+                                                {text}
+                                            </div>
+                                        );
                                     })()}
                                     {/* v6.10.0-alpha.17 - Drop zone for creating new views from filter bar drag */}
                                     <div
