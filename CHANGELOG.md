@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.11.0] - 2026-03-29
+
+### Changed
+- **Views filter with active search** — Saved Views now work like folders when filters are active: only views containing matching books are shown, with counts like `(1/12)`. Clicking a view shows the intersection of your current filters and the view's criteria, rather than replacing your filters. Filter bar stays fully interactive while in a view.
+
+### Refactored
+- **Parameterized book filter** — Extracted `bookMatchesFilters(book, filters)` from the monolithic `filterBookForExplorer`. Accepts any filter criteria object, enabling reuse for view match counting and future filter-related features. Removed filter stash/restore mechanism and `applyViewFilters` — views no longer hijack filter bar state.
+
 ## [6.10.0] - 2026-03-27
 
 ### Added

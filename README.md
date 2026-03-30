@@ -126,7 +126,7 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 <!-- SYNC: Keep "Recent Features" in sync with features.html -->
 ## Recent Features
 
-- **Saved Filter Views** — Save any filter combination as a named View in the sidebar. Single tag, multi-tag, or complex filters — save it and access it with one click.
+- **Saved Filter Views** — Save any filter combination as a named View in the sidebar. Single tag, multi-tag, or complex filters — save it and access it with one click. Views work like folders: when you search or filter, only matching views appear with filtered counts. Click a view to drill into the intersection.
 - **Share Book** — Share book recommendations with friends via link, email, or native share.
 - **Tag from Collections** — One-click wizard converts your Kindle Collections into editable tags. "New books only" filter for painless repeat imports. Detects when books leave a Kindle Collection.
 - **Video Tutorials** — Quick-start guides and feature walkthroughs to get you up and running.
