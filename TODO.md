@@ -27,7 +27,13 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Record and produce 9 videos (OBS + CapCut + Google TTS)
    - README.md diverges from index.html (GitHub audience only)
 
-**4. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
+**4. 📋 FAQ Page** - LOW/LOW (2-3 hours)
+   - Create faq.html — answers to common questions
+   - Link from: Help menu, README, features.html footer, tutorials.html footer
+   - Sections: Security/Privacy, Data/Backup, Troubleshooting, Library, General
+   - Include: relay revocation, encryption explanation, moving to new computer, bookmarklet troubleshooting, stale data, physical books, multi-browser, pricing
+
+**5. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
    - Document relay credential recovery paths
    - Document backup files include relay credentials
    - Problem: Users have no guidance for recovering from data loss

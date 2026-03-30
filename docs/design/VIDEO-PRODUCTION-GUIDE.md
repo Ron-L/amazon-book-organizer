@@ -17,7 +17,7 @@ Nine videos total: one sizzle reel (hook) + eight tutorials (teach). All videos 
 | 2 | Setting Up the Relay | 1-2 min | New users who skipped Quick Start | Script ready |
 | 3 | Fetching Your Library | 2-3 min | Users who want to understand the fetcher | Script ready |
 | 4 | Organizing with Folders | 3-4 min | Users who imported and need to organize | Script updated (added Tag from Collections) |
-| 5 | Views & Filters | 3-4 min | Users who want to find books quickly | Script updated (saved filter views, lens model) |
+| 5 | Views & Filters | 3-4 min | Users who want to find books quickly | Script updated (saved filter views, filter intersection) |
 | 6 | Wishlist & Discovery | 2-3 min | Users who want to track books before buying | Script ready |
 | 7 | Mobile Sync | 1-2 min | Users who read on phone | Script ready |
 | 8 | Power Features | 2-3 min | Advanced users | Script updated (Share Book, Data Status freshness) |
@@ -213,31 +213,34 @@ For sizzle reel only (tutorials use voiceover, not music). Tutorial videos may o
 | 2 (Relay Setup) | ~900 |
 | 3 (Fetching) | ~1,400 |
 | 4 (Organizing) | ~2,800 (+Tag from Collections scene) |
-| 5 (Views & Filters) | ~2,600 (rewritten for saved filter views) |
+| 5 (Views & Filters) | ~2,700 (saved filter views + filter intersection) |
 | 6 (Wishlist) | ~1,400 |
 | 7 (Mobile) | ~800 |
 | 8 (Power Features) | ~1,850 (+Share Book, expanded Data Status) |
-| **Total** | **~13,600 / 1,000,000** (1.4%) |
+| **Total** | **~13,700 / 1,000,000** (1.4%) |
 
 ### File Organization
 
 ```
+tutorials.html                          Tutorial hub page (project root)
 tutorials/
-├── tutorial-1.mp4              Finished tutorial videos (future)
+├── tutorial-1.mp4                      Finished tutorial videos (future)
 ├── tutorial-2.mp4
 ├── ...
 └── work-products/
-    ├── demo-library/           Tools + files for Amazon page prep (see README.md)
-    │   ├── demo-whitelist.json
-    │   ├── demo-whitelist-loader.js
-    │   ├── demo-whitelist-cleanup-html.js
-    │   ├── demo-whitelist-yourbooks-filter.js
-    │   ├── yourbooks-raw.html
-    │   ├── yourbooks-raw_files/
-    │   └── amazon-yourbooks-demo.html
-    └── tutorial-1/             Per-tutorial production files
-        ├── narration/          WAV narration clips per scene
-        └── stills/             Static images (before/after screenshots)
+    ├── demo-library/                   Tools + files for Amazon page prep
+    │   ├── README.md                   Step-by-step demo prep instructions
+    │   ├── demo-whitelist.json         119 ASINs for demo library
+    │   ├── demo-whitelist-loader.js    Loads whitelist into Amazon localStorage
+    │   ├── demo-whitelist-cleanup-html.js   Strips non-whitelist books from saved page
+    │   ├── demo-whitelist-yourbooks-filter.js  Injects cleaned HTML into live Amazon
+    │   ├── yourbooks-raw.html          Full saved Amazon "Your Books" page
+    │   ├── yourbooks-raw_files/        Companion folder (images, CSS)
+    │   └── amazon-yourbooks-demo.html  Cleaned 80-item demo page
+    └── tutorial-N/                     Per-tutorial production files
+        ├── narration/                  scene-1.wav, scene-2.wav, ...
+        ├── stills/                     scene-1-a.png, scene-1-b.png, ...
+        └── scene-1.mp4                 Composite per-scene (narration + stills)
 ```
 
 ---
@@ -962,7 +965,7 @@ Active filters show a blue banner with a count: "12 of 119 books." Click "Clear 
 
 ---
 
-**[SCENE 4: Saving a Filter View — 1:15-1:55]**
+**[SCENE 4: Saving a Filter View — 1:15-2:00]**
 
 Here's where it gets powerful. Set up a filter you use often. Say... tags: Fantasy... plus read status: Unread. Your unread fantasy books.
 
@@ -970,9 +973,11 @@ See the drag handle on the blue filter banner? Drag it to the Views section in t
 
 A new view appears... named automatically. "Fantasy, Unread." You can rename it if you like.
 
-Now click that view. Notice what happens. The filter bar grays out... and a purple banner appears showing the view name. The view is a frozen lens... it always shows exactly what you saved.
+Click that view anytime to see those books. Views work just like folders. Your filters stay active... and the view narrows the results further.
 
-Click any folder to leave the view... and your previous filters are restored. The view didn't overwrite anything.
+Watch this. Search for a book title... and the views update in real time. Views that don't contain a match disappear... just like folders. The ones that remain show a count... like "1 of 12." Click a view to see just the matching books inside it.
+
+Clear the search... and all your views come back with their full counts.
 
 You can also create views from the Tag Manager. Open it from the toolbar... and drag any tag — or select several and drag them together — to the Views section. Great for building quick single-tag views... or combining multiple tags into one view.
 
@@ -980,7 +985,7 @@ Remember those Kindle Collections you converted to tags? Save any of them as a v
 
 ---
 
-**[SCENE 5: Cover View and Badges — 1:55-2:25]**
+**[SCENE 5: Cover View and Badges — 2:00-2:30]**
 
 Switch to cover view using the grid icon in the toolbar.
 
@@ -996,7 +1001,7 @@ Both views honor all your active filters... so everything you see updates togeth
 
 ---
 
-**[SCENE 6: Multi-Column Sorting and Personal Ratings — 2:25-3:00]**
+**[SCENE 6: Multi-Column Sorting and Personal Ratings — 2:30-3:05]**
 
 Click any column header to sort. Click "Series" to group by series.
 
@@ -1035,19 +1040,24 @@ One more trick. You can drag books up and down within a folder to set a manual o
 - Blue banner: "12 of 119 books"
 - Click "Clear All ×"
 
-**[SCENE 4: 1:15-1:55]**
+**[SCENE 4: 1:15-2:00]**
 - Set up filters: Tags → Fantasy, Read Status → Unread
 - Blue banner appears with drag handle (⠿)
 - Drag handle to Views section in sidebar — drop
 - New view "Fantasy, Unread" appears in sidebar
-- Click the new view — filter bar grays out, purple "View: Fantasy, Unread" banner appears
-- Click Inbox — filter bar restores to normal, previous filters return
+- Click the new view — shows the matching books
+- Clear filters, click All Books — back to full library
+- Type a book title in search box — views in sidebar update:
+  - Non-matching views disappear
+  - Remaining views show filtered counts (e.g., "1/12")
+- Click a remaining view — shows just the matching book(s) inside that view
+- Clear search — all views reappear with full counts
 - Open Tag Manager from toolbar
 - Select two tags → drag handle to Views section
 - New combined view appears
 - Close Tag Manager
 
-**[SCENE 5: 1:55-2:25]**
+**[SCENE 5: 2:00-2:30]**
 - Click grid icon (⊞) in toolbar → covers view
 - Zoom in on a few covers showing badges:
   - Gold star (rating)
@@ -1055,7 +1065,7 @@ One more trick. You can drag books up and down within a folder to set a manual o
   - "KU" badge (Kindle Unlimited)
   - Price tag (wishlist)
 
-**[SCENE 6: 2:25-3:00]**
+**[SCENE 6: 2:30-3:05]**
 - Click "Series" column header → sorts
 - Shift+Click "#" column → secondary sort added
 - Status bar shows "Series ▲ → # ▲"
