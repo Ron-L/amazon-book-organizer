@@ -291,7 +291,7 @@ tutorials/
 ### Demo Whitelist (for live fetch recordings)
 
 Videos that show live fetching use the whitelist filter so only demo books are fetched:
-1. Load whitelist: run `.private/load-demo-whitelist.js` in DevTools on amazon.com
+1. Load whitelist: run `tutorials/work-products/demo-library/demo-whitelist-loader.js` in DevTools on amazon.com
 2. Fetcher will only process the 119 demo ASINs
 3. Console shows: `🔒 Demo whitelist active: 119 ASINs`
 
@@ -355,9 +355,9 @@ Brand new users who need to get started fast
 - Chrome with bookmarks bar visible
 - Demo whitelist loaded on amazon.com (for controlled fetch)
 
-### Script (TTS-Optimized)
+### Scene 1: The Problem — 0:00-0:20
 
-**[SCENE 1: The Problem — 0:00-0:20]**
+**Script:**
 
 Got a Kindle library? Dozens of books... hundreds... maybe thousands?
 
@@ -367,9 +367,16 @@ ReaderWrangler fixes that.
 
 In the next three minutes... you'll connect to your Amazon library... import your books... and start organizing them your way.
 
+**Screen Direction:**
+- Show Amazon "Your Books" page — a couple rows of covers, no organization visible
+- Text overlay: "No folders. No tags. No way to organize."
+- Transition to clean ReaderWrangler app (empty state)
+
 ---
 
-**[SCENE 2: One-Time Setup — 0:20-0:50]**
+### Scene 2: One-Time Setup — 0:20-0:50
+
+**Script:**
 
 First... a one-time setup. Open the File menu... and click Relay Setup.
 
@@ -381,9 +388,22 @@ Now drag the bookmarklet that appears... onto your browser's bookmarks bar.
 
 That's it. Setup done. You'll never need to do this again.
 
+**Screen Direction:**
+- Click File menu (highlight)
+- Click "Relay Setup"
+- Relay Setup dialog opens — accordion style, Step 1 expanded
+- Click "Generate Credentials" (highlight button)
+- Credentials appear, green checkmark, bookmarklet button appears in Step 2
+- Open Step 2 (accordion expands)
+- **Slow motion**: Drag bookmarklet onto browser bookmarks bar
+- Show bookmarklet appearing in bar (highlight)
+- Close dialog
+
 ---
 
-**[SCENE 3: Fetch Your Library — 0:50-1:35]**
+### Scene 3: Fetch Your Library — 0:50-1:35
+
+**Script:**
 
 Now go to your Amazon library page... and click the ReaderWrangler bookmarklet.
 
@@ -401,9 +421,23 @@ For a big library... this can take a few minutes. Go grab a coffee.
 
 When it's done... your books are waiting in the relay, ready to import.
 
+**Screen Direction:**
+- Navigate to Amazon library page
+- Click bookmarklet in toolbar
+- Progress dialog appears (zoom in)
+- Show Phase 1 counter: "Fetching titles… 45/119"
+- Show Phase 2: "Enriching descriptions…"
+- Show Phase 3: "Fetching tags…"
+- Show Phase 4: "Checking prices…"
+- Time-lapse to completion
+- "Upload complete" message
+- Note: with whitelist, this runs fast (~2 min for 119 books)
+
 ---
 
-**[SCENE 4: Import to App — 1:35-2:00]**
+### Scene 4: Import to App — 1:35-2:00
+
+**Script:**
 
 Back in ReaderWrangler... open the File menu... and click "Import from Relay."
 
@@ -411,9 +445,18 @@ Your books arrive. The app tells you exactly how many are new.
 
 They land in your Inbox... ready to organize.
 
+**Screen Direction:**
+- Switch to ReaderWrangler tab
+- File → Import from Relay (highlight)
+- Progress dialog: "Checking relay… 119 new books found"
+- Books appear in Inbox
+- Inbox badge count shows 119
+
 ---
 
-**[SCENE 5: Organize — 2:00-2:45]**
+### Scene 5: Organize — 2:00-2:45
+
+**Script:**
 
 The Inbox is your staging area. Everything new arrives here.
 
@@ -431,77 +474,7 @@ But you can go further. Create your own tags — like "Fantasy" — and assign t
 
 Now set up a filter for that tag. See the drag handle on the filter banner? Drag it to the Views section... and it becomes a saved view in your sidebar. Click it anytime to see all your fantasy books instantly.
 
----
-
-**[SCENE 6: Wrap Up — 2:45-3:00]**
-
-That's it.
-
-Your books. Your order. Finally.
-
-Everything fetched directly from Amazon... organized however you want... running entirely in your browser.
-
-Start wrangling your reading chaos today.
-
----
-
-**[ALT: Demo Library Quick Path — insert after Scene 1 if showing both paths]**
-
-Don't want to connect your Amazon account yet? No problem.
-
-Download the Demo Library from the landing page... then use File... Restore Backup... to load it.
-
-A hundred classic books appear in your Inbox. Now you can explore everything ReaderWrangler can do — folders, tags, views, filters — without connecting your Amazon account. When you're ready... connect your real library later.
-
----
-
-### Screen Direction
-
-**[SCENE 1: 0:00-0:20]**
-- Show Amazon "Your Books" page — a couple rows of covers, no organization visible
-- Text overlay: "No folders. No tags. No way to organize."
-- Transition to clean ReaderWrangler app (empty state)
-
-**[ALT: Demo Library Quick Path — insert after Scene 1]**
-- Show landing page, scroll to or highlight "Demo Library" download link
-- Click download — file saves to Downloads
-- Switch to ReaderWrangler app
-- File menu → Restore Backup (highlight)
-- Select demo library file
-- Books populate Inbox — badge shows 100
-- Quick montage: click a folder, click a tag view, open filter dropdown — showing features available to explore
-
-**[SCENE 2: 0:20-0:50]**
-- Click File menu (highlight)
-- Click "Relay Setup"
-- Relay Setup dialog opens — accordion style, Step 1 expanded
-- Click "Generate Credentials" (highlight button)
-- Credentials appear, green checkmark, bookmarklet button appears in Step 2
-- Open Step 2 (accordion expands)
-- **Slow motion**: Drag bookmarklet onto browser bookmarks bar
-- Show bookmarklet appearing in bar (highlight)
-- Close dialog
-
-**[SCENE 3: 0:50-1:35]**
-- Navigate to Amazon library page
-- Click bookmarklet in toolbar
-- Progress dialog appears (zoom in)
-- Show Phase 1 counter: "Fetching titles… 45/119"
-- Show Phase 2: "Enriching descriptions…"
-- Show Phase 3: "Fetching tags…"
-- Show Phase 4: "Checking prices…"
-- Time-lapse to completion
-- "Upload complete" message
-- Note: with whitelist, this runs fast (~2 min for 119 books)
-
-**[SCENE 4: 1:35-2:00]**
-- Switch to ReaderWrangler tab
-- File → Import from Relay (highlight)
-- Progress dialog: "Checking relay… 119 new books found"
-- Books appear in Inbox
-- Inbox badge count shows 119
-
-**[SCENE 5: 2:00-2:45]**
+**Screen Direction:**
 - Inbox selected, books visible in right pane
 - Right-click Folders label → New Folder
 - Type "Next to Read" → Enter
@@ -514,10 +487,47 @@ A hundred classic books appear in your Inbox. Now you can explore everything Rea
 - Drag handle (⠿) from filter banner to Views section in sidebar
 - New "Fantasy" view appears — click it → right pane shows tagged books, filter bar grayed out
 
-**[SCENE 6: 2:45-3:00]**
+---
+
+### Scene 6: Wrap Up — 2:45-3:00
+
+**Script:**
+
+That's it.
+
+Your books. Your order. Finally.
+
+Everything fetched directly from Amazon... organized however you want... running entirely in your browser.
+
+Start wrangling your reading chaos today.
+
+**Screen Direction:**
 - Zoom out to show organized sidebar and full cover pane
 - Fade to ReaderWrangler logo
 - End card: "readerwrangler.com"
+
+---
+
+### ALT: Demo Library Quick Path — insert after Scene 1 if showing both paths
+
+**Script:**
+
+Don't want to connect your Amazon account yet? No problem.
+
+Download the Demo Library from the landing page... then use File... Restore Backup... to load it.
+
+A hundred classic books appear in your Inbox. Now you can explore everything ReaderWrangler can do — folders, tags, views, filters — without connecting your Amazon account. When you're ready... connect your real library later.
+
+**Screen Direction:**
+- Show landing page, scroll to or highlight "Demo Library" download link
+- Click download — file saves to Downloads
+- Switch to ReaderWrangler app
+- File menu → Restore Backup (highlight)
+- Select demo library file
+- Books populate Inbox — badge shows 100
+- Quick montage: click a folder, click a tag view, open filter dropdown — showing features available to explore
+
+---
 
 ### Timing Notes
 
@@ -558,17 +568,23 @@ New users who need detailed setup guidance, or users re-pairing after a reset
 - Chrome with bookmarks bar visible
 - Clean browser profile
 
-### Script (TTS-Optimized)
+### Scene 1: Why the Relay — 0:00-0:15
 
-**[SCENE 1: Why the Relay — 0:00-0:15]**
+**Script:**
 
 Before you can import your Kindle library... you need to set up the relay. This is a one-time step.
 
 The relay is an encrypted channel. It transfers your book data securely between Amazon and your app. No one else can see it.
 
+**Screen Direction:**
+- Show ReaderWrangler app, empty state
+- Brief text overlay: "One-time setup"
+
 ---
 
-**[SCENE 2: Generate Credentials — 0:15-0:35]**
+### Scene 2: Generate Credentials — 0:15-0:35
+
+**Script:**
 
 Open the File menu... and click Relay Setup.
 
@@ -578,41 +594,7 @@ Click "Generate Credentials." Two keys appear instantly... and a green checkmark
 
 These keys are unique to you. They encrypt everything that passes through the relay.
 
----
-
-**[SCENE 3: Install Bookmarklet — 0:35-0:55]**
-
-Now open Step 2... Install Bookmarklet.
-
-You'll see a button labeled "ReaderWrangler." Drag it onto your browser's bookmarks bar.
-
-That's your import tool. One click on any Amazon page starts the fetch.
-
----
-
-**[SCENE 4: Test Connection — 0:55-1:10]**
-
-Want to make sure it's working? Click "Test Connection" in Step 1.
-
-A green "Connected" message appears. Your relay is live and ready.
-
----
-
-**[SCENE 5: You're Done — 1:10-1:20]**
-
-That's it. Click Done to close.
-
-Your credentials are saved automatically. The bookmarklet stays in your bookmarks bar. You're ready to import your library.
-
----
-
-### Screen Direction
-
-**[SCENE 1: 0:00-0:15]**
-- Show ReaderWrangler app, empty state
-- Brief text overlay: "One-time setup"
-
-**[SCENE 2: 0:15-0:35]**
+**Screen Direction:**
 - File → Relay Setup
 - Dialog opens with three accordion steps
 - Click Step 1 header — accordion expands
@@ -620,19 +602,51 @@ Your credentials are saved automatically. The bookmarklet stays in your bookmark
 - Keys appear in fields, green checkmark icon, animated left accent stripe pulses
 - Zoom in on the verified state
 
-**[SCENE 3: 0:35-0:55]**
+---
+
+### Scene 3: Install Bookmarklet — 0:35-0:55
+
+**Script:**
+
+Now open Step 2... Install Bookmarklet.
+
+You'll see a button labeled "ReaderWrangler." Drag it onto your browser's bookmarks bar.
+
+That's your import tool. One click on any Amazon page starts the fetch.
+
+**Screen Direction:**
 - Click Step 2 header — accordion expands (Step 1 collapses)
 - Show bookmarklet button with label "ReaderWrangler"
 - **Slow motion**: Drag bookmarklet to bookmarks bar
 - Bookmarklet appears in bar — highlight
 
-**[SCENE 4: 0:55-1:10]**
+---
+
+### Scene 4: Test Connection — 0:55-1:10
+
+**Script:**
+
+Want to make sure it's working? Click "Test Connection" in Step 1.
+
+A green "Connected" message appears. Your relay is live and ready.
+
+**Screen Direction:**
 - Click Step 1 again to expand
 - Click "Test Connection" button
 - Green "Connected" sub-label appears below button
 - Zoom in on the green result
 
-**[SCENE 5: 1:10-1:20]**
+---
+
+### Scene 5: You're Done — 1:10-1:20
+
+**Script:**
+
+That's it. Click Done to close.
+
+Your credentials are saved automatically. The bookmarklet stays in your bookmarks bar. You're ready to import your library.
+
+**Screen Direction:**
 - Click "Done" button
 - Dialog closes
 - App shows empty Inbox — ready for import
@@ -653,9 +667,9 @@ Users who want to understand what the fetcher does and how incremental updates w
 - Amazon account logged in
 - For incremental demo: first run completed, then add a few books to show delta
 
-### Script (TTS-Optimized)
+### Scene 1: Starting the Fetch — 0:00-0:20
 
-**[SCENE 1: Starting the Fetch — 0:00-0:20]**
+**Script:**
 
 With your relay set up and bookmarklet installed... go to your Amazon library page.
 
@@ -663,9 +677,16 @@ Click the ReaderWrangler bookmarklet in your bookmarks bar.
 
 A progress panel appears... and the fetch begins automatically.
 
+**Screen Direction:**
+- Navigate to amazon.com/hz/mycd/digital-console/contentlist/booksPurchased
+- Click bookmarklet
+- Progress panel appears at top of Amazon page
+
 ---
 
-**[SCENE 2: The Five Phases — 0:20-1:20]**
+### Scene 2: The Five Phases — 0:20-1:20
+
+**Script:**
 
 The fetcher runs five phases. Each one adds a different layer of information.
 
@@ -679,9 +700,19 @@ Phase 4 checks current prices for all your books. This runs every time... so you
 
 Phase 5 is a background scan. It compares your library against Amazon... and flags any books that have been removed. Maybe a Prime Reading title rotated out... or a Kindle Unlimited book expired.
 
+**Screen Direction:**
+- Phase 1: counter climbing "Fetching titles… 23/119" — zoom in on counter
+- Phase 2: "Enriching descriptions…" with progress
+- Phase 3: "Fetching tags… 10/10" — note the cap
+- Phase 4: "Checking prices…"
+- Phase 5: "Scanning for orphans…" — background, counter shows pages
+- Show info banner: "Incremental scan — 119 existing books"
+
 ---
 
-**[SCENE 3: Upload and Import — 1:20-1:45]**
+### Scene 3: Upload and Import — 1:20-1:45
+
+**Script:**
 
 When all phases complete... your library is uploaded to the relay.
 
@@ -691,9 +722,18 @@ A progress dialog shows how many new books were found. They land in your Inbox..
 
 The app keeps an eye on this... and lets you know when it's time to refresh.
 
+**Screen Direction:**
+- "Upload complete" message in dialog
+- Switch to ReaderWrangler tab
+- File → Import from Relay
+- Progress dialog → "119 new books found"
+- Inbox fills with books
+
 ---
 
-**[SCENE 4: Incremental Updates — 1:45-2:15]**
+### Scene 4: Incremental Updates — 1:45-2:15
+
+**Script:**
 
 The next time you run the fetcher... it's much faster.
 
@@ -705,45 +745,23 @@ Prices still check everything... but that's quick.
 
 The result? A library that stays current with one click. Run it weekly... or whenever you buy new books.
 
----
-
-**[SCENE 5: The Scan Results — 2:15-2:30]**
-
-After the fetch... the dialog shows a summary. How many books were fetched... how many are new... and whether any orphans were detected.
-
-You'll see "Import from Relay" right there in the dialog. One click to bring everything into the app.
-
----
-
-### Screen Direction
-
-**[SCENE 1: 0:00-0:20]**
-- Navigate to amazon.com/hz/mycd/digital-console/contentlist/booksPurchased
-- Click bookmarklet
-- Progress panel appears at top of Amazon page
-
-**[SCENE 2: 0:20-1:20]**
-- Phase 1: counter climbing "Fetching titles… 23/119" — zoom in on counter
-- Phase 2: "Enriching descriptions…" with progress
-- Phase 3: "Fetching tags… 10/10" — note the cap
-- Phase 4: "Checking prices…"
-- Phase 5: "Scanning for orphans…" — background, counter shows pages
-- Show info banner: "Incremental scan — 119 existing books"
-
-**[SCENE 3: 1:20-1:45]**
-- "Upload complete" message in dialog
-- Switch to ReaderWrangler tab
-- File → Import from Relay
-- Progress dialog → "119 new books found"
-- Inbox fills with books
-
-**[SCENE 4: 1:45-2:15]**
+**Screen Direction:**
 - (Pre-recorded second run with a few new books added)
 - Phase 1 stops early: "Found overlap at page 1"
 - Much faster completion
 - Import shows: "3 new books"
 
-**[SCENE 5: 2:15-2:30]**
+---
+
+### Scene 5: The Scan Results — 2:15-2:30
+
+**Script:**
+
+After the fetch... the dialog shows a summary. How many books were fetched... how many are new... and whether any orphans were detected.
+
+You'll see "Import from Relay" right there in the dialog. One click to bring everything into the app.
+
+**Screen Direction:**
 - Show multi-state dialog: summary with book count, orphan count
 - "Import from Relay" CTA button in dialog
 - Click it — done
@@ -762,17 +780,23 @@ Users who imported books and need to organize them
 - Demo library loaded, all 119 books in Inbox
 - No folders created yet (fresh import state)
 
-### Script (TTS-Optimized)
+### Scene 1: The Inbox — 0:00-0:15
 
-**[SCENE 1: The Inbox — 0:00-0:15]**
+**Script:**
 
 All your imported books land in the Inbox. Think of it as your staging area.
 
 Right now you have 119 books waiting to be organized. Let's fix that.
 
+**Screen Direction:**
+- Show Inbox selected, 119 books in right pane (list view)
+- Scroll through a few — show covers, authors, series info
+
 ---
 
-**[SCENE 2: Auto-Organize — 0:15-0:50]**
+### Scene 2: Auto-Organize — 0:15-0:50
+
+**Script:**
 
 ReaderWrangler can do the heavy lifting. Open the File menu... and click Auto-Organize.
 
@@ -784,9 +808,20 @@ Happy with it? Click Apply. Watch the folder tree fill up.
 
 Don't like what happened? Press Control-Z. The entire operation undoes in one step.
 
+**Screen Direction:**
+- File → Auto-Organize
+- Wizard dialog opens, source: Inbox
+- Adjust slider to 3 books minimum
+- Click Preview — show preview of proposed folders
+- Click Apply — folder tree populates (zoom on tree expanding)
+- Briefly show Ctrl+Z undo — tree collapses back
+- Redo with Ctrl+Y — tree restores
+
 ---
 
-**[SCENE 3: Tag from Collections — 0:50-1:20]**
+### Scene 3: Tag from Collections — 0:50-1:20
+
+**Script:**
 
 Auto-Organize handled your folders. Now let's talk about tags.
 
@@ -798,9 +833,18 @@ Now they're yours to work with. Rename them. Merge them. Add books. Remove books
 
 One thing to keep in mind. ReaderWrangler is your personal organizer. Changes you make here — tags, folders, views — stay in the app. Nothing is sent back to Amazon or your Kindle. It's a one-way flow: Amazon to you.
 
+**Screen Direction:**
+- File → Tag from Collections
+- Wizard dialog opens — shows list of Kindle Collections with book counts
+- Select a few collections → click Apply
+- Show tags appearing on books (open a book detail to confirm)
+- Brief pause on the wizard UI
+
 ---
 
-**[SCENE 4: Manual Refinement — 1:20-2:00]**
+### Scene 4: Manual Refinement — 1:20-2:00
+
+**Script:**
 
 Auto-Organize gives you a great starting point. Now make it yours.
 
@@ -812,9 +856,18 @@ You can also create subfolders. Right-click a folder... Create Subfolder. Name i
 
 Drag the Jack Ryan series books in.
 
+**Screen Direction:**
+- Right-click Folders label → New Folder → "Thrillers"
+- Drag "Lee Child" folder into Thrillers
+- Drag "Tom Clancy" folder into Thrillers
+- Right-click Tom Clancy → Create Subfolder → "Jack Ryan"
+- Drag Jack Ryan books into the subfolder
+
 ---
 
-**[SCENE 5: Copies — 2:00-2:30]**
+### Scene 5: Copies — 2:00-2:30
+
+**Script:**
 
 Some books belong in more than one place. Larry Niven and Jerry Pournelle wrote books together.
 
@@ -824,9 +877,18 @@ A toast message confirms: "Same book, two folders. Your ratings, notes, and edit
 
 This works great for anthologies too. Jim Butcher's anthologies contain Dresden Files stories... so they belong in both the Anthologies folder and the Dresden Files folder.
 
+**Screen Direction:**
+- Navigate to Larry Niven folder — show "Lucifer's Hammer"
+- Ctrl+Drag "Lucifer's Hammer" to Jerry Pournelle folder
+- Toast appears: "Copied to 'Jerry Pournelle'..."
+- Navigate to Pournelle folder — show book appears there too
+- Repeat concept with Butcher anthology → Dresden Files folder
+
 ---
 
-**[SCENE 6: Folder Properties — 2:30-2:50]**
+### Scene 6: Folder Properties — 2:30-2:50
+
+**Script:**
 
 Right-click any folder... and choose Properties.
 
@@ -834,9 +896,17 @@ You can rename it... and add a description. The description appears as a tooltip
 
 Try "All Sanderson books by publication order." Now when you hover over that folder... you see the note.
 
+**Screen Direction:**
+- Right-click folder → Properties
+- Type a description
+- Click Save
+- Hover over folder — tooltip appears
+
 ---
 
-**[SCENE 7: Deleting and the Trash Bin — 2:50-3:25]**
+### Scene 7: Deleting and the Trash Bin — 2:50-3:25
+
+**Script:**
 
 See a book you don't want? Select it and press Delete.
 
@@ -850,59 +920,7 @@ Purchased books show a warning first: they'll reappear on your next fetch. You c
 
 When you're sure... right-click Trash and choose Empty Trash. That's permanent.
 
----
-
-**[SCENE 8: Wrap Up — 3:25-3:35]**
-
-From a flat pile of 119 books... to a structured library in minutes.
-
-Remember... Control-Z undoes anything. Experiment freely.
-
----
-
-### Screen Direction
-
-**[SCENE 1: 0:00-0:15]**
-- Show Inbox selected, 119 books in right pane (list view)
-- Scroll through a few — show covers, authors, series info
-
-**[SCENE 2: 0:15-0:50]**
-- File → Auto-Organize
-- Wizard dialog opens, source: Inbox
-- Adjust slider to 3 books minimum
-- Click Preview — show preview of proposed folders
-- Click Apply — folder tree populates (zoom on tree expanding)
-- Briefly show Ctrl+Z undo — tree collapses back
-- Redo with Ctrl+Y — tree restores
-
-**[SCENE 3: 0:50-1:20]**
-- File → Tag from Collections
-- Wizard dialog opens — shows list of Kindle Collections with book counts
-- Select a few collections → click Apply
-- Show tags appearing on books (open a book detail to confirm)
-- Brief pause on the wizard UI
-
-**[SCENE 4: 1:20-2:00]**
-- Right-click Folders label → New Folder → "Thrillers"
-- Drag "Lee Child" folder into Thrillers
-- Drag "Tom Clancy" folder into Thrillers
-- Right-click Tom Clancy → Create Subfolder → "Jack Ryan"
-- Drag Jack Ryan books into the subfolder
-
-**[SCENE 5: 2:00-2:30]**
-- Navigate to Larry Niven folder — show "Lucifer's Hammer"
-- Ctrl+Drag "Lucifer's Hammer" to Jerry Pournelle folder
-- Toast appears: "Copied to 'Jerry Pournelle'..."
-- Navigate to Pournelle folder — show book appears there too
-- Repeat concept with Butcher anthology → Dresden Files folder
-
-**[SCENE 6: 2:30-2:50]**
-- Right-click folder → Properties
-- Type a description
-- Click Save
-- Hover over folder — tooltip appears
-
-**[SCENE 7: 2:50-3:25]**
+**Screen Direction:**
 - Select a book → press Delete
 - Confirmation dialog → Delete
 - Trash badge appears with count
@@ -911,7 +929,17 @@ Remember... Control-Z undoes anything. Experiment freely.
 - Select a purchased book → Delete → warning dialog with "Hide Instead" option
 - Right-click Trash → Empty Trash → permanent confirmation
 
-**[SCENE 8: 3:25-3:35]**
+---
+
+### Scene 8: Wrap Up — 3:25-3:35
+
+**Script:**
+
+From a flat pile of 119 books... to a structured library in minutes.
+
+Remember... Control-Z undoes anything. Experiment freely.
+
+**Screen Direction:**
 - Zoom out to show full organized sidebar
 - Fade to logo
 
@@ -931,9 +959,9 @@ Users who want to find books quickly
 - No saved views yet (we'll create them during the video)
 - Cover view available for badge demo
 
-### Script (TTS-Optimized)
+### Scene 1: Views vs Folders — 0:00-0:25
 
-**[SCENE 1: Views vs Folders — 0:00-0:25]**
+**Script:**
 
 ReaderWrangler has two ways to see your books. Folders... and Views.
 
@@ -943,17 +971,32 @@ Views are like a lens. They show books that match a set of filters... across you
 
 Hover over Views in the sidebar... the tooltip says it: "Different ways to see the same books — not separate copies."
 
+**Screen Direction:**
+- Show sidebar with Views section (top) and Folders section (below)
+- Hover over Views label — tooltip appears
+- Point out the visual split
+
 ---
 
-**[SCENE 2: All Books — 0:25-0:40]**
+### Scene 2: All Books — 0:25-0:40
+
+**Script:**
 
 Click "All Books" in the Views section. Every book in your library appears here... from every folder.
 
 You can search, filter, and sort... but you can't drag books out. All Books is a view... not a container.
 
+**Screen Direction:**
+- Click All Books
+- Right pane shows all 119 books
+- Try dragging a book — show it's disabled
+- Hover over All Books — tooltip: "Every book in your library..."
+
 ---
 
-**[SCENE 3: The Filter Bar — 0:40-1:15]**
+### Scene 3: The Filter Bar — 0:40-1:15
+
+**Script:**
 
 The toolbar has powerful filters. Type in the search box to find any book by title or author.
 
@@ -963,9 +1006,21 @@ Click "More" for advanced filters. Filter by Amazon rating... your personal rati
 
 Active filters show a blue banner with a count: "12 of 119 books." Click "Clear All" to reset.
 
+**Screen Direction:**
+- Type in search box → results narrow in real-time
+- Use Read Status dropdown → "Read"
+- Use Tags dropdown → select "Fantasy"
+- Use Ownership dropdown → show "Removed from Amazon" option
+- Click "More" → show expanded filter panel
+- Show special values: "Unrated", "Not in Series", "Last 30 days"
+- Blue banner: "12 of 119 books"
+- Click "Clear All ×"
+
 ---
 
-**[SCENE 4: Saving a Filter View — 1:15-2:00]**
+### Scene 4: Saving a Filter View — 1:15-2:00
+
+**Script:**
 
 Here's where it gets powerful. Set up a filter you use often. Say... tags: Fantasy... plus read status: Unread. Your unread fantasy books.
 
@@ -983,64 +1038,7 @@ You can also create views from the Tag Manager. Open it from the toolbar... and 
 
 Remember those Kindle Collections you converted to tags? Save any of them as a view... or combine several into one.
 
----
-
-**[SCENE 5: Cover View and Badges — 2:00-2:30]**
-
-Switch to cover view using the grid icon in the toolbar.
-
-Your library becomes a visual wall of book covers. Great for browsing when you're in the mood to pick something by its cover. List view is better when you need to compare details across many books.
-
-Each cover tells you something at a glance.
-
-Gold star in the corner? That's the Amazon rating. Green checkmark? You've read it. A price tag? That's a wishlist book with a tracked price.
-
-You'll also see ownership badges. K-U for Kindle Unlimited. Prime. Sample. Borrowed. These help you filter by what you actually own versus what you're borrowing.
-
-Both views honor all your active filters... so everything you see updates together.
-
----
-
-**[SCENE 6: Multi-Column Sorting and Personal Ratings — 2:30-3:05]**
-
-Click any column header to sort. Click "Series" to group by series.
-
-Now hold Shift and click the number column. Books sort by series first... then by number within each series. Perfect reading order. You can stack up to three sort levels this way. A normal click resets back to single-column sorting.
-
-The status bar shows your sort chain: Series ascending... then number ascending. Column headers show small subscript indicators for secondary and tertiary sorts.
-
-Try other combos. Sort by price descending... then shift-click rating ascending... to find cheap, highly-rated books. Or date added descending... then your personal rating descending... to see your recent favorites first.
-
-Speaking of ratings... double-click any book to open the detail view. You'll see Amazon's yellow stars... and below them... your personal blue stars. Click to set your own rating. This is your rating... separate from Amazon's. Use the personal rating filter to find your five-star favorites across your entire library.
-
-One more trick. You can drag books up and down within a folder to set a manual order. Manual ordering overrides column sorting for that folder... so you can keep your "Next to Read" list in exactly the order you want.
-
----
-
-### Screen Direction
-
-**[SCENE 1: 0:00-0:25]**
-- Show sidebar with Views section (top) and Folders section (below)
-- Hover over Views label — tooltip appears
-- Point out the visual split
-
-**[SCENE 2: 0:25-0:40]**
-- Click All Books
-- Right pane shows all 119 books
-- Try dragging a book — show it's disabled
-- Hover over All Books — tooltip: "Every book in your library..."
-
-**[SCENE 3: 0:40-1:15]**
-- Type in search box → results narrow in real-time
-- Use Read Status dropdown → "Read"
-- Use Tags dropdown → select "Fantasy"
-- Use Ownership dropdown → show "Removed from Amazon" option
-- Click "More" → show expanded filter panel
-- Show special values: "Unrated", "Not in Series", "Last 30 days"
-- Blue banner: "12 of 119 books"
-- Click "Clear All ×"
-
-**[SCENE 4: 1:15-2:00]**
+**Screen Direction:**
 - Set up filters: Tags → Fantasy, Read Status → Unread
 - Blue banner appears with drag handle (⠿)
 - Drag handle to Views section in sidebar — drop
@@ -1057,7 +1055,25 @@ One more trick. You can drag books up and down within a folder to set a manual o
 - New combined view appears
 - Close Tag Manager
 
-**[SCENE 5: 2:00-2:30]**
+---
+
+### Scene 5: Cover View and Badges — 2:00-2:30
+
+**Script:**
+
+Switch to cover view using the grid icon in the toolbar.
+
+Your library becomes a visual wall of book covers. Great for browsing when you're in the mood to pick something by its cover. List view is better when you need to compare details across many books.
+
+Each cover tells you something at a glance.
+
+Gold star in the corner? That's the Amazon rating. Green checkmark? You've read it. A price tag? That's a wishlist book with a tracked price.
+
+You'll also see ownership badges. K-U for Kindle Unlimited. Prime. Sample. Borrowed. These help you filter by what you actually own versus what you're borrowing.
+
+Both views honor all your active filters... so everything you see updates together.
+
+**Screen Direction:**
 - Click grid icon (⊞) in toolbar → covers view
 - Zoom in on a few covers showing badges:
   - Gold star (rating)
@@ -1065,7 +1081,25 @@ One more trick. You can drag books up and down within a folder to set a manual o
   - "KU" badge (Kindle Unlimited)
   - Price tag (wishlist)
 
-**[SCENE 6: 2:30-3:05]**
+---
+
+### Scene 6: Multi-Column Sorting and Personal Ratings — 2:30-3:05
+
+**Script:**
+
+Click any column header to sort. Click "Series" to group by series.
+
+Now hold Shift and click the number column. Books sort by series first... then by number within each series. Perfect reading order. You can stack up to three sort levels this way. A normal click resets back to single-column sorting.
+
+The status bar shows your sort chain: Series ascending... then number ascending. Column headers show small subscript indicators for secondary and tertiary sorts.
+
+Try other combos. Sort by price descending... then shift-click rating ascending... to find cheap, highly-rated books. Or date added descending... then your personal rating descending... to see your recent favorites first.
+
+Speaking of ratings... double-click any book to open the detail view. You'll see Amazon's yellow stars... and below them... your personal blue stars. Click to set your own rating. This is your rating... separate from Amazon's. Use the personal rating filter to find your five-star favorites across your entire library.
+
+One more trick. You can drag books up and down within a folder to set a manual order. Manual ordering overrides column sorting for that folder... so you can keep your "Next to Read" list in exactly the order you want.
+
+**Screen Direction:**
 - Click "Series" column header → sorts
 - Shift+Click "#" column → secondary sort added
 - Status bar shows "Series ▲ → # ▲"
@@ -1094,17 +1128,23 @@ Users who want to track books before buying
 - Amazon product page, series page, and author page open in tabs
 - Wishlist bookmarklet installed (from nav hub)
 
-### Script (TTS-Optimized)
+### Scene 1: What's the Wishlist? — 0:00-0:15
 
-**[SCENE 1: What's the Wishlist? — 0:00-0:15]**
+**Script:**
 
 Found a book you want to buy? Add it to your ReaderWrangler wishlist.
 
 You can add books one at a time from any Amazon page... or grab an entire series or author bibliography at once.
 
+**Screen Direction:**
+- Show app with organized library
+- Brief text: "Track books before you buy"
+
 ---
 
-**[SCENE 2: Adding from a Product Page — 0:15-0:40]**
+### Scene 2: Adding from a Product Page — 0:15-0:40
+
+**Script:**
 
 On any Amazon book page... click the ReaderWrangler bookmarklet.
 
@@ -1114,9 +1154,19 @@ The book's details are captured... cover, title, author, price... and uploaded t
 
 Back in the app... Import from Relay. The wishlist book appears with a heart badge on its cover.
 
+**Screen Direction:**
+- Switch to Amazon product page for a specific book
+- Click bookmarklet → nav hub appears
+- Click "Add to Wishlist"
+- Progress → upload complete
+- Switch to app → File → Import from Relay
+- Show wishlist book with heart badge in Inbox
+
 ---
 
-**[SCENE 3: Series Page Import — 0:40-1:10]**
+### Scene 3: Series Page Import — 0:40-1:10
+
+**Script:**
 
 Want an entire series? Navigate to the series page on Amazon.
 
@@ -1126,9 +1176,18 @@ ReaderWrangler scans the series page... captures every book... and shows which o
 
 Books you don't own get added to your wishlist. Books you do own are skipped.
 
+**Screen Direction:**
+- Navigate to Amazon series page
+- Click bookmarklet → "Import Series"
+- Dialog shows books being scanned
+- "3 added to wishlist, 5 already owned (skipped)"
+- Import to app → wishlist books appear
+
 ---
 
-**[SCENE 4: Author Bibliography — 1:10-1:35]**
+### Scene 4: Author Bibliography — 1:10-1:35
+
+**Script:**
 
 Same idea for authors. Go to an author's Amazon page.
 
@@ -1136,9 +1195,17 @@ Click the bookmarklet... then "Author Bibliography."
 
 Every Kindle book by that author is captured. Ones you own are skipped... the rest go to your wishlist.
 
+**Screen Direction:**
+- Navigate to Amazon author page
+- Click bookmarklet → "Author Bibliography"
+- Similar flow: scan, skip owned, add rest
+- Import to app
+
 ---
 
-**[SCENE 5: Price Goals and Deals — 1:35-2:10]**
+### Scene 5: Price Goals and Deals — 1:35-2:10
+
+**Script:**
 
 Here's where it gets powerful. Right-click a wishlist book... and set a price goal.
 
@@ -1150,36 +1217,7 @@ Click it... and you see only the deals. Price tags on covers show the current pr
 
 Run the fetcher periodically to keep prices fresh. ReaderWrangler checks every book's price on every run.
 
----
-
-### Screen Direction
-
-**[SCENE 1: 0:00-0:15]**
-- Show app with organized library
-- Brief text: "Track books before you buy"
-
-**[SCENE 2: 0:15-0:40]**
-- Switch to Amazon product page for a specific book
-- Click bookmarklet → nav hub appears
-- Click "Add to Wishlist"
-- Progress → upload complete
-- Switch to app → File → Import from Relay
-- Show wishlist book with heart badge in Inbox
-
-**[SCENE 3: 0:40-1:10]**
-- Navigate to Amazon series page
-- Click bookmarklet → "Import Series"
-- Dialog shows books being scanned
-- "3 added to wishlist, 5 already owned (skipped)"
-- Import to app → wishlist books appear
-
-**[SCENE 4: 1:10-1:35]**
-- Navigate to Amazon author page
-- Click bookmarklet → "Author Bibliography"
-- Similar flow: scan, skip owned, add rest
-- Import to app
-
-**[SCENE 5: 1:35-2:10]**
+**Screen Direction:**
 - Right-click wishlist book → Set Price Goal → "50% off"
 - Price tag badge appears on cover
 - Click Deals toggle in toolbar → green theme activates
@@ -1201,9 +1239,9 @@ Users who want to browse their library on their phone
 - Phone available for recording (or phone simulator)
 - Relay configured on desktop
 
-### Script (TTS-Optimized)
+### Scene 1: Pairing — 0:00-0:30
 
-**[SCENE 1: Pairing — 0:00-0:30]**
+**Script:**
 
 Your organized library isn't stuck on your desktop. Let's put it on your phone.
 
@@ -1213,9 +1251,18 @@ A QR code appears. Open your phone's camera... and scan it.
 
 Your phone browser opens ReaderWrangler... and your library is already there. Folders, tags, everything.
 
+**Screen Direction:**
+- Desktop: File → Relay Setup → Step 3 (Mobile Pairing)
+- QR code visible
+- Phone camera: aim at QR code
+- Phone browser opens readerwrangler.com → library loads
+- Split screen: desktop on left, phone on right
+
 ---
 
-**[SCENE 2: Browsing on Mobile — 0:30-1:00]**
+### Scene 2: Browsing on Mobile — 0:30-1:00
+
+**Script:**
 
 The mobile app shows your library as a dashboard. Shelves for recent books... your folders... your tag views.
 
@@ -1223,9 +1270,18 @@ Tap a folder to browse. Tap a book to see its full details... cover, description
 
 Search and sort work just like desktop. Tap the search icon... type an author name... and find what you're looking for.
 
+**Screen Direction:**
+- Phone screen: mobile dashboard with shelves
+- Tap "Thrillers" folder → books appear
+- Tap a book → detail modal with cover, description, ratings
+- Tap search → type "Heinlein" → results filter
+- Scroll through cover grid
+
 ---
 
-**[SCENE 3: Add to Home Screen — 1:00-1:15]**
+### Scene 3: Add to Home Screen — 1:00-1:15
+
+**Script:**
 
 For an app-like experience... add ReaderWrangler to your home screen.
 
@@ -1233,36 +1289,20 @@ On your phone browser... tap the share button... then "Add to Home Screen."
 
 Now it launches like a native app. Full screen. No browser bars.
 
----
-
-**[SCENE 4: Wrap Up — 1:15-1:25]**
-
-Organize on desktop. Browse on mobile. Your library... everywhere.
-
----
-
-### Screen Direction
-
-**[SCENE 1: 0:00-0:30]**
-- Desktop: File → Relay Setup → Step 3 (Mobile Pairing)
-- QR code visible
-- Phone camera: aim at QR code
-- Phone browser opens readerwrangler.com → library loads
-- Split screen: desktop on left, phone on right
-
-**[SCENE 2: 0:30-1:00]**
-- Phone screen: mobile dashboard with shelves
-- Tap "Thrillers" folder → books appear
-- Tap a book → detail modal with cover, description, ratings
-- Tap search → type "Heinlein" → results filter
-- Scroll through cover grid
-
-**[SCENE 3: 1:00-1:15]**
+**Screen Direction:**
 - Phone: browser menu → "Add to Home Screen"
 - Home screen shows ReaderWrangler icon
 - Tap icon → app opens full screen
 
-**[SCENE 4: 1:15-1:25]**
+---
+
+### Scene 4: Wrap Up — 1:15-1:25
+
+**Script:**
+
+Organize on desktop. Browse on mobile. Your library... everywhere.
+
+**Screen Direction:**
 - Split screen: organized desktop + phone showing same library
 - Fade to logo
 
@@ -1280,9 +1320,9 @@ Users who want to work faster and protect their data
 - Demo library organized into target folder structure
 - A few actions to undo ready (pre-do a move and a delete)
 
-### Script (TTS-Optimized)
+### Scene 1: Undo and Redo — 0:00-0:30
 
-**[SCENE 1: Undo and Redo — 0:00-0:30]**
+**Script:**
 
 ReaderWrangler tracks everything you do. Moved a book to the wrong folder? Press Control-Z. It's back.
 
@@ -1294,9 +1334,19 @@ Changed your mind about the undo? Control-Y to redo.
 
 You can undo multiple steps in a row. Experiment freely... you can always go back.
 
+**Screen Direction:**
+- Drag a book to wrong folder — show it landing
+- Press Ctrl+Z — book returns to original folder
+- Delete a folder with books — confirmation → delete
+- Ctrl+Z — folder restored with books
+- Ctrl+Y — redo the delete
+- Ctrl+Z again — restored again
+
 ---
 
-**[SCENE 2: Keyboard Shortcuts — 0:30-1:00]**
+### Scene 2: Keyboard Shortcuts — 0:30-1:00
+
+**Script:**
 
 Power users love keyboard shortcuts. Here are the essentials.
 
@@ -1312,9 +1362,18 @@ Press Escape to cancel any operation... close a menu... or clear the clipboard.
 
 All shortcuts are listed in Help... Keyboard Shortcuts.
 
+**Screen Direction:**
+- Click folder → press F2 → type new name → Enter
+- Ctrl+X on a folder — folder goes 50% opacity
+- Click target folder → Ctrl+V — folder moves, opacity restored
+- Show Ctrl+C → Ctrl+V — folder copy appears as "Name (Copy)"
+- Help → Keyboard Shortcuts — show the full list dialog
+
 ---
 
-**[SCENE 3: Backup and Restore — 1:00-1:30]**
+### Scene 3: Backup and Restore — 1:00-1:30
+
+**Script:**
 
 Your organization is precious. Let's protect it.
 
@@ -1326,9 +1385,17 @@ To restore... File... Restore Backup... and pick the file. Everything comes back
 
 Keep a backup after any major reorganization. If anything ever goes wrong... you can recover in seconds.
 
+**Screen Direction:**
+- File → Save Backup → file save dialog
+- Show the file in explorer (readerwrangler-backup-*.json)
+- File → Restore Backup → pick the file
+- Library restores — show folders, books, tags all intact
+
 ---
 
-**[SCENE 4: Auto-Organize Deep Dive — 1:30-2:00]**
+### Scene 4: Auto-Organize Deep Dive — 1:30-2:00
+
+**Script:**
 
 Auto-Organize is your best friend for a large Inbox.
 
@@ -1336,9 +1403,19 @@ It groups books by author. Authors with series get subfolders automatically. The
 
 Preview shows exactly what will happen before you commit. And the entire operation... no matter how many folders it creates... undoes in a single Control-Z.
 
+**Screen Direction:**
+- File → Auto-Organize
+- Show slider at different values (1, 3, 5)
+- Click Preview — show the proposed hierarchy
+- Click Apply — tree fills up
+- Ctrl+Z — everything undone
+- Ctrl+Y — restored
+
 ---
 
-**[SCENE 5: Share Book — 2:00-2:20]**
+### Scene 5: Share Book — 2:00-2:20
+
+**Script:**
 
 Found a book you want to recommend? Right-click it... and choose Share.
 
@@ -1346,9 +1423,18 @@ You can copy the Amazon link... email it to a friend... or use your device's sha
 
 Select multiple books and share them all at once. A quick way to send a reading list to someone.
 
+**Screen Direction:**
+- Right-click a book → Share submenu
+- Show options: Copy Amazon Link, Email to a Friend
+- Click Copy Amazon Link — toast confirms
+- Select 3 books → right-click → Share → Email to a Friend
+- Email compose opens with book links
+
 ---
 
-**[SCENE 6: Data Status — 2:20-2:55]**
+### Scene 6: Data Status — 2:20-2:55
+
+**Script:**
 
 The colored dot next to the File menu is your Data Status indicator.
 
@@ -1362,47 +1448,7 @@ If it turns orange or red... your data is getting old. Time to run the fetcher a
 
 The app checks the relay automatically... so you'll always know when fresh data is available.
 
----
-
-### Screen Direction
-
-**[SCENE 1: 0:00-0:30]**
-- Drag a book to wrong folder — show it landing
-- Press Ctrl+Z — book returns to original folder
-- Delete a folder with books — confirmation → delete
-- Ctrl+Z — folder restored with books
-- Ctrl+Y — redo the delete
-- Ctrl+Z again — restored again
-
-**[SCENE 2: 0:30-1:00]**
-- Click folder → press F2 → type new name → Enter
-- Ctrl+X on a folder — folder goes 50% opacity
-- Click target folder → Ctrl+V — folder moves, opacity restored
-- Show Ctrl+C → Ctrl+V — folder copy appears as "Name (Copy)"
-- Help → Keyboard Shortcuts — show the full list dialog
-
-**[SCENE 3: 1:00-1:30]**
-- File → Save Backup → file save dialog
-- Show the file in explorer (readerwrangler-backup-*.json)
-- File → Restore Backup → pick the file
-- Library restores — show folders, books, tags all intact
-
-**[SCENE 4: 1:30-2:00]**
-- File → Auto-Organize
-- Show slider at different values (1, 3, 5)
-- Click Preview — show the proposed hierarchy
-- Click Apply — tree fills up
-- Ctrl+Z — everything undone
-- Ctrl+Y — restored
-
-**[SCENE 5: 2:00-2:20]**
-- Right-click a book → Share submenu
-- Show options: Copy Amazon Link, Email to a Friend
-- Click Copy Amazon Link — toast confirms
-- Select 3 books → right-click → Share → Email to a Friend
-- Email compose opens with book links
-
-**[SCENE 6: 2:20-2:55]**
+**Screen Direction:**
 - Point to status dot (green ✅) next to File menu
 - Click it — Data Status dialog opens
 - Show library info, relay section ("No newer data"), integrity
