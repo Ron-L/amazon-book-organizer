@@ -31,7 +31,7 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Create faq.html — answers to common questions
    - Link from: Help menu, README, features.html footer, tutorials.html footer
    - Sections: Security/Privacy, Data/Backup, Troubleshooting, Library, General
-   - Include: relay revocation, encryption explanation, moving to new computer, bookmarklet troubleshooting, stale data, physical books, multi-browser, pricing
+   - Include: relay revocation, encryption explanation, moving to new computer, bookmarklet troubleshooting (including blank-tab limitation), stale data, physical books, multi-browser, pricing
 
 **5. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
    - Document relay credential recovery paths

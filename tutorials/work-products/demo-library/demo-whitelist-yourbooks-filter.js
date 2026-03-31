@@ -96,6 +96,18 @@
             document.head.appendChild(style.cloneNode(true));
         }
 
+        // Anonymize personal info
+        const profileName = freshBody.querySelector('[data-testid="profileName"]');
+        if (profileName) profileName.textContent = 'Your Books';
+        const customerSince = freshBody.querySelector('#profile-customer-info-value');
+        if (customerSince) customerSince.textContent = '';
+        const deliverTo = freshBody.querySelector('#glow-ingress-line1');
+        if (deliverTo) deliverTo.textContent = 'Deliver to You';
+        const deliverLoc = freshBody.querySelector('#glow-ingress-line2');
+        if (deliverLoc) deliverLoc.textContent = 'Your town';
+        const helloName = freshBody.querySelector('#nav-link-accountList-nav-line-1');
+        if (helloName) helloName.textContent = 'Hello, sign in';
+
         // Clean up
         input.remove();
 

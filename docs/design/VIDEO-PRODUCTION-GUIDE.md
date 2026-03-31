@@ -353,7 +353,9 @@ Brand new users who need to get started fast
 - Fresh ReaderWrangler state (File → Reset App or fresh browser profile)
 - Amazon account logged in
 - Chrome with bookmarks bar visible
+- Chrome settings: new tabs open google.com (so bookmarklet works on new tabs)
 - Demo whitelist loaded on amazon.com (for controlled fetch)
+- Have `amazon-yourbooks-demo.html` ready to pick from file picker (for Scene 3 page swap)
 
 ### Scene 1: The Problem — 0:00-0:20
 
@@ -384,7 +386,9 @@ Click "Generate Credentials" to create your private relay.
 
 This is an encrypted channel between Amazon and your app. No one else can see your data.
 
-Now drag the bookmarklet that appears... onto your browser's bookmarks bar.
+If you don't see your bookmarks bar... press Control Alt B to show it.
+
+Now drag the bookmarklet that appears... onto your bookmarks bar.
 
 That's it. Setup done. You'll never need to do this again.
 
@@ -395,6 +399,7 @@ That's it. Setup done. You'll never need to do this again.
 - Click "Generate Credentials" (highlight button)
 - Credentials appear, green checkmark, bookmarklet button appears in Step 2
 - Open Step 2 (accordion expands)
+- If bookmarks bar not visible: show Ctrl+Alt+B keyboard shortcut (text overlay)
 - **Slow motion**: Drag bookmarklet onto browser bookmarks bar
 - Show bookmarklet appearing in bar (highlight)
 - Close dialog
@@ -405,7 +410,7 @@ That's it. Setup done. You'll never need to do this again.
 
 **Script:**
 
-Now go to your Amazon library page... and click the ReaderWrangler bookmarklet.
+Click the ReaderWrangler bookmarklet. It takes you straight to your Amazon library.
 
 A progress panel opens and starts fetching your library.
 
@@ -422,9 +427,10 @@ For a big library... this can take a few minutes. Go grab a coffee.
 When it's done... your books are waiting in the relay, ready to import.
 
 **Screen Direction:**
-- Navigate to Amazon library page
-- Click bookmarklet in toolbar
-- Progress dialog appears (zoom in)
+- Open new tab (shows Google homepage — Chrome set to open google.com on new tab)
+- Click ReaderWrangler bookmarklet — navigates to amazon.com/yourbooks
+- (Edit out: open DevTools, paste/run demo-whitelist-yourbooks-filter.js, pick amazon-yourbooks-demo.html, close DevTools — viewer sees clean amazon.com/yourbooks with demo library)
+- Click bookmarklet again — progress panel opens on the Amazon page
 - Show Phase 1 counter: "Fetching titles… 45/119"
 - Show Phase 2: "Enriching descriptions…"
 - Show Phase 3: "Fetching tags…"
