@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2065,11 +2065,7 @@
                     }
                 }
 
-                // Can't move into Inbox
-                if (newParentId === '__inbox__') {
-                    showToast("Can't move folders into Inbox", null, null, { level: 'error' });
-                    return false;
-                }
+                // v6.11.2 - Removed Inbox reparent restriction. Inbox is a standard folder.
 
                 // Save old parentIds for undo
                 const oldParentIds = folderIds.map(id => {
@@ -2084,17 +2080,16 @@
                     return folder;
                 }));
 
-                // Record for undo
                 const folderNames = folderIds.map(id => folders.find(f => f.id === id)?.name || id).join(', ');
                 const targetName = newParentId ? folders.find(f => f.id === newParentId)?.name : 'root';
-                recordAction({
+                const action = {
                     type: 'REPARENT_FOLDER',
                     folderIds,
                     oldParentIds,
                     newParentId,
                     description: `Move "${folderNames}" into "${targetName}"`
-                });
-
+                };
+                recordAction(action);
                 showToast(`Moved "${folderNames}" into "${targetName}"`);
                 console.log(`📁 Moved ${folderIds.length} folder(s) into ${newParentId || 'root'}`);
                 return true;
@@ -5186,6 +5181,13 @@
             };
 
             const executeUndo = (action) => {
+                // v6.11.2 - Compound action: undo sub-actions in reverse order
+                if (action.type === 'COMPOUND') {
+                    for (let i = action.actions.length - 1; i >= 0; i--) {
+                        executeUndo(action.actions[i]);
+                    }
+                    return;
+                }
                 switch (action.type) {
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Restore each book's previous hidden state
@@ -5610,6 +5612,10 @@
             };
 
             const executeRedo = (action) => {
+                if (action.type === 'COMPOUND') {
+                    for (const sub of action.actions) executeRedo(sub);
+                    return;
+                }
                 switch (action.type) {
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Re-apply the hide/unhide action
