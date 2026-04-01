@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -606,10 +606,9 @@
             const [rightPanelPlaceholderMode, setRightPanelPlaceholderMode] = useState(false); // v5.0.0-alpha.156 - Placeholder mode (right panel)
             const [explorerDragBookId, setExplorerDragBookId] = useState(null); // Book being dragged in Explorer
             const explorerDropTargetRef = useRef(null); // DOM element of folder being dragged over (ref-based to avoid re-renders)
-            const [explorerSelectedBooks, setExplorerSelectedBooks] = useState(new Set()); // Multi-select in Explorer
-            const [explorerSelectedFolders, setExplorerSelectedFolders] = useState(new Set()); // v5.0.0-alpha.54 - Folder selection in right pane
-            const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null); // Anchor index for Shift+click range select (books)
-            const [explorerFolderAnchor, setExplorerFolderAnchor] = useState(null); // Anchor index for Shift+click range select (folders)
+            // v6.11.1-alpha.2 - Unified selection: books and folders share one Set + one anchor
+            const [explorerSelectedItems, setExplorerSelectedItems] = useState(new Set());
+            const [explorerSelectionAnchor, setExplorerSelectionAnchor] = useState(null);
             const [explorerBookContextMenu, setExplorerBookContextMenu] = useState(null); // v5.0.0-alpha.165 - Book context menu in Explorer (separate from Columns App menu)
             const explorerReorderTargetRef = useRef(null); // DOM element for reorder drop indicator (ref-based to avoid re-renders)
             const [explorerFolderDragTarget, setExplorerFolderDragTarget] = useState(null); // v5.0.0-alpha.69 - { type: 'reorder'|'reparent', index?, position?, folderId? }
@@ -1362,6 +1361,54 @@
                 explorerDisplayItems.filter(item => item.type === 'book').map(item => item.book),
                 [explorerDisplayItems]);
 
+            // v6.11.2-alpha.1 - Visible folders in right pane (lifted from inline JSX for unified selection)
+            const explorerVisibleFolders = useMemo(() => {
+                // Views and All Books don't show child folders
+                if (['__all__', '__views__', '__trash__'].includes(selectedFolderId) || isViewFolder(selectedFolderId)) return [];
+                const childFolders = selectedFolderId === '__library__'
+                    ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                    : getChildFolders(selectedFolderId);
+                if (childFolders.length === 0) return [];
+                const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
+                let sorted;
+                if (selectedFolderId === '__library__') {
+                    const inbox = childFolders.find(f => f.id === '__inbox__');
+                    const others = childFolders.filter(f => f.id !== '__inbox__');
+                    const sortedOthers = explorerSort[0].column === 'custom'
+                        ? others : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
+                    sorted = [inbox, ...sortedOthers].filter(Boolean);
+                } else {
+                    sorted = explorerSort[0].column === 'custom'
+                        ? childFolders : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                }
+                if (hasActiveFilters && !showAllFoldersOverride) {
+                    return sorted.filter(folder => {
+                        const { matching } = getFilteredFolderCount(folder.id);
+                        const hasMatchingDescendant = (folderId) => {
+                            const childFldrs = folders.filter(f => f.parentId === folderId);
+                            return childFldrs.some(child => {
+                                const { matching: childMatching } = getFilteredFolderCount(child.id);
+                                return childMatching > 0 || hasMatchingDescendant(child.id);
+                            });
+                        };
+                        return matching > 0 || hasMatchingDescendant(folder.id);
+                    });
+                }
+                return sorted;
+            }, [selectedFolderId, folders, explorerSort, hasActiveFilters, showAllFoldersOverride]);
+
+            // v6.11.2-alpha.1 - Unified display list: folders first, then books (for unified selection)
+            const explorerUnifiedItems = useMemo(() => [
+                ...explorerVisibleFolders.map(f => ({ type: 'folder', id: f.id, folder: f })),
+                ...explorerSortedBooks.map(b => ({ type: 'book', id: b.id, book: b }))
+            ], [explorerVisibleFolders, explorerSortedBooks]);
+
+            // v6.11.2-alpha.1 - Selection accessors (encapsulate unified Set)
+            const isSelected = (id) => explorerSelectedItems.has(id);
+            const getSelectedBookIds = () => [...explorerSelectedItems].filter(id => bookMap.has(id));
+            const getSelectedFolderIds = () => [...explorerSelectedItems].filter(id => folders.some(f => f.id === id));
+            const clearSelection = () => { setExplorerSelectedItems(new Set()); setExplorerSelectionAnchor(null); };
+
             // v5.5.4 - Render cap: show first 200 items instantly, "Show all" button for rest
             // Resets on navigation changes (sort/filter/folder), NOT on data mutations (reorder/tag edit)
             const RENDER_CAP = 200;
@@ -1628,7 +1675,7 @@
                     });
                 }
 
-                setExplorerSelectedBooks(new Set());
+                setExplorerSelectedItems(new Set());
 
                 // Toast messages
                 const msgs = [];
@@ -1689,7 +1736,7 @@
                     restoredBooks
                 });
 
-                setExplorerSelectedBooks(new Set());
+                setExplorerSelectedItems(new Set());
                 const count = bookIds.length;
                 showToast(`Restored ${count} book${count !== 1 ? 's' : ''}`);
             };
@@ -1708,7 +1755,7 @@
                     bookIds: (f.bookIds || []).filter(id => !bookIdsSet.has(id))
                 })));
 
-                setExplorerSelectedBooks(new Set());
+                setExplorerSelectedItems(new Set());
                 const count = bookIds.length;
                 showToast(`Permanently deleted ${count} book${count !== 1 ? 's' : ''}`);
 
@@ -2082,8 +2129,7 @@
                 // View filters are applied additively by filterBookForExplorer.
                 setSelectedFolderId(folderId);
                 // v5.0.0-alpha.161 - Clear right panel selections when navigating
-                setExplorerSelectedFolders(new Set());
-                setExplorerSelectedBooks(new Set());
+                clearSelection();
                 if (addToHistory) {
                     // Truncate forward history and add new entry
                     setNavHistory(prev => [...prev.slice(0, navHistoryIndex + 1), folderId]);
@@ -2102,8 +2148,8 @@
                     setNavHistoryIndex(newIndex);
                     setSelectedFolderId(navHistory[newIndex]);
                     // v5.0.0-alpha.161 - Clear right panel selections when navigating
-                    setExplorerSelectedFolders(new Set());
-                    setExplorerSelectedBooks(new Set());
+                    setExplorerSelectedItems(new Set());
+                    setExplorerSelectedItems(new Set());
                     // v5.5.15-alpha.22 - Sync browser history
                     pendingBrowserNavRef.current++;
                     history.back();
@@ -2116,8 +2162,8 @@
                     setNavHistoryIndex(newIndex);
                     setSelectedFolderId(navHistory[newIndex]);
                     // v5.0.0-alpha.161 - Clear right panel selections when navigating
-                    setExplorerSelectedFolders(new Set());
-                    setExplorerSelectedBooks(new Set());
+                    setExplorerSelectedItems(new Set());
+                    setExplorerSelectedItems(new Set());
                     // v5.5.15-alpha.22 - Sync browser history
                     pendingBrowserNavRef.current++;
                     history.forward();
@@ -2140,8 +2186,8 @@
                     const navIndex = e.state?.navIndex;
                     if (folderId) {
                         setSelectedFolderId(folderId);
-                        setExplorerSelectedFolders(new Set());
-                        setExplorerSelectedBooks(new Set());
+                        setExplorerSelectedItems(new Set());
+                        setExplorerSelectedItems(new Set());
                         if (navIndex !== undefined) {
                             setNavHistoryIndex(navIndex);
                         }
@@ -3204,39 +3250,28 @@
                     if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
                         e.preventDefault(); // Prevent browser's select-all
 
-                        // v6.12.0-alpha.1 - Select all visible books AND folders together (like Windows Explorer)
-                        // Books
-                        const allVisibleBookIds = (selectedFolderId !== '__library__' && selectedFolderId !== '__views__')
-                            ? getFolderBookIds(selectedFolderId)
-                                .map(id => books.find(b => b.id === id))
-                                .filter(book => filterBookForExplorer(book))
-                                .map(book => book.id)
-                            : [];
-                        setExplorerSelectedBooks(new Set(allVisibleBookIds));
-
-                        // Folders/views at this level
-                        const childFolders = selectedFolderId === '__library__'
-                            ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
-                            : selectedFolderId === '__views__'
-                                ? [FOLDER_ALL_BOOKS, ...[...savedViews].sort((a, b) => a.position - b.position).map(v => ({ id: `__view_${v.id}__`, name: v.name }))]
-                                : selectedFolderId === '__all__'
-                                    ? []
-                                    : getChildFolders(selectedFolderId);
-                        const allVisibleFolderIds = childFolders.map(f => f.id);
-                        setExplorerSelectedFolders(new Set(allVisibleFolderIds));
-
-                        console.log(`✅ Selected ${allVisibleBookIds.length} book(s) + ${allVisibleFolderIds.length} folder(s) in Explorer`);
+                        // v6.11.2-alpha.1 - Select all visible items via unified list
+                        const allIds = explorerUnifiedItems.map(item => item.id);
+                        // Also include views/special folders not in unified list
+                        if (selectedFolderId === '__library__' || selectedFolderId === '__views__') {
+                            const specialFolders = selectedFolderId === '__library__'
+                                ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                                : [FOLDER_ALL_BOOKS, ...[...savedViews].sort((a, b) => a.position - b.position).map(v => ({ id: `__view_${v.id}__`, name: v.name }))];
+                            allIds.push(...specialFolders.map(f => f.id));
+                        }
+                        setExplorerSelectedItems(new Set(allIds));
+                        console.log(`✅ Selected ${allIds.length} item(s) in Explorer`);
                     }
 
                     // v5.0.0-alpha.168 - Ctrl+X in Explorer view: Cut selected books
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'x' && explorerSelectedBooks.size > 0) {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'x' && getSelectedBookIds().length > 0) {
                         e.preventDefault();
                         // Can't cut from virtual folders (Inbox is a real folder, allow cut)
                         if (['__all__', '__library__'].includes(selectedFolderId)) {
                             console.log('⚠️ Cannot cut books from virtual folders');
                             return;
                         }
-                        const bookIds = Array.from(explorerSelectedBooks);
+                        const bookIds = getSelectedBookIds();
                         const sourcePositions = bookIds.map(bookId => ({
                             bookId,
                             folderId: selectedFolderId
@@ -3248,9 +3283,9 @@
                     }
 
                     // v5.0.0-alpha.168 - Ctrl+C in Explorer view: Copy selected books
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'c' && explorerSelectedBooks.size > 0) {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'c' && getSelectedBookIds().length > 0) {
                         e.preventDefault();
-                        const bookIds = Array.from(explorerSelectedBooks);
+                        const bookIds = getSelectedBookIds();
                         const sourcePositions = bookIds.map(bookId => ({
                             bookId,
                             folderId: selectedFolderId
@@ -3338,9 +3373,9 @@
 
                     // v5.0.0-alpha.46 - DEL key in Explorer: Remove selected books from current folder
                     // v6.0.0-alpha.49 - DEL key: Trash view = permanent delete, Tag view = remove tag, else = soft delete
-                    if (e.key === 'Delete' && explorerSelectedBooks.size > 0) {
+                    if (e.key === 'Delete' && getSelectedBookIds().length > 0) {
                         e.preventDefault();
-                        const bookIdsToDelete = [...explorerSelectedBooks];
+                        const bookIdsToDelete = getSelectedBookIds();
 
                         // Trash view: permanently delete with confirmation
                         if (selectedFolderId === '__trash__') {
@@ -3372,7 +3407,7 @@
                                 addedDest: [],
                                 removedSource: bookIdsToDelete
                             });
-                            setExplorerSelectedBooks(new Set());
+                            setExplorerSelectedItems(new Set());
                             return;
                         }
 
@@ -3388,7 +3423,7 @@
 
                 window.addEventListener('keydown', handleKeyDown);
                 return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [hiddenInstances, explorerSelectedBooks, selectedFolderId, folders]);
+            }, [hiddenInstances, explorerSelectedItems, selectedFolderId, folders]);
 
 
             // Close context menu on click
@@ -3583,8 +3618,8 @@
                         e.preventDefault();
 
                         // Priority 1: If exactly one folder is selected in right panel, rename it there
-                        if (explorerSelectedFolders.size === 1) {
-                            const folderId = Array.from(explorerSelectedFolders)[0];
+                        if (getSelectedFolderIds().length === 1) {
+                            const folderId = getSelectedFolderIds()[0];
                             const folder = folders.find(f => f.id === folderId);
                             if (folder && !['__all__', '__inbox__', '__library__'].includes(folder.id)) {
                                 setRightPanelEditingId(folder.id);
@@ -3603,7 +3638,7 @@
                     }
 
                     // Delete - Delete current folder (skip if books selected in explorer)
-                    if (e.key === 'Delete' && !isSpecialFolder && explorerSelectedBooks.size === 0) {
+                    if (e.key === 'Delete' && !isSpecialFolder && getSelectedBookIds().length === 0) {
                         e.preventDefault();
 
                         const hasChildren = folders.some(f => f.parentId === currentFolder.id);
@@ -3686,7 +3721,7 @@
 
                 window.addEventListener('keydown', handleKeyboard);
                 return () => window.removeEventListener('keydown', handleKeyboard);
-            }, [selectedFolderId, folders, folderClipboard, folderContextMenu, folderPropertiesDialog, explorerSelectedFolders, explorerSelectedBooks]); // v5.0.0-alpha.157 - Added explorerSelectedFolders for F2
+            }, [selectedFolderId, folders, folderClipboard, folderContextMenu, folderPropertiesDialog, explorerSelectedItems, explorerSelectedItems]); // v5.0.0-alpha.157 - Added explorerSelectedItems for F2
 
             // v5.0.0-alpha.175.48 - Removed saveSettings function (dead code)
 
@@ -5008,7 +5043,7 @@
 
             // v5.4.7 - Bulk edit via context menu
             const openBulkEditModal = (field) => {
-                const selectedBookIds = Array.from(explorerSelectedBooks);
+                const selectedBookIds = getSelectedBookIds();
                 const selectedBooks = selectedBookIds.map(id => books.find(b => b.id === id)).filter(Boolean);
                 const fieldKey = field === 'position' ? 'seriesPosition' : (field === 'ownership' ? 'onWishlist' : field);
                 const values = new Set(selectedBooks.map(b => {
@@ -5077,7 +5112,7 @@
             };
 
             const clearSelection = () => {
-                setExplorerSelectedBooks(new Set());
+                setExplorerSelectedItems(new Set());
             };
 
             // v4.8.0 - Undo/Redo core functions
@@ -11219,7 +11254,7 @@
                                                                 recordAction({ type: 'TAG_BOOKS_DRAG', bookIds, destTagId, sourceTagId: isMove ? sourceTagId : null, addedDest, removedSource });
                                                             }
                                                             setFolderDropHighlight(null);
-                                                            setExplorerSelectedBooks(new Set());
+                                                            setExplorerSelectedItems(new Set());
                                                             stopDragVirtualization();
                                                             setExplorerDragBookId(null);
                                                             setExplorerDragData(null);
@@ -11441,7 +11476,7 @@
                                             if (sourceFolder === '__all__') {
                                                 showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
                                                 setFolderDropHighlight(null);
-                                                setExplorerSelectedBooks(new Set());
+                                                setExplorerSelectedItems(new Set());
                                                 return;
                                             }
                                             // v6.0.0-alpha.53 - Drag from Trash to Inbox = undelete + place in Inbox only
@@ -11465,7 +11500,7 @@
                                                 }));
                                                 showToast(`Restored ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to Inbox`);
                                                 setFolderDropHighlight(null);
-                                                setExplorerSelectedBooks(new Set());
+                                                setExplorerSelectedItems(new Set());
                                                 stopDragVirtualization();
                                                 setExplorerDragBookId(null);
                                                 setExplorerDragData(null);
@@ -11502,7 +11537,7 @@
                                                 recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId: sourceFolder, toFolderId: '__inbox__', bookIds, fromIndices, toIndex: 0 });
                                             }
                                             setFolderDropHighlight(null);
-                                            setExplorerSelectedBooks(new Set());
+                                            setExplorerSelectedItems(new Set());
                                             stopDragVirtualization(); // v5.5.4-alpha.23
                                             // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
                                             setExplorerDragBookId(null);
@@ -11775,14 +11810,14 @@
                                                             if (sourceFolder === '__all__') {
                                                                 showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
                                                                 setFolderDropHighlight(null);
-                                                                setExplorerSelectedBooks(new Set());
+                                                                setExplorerSelectedItems(new Set());
                                                                 return;
                                                             }
                                                             // v5.5.15-alpha.34 - 1I: Disallow drag from tag view to real folder
                                                             if (isViewFolder(sourceFolder)) {
                                                                 showToast('Can\'t move from tag view to folder. Use folders to organize.', e.clientX, e.clientY);
                                                                 setFolderDropHighlight(null);
-                                                                setExplorerSelectedBooks(new Set());
+                                                                setExplorerSelectedItems(new Set());
                                                                 return;
                                                             }
                                                             // v6.0.0-alpha.53 - Drag from Trash = undelete + place in target folder only
@@ -11807,7 +11842,7 @@
                                                                 }));
                                                                 showToast(`Restored ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to "${folder.name}"`);
                                                                 setFolderDropHighlight(null);
-                                                                setExplorerSelectedBooks(new Set());
+                                                                setExplorerSelectedItems(new Set());
                                                                 stopDragVirtualization();
                                                                 setExplorerDragBookId(null);
                                                                 setExplorerDragData(null);
@@ -11859,7 +11894,7 @@
                                                                 }
                                                             }
                                                             setFolderDropHighlight(null);
-                                                            setExplorerSelectedBooks(new Set());
+                                                            setExplorerSelectedItems(new Set());
                                                             explorerIsCopyDragRef.current = false;
                                                             stopDragVirtualization(); // v5.5.4-alpha.23
                                             // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
@@ -12171,7 +12206,7 @@
                                                 if (!bookDataStr) return;
                                                 const { sourceFolder, bookIds } = JSON.parse(bookDataStr);
                                                 if (sourceFolder === '__trash__') return;
-                                                setExplorerSelectedBooks(new Set());
+                                                setExplorerSelectedItems(new Set());
                                                 stopDragVirtualization();
                                                 setExplorerDragBookId(null);
                                                 setExplorerDragData(null);
@@ -12284,7 +12319,7 @@
                                                                         });
                                                                         console.log(`📦 Moved ${bookIds.length} book(s) to "${folder.name}" via breadcrumb`);
                                                                     }
-                                                                    setExplorerSelectedBooks(new Set());
+                                                                    setExplorerSelectedItems(new Set());
                                                                     stopDragVirtualization(); // v5.5.4-alpha.23
                                             // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
                                                                     setExplorerDragBookId(null);
@@ -12981,7 +13016,7 @@
                                                         const row = (
                                                             <tr
                                                                 key={`folder-${folder.id}`}
-                                                                className={`group cursor-pointer border-b border-gray-100 ${explorerSelectedFolders.has(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                                className={`group cursor-pointer border-b border-gray-100 ${isSelected(folder.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
                                                                 title={folder.description || undefined}
                                                                 style={(() => {
                                                                     // v5.0.0-alpha.73 - Phase C: Visual feedback (blue=valid, red=invalid)
@@ -13016,15 +13051,23 @@
                                                                 draggable={isDraggable}
                                                                 onDragStart={isDraggable ? (e) => {
                                                                     e.stopPropagation();
-                                                                    e.dataTransfer.effectAllowed = 'move';
+                                                                    e.dataTransfer.effectAllowed = 'copyMove';
                                                                     e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
-                                                                        folderIds: explorerSelectedFolders.has(folder.id) && explorerSelectedFolders.size > 1
-                                                                            ? [...explorerSelectedFolders]
+                                                                        folderIds: isSelected(folder.id) && getSelectedFolderIds().length > 1
+                                                                            ? getSelectedFolderIds()
                                                                             : [folder.id],
                                                                         parentId: parentForReorder
                                                                     }));
-                                                                    if (!explorerSelectedFolders.has(folder.id)) {
-                                                                        setExplorerSelectedFolders(new Set([folder.id]));
+                                                                    // v6.11.2-alpha.1 - Also carry selected books for mixed drag
+                                                                    const selectedBooks = getSelectedBookIds();
+                                                                    if (selectedBooks.length > 0) {
+                                                                        e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify({
+                                                                            sourceFolder: selectedFolderId,
+                                                                            bookIds: selectedBooks
+                                                                        }));
+                                                                    }
+                                                                    if (!isSelected(folder.id)) {
+                                                                        setExplorerSelectedItems(new Set([folder.id]));
                                                                     }
                                                                 } : undefined}
                                                                 onDragOver={(e) => {
@@ -13129,7 +13172,7 @@
                                                                             }
                                                                         }
                                                                         setFolderDropHighlight(null);
-                                                                        setExplorerSelectedBooks(new Set());
+                                                                        setExplorerSelectedItems(new Set());
                                                                         explorerIsCopyDragRef.current = false;
                                                                         stopDragVirtualization(); // v5.5.4-alpha.23
                                             // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
@@ -13146,25 +13189,24 @@
                                                                     // v5.0.0-alpha.151 - Skip selection when editing folder name
                                                                     if (editingFolderId === folder.id) return;
 
-                                                                    // v6.12.0-alpha.1 - Only clear book selection on plain click (not Ctrl/Shift)
-                                                                    if (!e.ctrlKey && !e.metaKey && !e.shiftKey) setExplorerSelectedBooks(new Set());
-                                                                    if (e.shiftKey && explorerFolderAnchor !== null) {
-                                                                        // Shift-click: select range from anchor to current
-                                                                        const start = Math.min(explorerFolderAnchor, folderIndex);
-                                                                        const end = Math.max(explorerFolderAnchor, folderIndex);
-                                                                        const rangeIds = visibleFolders.slice(start, end + 1).map(f => f.id);
-                                                                        setExplorerSelectedFolders(new Set(rangeIds));
+                                                                    // v6.11.2-alpha.1 - Unified selection: folders + books share one model
+                                                                    const unifiedIndex = folderIndex; // folders are first in unified list
+                                                                    if (e.shiftKey && explorerSelectionAnchor !== null) {
+                                                                        const start = Math.min(explorerSelectionAnchor, unifiedIndex);
+                                                                        const end = Math.max(explorerSelectionAnchor, unifiedIndex);
+                                                                        const rangeIds = explorerUnifiedItems.slice(start, end + 1).map(item => item.id);
+                                                                        setExplorerSelectedItems(new Set(rangeIds));
                                                                     } else if (e.ctrlKey || e.metaKey) {
-                                                                        setExplorerSelectedFolders(prev => {
+                                                                        setExplorerSelectedItems(prev => {
                                                                             const next = new Set(prev);
                                                                             if (next.has(folder.id)) next.delete(folder.id);
                                                                             else next.add(folder.id);
                                                                             return next;
                                                                         });
-                                                                        setExplorerFolderAnchor(folderIndex);
+                                                                        setExplorerSelectionAnchor(unifiedIndex);
                                                                     } else {
-                                                                        setExplorerSelectedFolders(new Set([folder.id]));
-                                                                        setExplorerFolderAnchor(folderIndex);
+                                                                        setExplorerSelectedItems(new Set([folder.id]));
+                                                                        setExplorerSelectionAnchor(unifiedIndex);
                                                                     }
                                                                 }}
                                                                 onDoubleClick={() => {
@@ -13176,8 +13218,8 @@
                                                                     // Expand parent if collapsed
                                                                     setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f));
                                                                     // Clear selections
-                                                                    setExplorerSelectedFolders(new Set());
-                                                                    setExplorerSelectedBooks(new Set());
+                                                                    setExplorerSelectedItems(new Set());
+                                                                    setExplorerSelectedItems(new Set());
                                                                 }}
                                                                 onContextMenu={(e) => {
                                                                     // v5.0.0-alpha.146 - Right panel folder context menu
@@ -13195,20 +13237,20 @@
                                                                     style={{ width: '24px' }}
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        setExplorerSelectedFolders(prev => {
+                                                                        setExplorerSelectedItems(prev => {
                                                                             const next = new Set(prev);
                                                                             if (next.has(folder.id)) next.delete(folder.id);
                                                                             else next.add(folder.id);
                                                                             return next;
                                                                         });
-                                                                        setExplorerSelectedBooks(new Set());
+                                                                        setExplorerSelectedItems(new Set());
                                                                     }}>
                                                                     <div className={`w-3.5 h-3.5 border rounded flex items-center justify-center text-xs ${
-                                                                        explorerSelectedFolders.has(folder.id)
+                                                                        isSelected(folder.id)
                                                                             ? 'opacity-100 bg-blue-500 border-blue-500 text-white'
                                                                             : 'opacity-0 group-hover:opacity-100 border-gray-400'
                                                                     }`}>
-                                                                        {explorerSelectedFolders.has(folder.id) && '✓'}
+                                                                        {isSelected(folder.id) && '✓'}
                                                                     </div>
                                                                 </td>
                                                                 <td className="p-2 text-center text-xl">{folder.id === '__inbox__' ? '📥' : '📁'}</td>
@@ -13335,7 +13377,7 @@
                                                         return (
                                                         <tr
                                                             key={book.id}
-                                                            className={`group cursor-pointer border-b border-gray-100 ${explorerSelectedBooks.has(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
+                                                            className={`group cursor-pointer border-b border-gray-100 ${isSelected(book.id) ? 'bg-blue-50' : 'hover:bg-gray-100'}`}
                                                             style={(() => {
                                                                 const styles = {};
                                                                 // v5.0.6 - Hidden book visual feedback (check both current and legacy formats)
@@ -13368,18 +13410,25 @@
                                                                 e.stopPropagation();
                                                                 e.dataTransfer.effectAllowed = 'copyMove';
                                                                 const dragData = {
-                                                                    sourceFolder: selectedFolderId, // '__all__' for All Books
-                                                                    bookIds: explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1
-                                                                        ? [...explorerSelectedBooks]
+                                                                    sourceFolder: selectedFolderId,
+                                                                    bookIds: isSelected(book.id) && getSelectedBookIds().length > 1
+                                                                        ? getSelectedBookIds()
                                                                         : [book.id]
                                                                 };
                                                                 e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
-                                                                setExplorerDragData(dragData); // Store for validity checks
-                                                                if (!explorerSelectedBooks.has(book.id)) {
-                                                                    setExplorerSelectedBooks(new Set([book.id]));
+                                                                // v6.11.2-alpha.1 - Also carry selected folders for mixed drag
+                                                                const selectedFolders = getSelectedFolderIds();
+                                                                if (selectedFolders.length > 0) {
+                                                                    e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
+                                                                        folderIds: selectedFolders,
+                                                                        parentId: selectedFolderId === '__library__' ? null : selectedFolderId
+                                                                    }));
+                                                                }
+                                                                setExplorerDragData(dragData);
+                                                                if (!isSelected(book.id)) {
+                                                                    setExplorerSelectedItems(new Set([book.id]));
                                                                 }
                                                                 setExplorerDragBookId(book.id);
-                                                                // v5.5.4-alpha.23 - Start drag virtualization after state is set
                                                                 requestAnimationFrame(() => startDragVirtualization());
                                                             }}
                                                             onDragOver={(e) => {
@@ -13431,38 +13480,35 @@
                                                                 setExplorerDragData(null);
                                                             }}
                                                             onClick={(e) => {
-                                                                // v6.12.0-alpha.1 - Only clear folder selection on plain click (not Ctrl/Shift)
-                                                                if (!e.ctrlKey && !e.metaKey && !e.shiftKey) setExplorerSelectedFolders(new Set());
+                                                                // v6.11.2-alpha.1 - Unified selection: folders + books share one model
+                                                                const unifiedIndex = explorerVisibleFolders.length + index;
                                                                 if (e.shiftKey && explorerSelectionAnchor !== null) {
-                                                                    // Shift-click: select range from anchor to current
-                                                                    const start = Math.min(explorerSelectionAnchor, index);
-                                                                    const end = Math.max(explorerSelectionAnchor, index);
-                                                                    const rangeIds = explorerSortedBooks.slice(start, end + 1).map(b => b.id);
-                                                                    setExplorerSelectedBooks(new Set(rangeIds));
+                                                                    const start = Math.min(explorerSelectionAnchor, unifiedIndex);
+                                                                    const end = Math.max(explorerSelectionAnchor, unifiedIndex);
+                                                                    const rangeIds = explorerUnifiedItems.slice(start, end + 1).map(item => item.id);
+                                                                    setExplorerSelectedItems(new Set(rangeIds));
                                                                 } else if (e.ctrlKey || e.metaKey) {
-                                                                    // Ctrl/Cmd-click: toggle selection, update anchor
-                                                                    setExplorerSelectedBooks(prev => {
+                                                                    setExplorerSelectedItems(prev => {
                                                                         const next = new Set(prev);
                                                                         if (next.has(book.id)) next.delete(book.id);
                                                                         else next.add(book.id);
                                                                         return next;
                                                                     });
-                                                                    setExplorerSelectionAnchor(index);
+                                                                    setExplorerSelectionAnchor(unifiedIndex);
                                                                 } else {
-                                                                    // Regular click: select just this book, set anchor
-                                                                    setExplorerSelectedBooks(new Set([book.id]));
-                                                                    setExplorerSelectionAnchor(index);
+                                                                    setExplorerSelectedItems(new Set([book.id]));
+                                                                    setExplorerSelectionAnchor(unifiedIndex);
                                                                 }
                                                             }}
                                                             onContextMenu={(e) => {
                                                                 // v5.0.0-alpha.165 - Right-click: If book not in selection, select it first
                                                                 e.preventDefault();
-                                                                if (!explorerSelectedBooks.has(book.id)) {
-                                                                    setExplorerSelectedBooks(new Set([book.id]));
+                                                                if (!isSelected(book.id)) {
+                                                                    setExplorerSelectedItems(new Set([book.id]));
                                                                     setExplorerSelectionAnchor(index);
                                                                 }
                                                                 // Clear folder selection
-                                                                setExplorerSelectedFolders(new Set());
+                                                                setExplorerSelectedItems(new Set());
                                                                 setBookTooltip(null);  // v5.0.0-alpha.165.1 - Close tooltip when opening context menu
                                                                 setExplorerBookContextMenu({
                                                                     x: e.clientX,
@@ -13476,20 +13522,20 @@
                                                                 style={{ width: '24px' }}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    setExplorerSelectedBooks(prev => {
+                                                                    setExplorerSelectedItems(prev => {
                                                                         const next = new Set(prev);
                                                                         if (next.has(book.id)) next.delete(book.id);
                                                                         else next.add(book.id);
                                                                         return next;
                                                                     });
-                                                                    setExplorerSelectedFolders(new Set());
+                                                                    setExplorerSelectedItems(new Set());
                                                                 }}>
                                                                 <div className={`w-3.5 h-3.5 border rounded flex items-center justify-center text-xs ${
-                                                                    explorerSelectedBooks.has(book.id)
+                                                                    isSelected(book.id)
                                                                         ? 'opacity-100 bg-blue-500 border-blue-500 text-white'
                                                                         : 'opacity-0 group-hover:opacity-100 border-gray-400'
                                                                 }`}>
-                                                                    {explorerSelectedBooks.has(book.id) && '✓'}
+                                                                    {isSelected(book.id) && '✓'}
                                                                 </div>
                                                             </td>
                                                             <td className="p-2">
@@ -13697,7 +13743,7 @@
                                                     return (
                                                     <div
                                                         key={`folder-${folder.id}`}
-                                                        className={`cursor-pointer hover:opacity-80 ${!isDraggable ? 'select-none' : ''} ${explorerSelectedFolders.has(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
+                                                        className={`cursor-pointer hover:opacity-80 ${!isDraggable ? 'select-none' : ''} ${isSelected(folder.id) ? 'ring-2 ring-blue-400' : ''}`}
                                                         title={folder.description || undefined}
                                                         style={(() => {
                                                             // v5.4.3 - Book drop target feedback now handled by ref-based setFolderDropHighlight
@@ -13718,15 +13764,23 @@
                                                         draggable={isDraggable}
                                                         onDragStart={isDraggable ? (e) => {
                                                             e.stopPropagation();
-                                                            e.dataTransfer.effectAllowed = 'move';
+                                                            e.dataTransfer.effectAllowed = 'copyMove';
                                                             e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
-                                                                folderIds: explorerSelectedFolders.has(folder.id) && explorerSelectedFolders.size > 1
-                                                                    ? [...explorerSelectedFolders]
+                                                                folderIds: isSelected(folder.id) && getSelectedFolderIds().length > 1
+                                                                    ? getSelectedFolderIds()
                                                                     : [folder.id],
                                                                 parentId: parentForReorder
                                                             }));
-                                                            if (!explorerSelectedFolders.has(folder.id)) {
-                                                                setExplorerSelectedFolders(new Set([folder.id]));
+                                                            // v6.11.2-alpha.1 - Also carry selected books for mixed drag
+                                                            const selectedBooks = getSelectedBookIds();
+                                                            if (selectedBooks.length > 0) {
+                                                                e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify({
+                                                                    sourceFolder: selectedFolderId,
+                                                                    bookIds: selectedBooks
+                                                                }));
+                                                            }
+                                                            if (!isSelected(folder.id)) {
+                                                                setExplorerSelectedItems(new Set([folder.id]));
                                                             }
                                                         } : undefined}
                                                         onDragOver={(e) => {
@@ -13831,7 +13885,7 @@
                                                                     }
                                                                 }
                                                                 setFolderDropHighlight(null);
-                                                                setExplorerSelectedBooks(new Set());
+                                                                setExplorerSelectedItems(new Set());
                                                                 explorerIsCopyDragRef.current = false;
                                                                 stopDragVirtualization(); // v5.5.4-alpha.23
                                             // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
@@ -13846,30 +13900,31 @@
                                                         }}
                                                         onClick={(e) => {
                                                             // v6.12.0-alpha.1 - Only clear book selection on plain click (not Ctrl/Shift)
-                                                            if (!e.ctrlKey && !e.metaKey && !e.shiftKey) setExplorerSelectedBooks(new Set());
-                                                            if (e.shiftKey && explorerFolderAnchor !== null) {
-                                                                const start = Math.min(explorerFolderAnchor, folderIndex);
-                                                                const end = Math.max(explorerFolderAnchor, folderIndex);
-                                                                const rangeIds = visibleFolders.slice(start, end + 1).map(f => f.id);
-                                                                setExplorerSelectedFolders(new Set(rangeIds));
+                                                            // v6.11.2-alpha.1 - Unified selection
+                                                            const unifiedIndex = folderIndex;
+                                                            if (e.shiftKey && explorerSelectionAnchor !== null) {
+                                                                const start = Math.min(explorerSelectionAnchor, unifiedIndex);
+                                                                const end = Math.max(explorerSelectionAnchor, unifiedIndex);
+                                                                const rangeIds = explorerUnifiedItems.slice(start, end + 1).map(item => item.id);
+                                                                setExplorerSelectedItems(new Set(rangeIds));
                                                             } else if (e.ctrlKey || e.metaKey) {
-                                                                setExplorerSelectedFolders(prev => {
+                                                                setExplorerSelectedItems(prev => {
                                                                     const next = new Set(prev);
                                                                     if (next.has(folder.id)) next.delete(folder.id);
                                                                     else next.add(folder.id);
                                                                     return next;
                                                                 });
-                                                                setExplorerFolderAnchor(folderIndex);
+                                                                setExplorerSelectionAnchor(unifiedIndex);
                                                             } else {
-                                                                setExplorerSelectedFolders(new Set([folder.id]));
-                                                                setExplorerFolderAnchor(folderIndex);
+                                                                setExplorerSelectedItems(new Set([folder.id]));
+                                                                setExplorerSelectionAnchor(unifiedIndex);
                                                             }
                                                         }}
                                                         onDoubleClick={() => {
                                                             navigateToFolder(folder.id);
                                                             setFolders(prev => prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f));
-                                                            setExplorerSelectedFolders(new Set());
-                                                            setExplorerSelectedBooks(new Set());
+                                                            setExplorerSelectedItems(new Set());
+                                                            setExplorerSelectedItems(new Set());
                                                         }}>
                                                         <div className={`aspect-[2/3] ${folder.id === '__inbox__' ? 'bg-blue-50 border-blue-200' : 'bg-amber-50 border-amber-200'} border-2 rounded shadow flex items-center justify-center relative`} style={{ containerType: 'inline-size' }}>
                                                             {/* v5.0.0-alpha.65 - Pin icon for Inbox in My Library view */}
@@ -13946,15 +14001,23 @@
                                                             e.stopPropagation();
                                                             e.dataTransfer.effectAllowed = 'copyMove';
                                                             const dragData = {
-                                                                sourceFolder: selectedFolderId, // '__all__' for All Books
-                                                                bookIds: explorerSelectedBooks.has(book.id) && explorerSelectedBooks.size > 1
-                                                                    ? [...explorerSelectedBooks]
+                                                                sourceFolder: selectedFolderId,
+                                                                bookIds: isSelected(book.id) && getSelectedBookIds().length > 1
+                                                                    ? getSelectedBookIds()
                                                                     : [book.id]
                                                             };
                                                             e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
-                                                            setExplorerDragData(dragData); // Store for validity checks in dragOver
-                                                            if (!explorerSelectedBooks.has(book.id)) {
-                                                                setExplorerSelectedBooks(new Set([book.id]));
+                                                            // v6.11.2-alpha.1 - Also carry selected folders for mixed drag
+                                                            const selectedFolders = getSelectedFolderIds();
+                                                            if (selectedFolders.length > 0) {
+                                                                e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
+                                                                    folderIds: selectedFolders,
+                                                                    parentId: selectedFolderId === '__library__' ? null : selectedFolderId
+                                                                }));
+                                                            }
+                                                            setExplorerDragData(dragData);
+                                                            if (!isSelected(book.id)) {
+                                                                setExplorerSelectedItems(new Set([book.id]));
                                                             }
                                                             setExplorerDragBookId(book.id);
                                                             // v5.5.4-alpha.23 - Start drag virtualization after state is set
@@ -14011,35 +14074,35 @@
                                                             setExplorerDragData(null);
                                                         }}
                                                         onClick={(e) => {
-                                                            // v6.12.0-alpha.1 - Only clear folder selection on plain click (not Ctrl/Shift)
-                                                            if (!e.ctrlKey && !e.metaKey && !e.shiftKey) setExplorerSelectedFolders(new Set());
+                                                            // v6.11.2-alpha.1 - Unified selection
+                                                            const unifiedIndex = explorerVisibleFolders.length + index;
                                                             if (e.shiftKey && explorerSelectionAnchor !== null) {
-                                                                const start = Math.min(explorerSelectionAnchor, index);
-                                                                const end = Math.max(explorerSelectionAnchor, index);
-                                                                const rangeIds = explorerSortedBooks.slice(start, end + 1).map(b => b.id);
-                                                                setExplorerSelectedBooks(new Set(rangeIds));
+                                                                const start = Math.min(explorerSelectionAnchor, unifiedIndex);
+                                                                const end = Math.max(explorerSelectionAnchor, unifiedIndex);
+                                                                const rangeIds = explorerUnifiedItems.slice(start, end + 1).map(item => item.id);
+                                                                setExplorerSelectedItems(new Set(rangeIds));
                                                             } else if (e.ctrlKey || e.metaKey) {
-                                                                setExplorerSelectedBooks(prev => {
+                                                                setExplorerSelectedItems(prev => {
                                                                     const next = new Set(prev);
                                                                     if (next.has(book.id)) next.delete(book.id);
                                                                     else next.add(book.id);
                                                                     return next;
                                                                 });
-                                                                setExplorerSelectionAnchor(index);
+                                                                setExplorerSelectionAnchor(unifiedIndex);
                                                             } else {
-                                                                setExplorerSelectedBooks(new Set([book.id]));
-                                                                setExplorerSelectionAnchor(index);
+                                                                setExplorerSelectedItems(new Set([book.id]));
+                                                                setExplorerSelectionAnchor(unifiedIndex);
                                                             }
                                                         }}
                                                         onContextMenu={(e) => {
                                                             // v5.0.0-alpha.165 - Right-click: If book not in selection, select it first
                                                             e.preventDefault();
-                                                            if (!explorerSelectedBooks.has(book.id)) {
-                                                                setExplorerSelectedBooks(new Set([book.id]));
-                                                                setExplorerSelectionAnchor(index);
+                                                            if (!isSelected(book.id)) {
+                                                                setExplorerSelectedItems(new Set([book.id]));
+                                                                setExplorerSelectionAnchor(explorerVisibleFolders.length + index);
                                                             }
                                                             // Clear folder selection
-                                                            setExplorerSelectedFolders(new Set());
+                                                            setExplorerSelectedItems(new Set());
                                                             setBookTooltip(null);  // v5.0.0-alpha.165.1 - Close tooltip when opening context menu
                                                             setExplorerBookContextMenu({
                                                                 x: e.clientX,
@@ -14090,7 +14153,7 @@
                                                                 </div>
                                                             )}
                                                             {/* Top-left: Selection checkmark > Collections count > Wishlist heart (mutually exclusive) */}
-                                                            {explorerSelectedBooks.has(book.id) ? (
+                                                            {isSelected(book.id) ? (
                                                                 <div className="absolute top-1 left-1 bg-blue-700 rounded-full w-6 h-6 flex items-center justify-center z-10">
                                                                     <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                                                                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
@@ -14584,8 +14647,8 @@
                                                     .map(id => books.find(b => b.id === id))
                                                     .filter(book => filterBookForExplorer(book))
                                                     .map(book => book.id);
-                                                setExplorerSelectedBooks(new Set(allVisibleBookIds));
-                                                setExplorerSelectedFolders(new Set());
+                                                setExplorerSelectedItems(new Set(allVisibleBookIds));
+                                                setExplorerSelectedItems(new Set());
                                                 setFolderContextMenu(null);
                                             }}>
                                             <span>☑️</span><span>Select All</span>
@@ -14628,8 +14691,8 @@
                                                     .map(id => books.find(b => b.id === id))
                                                     .filter(book => filterBookForExplorer(book))
                                                     .map(book => book.id);
-                                                setExplorerSelectedBooks(new Set(allVisibleBookIds));
-                                                setExplorerSelectedFolders(new Set());
+                                                setExplorerSelectedItems(new Set(allVisibleBookIds));
+                                                setExplorerSelectedItems(new Set());
                                                 setFolderContextMenu(null);
                                             }}>
                                             <span>☑️</span><span>Select All</span>
@@ -15391,7 +15454,7 @@
 
                         // Move books to target folder
                         const handleMoveToFolder = (targetFolderId) => {
-                            const selectedBookIds = Array.from(explorerSelectedBooks);
+                            const selectedBookIds = getSelectedBookIds();
                             const currentFolderId = selectedFolderId;
 
                             // Remove books from current folder
@@ -15421,7 +15484,7 @@
                             });
 
                             // Clear selection and close menu
-                            setExplorerSelectedBooks(new Set());
+                            setExplorerSelectedItems(new Set());
                             setExplorerBookContextMenu(null);
                             setContextSubmenu(null);
 
@@ -15431,7 +15494,7 @@
 
                         // Copy books to target folder
                         const handleCopyToFolder = (targetFolderId) => {
-                            const selectedBookIds = Array.from(explorerSelectedBooks);
+                            const selectedBookIds = getSelectedBookIds();
 
                             // Add books to target folder (keep in source)
                             setFolders(prev => prev.map(f => {
@@ -15455,7 +15518,7 @@
                             });
 
                             // Clear selection and close menu
-                            setExplorerSelectedBooks(new Set());
+                            setExplorerSelectedItems(new Set());
                             setExplorerBookContextMenu(null);
                             setContextSubmenu(null);
 
@@ -15533,7 +15596,7 @@
                                 onClick={(e) => e.stopPropagation()}>
                                 {/* Header */}
                                 <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 border-b border-gray-200">
-                                    {explorerSelectedBooks.size} book{explorerSelectedBooks.size !== 1 ? 's' : ''} selected
+                                    {getSelectedBookIds().length} book{getSelectedBookIds().length !== 1 ? 's' : ''} selected
                                 </div>
 
                                 {/* Move to, Copy to, Cut/Copy/Paste — hidden in Trash view */}
@@ -15634,7 +15697,7 @@
                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
                                         role="menuitem"
                                         onClick={() => {
-                                            const bookIds = Array.from(explorerSelectedBooks);
+                                            const bookIds = getSelectedBookIds();
                                             const sourcePositions = bookIds.map(bookId => ({
                                                 bookId,
                                                 folderId: selectedFolderId
@@ -15655,7 +15718,7 @@
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
                                     role="menuitem"
                                     onClick={() => {
-                                        const bookIds = Array.from(explorerSelectedBooks);
+                                        const bookIds = getSelectedBookIds();
                                         const sourcePositions = bookIds.map(bookId => ({
                                             bookId,
                                             folderId: selectedFolderId
@@ -15755,7 +15818,7 @@
                                 {/* Helper to get selected books as array */}
                                 {(() => {
                                     const getSelectedBooksArray = () => {
-                                        const selectedIds = Array.from(explorerSelectedBooks);
+                                        const selectedIds = getSelectedBookIds();
                                         return selectedIds.map(id => books.find(b => b.id === id)).filter(Boolean);
                                     };
 
@@ -16042,7 +16105,7 @@
                                                                                         title="Remove tag from selected books"
                                                                                         onClick={(e) => {
                                                                                             e.stopPropagation();
-                                                                                            const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                                            const selectedBookIds = getSelectedBookIds();
                                                                                             // Remove tag from all selected books
                                                                                             setBooks(prev => {
                                                                                                 const updated = prev.map(b => {
@@ -16092,7 +16155,7 @@
                                                                         const exactMatch = Object.entries(tagRegistry)
                                                                             .find(([id, data]) => data.label.toLowerCase() === inputValue);
 
-                                                                        const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                        const selectedBookIds = getSelectedBookIds();
 
                                                                         if (exactMatch) {
                                                                             // Add existing tag to books that don't have it
@@ -16170,7 +16233,7 @@
                                                                             onClick={() => {
                                                                                 const newTagId = inputValue.replace(/\s+/g, '-');
                                                                                 const newTagLabel = tagInputValue.trim();
-                                                                                const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                                const selectedBookIds = getSelectedBookIds();
                                                                                 setTagRegistry(prev => ({
                                                                                     ...prev,
                                                                                     [newTagId]: { label: newTagLabel, count: selectedBookIds.length }
@@ -16198,7 +16261,7 @@
                                                                             key={tagId}
                                                                             className="px-3 py-1.5 hover:bg-gray-100 cursor-pointer text-sm flex items-center justify-between"
                                                                             onClick={() => {
-                                                                                const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                                const selectedBookIds = getSelectedBookIds();
                                                                                 let addedCount = 0;
                                                                                 setBooks(prev => {
                                                                                     const updated = prev.map(b => {
@@ -16286,7 +16349,7 @@
                                                                     key={price}
                                                                     className={`px-4 py-2 hover:bg-gray-100 cursor-pointer ${hasThisGoal ? 'font-bold' : ''}`}
                                                                     onClick={async () => {
-                                                                    const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                    const selectedBookIds = getSelectedBookIds();
                                                                     setBooks(prev => {
                                                                         const updated = prev.map(b =>
                                                                             selectedBookIds.includes(b.id) ? { ...b, priceTrigger: price } : b
@@ -16306,7 +16369,7 @@
                                                             className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                                                             onClick={() => {
                                                                 // v5.0.0-alpha.169.8 - Store Explorer selection before opening modal
-                                                                setBulkPriceBookIds(Array.from(explorerSelectedBooks));
+                                                                setBulkPriceBookIds(getSelectedBookIds());
                                                                 setShowBulkPriceModal(true);
                                                                 setExplorerBookContextMenu(null);
                                                                 setContextSubmenu(null);
@@ -16317,7 +16380,7 @@
                                                         <div
                                                             className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-red-600"
                                                             onClick={async () => {
-                                                                const selectedBookIds = Array.from(explorerSelectedBooks);
+                                                                const selectedBookIds = getSelectedBookIds();
                                                                 setBooks(prev => {
                                                                     const updated = prev.map(b =>
                                                                         selectedBookIds.includes(b.id) ? { ...b, priceTrigger: null } : b
@@ -16345,7 +16408,7 @@
                                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
                                                         onClick={async () => {
                                                             const newHiddenState = !allHidden;
-                                                            const bookIdsToToggle = Array.from(explorerSelectedBooks);
+                                                            const bookIdsToToggle = getSelectedBookIds();
                                                             const previousStates = {};
                                                             bookIdsToToggle.forEach(id => {
                                                                 const book = books.find(b => b.id === id);
@@ -16386,7 +16449,7 @@
                                                     <div
                                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
                                                         onClick={() => {
-                                                            restoreBooks(Array.from(explorerSelectedBooks));
+                                                            restoreBooks(getSelectedBookIds());
                                                             setExplorerBookContextMenu(null);
                                                             setContextSubmenu(null);
                                                         }}>
@@ -16400,7 +16463,7 @@
                                                             if (confirm(`Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
                                                                 setExplorerBookContextMenu(null);
                                                                 setContextSubmenu(null);
-                                                                await permanentlyDeleteBooks(Array.from(explorerSelectedBooks));
+                                                                await permanentlyDeleteBooks(getSelectedBookIds());
                                                             }
                                                             setExplorerBookContextMenu(null);
                                                             setContextSubmenu(null);
@@ -16414,7 +16477,7 @@
                                                 <div
                                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600" role="menuitem"
                                                     onClick={() => {
-                                                        const bookIdsToRemove = Array.from(explorerSelectedBooks);
+                                                        const bookIdsToRemove = getSelectedBookIds();
                                                         setBooks(prev => {
                                                             const updated = prev.map(b => {
                                                                 if (bookIdsToRemove.includes(b.id) && (b.tags || []).includes(tagViewCtxId)) {
@@ -16435,7 +16498,7 @@
                                                         });
                                                         const bookWord = bookIdsToRemove.length === 1 ? 'book' : 'books';
                                                         showToast(`Removed ${bookIdsToRemove.length} ${bookWord} from "${tagViewCtxLabel}"`);
-                                                        setExplorerSelectedBooks(new Set());
+                                                        setExplorerSelectedItems(new Set());
                                                         setExplorerBookContextMenu(null);
                                                         setContextSubmenu(null);
                                                     }}>
@@ -16455,7 +16518,7 @@
                                                 <div
                                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600" role="menuitem"
                                                     onClick={() => {
-                                                        softDeleteBooks(Array.from(explorerSelectedBooks));
+                                                        softDeleteBooks(getSelectedBookIds());
                                                         setExplorerBookContextMenu(null);
                                                         setContextSubmenu(null);
                                                     }}>
@@ -16837,11 +16900,11 @@
                                 </span>
                             )}
                             {/* Separator when both present */}
-                            {clipboardMessage && footerClipboardVisible && explorerSelectedBooks.size > 0 && <span className="text-gray-400">•</span>}
+                            {clipboardMessage && footerClipboardVisible && getSelectedBookIds().length > 0 && <span className="text-gray-400">•</span>}
                             {/* Selection count */}
-                            {explorerSelectedBooks.size > 0 && (
+                            {getSelectedBookIds().length > 0 && (
                                 <span className="flex items-center gap-1">
-                                    {explorerSelectedBooks.size} book{explorerSelectedBooks.size !== 1 ? 's' : ''} selected
+                                    {getSelectedBookIds().length} book{getSelectedBookIds().length !== 1 ? 's' : ''} selected
                                     <button
                                         onClick={() => clearSelection()}
                                         className="ml-1 text-gray-400 hover:text-gray-600"
@@ -16851,7 +16914,7 @@
                                 </span>
                             )}
                             {/* Non-breaking space when both empty to maintain layout */}
-                            {!clipboardMessage && explorerSelectedBooks.size === 0 && '\u00A0'}
+                            {!clipboardMessage && getSelectedBookIds().length === 0 && '\u00A0'}
                         </div>
                         {/* Center: Affiliate disclosure */}
                         <div className="text-center flex-1">
