@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13066,14 +13066,23 @@
                                                                     }
                                                                 } : undefined}
                                                                 onDragOver={(e) => {
+                                                                    const hasBooks = e.dataTransfer.types.includes('application/x-readerwrangler');
+                                                                    const hasFolders = e.dataTransfer.types.includes('application/x-folder-reorder');
                                                                     // v5.4.3 - Book drag: highlight entire folder as drop target
-                                                                    if (e.dataTransfer.types.includes('application/x-readerwrangler')) {
+                                                                    if (hasBooks) {
                                                                         e.preventDefault();
                                                                         const isCopy = ctrlKeyRef.current;
                                                                         explorerIsCopyDragRef.current = isCopy;
                                                                         e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
                                                                         setFolderDropHighlight(e.currentTarget);
-                                                                        return;
+                                                                        // v6.11.2-alpha.3 - Mixed drag: also set reparent target for folders
+                                                                        if (hasFolders) {
+                                                                            const current = explorerFolderDragTarget;
+                                                                            if (!current || current.type !== 'reparent' || current.folderId !== folder.id) {
+                                                                                setExplorerFolderDragTarget({ type: 'reparent', folderId: folder.id });
+                                                                            }
+                                                                        }
+                                                                        if (!hasFolders) return;
                                                                     }
                                                                     // v5.0.0-alpha.70 - Folder drag: Two-target zone detection (optimized)
                                                                     e.preventDefault();
@@ -13779,14 +13788,21 @@
                                                             }
                                                         } : undefined}
                                                         onDragOver={(e) => {
-                                                            // v5.4.3 - Book drag: highlight entire folder as drop target
-                                                            if (e.dataTransfer.types.includes('application/x-readerwrangler')) {
+                                                            const hasBooks = e.dataTransfer.types.includes('application/x-readerwrangler');
+                                                            const hasFolders = e.dataTransfer.types.includes('application/x-folder-reorder');
+                                                            if (hasBooks) {
                                                                 e.preventDefault();
                                                                 const isCopy = ctrlKeyRef.current;
                                                                 explorerIsCopyDragRef.current = isCopy;
                                                                 e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
                                                                 setFolderDropHighlight(e.currentTarget);
-                                                                return;
+                                                                if (hasFolders) {
+                                                                    const current = explorerFolderDragTarget;
+                                                                    if (!current || current.type !== 'reparent' || current.folderId !== folder.id) {
+                                                                        setExplorerFolderDragTarget({ type: 'reparent', folderId: folder.id });
+                                                                    }
+                                                                }
+                                                                if (!hasFolders) return;
                                                             }
                                                             // v5.0.0-alpha.70 - Folder drag: Two-target zone detection (optimized)
                                                             e.preventDefault();
