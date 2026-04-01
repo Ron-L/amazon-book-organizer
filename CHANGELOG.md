@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.11.2] - 2026-04-01
+
+### Changed
+- **Unified item drag/drop** — Books and folders now share a single drag/drop system. Ctrl+A selects all items, drag moves everything atomically with one undo action. New `moveItems()` function replaces 4 copies of inline book-move logic. Shift+Click range selection spans across folders and books. Folders can now be moved into Inbox.
+
+### Refactored
+- **Unified selection model** — Replaced separate `explorerSelectedBooks`/`explorerSelectedFolders` state with single `explorerSelectedItems` Set. Accessor methods (`isSelected()`, `getSelectedBookIds()`, `getSelectedFolderIds()`) encapsulate type-specific access. Extracted `isDescendantFolder()` helper for reuse.
+
 ## [6.11.1] - 2026-03-31
 
 ### Fixed
