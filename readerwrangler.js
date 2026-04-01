@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -11641,6 +11641,13 @@
                                                                 explorerIsCopyDragRef.current = isCopy;
                                                                 e.dataTransfer.dropEffect = isCopy ? 'copy' : 'move';
                                                                 setFolderDropHighlight(e.currentTarget);
+                                                            }
+                                                            if (isFolderDrag && isBookDrag) {
+                                                                // v6.11.2 - Mixed drag: always reparent (no reorder zones)
+                                                                const current = sidebarFolderDragTarget;
+                                                                if (!current || current.type !== 'reparent' || current.folderId !== folder.id) {
+                                                                    setSidebarFolderDragTarget({ type: 'reparent', folderId: folder.id });
+                                                                }
                                                             } else if (isFolderDrag) {
                                                                 // v5.0.0-alpha.86 - Folder drag with zone detection
                                                                 e.dataTransfer.dropEffect = 'move';
@@ -11803,21 +11810,13 @@
                                                                 } catch (err) {
                                                                     console.error('Sidebar folder drop error:', err);
                                                                 }
-                                                                return;
+                                                                // v6.11.2 - Don't return early; fall through to also process books
                                                             }
 
                                                             // Book drop - existing behavior
                                                             const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
                                                             const folderDataStr = e.dataTransfer.getData('application/x-folder-reorder');
                                                             console.log(`🎯 DROP on SIDEBAR "${folder.name}": bookData=${bookDataStr ? 'YES' : 'NO'}, folderData=${folderDataStr ? 'YES' : 'NO'}`);
-                                                            // v6.11.2 - Handle folder reparent from mixed drag
-                                                            if (folderDataStr) {
-                                                                try {
-                                                                    const folderDragData = JSON.parse(folderDataStr);
-                                                                    console.log(`  📂 Reparenting folders: ${JSON.stringify(folderDragData.folderIds)} into ${folder.id}`);
-                                                                    reparentFolder(folderDragData.folderIds, folder.id);
-                                                                } catch (err) { console.warn('Folder reparent failed:', err); }
-                                                            }
                                                             if (!bookDataStr) return;
                                                             const dragData = JSON.parse(bookDataStr);
                                                             const { sourceFolder, bookIds } = dragData;
