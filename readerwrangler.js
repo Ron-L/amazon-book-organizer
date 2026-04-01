@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3204,31 +3204,28 @@
                     if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
                         e.preventDefault(); // Prevent browser's select-all
 
-                        // Determine what to select based on current view
-                        if (selectedFolderId === '__all__' || (selectedFolderId !== '__library__' && selectedFolderId !== '__views__' && getFolderBookIds(selectedFolderId).length > 0)) {
-                            // Viewing books - select all visible (filtered) books
-                            const allVisibleBookIds = getFolderBookIds(selectedFolderId)
+                        // v6.12.0-alpha.1 - Select all visible books AND folders together (like Windows Explorer)
+                        // Books
+                        const allVisibleBookIds = (selectedFolderId !== '__library__' && selectedFolderId !== '__views__')
+                            ? getFolderBookIds(selectedFolderId)
                                 .map(id => books.find(b => b.id === id))
                                 .filter(book => filterBookForExplorer(book))
-                                .map(book => book.id);
+                                .map(book => book.id)
+                            : [];
+                        setExplorerSelectedBooks(new Set(allVisibleBookIds));
 
-                            setExplorerSelectedBooks(new Set(allVisibleBookIds));
-                            setExplorerSelectedFolders(new Set()); // Clear folder selection
-                            console.log(`✅ Selected ${allVisibleBookIds.length} book(s) in Explorer`);
-                        } else {
-                            // Viewing folders/views - select all visible items
-                            const childFolders = selectedFolderId === '__library__'
-                                ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
-                                : selectedFolderId === '__views__'
-                                    ? [FOLDER_ALL_BOOKS, ...[...savedViews].sort((a, b) => a.position - b.position).map(v => ({ id: `__view_${v.id}__`, name: v.name }))]
+                        // Folders/views at this level
+                        const childFolders = selectedFolderId === '__library__'
+                            ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                            : selectedFolderId === '__views__'
+                                ? [FOLDER_ALL_BOOKS, ...[...savedViews].sort((a, b) => a.position - b.position).map(v => ({ id: `__view_${v.id}__`, name: v.name }))]
+                                : selectedFolderId === '__all__'
+                                    ? []
                                     : getChildFolders(selectedFolderId);
+                        const allVisibleFolderIds = childFolders.map(f => f.id);
+                        setExplorerSelectedFolders(new Set(allVisibleFolderIds));
 
-                            const allVisibleFolderIds = childFolders.map(f => f.id);
-
-                            setExplorerSelectedFolders(new Set(allVisibleFolderIds));
-                            setExplorerSelectedBooks(new Set()); // Clear book selection
-                            console.log(`✅ Selected ${allVisibleFolderIds.length} folder(s) in Explorer`);
-                        }
+                        console.log(`✅ Selected ${allVisibleBookIds.length} book(s) + ${allVisibleFolderIds.length} folder(s) in Explorer`);
                     }
 
                     // v5.0.0-alpha.168 - Ctrl+X in Explorer view: Cut selected books
@@ -13149,8 +13146,8 @@
                                                                     // v5.0.0-alpha.151 - Skip selection when editing folder name
                                                                     if (editingFolderId === folder.id) return;
 
-                                                                    // Clear book selection when selecting folder
-                                                                    setExplorerSelectedBooks(new Set());
+                                                                    // v6.12.0-alpha.1 - Only clear book selection on plain click (not Ctrl/Shift)
+                                                                    if (!e.ctrlKey && !e.metaKey && !e.shiftKey) setExplorerSelectedBooks(new Set());
                                                                     if (e.shiftKey && explorerFolderAnchor !== null) {
                                                                         // Shift-click: select range from anchor to current
                                                                         const start = Math.min(explorerFolderAnchor, folderIndex);
@@ -13434,8 +13431,8 @@
                                                                 setExplorerDragData(null);
                                                             }}
                                                             onClick={(e) => {
-                                                                // v5.0.0-alpha.124 - Clear folder selection when selecting book (matches folder row behavior)
-                                                                setExplorerSelectedFolders(new Set());
+                                                                // v6.12.0-alpha.1 - Only clear folder selection on plain click (not Ctrl/Shift)
+                                                                if (!e.ctrlKey && !e.metaKey && !e.shiftKey) setExplorerSelectedFolders(new Set());
                                                                 if (e.shiftKey && explorerSelectionAnchor !== null) {
                                                                     // Shift-click: select range from anchor to current
                                                                     const start = Math.min(explorerSelectionAnchor, index);
@@ -13848,7 +13845,8 @@
                                                             setBreadcrumbDropTargetId(null); // v5.0.0-alpha.83
                                                         }}
                                                         onClick={(e) => {
-                                                            setExplorerSelectedBooks(new Set());
+                                                            // v6.12.0-alpha.1 - Only clear book selection on plain click (not Ctrl/Shift)
+                                                            if (!e.ctrlKey && !e.metaKey && !e.shiftKey) setExplorerSelectedBooks(new Set());
                                                             if (e.shiftKey && explorerFolderAnchor !== null) {
                                                                 const start = Math.min(explorerFolderAnchor, folderIndex);
                                                                 const end = Math.max(explorerFolderAnchor, folderIndex);
@@ -14013,8 +14011,8 @@
                                                             setExplorerDragData(null);
                                                         }}
                                                         onClick={(e) => {
-                                                            // v5.4.3 - Clear folder selection when selecting book (matches table view behavior)
-                                                            setExplorerSelectedFolders(new Set());
+                                                            // v6.12.0-alpha.1 - Only clear folder selection on plain click (not Ctrl/Shift)
+                                                            if (!e.ctrlKey && !e.metaKey && !e.shiftKey) setExplorerSelectedFolders(new Set());
                                                             if (e.shiftKey && explorerSelectionAnchor !== null) {
                                                                 const start = Math.min(explorerSelectionAnchor, index);
                                                                 const end = Math.max(explorerSelectionAnchor, index);
