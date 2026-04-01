@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2044,17 +2044,16 @@
             };
 
             // v5.0.0-alpha.78 - Phase D: Reparent folder (move into another folder) with undo
-            const reparentFolder = (folderIds, newParentId) => {
-                // Helper: Check if targetId is a descendant of folderId
-                const isDescendant = (folderId, targetId) => {
-                    if (folderId === targetId) return true;
-                    const children = folders.filter(f => f.parentId === folderId);
-                    return children.some(child => isDescendant(child.id, targetId));
-                };
+            // v6.11.2 - Extracted from reparentFolder for reuse by moveItems
+            const isDescendantFolder = (folderId, targetId) => {
+                if (folderId === targetId) return true;
+                const children = folders.filter(f => f.parentId === folderId);
+                return children.some(child => isDescendantFolder(child.id, targetId));
+            };
 
-                // Validate: can't move folder into itself or its descendants
+            const reparentFolder = (folderIds, newParentId) => {
                 for (const folderId of folderIds) {
-                    if (folderId === newParentId || isDescendant(folderId, newParentId)) {
+                    if (folderId === newParentId || isDescendantFolder(folderId, newParentId)) {
                         showToast("Can't move folder into itself or its subfolder", null, null, { level: 'error' });
                         return false;
                     }
@@ -2092,6 +2091,69 @@
                 recordAction(action);
                 showToast(`Moved "${folderNames}" into "${targetName}"`);
                 console.log(`📁 Moved ${folderIds.length} folder(s) into ${newParentId || 'root'}`);
+                return true;
+            };
+
+            // v6.11.2 - Unified move: handles books + folders in one atomic operation
+            const moveItems = (itemIds, targetFolderId, sourceFolderId, { isCopy = false } = {}) => {
+                const bookIds = itemIds.filter(id => bookMap.has(id));
+                const folderIdsToMove = itemIds.filter(id => folders.some(f => f.id === id));
+
+                // Validate: if ANY folder can't move, abort ENTIRE operation
+                for (const fid of folderIdsToMove) {
+                    if (fid === targetFolderId || isDescendantFolder(fid, targetFolderId)) {
+                        showToast("Can't move a folder into itself or a subfolder", null, null, { level: 'error' });
+                        return false;
+                    }
+                    if (fid === '__inbox__') {
+                        showToast("Inbox cannot be moved", null, null, { level: 'error' });
+                        return false;
+                    }
+                }
+
+                // Capture undo state BEFORE mutating
+                const oldParentIds = folderIdsToMove.map(id => ({
+                    folderId: id, oldParentId: folders.find(f => f.id === id)?.parentId
+                }));
+                const sourceFolderObj = folders.find(f => f.id === sourceFolderId);
+                const fromIndices = bookIds.map(id => (sourceFolderObj?.bookIds || []).indexOf(id));
+
+                // Filter books already in target
+                const targetFolder = folders.find(f => f.id === targetFolderId);
+                const existingInTarget = new Set(targetFolder?.bookIds || []);
+                const newBookIds = bookIds.filter(id => !existingInTarget.has(id));
+
+                if (folderIdsToMove.length === 0 && newBookIds.length === 0) {
+                    if (bookIds.length > 0) showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder');
+                    return false;
+                }
+
+                // ONE setFolders call: reparent folders + move books atomically
+                setFolders(prev => prev.map(f => {
+                    if (folderIdsToMove.includes(f.id)) return { ...f, parentId: targetFolderId };
+                    if (f.id === targetFolderId && newBookIds.length > 0) {
+                        return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
+                    }
+                    if (!isCopy && f.id === sourceFolderId && bookIds.length > 0) {
+                        return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                    }
+                    return f;
+                }));
+
+                // ONE undo action
+                recordAction({
+                    type: 'MOVE_ITEMS',
+                    bookIds: newBookIds, folderIds: folderIdsToMove,
+                    fromFolderId: sourceFolderId, toFolderId: targetFolderId,
+                    oldParentIds, fromIndices, isCopy, toIndex: 0
+                });
+
+                // Toast
+                const parts = [];
+                if (folderIdsToMove.length > 0) parts.push(`${folderIdsToMove.length} folder(s)`);
+                if (newBookIds.length > 0) parts.push(`${newBookIds.length} book(s)`);
+                const targetName = folders.find(f => f.id === targetFolderId)?.name || 'Inbox';
+                showToast(`${isCopy ? 'Copied' : 'Moved'} ${parts.join(' + ')} to "${targetName}"`);
                 return true;
             };
 
@@ -5353,6 +5415,42 @@
                             setSelectedFolderId(action.parentId || '__all__');
                         }
                         break;
+                    case 'MOVE_ITEMS': {
+                        // v6.11.2 - Unified undo: restore folders + books in one action
+                        setFolders(prev => {
+                            let updated = prev.map(f => ({ ...f }));
+                            // Undo folder reparents
+                            for (const { folderId, oldParentId } of (action.oldParentIds || [])) {
+                                updated = updated.map(f => f.id === folderId ? { ...f, parentId: oldParentId } : f);
+                            }
+                            // Undo book moves
+                            if (action.bookIds?.length > 0) {
+                                if (action.isCopy) {
+                                    // Undo copy: remove from target
+                                    updated = updated.map(f => f.id === action.toFolderId
+                                        ? { ...f, bookIds: (f.bookIds || []).filter(id => !action.bookIds.includes(id)) }
+                                        : f);
+                                } else {
+                                    // Undo move: remove from target, restore to source at original indices
+                                    updated = updated.map(f => {
+                                        if (f.id === action.toFolderId) return { ...f, bookIds: (f.bookIds || []).filter(id => !action.bookIds.includes(id)) };
+                                        if (f.id === action.fromFolderId) {
+                                            const bookIds = [...(f.bookIds || [])];
+                                            action.bookIds.forEach((id, i) => {
+                                                const idx = action.fromIndices?.[i] ?? 0;
+                                                bookIds.splice(idx, 0, id);
+                                            });
+                                            return { ...f, bookIds };
+                                        }
+                                        return f;
+                                    });
+                                }
+                            }
+                            return updated;
+                        });
+                        showToast('Undo: moved items');
+                        break;
+                    }
                     case 'REPARENT_FOLDER':
                         // v5.0.0-alpha.78 - Undo reparent: restore old parentIds
                         setFolders(prev => prev.map(folder => {
@@ -5755,6 +5853,32 @@
                         setFolders(prev => [...prev, { ...action.folder }]);
                         setSelectedFolderId(action.folderId);
                         break;
+                    case 'MOVE_ITEMS': {
+                        setFolders(prev => {
+                            let updated = prev.map(f => ({ ...f }));
+                            // Redo folder reparents
+                            for (const { folderId } of (action.oldParentIds || [])) {
+                                updated = updated.map(f => f.id === folderId ? { ...f, parentId: action.toFolderId } : f);
+                            }
+                            // Redo book moves
+                            if (action.bookIds?.length > 0) {
+                                updated = updated.map(f => {
+                                    if (f.id === action.toFolderId) {
+                                        const existing = new Set(f.bookIds || []);
+                                        const newBooks = action.bookIds.filter(id => !existing.has(id));
+                                        return newBooks.length > 0 ? { ...f, bookIds: [...newBooks, ...(f.bookIds || [])] } : f;
+                                    }
+                                    if (!action.isCopy && f.id === action.fromFolderId) {
+                                        return { ...f, bookIds: (f.bookIds || []).filter(id => !action.bookIds.includes(id)) };
+                                    }
+                                    return f;
+                                });
+                            }
+                            return updated;
+                        });
+                        showToast('Redo: moved items');
+                        break;
+                    }
                     case 'REPARENT_FOLDER':
                         // v5.0.0-alpha.78 - Redo reparent: apply the new parentId again
                         setFolders(prev => prev.map(folder => {
@@ -11468,6 +11592,18 @@
                                         }}
                                         onDrop={(e) => {
                                             e.preventDefault();
+                                            const rwItemsStr = e.dataTransfer.getData('application/x-rw-items');
+                                            if (rwItemsStr) {
+                                                const { sourceFolder, itemIds } = JSON.parse(rwItemsStr);
+                                                const isCopy = ctrlKeyRef.current;
+                                                moveItems(itemIds, '__inbox__', sourceFolder, { isCopy });
+                                                setFolderDropHighlight(null);
+                                                setExplorerSelectedItems(new Set());
+                                                stopDragVirtualization();
+                                                setExplorerDragBookId(null);
+                                                setExplorerDragData(null);
+                                                return;
+                                            }
                                             const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
                                             const folderDataStr = e.dataTransfer.getData('application/x-folder-reorder');
                                             console.log(`🎯 DROP on SIDEBAR INBOX: bookData=${bookDataStr ? 'YES' : 'NO'}, folderData=${folderDataStr ? 'YES' : 'NO'}`);
@@ -11748,6 +11884,29 @@
                                                                     console.error('Tag view on folder drop error:', err);
                                                                 }
                                                                 return;
+                                                            }
+
+                                                            const rwItemsStr = e.dataTransfer.getData('application/x-rw-items');
+                                                            if (rwItemsStr) {
+                                                                const { sourceFolder, itemIds } = JSON.parse(rwItemsStr);
+                                                                const target = sidebarFolderDragTarget;
+                                                                setSidebarFolderDragTarget(null);
+                                                                if (target?.type === 'reparent' || !e.dataTransfer.types.includes('application/x-folder-reorder')) {
+                                                                    const isCopy = ctrlKeyRef.current;
+                                                                    moveItems(itemIds, folder.id, sourceFolder, { isCopy });
+                                                                }
+                                                                // If target is 'reorder', fall through to existing folder reorder logic
+                                                                if (target?.type === 'reorder') {
+                                                                    // Let existing folder reorder code handle it below
+                                                                } else {
+                                                                    setFolderDropHighlight(null);
+                                                                    setExplorerSelectedItems(new Set());
+                                                                    explorerIsCopyDragRef.current = false;
+                                                                    stopDragVirtualization();
+                                                                    setExplorerDragBookId(null);
+                                                                    setExplorerDragData(null);
+                                                                    return;
+                                                                }
                                                             }
 
                                                             // v5.0.0-alpha.86 - Handle folder drops first
@@ -12287,6 +12446,19 @@
                                                         onDrop={(e) => {
                                                             e.preventDefault();
                                                             setBreadcrumbDropTargetId(null);
+
+                                                            const rwItemsStr = e.dataTransfer.getData('application/x-rw-items');
+                                                            if (rwItemsStr) {
+                                                                const { sourceFolder, itemIds } = JSON.parse(rwItemsStr);
+                                                                const isCopy = ctrlKeyRef.current;
+                                                                moveItems(itemIds, folder.id, sourceFolder, { isCopy });
+                                                                setFolderDropHighlight(null);
+                                                                setExplorerSelectedItems(new Set());
+                                                                stopDragVirtualization();
+                                                                setExplorerDragBookId(null);
+                                                                setExplorerDragData(null);
+                                                                return;
+                                                            }
 
                                                             // Try folder drag first
                                                             const folderData = e.dataTransfer.getData('application/x-folder-reorder');
@@ -13078,6 +13250,7 @@
                                                                     e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
                                                                         folderIds, parentId: parentForReorder
                                                                     }));
+                                                                    e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...explorerSelectedItems] }));
                                                                     if (selectedBooks.length > 0) {
                                                                         e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify({
                                                                             sourceFolder: selectedFolderId, bookIds: selectedBooks
@@ -13142,6 +13315,23 @@
                                                                 onDrop={(e) => {
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
+                                                                    const rwItemsStr = e.dataTransfer.getData('application/x-rw-items');
+                                                                    if (rwItemsStr) {
+                                                                        const { sourceFolder, itemIds } = JSON.parse(rwItemsStr);
+                                                                        const target = explorerFolderDragTarget;
+                                                                        if (target?.type === 'reparent') {
+                                                                            const isCopy = ctrlKeyRef.current;
+                                                                            moveItems(itemIds, folder.id, sourceFolder, { isCopy });
+                                                                        }
+                                                                        setExplorerFolderDragTarget(null);
+                                                                        setFolderDropHighlight(null);
+                                                                        setExplorerSelectedItems(new Set());
+                                                                        explorerIsCopyDragRef.current = false;
+                                                                        stopDragVirtualization();
+                                                                        setExplorerDragBookId(null);
+                                                                        setExplorerDragData(null);
+                                                                        return;
+                                                                    }
                                                                     const folderDataStr = e.dataTransfer.getData('application/x-folder-reorder');
                                                                     const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
                                                                     console.log(`🎯 DROP on "${folder.name}": folderData=${folderDataStr ? 'YES' : 'NO'}, bookData=${bookDataStr ? 'YES' : 'NO'}, target=${JSON.stringify(explorerFolderDragTarget)}`);
@@ -13449,6 +13639,7 @@
                                                                     bookIds: selectedBooks
                                                                 };
                                                                 e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
+                                                                e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...explorerSelectedItems] }));
                                                                 if (selectedFolders.length > 0) {
                                                                     e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
                                                                         folderIds: selectedFolders,
@@ -13803,6 +13994,7 @@
                                                                     : [folder.id],
                                                                 parentId: parentForReorder
                                                             }));
+                                                            e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...explorerSelectedItems] }));
                                                             // v6.11.2-alpha.1 - Also carry selected books for mixed drag
                                                             const selectedBooks = getSelectedBookIds();
                                                             if (selectedBooks.length > 0) {
@@ -13867,6 +14059,23 @@
                                                             // v5.0.0-alpha.76 - Phase D: Handle reorder and reparent
                                                             e.preventDefault();
                                                             e.stopPropagation();
+                                                            const rwItemsStr = e.dataTransfer.getData('application/x-rw-items');
+                                                            if (rwItemsStr) {
+                                                                const { sourceFolder, itemIds } = JSON.parse(rwItemsStr);
+                                                                const target = explorerFolderDragTarget;
+                                                                if (target?.type === 'reparent') {
+                                                                    const isCopy = ctrlKeyRef.current;
+                                                                    moveItems(itemIds, folder.id, sourceFolder, { isCopy });
+                                                                }
+                                                                setExplorerFolderDragTarget(null);
+                                                                setFolderDropHighlight(null);
+                                                                setExplorerSelectedItems(new Set());
+                                                                explorerIsCopyDragRef.current = false;
+                                                                stopDragVirtualization();
+                                                                setExplorerDragBookId(null);
+                                                                setExplorerDragData(null);
+                                                                return;
+                                                            }
                                                             try {
                                                                 const dragData = JSON.parse(e.dataTransfer.getData('application/x-folder-reorder'));
                                                                 const target = explorerFolderDragTarget;
@@ -14046,6 +14255,7 @@
                                                                     : [book.id]
                                                             };
                                                             e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
+                                                            e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...explorerSelectedItems] }));
                                                             // v6.11.2-alpha.1 - Also carry selected folders for mixed drag
                                                             const selectedFolders = getSelectedFolderIds();
                                                             if (selectedFolders.length > 0) {
