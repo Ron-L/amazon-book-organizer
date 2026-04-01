@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13058,8 +13058,9 @@
                                                                             sourceFolder: selectedFolderId, bookIds: selectedBooks
                                                                         }));
                                                                     }
-                                                                    console.log(`🔀 DRAG START (folder): folders=${JSON.stringify(folderIds)}, books=${JSON.stringify(selectedBooks)}, types=${['folder-reorder', selectedBooks.length > 0 ? 'readerwrangler' : null].filter(Boolean).join(',')}`);
+                                                                    console.log(`🔀 DRAG START (folder): folders=${JSON.stringify(folderIds)}, books=${JSON.stringify(selectedBooks)}, isSelected=${isSelected(folder.id)}, selectionSize=${explorerSelectedItems.size}, selectionContents=${JSON.stringify([...explorerSelectedItems])}`);
                                                                     if (!isSelected(folder.id)) {
+                                                                        console.log(`  ⚠️ Folder ${folder.id} not in selection — resetting to single`);
                                                                         setExplorerSelectedItems(new Set([folder.id]));
                                                                     }
                                                                 } : undefined}
