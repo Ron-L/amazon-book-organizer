@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -11463,7 +11463,17 @@
                                         onDrop={(e) => {
                                             e.preventDefault();
                                             const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
-                                            if (!bookDataStr) return;
+                                            const folderDataStr = e.dataTransfer.getData('application/x-folder-reorder');
+                                            console.log(`🎯 DROP on SIDEBAR INBOX: bookData=${bookDataStr ? 'YES' : 'NO'}, folderData=${folderDataStr ? 'YES' : 'NO'}`);
+                                            // v6.11.2 - Handle folder reparent from mixed drag
+                                            if (folderDataStr) {
+                                                try {
+                                                    const folderDragData = JSON.parse(folderDataStr);
+                                                    console.log(`  📂 Reparenting folders: ${JSON.stringify(folderDragData.folderIds)} into __inbox__`);
+                                                    reparentFolder(folderDragData.folderIds, '__inbox__');
+                                                } catch (err) { console.warn('Folder reparent failed:', err); }
+                                            }
+                                            if (!bookDataStr) { setFolderDropHighlight(null); return; }
                                             const dragData = JSON.parse(bookDataStr);
                                             const { sourceFolder, bookIds } = dragData;
 
@@ -11798,6 +11808,16 @@
 
                                                             // Book drop - existing behavior
                                                             const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                            const folderDataStr = e.dataTransfer.getData('application/x-folder-reorder');
+                                                            console.log(`🎯 DROP on SIDEBAR "${folder.name}": bookData=${bookDataStr ? 'YES' : 'NO'}, folderData=${folderDataStr ? 'YES' : 'NO'}`);
+                                                            // v6.11.2 - Handle folder reparent from mixed drag
+                                                            if (folderDataStr) {
+                                                                try {
+                                                                    const folderDragData = JSON.parse(folderDataStr);
+                                                                    console.log(`  📂 Reparenting folders: ${JSON.stringify(folderDragData.folderIds)} into ${folder.id}`);
+                                                                    reparentFolder(folderDragData.folderIds, folder.id);
+                                                                } catch (err) { console.warn('Folder reparent failed:', err); }
+                                                            }
                                                             if (!bookDataStr) return;
                                                             const dragData = JSON.parse(bookDataStr);
                                                             const { sourceFolder, bookIds } = dragData;
@@ -13416,21 +13436,21 @@
                                                             onDragStart={(e) => {
                                                                 e.stopPropagation();
                                                                 e.dataTransfer.effectAllowed = 'copyMove';
+                                                                const selectedBooks = isSelected(book.id) && getSelectedBookIds().length > 1
+                                                                    ? getSelectedBookIds() : [book.id];
+                                                                const selectedFolders = getSelectedFolderIds();
                                                                 const dragData = {
                                                                     sourceFolder: selectedFolderId,
-                                                                    bookIds: isSelected(book.id) && getSelectedBookIds().length > 1
-                                                                        ? getSelectedBookIds()
-                                                                        : [book.id]
+                                                                    bookIds: selectedBooks
                                                                 };
                                                                 e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
-                                                                // v6.11.2-alpha.1 - Also carry selected folders for mixed drag
-                                                                const selectedFolders = getSelectedFolderIds();
                                                                 if (selectedFolders.length > 0) {
                                                                     e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
                                                                         folderIds: selectedFolders,
                                                                         parentId: selectedFolderId === '__library__' ? null : selectedFolderId
                                                                     }));
                                                                 }
+                                                                console.log(`🔀 DRAG START (book): books=${selectedBooks.length}, folders=${selectedFolders.length}, selection=${JSON.stringify([...explorerSelectedItems])}`);
                                                                 setExplorerDragData(dragData);
                                                                 if (!isSelected(book.id)) {
                                                                     setExplorerSelectedItems(new Set([book.id]));
