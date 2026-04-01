@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13047,20 +13047,18 @@
                                                                 onDragStart={isDraggable ? (e) => {
                                                                     e.stopPropagation();
                                                                     e.dataTransfer.effectAllowed = 'copyMove';
-                                                                    e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
-                                                                        folderIds: isSelected(folder.id) && getSelectedFolderIds().length > 1
-                                                                            ? getSelectedFolderIds()
-                                                                            : [folder.id],
-                                                                        parentId: parentForReorder
-                                                                    }));
-                                                                    // v6.11.2-alpha.1 - Also carry selected books for mixed drag
+                                                                    const folderIds = isSelected(folder.id) && getSelectedFolderIds().length > 1
+                                                                        ? getSelectedFolderIds() : [folder.id];
                                                                     const selectedBooks = getSelectedBookIds();
+                                                                    e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
+                                                                        folderIds, parentId: parentForReorder
+                                                                    }));
                                                                     if (selectedBooks.length > 0) {
                                                                         e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify({
-                                                                            sourceFolder: selectedFolderId,
-                                                                            bookIds: selectedBooks
+                                                                            sourceFolder: selectedFolderId, bookIds: selectedBooks
                                                                         }));
                                                                     }
+                                                                    console.log(`🔀 DRAG START (folder): folders=${JSON.stringify(folderIds)}, books=${JSON.stringify(selectedBooks)}, types=${['folder-reorder', selectedBooks.length > 0 ? 'readerwrangler' : null].filter(Boolean).join(',')}`);
                                                                     if (!isSelected(folder.id)) {
                                                                         setExplorerSelectedItems(new Set([folder.id]));
                                                                     }
@@ -13116,15 +13114,18 @@
                                                                     }
                                                                 }}
                                                                 onDrop={(e) => {
-                                                                    // v5.0.0-alpha.76 - Phase D: Handle reorder and reparent
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
+                                                                    const folderDataStr = e.dataTransfer.getData('application/x-folder-reorder');
+                                                                    const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
+                                                                    console.log(`🎯 DROP on "${folder.name}": folderData=${folderDataStr ? 'YES' : 'NO'}, bookData=${bookDataStr ? 'YES' : 'NO'}, target=${JSON.stringify(explorerFolderDragTarget)}`);
                                                                     try {
-                                                                        const dragData = JSON.parse(e.dataTransfer.getData('application/x-folder-reorder'));
+                                                                        const dragData = JSON.parse(folderDataStr);
                                                                         const target = explorerFolderDragTarget;
+                                                                        console.log(`  📂 Folder drop: folderIds=${JSON.stringify(dragData.folderIds)}, target=${JSON.stringify(target)}`);
 
                                                                         if (target?.type === 'reparent') {
-                                                                            // Move folder(s) INTO target folder
+                                                                            console.log(`  ✅ Reparenting folders into ${target.folderId}`);
                                                                             reparentFolder(dragData.folderIds, target.folderId);
                                                                         } else if (target?.type === 'reorder') {
                                                                             // Reorder within same parent
@@ -13143,9 +13144,10 @@
                                                                         // Not a folder drag
                                                                     }
                                                                     // v5.4.3 - Book drop on subfolder in right pane
-                                                                    const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
-                                                                    if (bookDataStr) {
-                                                                        const dragData = JSON.parse(bookDataStr);
+                                                                    const bookDataStr2 = e.dataTransfer.getData('application/x-readerwrangler');
+                                                                    console.log(`  📚 Book drop check: bookData=${bookDataStr2 ? 'YES (' + JSON.parse(bookDataStr2).bookIds.length + ' books)' : 'NO'}`);
+                                                                    if (bookDataStr2) {
+                                                                        const dragData = JSON.parse(bookDataStr2);
                                                                         const { sourceFolder, bookIds } = dragData;
                                                                         if (sourceFolder === '__all__') {
                                                                             showToast('All Books is view-only. Organize from folders.', e.clientX, e.clientY);
