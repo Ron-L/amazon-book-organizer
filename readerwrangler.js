@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1361,54 +1361,6 @@
                 explorerDisplayItems.filter(item => item.type === 'book').map(item => item.book),
                 [explorerDisplayItems]);
 
-            // v6.11.2-alpha.1 - Visible folders in right pane (lifted from inline JSX for unified selection)
-            const explorerVisibleFolders = useMemo(() => {
-                // Views and All Books don't show child folders
-                if (['__all__', '__views__', '__trash__'].includes(selectedFolderId) || isViewFolder(selectedFolderId)) return [];
-                const childFolders = selectedFolderId === '__library__'
-                    ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
-                    : getChildFolders(selectedFolderId);
-                if (childFolders.length === 0) return [];
-                const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
-                let sorted;
-                if (selectedFolderId === '__library__') {
-                    const inbox = childFolders.find(f => f.id === '__inbox__');
-                    const others = childFolders.filter(f => f.id !== '__inbox__');
-                    const sortedOthers = explorerSort[0].column === 'custom'
-                        ? others : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
-                    sorted = [inbox, ...sortedOthers].filter(Boolean);
-                } else {
-                    sorted = explorerSort[0].column === 'custom'
-                        ? childFolders : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
-                }
-                if (hasActiveFilters && !showAllFoldersOverride) {
-                    return sorted.filter(folder => {
-                        const { matching } = getFilteredFolderCount(folder.id);
-                        const hasMatchingDescendant = (folderId) => {
-                            const childFldrs = folders.filter(f => f.parentId === folderId);
-                            return childFldrs.some(child => {
-                                const { matching: childMatching } = getFilteredFolderCount(child.id);
-                                return childMatching > 0 || hasMatchingDescendant(child.id);
-                            });
-                        };
-                        return matching > 0 || hasMatchingDescendant(folder.id);
-                    });
-                }
-                return sorted;
-            }, [selectedFolderId, folders, explorerSort, hasActiveFilters, showAllFoldersOverride]);
-
-            // v6.11.2-alpha.1 - Unified display list: folders first, then books (for unified selection)
-            const explorerUnifiedItems = useMemo(() => [
-                ...explorerVisibleFolders.map(f => ({ type: 'folder', id: f.id, folder: f })),
-                ...explorerSortedBooks.map(b => ({ type: 'book', id: b.id, book: b }))
-            ], [explorerVisibleFolders, explorerSortedBooks]);
-
-            // v6.11.2-alpha.1 - Selection accessors (encapsulate unified Set)
-            const isSelected = (id) => explorerSelectedItems.has(id);
-            const getSelectedBookIds = () => [...explorerSelectedItems].filter(id => bookMap.has(id));
-            const getSelectedFolderIds = () => [...explorerSelectedItems].filter(id => folders.some(f => f.id === id));
-            const clearSelection = () => { setExplorerSelectedItems(new Set()); setExplorerSelectionAnchor(null); };
-
             // v5.5.4 - Render cap: show first 200 items instantly, "Show all" button for rest
             // Resets on navigation changes (sort/filter/folder), NOT on data mutations (reorder/tag edit)
             const RENDER_CAP = 200;
@@ -1906,6 +1858,53 @@
                     directMatching: directMatching
                 };
             };
+
+            // v6.11.2-alpha.1 - Visible folders in right pane (lifted from inline JSX for unified selection)
+            const explorerVisibleFolders = useMemo(() => {
+                if (['__all__', '__views__', '__trash__'].includes(selectedFolderId) || isViewFolder(selectedFolderId)) return [];
+                const childFolders = selectedFolderId === '__library__'
+                    ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
+                    : getChildFolders(selectedFolderId);
+                if (childFolders.length === 0) return [];
+                const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
+                let sorted;
+                if (selectedFolderId === '__library__') {
+                    const inbox = childFolders.find(f => f.id === '__inbox__');
+                    const others = childFolders.filter(f => f.id !== '__inbox__');
+                    const sortedOthers = explorerSort[0].column === 'custom'
+                        ? others : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
+                    sorted = [inbox, ...sortedOthers].filter(Boolean);
+                } else {
+                    sorted = explorerSort[0].column === 'custom'
+                        ? childFolders : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                }
+                if (hasActiveFilters && !showAllFoldersOverride) {
+                    return sorted.filter(folder => {
+                        const { matching } = getFilteredFolderCount(folder.id);
+                        const hasMatchingDescendant = (folderId) => {
+                            const childFldrs = folders.filter(f => f.parentId === folderId);
+                            return childFldrs.some(child => {
+                                const { matching: childMatching } = getFilteredFolderCount(child.id);
+                                return childMatching > 0 || hasMatchingDescendant(child.id);
+                            });
+                        };
+                        return matching > 0 || hasMatchingDescendant(folder.id);
+                    });
+                }
+                return sorted;
+            }, [selectedFolderId, folders, explorerSort, hasActiveFilters, showAllFoldersOverride]);
+
+            // v6.11.2-alpha.1 - Unified display list: folders first, then books (for unified selection)
+            const explorerUnifiedItems = useMemo(() => [
+                ...explorerVisibleFolders.map(f => ({ type: 'folder', id: f.id, folder: f })),
+                ...explorerSortedBooks.map(b => ({ type: 'book', id: b.id, book: b }))
+            ], [explorerVisibleFolders, explorerSortedBooks]);
+
+            // v6.11.2-alpha.1 - Selection accessors (encapsulate unified Set)
+            const isSelected = (id) => explorerSelectedItems.has(id);
+            const getSelectedBookIds = () => [...explorerSelectedItems].filter(id => bookMap.has(id));
+            const getSelectedFolderIds = () => [...explorerSelectedItems].filter(id => folders.some(f => f.id === id));
+            const clearSelection = () => { setExplorerSelectedItems(new Set()); setExplorerSelectionAnchor(null); };
 
             // Reorder a book within a folder's bookIds array
             // Reorder books within a folder (supports single or multiple books)
