@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13319,7 +13319,7 @@
                                                                     if (rwItemsStr) {
                                                                         const { sourceFolder, itemIds } = JSON.parse(rwItemsStr);
                                                                         const target = explorerFolderDragTarget;
-                                                                        if (target?.type === 'reparent') {
+                                                                        if (target?.type === 'reparent' || !target) {
                                                                             const isCopy = ctrlKeyRef.current;
                                                                             moveItems(itemIds, folder.id, sourceFolder, { isCopy });
                                                                         }
@@ -14061,7 +14061,8 @@
                                                             if (rwItemsStr) {
                                                                 const { sourceFolder, itemIds } = JSON.parse(rwItemsStr);
                                                                 const target = explorerFolderDragTarget;
-                                                                if (target?.type === 'reparent') {
+                                                                // Reparent zone OR pure book drag (no zone detection needed — target is this folder)
+                                                                if (target?.type === 'reparent' || !target) {
                                                                     const isCopy = ctrlKeyRef.current;
                                                                     moveItems(itemIds, folder.id, sourceFolder, { isCopy });
                                                                 }
