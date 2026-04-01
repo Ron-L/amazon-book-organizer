@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.2-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13250,7 +13250,7 @@
                                                                     e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
                                                                         folderIds, parentId: parentForReorder
                                                                     }));
-                                                                    e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...explorerSelectedItems] }));
+                                                                    e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...folderIds, ...selectedBooks] }));
                                                                     if (selectedBooks.length > 0) {
                                                                         e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify({
                                                                             sourceFolder: selectedFolderId, bookIds: selectedBooks
@@ -13639,7 +13639,7 @@
                                                                     bookIds: selectedBooks
                                                                 };
                                                                 e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
-                                                                e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...explorerSelectedItems] }));
+                                                                e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...selectedBooks, ...selectedFolders] }));
                                                                 if (selectedFolders.length > 0) {
                                                                     e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
                                                                         folderIds: selectedFolders,
@@ -13988,15 +13988,13 @@
                                                         onDragStart={isDraggable ? (e) => {
                                                             e.stopPropagation();
                                                             e.dataTransfer.effectAllowed = 'copyMove';
-                                                            e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
-                                                                folderIds: isSelected(folder.id) && getSelectedFolderIds().length > 1
-                                                                    ? getSelectedFolderIds()
-                                                                    : [folder.id],
-                                                                parentId: parentForReorder
-                                                            }));
-                                                            e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...explorerSelectedItems] }));
-                                                            // v6.11.2-alpha.1 - Also carry selected books for mixed drag
+                                                            const covFolderIds = isSelected(folder.id) && getSelectedFolderIds().length > 1
+                                                                ? getSelectedFolderIds() : [folder.id];
                                                             const selectedBooks = getSelectedBookIds();
+                                                            e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
+                                                                folderIds: covFolderIds, parentId: parentForReorder
+                                                            }));
+                                                            e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...covFolderIds, ...selectedBooks] }));
                                                             if (selectedBooks.length > 0) {
                                                                 e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify({
                                                                     sourceFolder: selectedFolderId,
@@ -14248,16 +14246,15 @@
                                                         onDragStart={(e) => {
                                                             e.stopPropagation();
                                                             e.dataTransfer.effectAllowed = 'copyMove';
+                                                            const covBookIds = isSelected(book.id) && getSelectedBookIds().length > 1
+                                                                ? getSelectedBookIds() : [book.id];
+                                                            const selectedFolders = getSelectedFolderIds();
                                                             const dragData = {
                                                                 sourceFolder: selectedFolderId,
-                                                                bookIds: isSelected(book.id) && getSelectedBookIds().length > 1
-                                                                    ? getSelectedBookIds()
-                                                                    : [book.id]
+                                                                bookIds: covBookIds
                                                             };
                                                             e.dataTransfer.setData('application/x-readerwrangler', JSON.stringify(dragData));
-                                                            e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...explorerSelectedItems] }));
-                                                            // v6.11.2-alpha.1 - Also carry selected folders for mixed drag
-                                                            const selectedFolders = getSelectedFolderIds();
+                                                            e.dataTransfer.setData('application/x-rw-items', JSON.stringify({ sourceFolder: selectedFolderId, itemIds: [...covBookIds, ...selectedFolders] }));
                                                             if (selectedFolders.length > 0) {
                                                                 e.dataTransfer.setData('application/x-folder-reorder', JSON.stringify({
                                                                     folderIds: selectedFolders,
