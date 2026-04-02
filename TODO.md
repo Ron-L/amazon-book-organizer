@@ -50,7 +50,14 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
 
 ### 🚀 Priority 6: Post-Launch Internal Improvements
 
-**1. 🔌 Relay Disconnect / Reset** - LOW/LOW (1 hour)
+**1. 🔔 Credential Mismatch Detection** - LOW/LOW (1-2 hours)
+   - Restoring a backup with different relay credentials leaves the bookmarklet out of sync (it still has the old channelId/passphrase in amazon.com localStorage)
+   - The app and bookmarklet can't communicate cross-domain to detect this
+   - **Fix**: After backup restore, compare relay credentials before/after. If changed, show toast: "Your relay credentials changed. Reinstall the bookmarklet from File → Relay Setup."
+   - The app knows credentials changed; it can't fix the bookmarklet but can tell the user
+   - Future: bookmarklet could ping `/status/{channelId}` before fetching and warn on 403/404
+
+**2. 🔌 Relay Disconnect / Reset** - LOW/LOW (1 hour)
    - Relay Setup has no way to intentionally disconnect or reset credentials
    - Add a "Disconnect Relay" or "Reset Credentials" option in the Relay Setup dialog
    - Use case: re-pair after a passphrase exposure, switch relay channels, or intentionally go offline
