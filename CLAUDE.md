@@ -25,6 +25,21 @@
 
 ---
 
+## Code Quality — Opportunistic Refactoring
+
+When working in a section of code for any reason (feature, fix, or investigation):
+
+- If you see inline logic that should be a function, extract it
+- If you see duplicate code, consolidate it
+- If you see raw state access that should be an accessor, add one
+- If you see tightly coupled state pairs, group them
+
+Do this in the same commit as the work that brought you there. Don't ask permission for small extractions (under ~20 lines). Do ask before larger restructuring.
+
+The goal: leave every file cleaner than you found it. Don't plan refactoring projects — refactor while you work.
+
+---
+
 ## Preferences
 
 * User-facing copy: no technical jargon ("IndexedDB", "JSON", "localStorage")
