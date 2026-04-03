@@ -64,7 +64,15 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - On confirm: clear `relay.channelId` and `relay.passphrase` from localStorage and app state
    - Normal users never need this, but the gap is real (currently requires DevTools to clear)
 
-**3. 🖱️ Rectangle/Lasso Selection** - LOW/MEDIUM (3-4 hours)
+**3. 📂 Right-Click Menu for Folders in Right Pane** - LOW/LOW (2-3 hours)
+   - Right-clicking a folder in the right pane has no context menu (books do)
+   - Should match left-pane folder context menu (Rename, Delete, New Subfolder, etc.)
+   - Mixed selection (books + folders): show intersection of applicable operations (Windows Explorer pattern)
+     - Common ops (Move to, Copy to, Delete, Cut, Copy) — apply to all
+     - Book-only ops (Tags, Share, Note) — hidden or apply only to books in selection
+     - Folder-only ops (Rename) — only if single folder, no books selected
+
+**4. 🖱️ Rectangle/Lasso Selection** - LOW/MEDIUM (3-4 hours)
    - Click and drag in cover view to draw a selection rectangle around books/folders
    - Standard desktop behavior (Windows Explorer, macOS Finder)
    - Extends existing unified selection model (explorerSelectedItems)
