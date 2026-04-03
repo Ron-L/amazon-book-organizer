@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.4-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -14759,6 +14759,39 @@
                                             </>
                                         );
                                     })()}
+                                </div>
+                                {/* v6.11.3 - Create tag input in Tag Manager footer */}
+                                <div className="border-t border-gray-200 p-3 flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={tagInputValue}
+                                        placeholder="Create new tag..."
+                                        className="flex-1 px-3 py-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        onKeyDown={(e) => {
+                                            e.stopPropagation();
+                                            if (e.key === 'Enter') {
+                                                const inputValue = tagInputValue.trim();
+                                                if (!inputValue) return;
+                                                const newTagId = inputValue.toLowerCase().replace(/\s+/g, '-');
+                                                // Check for duplicate
+                                                const exists = Object.entries(tagRegistry)
+                                                    .find(([id, data]) => data.label.toLowerCase() === inputValue.toLowerCase());
+                                                if (exists) {
+                                                    showToast(`Tag "${exists[1].label}" already exists`);
+                                                } else {
+                                                    setTagRegistry(prev => ({
+                                                        ...prev,
+                                                        [newTagId]: { label: inputValue, count: 0 }
+                                                    }));
+                                                    showToast(`Created tag "${inputValue}"`);
+                                                }
+                                                setTagInputValue('');
+                                            } else if (e.key === 'Escape') {
+                                                setTagInputValue('');
+                                            }
+                                        }}
+                                        onChange={(e) => setTagInputValue(e.target.value)}
+                                    />
                                 </div>
                             </div>
                         </div>
