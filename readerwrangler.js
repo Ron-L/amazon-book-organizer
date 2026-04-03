@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.3-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13720,9 +13720,7 @@
                                                                     setExplorerSelectedItems(new Set([book.id]));
                                                                     setExplorerSelectionAnchor(index);
                                                                 }
-                                                                // Clear folder selection
-                                                                setExplorerSelectedItems(new Set());
-                                                                setBookTooltip(null);  // v5.0.0-alpha.165.1 - Close tooltip when opening context menu
+                                                                setBookTooltip(null);
                                                                 setExplorerBookContextMenu({
                                                                     x: e.clientX,
                                                                     y: e.clientY
@@ -14338,9 +14336,7 @@
                                                                 setExplorerSelectedItems(new Set([book.id]));
                                                                 setExplorerSelectionAnchor(explorerVisibleFolders.length + index);
                                                             }
-                                                            // Clear folder selection
-                                                            setExplorerSelectedItems(new Set());
-                                                            setBookTooltip(null);  // v5.0.0-alpha.165.1 - Close tooltip when opening context menu
+                                                            setBookTooltip(null);
                                                             setExplorerBookContextMenu({
                                                                 x: e.clientX,
                                                                 y: e.clientY

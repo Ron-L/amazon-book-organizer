@@ -64,7 +64,16 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - On confirm: clear `relay.channelId` and `relay.passphrase` from localStorage and app state
    - Normal users never need this, but the gap is real (currently requires DevTools to clear)
 
-**2. 🏷️ Deferred Desktop Polish** - LOW/LOW (2-3 hours)
+**3. 🖱️ Rectangle/Lasso Selection** - LOW/MEDIUM (3-4 hours)
+   - Click and drag in cover view to draw a selection rectangle around books/folders
+   - Standard desktop behavior (Windows Explorer, macOS Finder)
+   - Extends existing unified selection model (explorerSelectedItems)
+
+**4. 🏷️ Tag Manager Create Tag** - LOW/LOW (1 hour)
+   - Tag Manager dialog has no way to create a new tag — only right-click and book dialog can
+   - Add a "Create Tag" button or input field to Tag Manager
+
+**5. 🏷️ Deferred Desktop Polish** - LOW/LOW (2-3 hours)
    - Left pane keyboard navigation: Up/Down arrow, Left/Right collapse/expand, Home/End
    - ~~Desktop Mode escape hatch~~ ✅ v6.0.0-alpha.18 — Interstitial in readerwrangler.html shows "Return to Mobile Mode" / "Continue in Desktop Mode" before loading any app code. Uses sessionStorage to lock mode per tab session.
    - Directional shadow consistency with mobile cover view
