@@ -209,7 +209,7 @@ For sizzle reel only (tutorials use voiceover, not music). Tutorial videos may o
 | Video | ~Characters |
 |-------|-------------|
 | 0 (Sizzle) | 0 (no voiceover) |
-| 1 (Quick Start) | ~1,850 (Scene 5 updated) |
+| 1 (Quick Start) | ~2,100 (Scenes 5-6 split: organize + tags/views) |
 | 2 (Relay Setup) | ~900 |
 | 3 (Fetching) | ~1,400 |
 | 4 (Organizing) | ~2,800 (+Tag from Collections scene) |
@@ -217,7 +217,7 @@ For sizzle reel only (tutorials use voiceover, not music). Tutorial videos may o
 | 6 (Wishlist) | ~1,400 |
 | 7 (Mobile) | ~800 |
 | 8 (Power Features) | ~1,850 (+Share Book, expanded Data Status) |
-| **Total** | **~13,700 / 1,000,000** (1.4%) |
+| **Total** | **~13,950 / 1,000,000** (1.4%) |
 
 ### File Organization
 
@@ -344,7 +344,7 @@ Rapid cuts (1-3 sec each), zoom in/out transitions (0.25s), no voiceover, music 
 ## Video 1: Quick Start
 
 ### Target Length
-3 minutes
+3.5 minutes
 
 ### Audience
 Brand new users who need to get started fast
@@ -354,6 +354,7 @@ Brand new users who need to get started fast
 - Amazon account logged in
 - Chrome with bookmarks bar visible
 - Chrome settings: new tabs open google.com (so bookmarklet works on new tabs)
+- Chrome settings: Downloads → "Ask where to save each file before downloading" ON
 - Demo whitelist loaded on amazon.com (for controlled fetch)
 - Have `amazon-yourbooks-demo.html` ready to pick from file picker (for Scene 3 page swap)
 
@@ -460,42 +461,89 @@ They land in your Inbox... ready to organize.
 
 ---
 
-### Scene 5: Organize — 2:00-2:45
+### Scene 5: Organize — 2:00-2:50
 
 **Script:**
 
 The Inbox is your staging area. Everything new arrives here.
 
-Right-click in the Folders panel... and choose "New Folder." Name it "Next to Read."
+Let's organize. Right-click a book... and choose Auto-Organize.
 
-Now drag books in.
+It builds an Author... Series... Books structure automatically. One click... and your library has shape.
 
-Create another folder... "Finished Reading."
+But it's your library... not Amazon's. Auto-Organize grouped Jerry Pournelle and Larry Niven into five separate folders... because they collaborated with different co-authors. But you bought these books because of Pournelle and Niven. So let's fix that.
 
-Drag more books over.
+Create three folders: "Pournelle & Niven"... "Jerry Pournelle"... and "Larry Niven." Drag the books where they belong. Anything with both authors goes in the first folder. The rest sort into the other two.
 
-Notice the tags on your books? When you imported your library, your Kindle Collections came along as tags automatically.
+That's the idea. Auto-Organize gives you a starting point. You make it yours.
 
-But you can go further. Create your own tags — like "Fantasy" — and assign them to books.
-
-Now set up a filter for that tag. See the drag handle on the filter banner? Drag it to the Views section... and it becomes a saved view in your sidebar. Click it anytime to see all your fantasy books instantly.
+Now create a "Next to Read" folder... and drag in the books you're excited about.
 
 **Screen Direction:**
-- Inbox selected, books visible in right pane
-- Right-click Folders label → New Folder
-- Type "Next to Read" → Enter
-- Drag 3-4 books from right pane into folder
-- Create "Finished Reading" folder
-- Drag more books
-- Click a book → show tags section in book dialog (point out any imported Collections tags)
-- Create new tag "Fantasy", assign to 2-3 books
-- Use Tags filter dropdown → select "Fantasy" — filter banner appears
-- Drag handle (⠿) from filter banner to Views section in sidebar
-- New "Fantasy" view appears — click it → right pane shows tagged books, filter bar grayed out
+- Inbox selected, 119 books visible in right pane
+- Right-click a book → Auto-Organize (or use menu)
+- Folder tree populates with Author / Series / Books hierarchy
+- Expand a few authors to show the structure
+- Scroll to show Pournelle/Niven fragmentation — 5+ separate author folders:
+  - "Jerry Pournelle & Larry Niven"
+  - "Larry Niven"
+  - "Larry Niven & Jerry Pournelle & Steven Barnes"
+  - etc.
+- Create 3 new folders: "Pournelle & Niven", "Jerry Pournelle", "Larry Niven"
+- Drag books between folders — anything with both authors → "Pournelle & Niven"
+- Delete the now-empty auto-organized folders
+- Create "Next to Read" folder
+- Drag 3-4 books into it
+
+
+
+
+
+
+The auto-organize options should get a mention here in Scene 5 unless we cover it in another tutorial. I'm going to deselect the Misc option. Then show of the Preview option and then hit Organize Now in that dialog. Now talk about the resulting summary dialog.
+
+The way I'm going to do this is to filter on Pournelle.
+* I'll leave the Jerry Pournelle folder and the Larry Niven, Jerry Pournelle folders as targets.
+* Then visit each of the other folders showing and select them.
+* Select all contents whether it is folders and/or books and drag to one of the 2 targets depending on whether it includes Larry Niven or not. Delete the old folder
+* Then repeat filtering on Niven.
+
+
+
+
+
+
+
+
+
 
 ---
 
-### Scene 6: Wrap Up — 2:45-3:00
+### Scene 6: Tags & Views — 2:50-3:20
+
+**Script:**
+
+Notice the tags on your books? When you imported your library... your Kindle Collections came along as tags automatically.
+
+But you can go further. Create your own tags — like "Fantasy" — and assign them to books.
+
+Now set up a filter for that tag. See the drag handle on the filter banner? Drag it to the Views section... and it becomes a saved view in your sidebar.
+
+Click it anytime to see all your fantasy books instantly. Search for a title... and only views with a match stay visible. Click a view... and you see just the matching books inside it.
+
+**Screen Direction:**
+- Click a book → show tags section in book dialog (point out imported Collections tags)
+- Create new tag "Fantasy", assign to 2-3 books
+- Use Tags filter dropdown → select "Fantasy" — filter banner appears
+- Drag handle (⠿) from filter banner to Views section in sidebar
+- New "Fantasy" view appears — click it → shows tagged books
+- Type a search term — non-matching views disappear, remaining show filtered counts
+- Click a remaining view — shows intersection
+- Clear search — all views return
+
+---
+
+### Scene 7: Wrap Up — 3:20-3:30
 
 **Script:**
 
