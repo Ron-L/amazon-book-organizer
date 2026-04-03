@@ -495,45 +495,20 @@ Now create a "Next to Read" folder... and drag in the books you're excited about
 - Create "Next to Read" folder
 - Drag 3-4 books into it
 
-
-
-
-
-
-The auto-organize options should get a mention here in Scene 5 unless we cover it in another tutorial. I'm going to deselect the Misc option. Then show of the Preview option and then hit Organize Now in that dialog. Now talk about the resulting summary dialog.
-
-The way I'm going to do this is to filter on Pournelle.
-* I'll leave the Jerry Pournelle folder and the Larry Niven, Jerry Pournelle folders as targets.
-* Then visit each of the other folders showing and select them.
-* Select all contents whether it is folders and/or books and drag to one of the 2 targets depending on whether it includes Larry Niven or not. Delete the old folder
-* Then repeat filtering on Niven.
-
-
-
-
-
-
-
-
-
-
 ---
 
 ### Scene 6: Tags & Views — 2:50-3:20
 
 **Script:**
 
-Notice the tags on your books? When you imported your library... your Kindle Collections came along as tags automatically.
-
-But you can go further. Create your own tags — like "Fantasy" — and assign them to books.
+You can tag your books to see them across folders. Create a tag — like "Fantasy" — and assign it to a few books.
 
 Now set up a filter for that tag. See the drag handle on the filter banner? Drag it to the Views section... and it becomes a saved view in your sidebar.
 
 Click it anytime to see all your fantasy books instantly. Search for a title... and only views with a match stay visible. Click a view... and you see just the matching books inside it.
 
 **Screen Direction:**
-- Click a book → show tags section in book dialog (point out imported Collections tags)
-- Create new tag "Fantasy", assign to 2-3 books
+- Create new tag "Fantasy", assign to 2-3 books via book dialog or right-click
 - Use Tags filter dropdown → select "Fantasy" — filter banner appears
 - Drag handle (⠿) from filter banner to Views section in sidebar
 - New "Fantasy" view appears — click it → shows tagged books
