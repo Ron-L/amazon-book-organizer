@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.10.1';
+    const FETCHER_VERSION = 'v4.10.2';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -117,6 +117,7 @@ async function fetchAmazonLibrary() {
             kindleUnlimited: 0, // Kindle Unlimited (KU)
             koll: 0,         // Kindle Owners' Lending Library
             comixology: 0,   // Comixology Unlimited
+            insideAmazon: 0, // Amazon Insider (employee/internal testing program — speculative)
             unknown: []      // { asin, title, rawType } - for investigation
         }
     };
@@ -1480,7 +1481,7 @@ async function fetchAmazonLibrary() {
                     }
 
                     // Extract ownership type from relationshipSubType
-                    // Known values: Purchase, Sample, Sharing, Prime, KindleUnlimited, KOLL, Comixology
+                    // Known values: Purchase, Sample, Sharing, Prime, KindleUnlimited, KOLL, Comixology, InsideAmazon
                     const rawOwnershipType = node.relationshipSubType?.[0] || 'Purchase';
                     let ownershipType = 'purchased'; // default
 
@@ -1512,6 +1513,10 @@ async function fetchAmazonLibrary() {
                         case 'Comixology':
                             ownershipType = 'comixology';
                             stats.ownershipTypes.comixology++;
+                            break;
+                        case 'InsideAmazon':
+                            ownershipType = 'insideAmazon';
+                            stats.ownershipTypes.insideAmazon++;
                             break;
                         default:
                             // Unknown type - track for bug report
@@ -2183,6 +2188,9 @@ async function fetchAmazonLibrary() {
         }
         if (stats.ownershipTypes.comixology > 0) {
             console.log(`   Comixology:                   ${stats.ownershipTypes.comixology}`);
+        }
+        if (stats.ownershipTypes.insideAmazon > 0) {
+            console.log(`   Amazon Insider:               ${stats.ownershipTypes.insideAmazon}`);
         }
         if (stats.ownershipTypes.unknown.length > 0) {
             console.log(`   Unknown:                      ${stats.ownershipTypes.unknown.length}`);

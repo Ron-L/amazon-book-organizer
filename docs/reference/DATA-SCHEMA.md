@@ -42,7 +42,7 @@ Field names change at certain boundaries. This document maps those transformatio
   seriesNum: "1",
   collections: ["Collection 1", "Collection 2"],
   owned: "Yes",                   // "Yes" or "No" (wishlist) - from Amazon fetcher
-  ownershipType: "purchased",     // wishlist|purchased|sample|borrowed|prime|kindleUnlimited|koll|comixology
+  ownershipType: "purchased",     // wishlist|purchased|sample|borrowed|prime|kindleUnlimited|koll|comixology|insideAmazon
   onWishlist: false,              // Boolean flag (true for wishlist books) - v5.0.4: Source filter checks both ownershipType and onWishlist
   purchaseDate: "2024-01-15",
 

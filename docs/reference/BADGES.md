@@ -61,7 +61,7 @@ Book covers display up to 3 badges showing key metadata at a glance:
 - `className`: `absolute bottom-1 left-1 bg-teal-500 bg-opacity-90 rounded px-1.5 py-0.5 text-xs font-bold text-white`
 - Text: `BORROWED`
 
-**Subscription Badges** (Prime, KU, KOLL, Comixology)
+**Subscription Badges** (Prime, KU, KOLL, Comixology, Amazon Insider)
 - Purple background (indicates subscription/temporary access)
 - `className`: `absolute bottom-1 left-1 bg-purple-500 bg-opacity-90 rounded px-1.5 py-0.5 text-xs font-bold text-white`
 - Text varies by type:
@@ -69,6 +69,7 @@ Book covers display up to 3 badges showing key metadata at a glance:
   - `ownershipType === 'kindleUnlimited'` → `KU`
   - `ownershipType === 'koll'` → `KOLL`
   - `ownershipType === 'comixology'` → `COMIX`
+  - `ownershipType === 'insideAmazon'` → `INSIDER` (Amazon Insider program — speculative; first observed via GoatCounter telemetry)
 
 ### 4. Bottom-Right Corner
 
@@ -107,6 +108,7 @@ Book covers display up to 3 badges showing key metadata at a glance:
 | Kindle Unlimited | (none) | Rating (if >0) | KU (purple) | ✓ (if read) |
 | KOLL | (none) | Rating (if >0) | KOLL (purple) | ✓ (if read) |
 | Comixology | (none) | Rating (if >0) | COMIX (purple) | ✓ (if read) |
+| Amazon Insider | (none) | Rating (if >0) | INSIDER (purple) | ✓ (if read) |
 | Wishlist | ❤+ | Rating (if >0) | (none) | (none) |
 | Selected (any type) | ✓ blue | Rating (if >0) | (ownership) | ✓ green (if read) |
 

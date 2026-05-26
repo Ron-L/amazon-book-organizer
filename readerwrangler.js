@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.5-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1039,7 +1039,7 @@
                 const parts = [];
                 if (filters.tags?.length > 0) parts.push(filters.tags.map(t => tagRegistry[t]?.label || t).join(', '));
                 if (filters.readStatus) parts.push(filters.readStatus === 'READ' ? 'Read' : filters.readStatus === 'UNREAD' ? 'Unread' : filters.readStatus);
-                if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
+                if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership === 'insideAmazon' ? 'Insider' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
                 if (filters.collections?.length > 0) parts.push(filters.collections.join(', '));
                 if (filters.series?.length > 0) parts.push(filters.series.map(s => s === 'NOT_IN_SERIES' ? 'Not in series' : s).join(', '));
                 if (filters.minAmazonRating) parts.push(`${filters.minAmazonRating}+★`);
@@ -7383,7 +7383,8 @@
                                             'prime': 'Prime',
                                             'kindleUnlimited': 'Kindle Unlimited',
                                             'koll': 'KOLL',
-                                            'comixology': 'Comixology'
+                                            'comixology': 'Comixology',
+                                            'insideAmazon': 'Amazon Insider'
                                         };
                                         return labels[ownershipFilter] || ownershipFilter;
                                     })()
@@ -7424,6 +7425,7 @@
                                         { value: 'kindleUnlimited', label: 'Kindle Unlimited' },
                                         { value: 'koll', label: 'KOLL' },
                                         { value: 'comixology', label: 'Comixology' },
+                                        { value: 'insideAmazon', label: 'Amazon Insider' },
                                         { value: 'orphan', label: '🔍 Orphan (removed from Amazon)' }
                                     ].map(type => (
                                         <div
@@ -8129,7 +8131,7 @@
                                 {collectionFilter && (ratingFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {ratingFilter && <span>Rating: {ratingFilter}+★</span>}
                                 {ratingFilter && (ownershipFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
-                                {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
+                                {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter === 'insideAmazon' ? 'Amazon Insider' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
                                 {ownershipFilter && (seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {seriesFilter && <span>Series: {seriesFilter === 'NOT_IN_SERIES' ? 'Not in Series' : seriesFilter}</span>}
                                 {seriesFilter && (datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
@@ -14421,6 +14423,7 @@
                                                                     kindleUnlimited: { bg: 'bg-purple-500', text: 'KU' },
                                                                     koll: { bg: 'bg-purple-500', text: 'KOLL' },
                                                                     comixology: { bg: 'bg-purple-500', text: 'COMIX' },
+                                                                    insideAmazon: { bg: 'bg-purple-500', text: 'INSIDER' },
                                                                     unknown: { bg: 'bg-gray-500', text: '?' }
                                                                 };
                                                                 const config = badgeConfig[book.ownershipType];

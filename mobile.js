@@ -867,6 +867,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
                         kindleUnlimited: { bg: '#a855f7', text: 'KU' },
                         koll: { bg: '#a855f7', text: 'KOLL' },
                         comixology: { bg: '#a855f7', text: 'COMIX' },
+                        insideAmazon: { bg: '#a855f7', text: 'INSIDER' },
                         unknown: { bg: '#6b7280', text: '?' }
                     };
                     const config = badgeConfig[book.ownershipType];
