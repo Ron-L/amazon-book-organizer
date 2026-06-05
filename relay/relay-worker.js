@@ -12,6 +12,7 @@
  *   relay:{channelId}:revocation-proof → SHA-256 proof hash (permanent)
  *   ratelimit:{channelId}              → write counter per hour (TTL: 2 hours)
  *   blocklist:{channelId}              → permanently blocked channel (no TTL)
+ *   lifecycle:{channelId}:used         → ISO timestamp of first successful manifest upload (permanent, lifecycle telemetry)
  *   test-alert-counter                 → test alert sequence number
  *   usage-alert:{YYYY-MM-DD}           → threshold alerts already sent today (TTL: 2 days)
  */
@@ -181,6 +182,13 @@ async function handleUploadManifest(request, env, channelId) {
     { expirationTtl: LIBRARY_TTL }
   );
 
+  // Lifecycle telemetry: first successful manifest upload per channel
+  const usedKey = `lifecycle:${channelId}:used`;
+  if (!await env.RELAY_KV.get(usedKey)) {
+    await env.RELAY_KV.put(usedKey, new Date().toISOString());
+    await fireGoatCounter(env, 'relay-channel-used');
+  }
+
   return jsonResponse({ ok: true });
 }
 
@@ -305,9 +313,8 @@ async function handleRevoke(request, env, channelId) {
   await env.RELAY_KV.put(`blocklist:${channelId}`,
     JSON.stringify({ revokedAt: new Date().toISOString(), reason: 'user-revoked' }));
 
-  // Send alert
-  await sendAlert(env, 'Channel revoked',
-    `Channel ${channelId} was revoked by user.\nTime: ${new Date().toISOString()}`);
+  // Lifecycle telemetry (user-initiated revocations are normal events, not security alerts)
+  await fireGoatCounter(env, 'relay-channel-revoked');
 
   return jsonResponse({ ok: true, message: 'Channel revoked and data deleted' });
 }
@@ -335,12 +342,24 @@ async function checkRateLimit(env, channelId) {
         JSON.stringify({ revokedAt: new Date().toISOString(), reason: 'rate-limit-auto' }));
       await sendAlert(env, 'Channel auto-blocked',
         `Channel ${channelId} exceeded ${RATE_LIMIT_AUTO_BLOCK} writes/hour and was auto-blocked.\nTime: ${new Date().toISOString()}`);
+      await fireGoatCounter(env, 'relay-channel-blocked');
     }
     return false; // Rate limited
   }
 
   await env.RELAY_KV.put(key, JSON.stringify(data), { expirationTtl: 7200 }); // 2hr TTL
   return true; // Allowed
+}
+
+// --- Telemetry ---
+
+async function fireGoatCounter(env, eventName) {
+    try {
+        await fetch(`https://readerwrangler.goatcounter.com/count?p=/event/${eventName}`, {
+            method: 'GET',
+            headers: { 'User-Agent': 'ReaderWrangler-Relay/1.0' }
+        });
+    } catch { /* best-effort — telemetry failure must not affect the request */ }
 }
 
 // --- Email Alerts ---

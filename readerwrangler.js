@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.6-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -8660,6 +8660,7 @@
                                                                         crypto.getRandomValues(arr);
                                                                         for (let i = 0; i < 32; i++) passphrase += chars[arr[i] % chars.length];
                                                                         await relayOp('generate', { channelId, passphrase });
+                                                                        new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/relay-channel-created';
                                                                         setRelayManualCreds(false);
                                                                         setRelaySetupOpen(false);
                                                                         setTimeout(() => { setRelaySetupOpen(true); setRelaySetupSection('credentials'); }, 100);

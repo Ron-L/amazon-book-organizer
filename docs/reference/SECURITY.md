@@ -252,6 +252,10 @@ ReaderWrangler uses [GoatCounter](https://www.goatcounter.com/) for privacy-focu
 | `/event/file-exported` | User saves a backup | How often users back up |
 | `/event/app-reset` | User resets the app | How often users start fresh |
 | `/event/integrity-<type>` | Integrity check auto-fixes or flags an issue | How often data integrity issues occur and what types |
+| `/event/relay-channel-created` | User generates relay credentials | Top of the relay onboarding funnel |
+| `/event/relay-channel-used` | First successful manifest upload to a new channel | Middle of the funnel — credentials actually worked end-to-end (fired server-side from the relay worker) |
+| `/event/relay-channel-revoked` | User revokes their channel | Bottom of the funnel — user disconnected (fired server-side from the relay worker) |
+| `/event/relay-channel-blocked` | Channel auto-blocked by rate-limit abuse detector | Abuse signal (fired server-side from the relay worker, alongside email alert) |
 
 **What GoatCounter does NOT see:**
 - Book titles, authors, or any library content
@@ -291,8 +295,8 @@ Security-relevant events trigger email alerts to the site operator via [Resend](
 
 | Event | Alert sent |
 |-------|-----------|
-| Channel revoked by user | Yes |
-| Channel auto-blocklisted (rate limit abuse) | Yes |
+| Channel revoked by user | No — tracked as `/event/relay-channel-revoked` in GoatCounter instead (user revocations are normal lifecycle events, not security events) |
+| Channel auto-blocklisted (rate limit abuse) | Yes (also fires `/event/relay-channel-blocked` GoatCounter event) |
 | Rate limit exceeded (per-event) | No (would be noisy) |
 
 Alerts are sent to `contact@readerwrangler.com` and include the channelId and timestamp. They do **not** include any user data, passphrase material, or encrypted content.
