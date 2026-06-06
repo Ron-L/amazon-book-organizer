@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.11.6] - 2026-06-05
+
+### Added
+- **Relay lifecycle telemetry** — Four GoatCounter events instrument the relay onboarding funnel for launch analytics: `relay-channel-created` (app, on Generate Credentials), `relay-channel-used` (worker, on first manifest upload per channel), `relay-channel-revoked` (worker, on /revoke), `relay-channel-blocked` (worker, on auto-block). New worker KV key `lifecycle:{channelId}:used` tracks first use per channel.
+
+### Changed
+- **Relay email alerts taxonomy** — User-initiated channel revocations now fire a GoatCounter event instead of an admin email (normal lifecycle event, not a security event). Auto-blocks (rate-limit abuse) still send email *and* fire `relay-channel-blocked` telemetry. SECURITY.md updated to reflect.
+
 ## [6.11.5] - 2026-05-26
 
 ### Added
