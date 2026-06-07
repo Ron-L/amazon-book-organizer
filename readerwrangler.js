@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.7-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.7-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7617,7 +7617,7 @@
                                     : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                             }`}
                             style={{ fontSize: '13px', height: '28px', marginLeft: '12px', whiteSpace: 'nowrap' }}
-                            title="Include books you've hidden from view (delete with 'Hide Instead' option)">
+                            title={"Include books you've hidden from view\n(delete with 'Hide Instead' option)"}>
                             <input
                                 type="checkbox"
                                 checked={showHidden}
@@ -7677,7 +7677,7 @@
                                     <button
                                         onClick={() => { setCollectionsDropdownOpen(!collectionsDropdownOpen); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                         aria-expanded={collectionsDropdownOpen} aria-haspopup="listbox"
-                                        title="Filter by Kindle Collection. These come from Amazon and can't be edited here — use File › Tag from Collections to convert them into editable tags."
+                                        title={"Filter by Kindle Collection.\nThese come from Amazon and can't be edited here.\nUse File › Tag from Collections to convert them into editable tags."}
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             selectedCollections.length > 0
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
