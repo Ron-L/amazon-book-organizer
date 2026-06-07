@@ -78,6 +78,10 @@
     <div id="root">
         <!-- v5.5.11 - Splash screen (replaced when React mounts) -->
         <div id="splash" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:var(--bg-page, #ffffff);">
+            <!-- v6.11.7 - Top-of-viewport reassurance banner: sets expectations for Chrome's possible "Page Unresponsive" prompt during Babel compilation -->
+            <div style="position:absolute; top:24px; left:50%; transform:translateX(-50%); max-width:480px; padding:0 20px; text-align:center; color:var(--text-muted, #64748b); font-size:0.85em; line-height:1.5;">
+                A lot of book-wrangling code is loading right now. If your browser asks whether to wait, please do &mdash; we're busy compiling, not stuck.
+            </div>
             <img src="icons/logo-transparent.png" alt="" style="width:80px; height:80px; margin-bottom:20px;">
             <div style="font-family:'Libre Baskerville',Georgia,serif; font-size:1.8em; font-weight:700; color:var(--text-primary, #1e293b); margin-bottom:8px;">ReaderWrangler&#8482;</div>
             <!-- v6.3.0 - CSS-animated rotating messages, randomly selected each visit -->
