@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.11.7] - 2026-06-07
+
+### Added
+- **Filter and search control tooltips** — Native `title` tooltips on Search box, Show Hidden toggle, Collections filter, and Date Added filter. Collections tooltip explains the read-only-from-Amazon situation and points to File › Tag from Collections. Long tooltips (Collections, Show Hidden) use multi-line formatting for readability.
+- **Splash load reassurance banner** — Folksy explanation near the top of the splash screen sets expectations for Chrome's "Page Unresponsive" dialog that can appear during in-browser Babel compilation. Positioned at 25vh so Chrome's overlay doesn't cover it.
+
 ## [6.11.6] - 2026-06-05
 
 ### Added
