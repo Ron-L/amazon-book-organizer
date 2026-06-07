@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.8-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7273,9 +7273,30 @@
                                     overflowY: 'auto'
                                 }}>
                                     {Object.keys(tagRegistry).length === 0 ? (
-                                        <div style={{ padding: '8px 12px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                                            No tags available
-                                        </div>
+                                        <>
+                                            <div style={{ padding: '8px 12px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                                                No tags available
+                                            </div>
+                                            <div style={{ borderTop: '1px solid var(--border-default)', marginTop: '4px', paddingTop: '4px' }}>
+                                                <div
+                                                    onClick={() => {
+                                                        setTagManagementOpen(true);
+                                                        setTagsDropdownOpen(false);
+                                                    }}
+                                                    style={{
+                                                        padding: '8px 12px',
+                                                        fontSize: '13px',
+                                                        cursor: 'pointer',
+                                                        background: 'var(--bg-elevated)',
+                                                        color: 'var(--text-accent)'
+                                                    }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-elevated)'}
+                                                >
+                                                    Manage Tags...
+                                                </div>
+                                            </div>
+                                        </>
                                     ) : (
                                         <>
                                             <div
