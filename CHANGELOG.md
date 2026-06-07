@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.11.8] - 2026-06-07
+
+### Fixed
+- **Tags filter empty state** — When no tags existed, the Tags filter dropdown showed only "No tags available" with no path to create one, forcing users to navigate elsewhere to create their first tag. Now mirrors the populated-state structure with a divider and "Manage Tags..." action so users can create the first tag from the same context they'd look for one.
+
 ## [6.11.7] - 2026-06-07
 
 ### Added
