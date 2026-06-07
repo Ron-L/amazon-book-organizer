@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.7-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -325,6 +325,7 @@
                         value={inputValue}
                         onChange={(e) => handleChange(e.target.value)}
                         placeholder="Title or author..."
+                        title="Search by title or author (matches anywhere in the field)"
                         style={{
                             width: '100%', height: '28px', padding: '0 28px 0 28px',
                             fontSize: '13px', border: '1px solid var(--border-strong)', borderRadius: '4px', outline: 'none'
@@ -7615,7 +7616,8 @@
                                     ? 'bg-blue-50 border-blue-300 text-blue-700'
                                     : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                             }`}
-                            style={{ fontSize: '13px', height: '28px', marginLeft: '12px', whiteSpace: 'nowrap' }}>
+                            style={{ fontSize: '13px', height: '28px', marginLeft: '12px', whiteSpace: 'nowrap' }}
+                            title="Include books you've hidden from view (delete with 'Hide Instead' option)">
                             <input
                                 type="checkbox"
                                 checked={showHidden}
@@ -7675,6 +7677,7 @@
                                     <button
                                         onClick={() => { setCollectionsDropdownOpen(!collectionsDropdownOpen); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); setDateDropdownOpen(false); }}
                                         aria-expanded={collectionsDropdownOpen} aria-haspopup="listbox"
+                                        title="Filter by Kindle Collection. These come from Amazon and can't be edited here — use File › Tag from Collections to convert them into editable tags."
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             selectedCollections.length > 0
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
@@ -7987,6 +7990,7 @@
                                     <button
                                         onClick={() => { setDateDropdownOpen(!dateDropdownOpen); setCollectionsDropdownOpen(false); setAmazonRatingDropdownOpen(false); setMyRatingDropdownOpen(false); setSeriesDropdownOpen(false); }}
                                         aria-expanded={dateDropdownOpen} aria-haspopup="listbox"
+                                        title="Filter by date book was added to your Amazon library"
                                         className={`w-full px-3 py-1.5 rounded border text-left flex justify-between items-center ${
                                             datePreset
                                                 ? 'bg-blue-50 border-blue-300 text-blue-700'
