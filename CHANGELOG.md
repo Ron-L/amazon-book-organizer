@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.11.9] - 2026-06-08
+
+### Added
+- **Comprehensive tooltip coverage** — Systematic audit of all interactive UI elements (155 scanned) added tooltips to 19 controls that lacked them. Mobile: Back, Folders, Search, Menu, Clear search, Close, Sort cycle. Desktop: logo link, Clear All filters, Auto-Organize All/Some/None segmented control, Book Detail Wishlist/Purchased pill, series dropdown chevron, 5 price-goal chips (per-price text), Custom price button, sidebar Show all/Hide empty toggle, Tag Manager sortable headers.
+- **Mobile accessibility — `aria-label` on icon buttons** — Screen readers (TalkBack on Android, VoiceOver on iOS) now announce all icon-only mobile controls. Mobile Chrome doesn't show visible `title` tooltips on touch devices, so `aria-label` is the right primitive for touch accessibility.
+
 ## [6.11.8] - 2026-06-07
 
 ### Fixed
