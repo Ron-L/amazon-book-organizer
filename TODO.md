@@ -33,11 +33,52 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Sections: Security/Privacy, Data/Backup, Troubleshooting, Library, General
    - Include: relay revocation, encryption explanation, moving to new computer, bookmarklet troubleshooting (including blank-tab limitation), stale data, physical books, multi-browser, pricing
 
-**5. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
+**5. AI-Powered User Support via Custom GPT — Create a shareable Custom GPT as an interactive help resource, replacing tutorial videos 2–8
+   - Pre-load with ReaderWrangler documentation (README, user guide, etc.) as knowledge files
+   - Set system instructions to scope it as a ReaderWrangler support assistant
+   - Add link to Help menu in the app so users land directly in a ready-to-go ChatGPT session
+   - Works with free tier ChatGPT accounts — no setup required from users
+   - Evaluate Claude Projects equivalent if/when shareable project links become available
+
+**6. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
    - Document relay credential recovery paths
    - Document backup files include relay credentials
    - Problem: Users have no guidance for recovering from data loss
    - Impact: Confidence that data is recoverable
+
+**7. 🔧 Pre-Launch Follow-Ups from PM Synthesis (2026-06-07)** - MIXED (sized below)
+   - Items flagged across multiple post-mortems but never addressed during normal release work. Audit found "Recommendations for Future" tends to recur unaddressed unless given a dedicated session.
+
+   **7a. `integrity-homeless` investigation** - MEDIUM/MEDIUM (2-4 hours)
+   - Real user fired `integrity-homeless` GoatCounter event in v6.11.5 (carried forward in v6.11.6 PM)
+   - DATA-INTEGRITY.md: homeless = books in IndexedDB no folder references; should NOT happen on a fresh import
+   - Three candidate causes per v6.11.5 PM: (a) import bug writing to IndexedDB without updating Inbox bookIds, (b) race between integrity check and import completion, (c) user action between fetch and import
+   - Impact: Bug affecting at least one real user; affects launch confidence
+
+   **7b. v4 → v5 feature parity audit** - MEDIUM/MEDIUM (3-5 hours)
+   - Flagged in v5.0.6, v5.0.7, v5.0.8 PMs — never executed; 4-time recommendation that didn't happen during normal release work
+   - 6 v5.0.x patch releases were cleanup bugs from v5.0.0's BookExplorer rewrite; suggests more may still be hiding
+   - Method: walk v4 features, verify each exists in v6 with parity (or document why intentionally dropped)
+   - Impact: Find missing features before users do
+
+   **7c. `console.log` audit** - LOW/LOW (1-2 hours)
+   - ~70 statements remain (per v6.10.0 PM)
+   - Decide which to keep (real diagnostics), gate behind a `DEBUG` flag, or remove
+   - Impact: Cleaner DevTools console for users who open it
+
+   **7d. ✅ Tooltip inventory & audit** — shipped v6.11.9 (2026-06-08)
+   - Systematic audit of 155 interactive UI elements
+   - 19 new tooltips added (7 mobile + 12 desktop)
+   - aria-label added to mobile icon buttons for touch accessibility (title doesn't render on touch in modern Chrome)
+   - Did NOT audit Tag from Collections wizard — see 7e below
+
+   **7e. Tooltip audit — Tag from Collections wizard** - LOW/LOW (~1 hour) — added 2026-06-08
+   - Inventory agent (v6.11.9 audit) deferred this area as a separate pass
+   - Walk the entire Tag from Collections wizard (all steps): collection list, checkboxes, "New books only" filter, "Removed from Kindle" handling, action buttons
+   - Add `title` + `aria-label` per established voice (concise, no jargon, what + why)
+   - Impact: Discoverability of the collections-to-tags workflow — currently a hidden gem
+
+   See post-mortems/ for the full thread on each. Automated test suite (also a recurring recommendation) is parked in Priority 6 — too large for pre-launch.
 
 ---
 
