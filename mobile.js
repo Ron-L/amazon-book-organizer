@@ -367,7 +367,7 @@ function Header({ currentNav, navStack, folders, books, tagRegistry, onGoBack, o
                     borderBottom: '1px solid var(--border-default, #e2e8f0)',
                     color: 'var(--text-primary, #1e293b)'
                 }}>
-                <button onClick={onGoBack} className="p-2 -ml-1 flex-shrink-0" style={{ touchAction: 'manipulation' }}>
+                <button onClick={onGoBack} className="p-2 -ml-1 flex-shrink-0" style={{ touchAction: 'manipulation' }} title="Back">
                     <IconBack />
                 </button>
                 <div style={{
@@ -394,7 +394,8 @@ function Header({ currentNav, navStack, folders, books, tagRegistry, onGoBack, o
                                 position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
                                 padding: '2px', touchAction: 'manipulation',
                                 color: 'var(--text-muted, #64748b)', background: 'none', border: 'none'
-                            }}>
+                            }}
+                            title="Clear search">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                             </svg>
@@ -414,11 +415,11 @@ function Header({ currentNav, navStack, folders, books, tagRegistry, onGoBack, o
                 color: 'var(--text-primary, #1e293b)'
             }}>
             <div className="flex items-center">
-                <button onClick={onToggleDrawer} className="p-2 -ml-1" style={{ touchAction: 'manipulation' }}>
+                <button onClick={onToggleDrawer} className="p-2 -ml-1" style={{ touchAction: 'manipulation' }} title="Folders">
                     <IconHamburger />
                 </button>
                 {showBack && (
-                    <button onClick={onGoBack} className="p-2" style={{ touchAction: 'manipulation' }}>
+                    <button onClick={onGoBack} className="p-2" style={{ touchAction: 'manipulation' }} title="Back">
                         <IconBack />
                     </button>
                 )}
@@ -442,10 +443,10 @@ function Header({ currentNav, navStack, folders, books, tagRegistry, onGoBack, o
                         </svg>
                     </button>
                 )}
-                <button onClick={onOpenSearch} className="p-2" style={{ touchAction: 'manipulation' }}>
+                <button onClick={onOpenSearch} className="p-2" style={{ touchAction: 'manipulation' }} title="Search books">
                     <IconSearch />
                 </button>
-                <button onClick={onToggleMenu} className="p-2 -mr-1" style={{ touchAction: 'manipulation' }}>
+                <button onClick={onToggleMenu} className="p-2 -mr-1" style={{ touchAction: 'manipulation' }} title="Menu">
                     <IconDots />
                 </button>
             </div>
@@ -506,7 +507,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, onSelectF
             <div onClick={() => onSelectFolder('__all__')} className="flex items-center justify-between px-3 flex-shrink-0"
                 style={{ height: '48px', borderBottom: '1px solid var(--border-default, #e2e8f0)', cursor: 'pointer', touchAction: 'manipulation' }}>
                 <span className="font-semibold text-sm">Dashboard</span>
-                <span className="p-2" onClick={(e) => { e.stopPropagation(); onClose(); }}><IconClose /></span>
+                <span className="p-2" onClick={(e) => { e.stopPropagation(); onClose(); }} title="Close"><IconClose /></span>
             </div>
 
             {/* All Books — navigates to all-books grid view */}
@@ -595,7 +596,7 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
             <div onClick={onClose} className="flex items-center justify-between px-3 flex-shrink-0"
                 style={{ height: '48px', borderBottom: '1px solid var(--border-default, #e2e8f0)', cursor: 'pointer', touchAction: 'manipulation' }}>
                 <span className="font-semibold text-sm">Menu</span>
-                <span className="p-2"><IconClose /></span>
+                <span className="p-2" title="Close"><IconClose /></span>
             </div>
 
             <div className="py-1">
@@ -1468,7 +1469,7 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, s
                     marginBottom: '10px', fontSize: '13px', color: 'var(--text-secondary, #475569)'
                 }}>
                     <span>{folderBooks.length} book{folderBooks.length !== 1 ? 's' : ''}</span>
-                    <button onClick={onCycleSort} style={{
+                    <button onClick={onCycleSort} title="Tap to change sort order" style={{
                         display: 'flex', alignItems: 'center', gap: '4px',
                         padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-default, #e2e8f0)',
                         background: 'var(--bg-surface, #ffffff)', color: 'var(--text-secondary, #475569)',

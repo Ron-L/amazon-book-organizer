@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.11.9-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6743,7 +6743,7 @@
                         gap: '2px'
                     }}>
                         {/* Logo + App Name - links to landing page */}
-                        <a href="index.html" style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '12px', marginRight: '4px', borderRight: '1px solid var(--border-strong)', textDecoration: 'none' }}>
+                        <a href="index.html" title="Go to ReaderWrangler home page" style={{ display: 'flex', alignItems: 'center', gap: '6px', paddingRight: '12px', marginRight: '4px', borderRight: '1px solid var(--border-strong)', textDecoration: 'none' }}>
                             <img src="icons/logo-transparent-32.png" alt="" style={{ width: '20px', height: '20px' }} />
                             <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
                                 ReaderWrangler<span style={{ fontSize: '9px', verticalAlign: 'super', color: 'var(--text-muted)' }}>™</span>
@@ -8196,6 +8196,7 @@
                                 }}
                                 style={{ fontSize: '16px', lineHeight: 1, marginLeft: '8px' }}>⠿</span>
                             <button
+                                title="Clear all active filters"
                                 onClick={() => {
                                     setSearchTerm('');
                                     setReadStatusFilter('');
@@ -9198,6 +9199,7 @@
                                                             <>
                                                                 <button
                                                                     onClick={() => setWizardSelectedAuthors(new Set(wizardAuthors.map(a => a.normalizedName)))}
+                                                                    title="Select all authors"
                                                                     className={`px-3 py-1 text-xs transition-colors ${
                                                                         isAll
                                                                             ? 'bg-blue-600 text-white font-semibold'
@@ -9206,6 +9208,7 @@
                                                                     All
                                                                 </button>
                                                                 <button
+                                                                    title="Mixed selection — click All or None to change"
                                                                     className={`px-3 py-1 text-xs border-l border-gray-300 ${
                                                                         isSome
                                                                             ? 'bg-blue-600 text-white font-semibold cursor-default'
@@ -9215,6 +9218,7 @@
                                                                 </button>
                                                                 <button
                                                                     onClick={() => setWizardSelectedAuthors(new Set())}
+                                                                    title="Deselect all authors"
                                                                     className={`px-3 py-1 text-xs border-l border-gray-300 transition-colors ${
                                                                         isNone
                                                                             ? 'bg-blue-600 text-white font-semibold'
@@ -10436,6 +10440,7 @@
                                                         value={editBookFields.onWishlist ? 'wishlist' : 'purchased'}
                                                         onChange={(e) => setEditBookFields(prev => ({ ...prev, onWishlist: e.target.value === 'wishlist' }))}
                                                         onKeyDown={(e) => e.stopPropagation()}
+                                                        title="Mark as Purchased or on Wishlist"
                                                         className={`px-3 py-1 rounded-full text-sm font-medium border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                                                             editBookFields.onWishlist
                                                                 ? 'bg-amber-100 text-amber-800 border-amber-300'
@@ -10583,6 +10588,7 @@
                                                                 type="button"
                                                                 onClick={() => { editBookSeriesFilterRef.current = false; setEditBookSeriesDropdownOpen(!editBookSeriesDropdownOpen); }}
                                                                 onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); if (editBookSeriesDropdownOpen) { setEditBookSeriesDropdownOpen(false); if (editBookSeriesInputRef.current) editBookSeriesInputRef.current.focus(); } else { e.target.blur(); } return; } e.stopPropagation(); }}
+                                                                title="Show all series"
                                                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs focus:outline-none"
                                                                 tabIndex={-1}>
                                                                 ▼
@@ -10942,6 +10948,7 @@
                                                                     });
                                                                     setModalBook(prev => ({ ...prev, priceTrigger: price }));
                                                                 }}
+                                                                title={`Notify me when price drops to $${price.toFixed(2)} or below`}
                                                                 className={`px-2 py-1 text-sm rounded ${modalBook.priceTrigger === price ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
                                                             >
                                                                 ${price.toFixed(2)}
@@ -10950,6 +10957,7 @@
                                                         {!showCustomPriceInput ? (
                                                             <button
                                                                 onClick={() => setShowCustomPriceInput(true)}
+                                                                title="Set a custom target price"
                                                                 className={`px-2 py-1 text-sm rounded ${modalBook.priceTrigger && ![0.99, 1.99, 2.99, 3.99, 4.99].includes(modalBook.priceTrigger) ? 'bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-700'}`}
                                                             >
                                                                 Custom...
@@ -11207,7 +11215,8 @@
                                             <span className="text-amber-700">{text}</span>
                                             <button
                                                 className={`ml-2 border font-medium px-2 py-0.5 rounded flex-shrink-0 ${springLoadActive ? 'bg-amber-200 border-amber-400 text-amber-900 animate-pulse' : 'bg-white border-amber-300 text-amber-700 hover:bg-amber-100'}`}
-                                                onClick={() => setShowAllFoldersOverride(prev => !prev)}>
+                                                onClick={() => setShowAllFoldersOverride(prev => !prev)}
+                                                title={"Show folders with no matches\n(turn off to hide them again)"}>
                                                 {showAllFoldersOverride ? 'Hide empty' : 'Show all'}
                                             </button>
                                         </div>
@@ -14626,11 +14635,13 @@
                                                         {sortArrow('pinned') || '📌'}
                                                     </span>
                                                     <span className="flex-1 cursor-pointer select-none hover:text-blue-600"
-                                                          onClick={() => toggleSort('name')}>
+                                                          onClick={() => toggleSort('name')}
+                                                          title="Click to sort by tag name">
                                                         Tag{sortArrow('name')}
                                                     </span>
                                                     <span className="w-14 text-center cursor-pointer select-none hover:text-blue-600"
-                                                          onClick={() => toggleSort('count')}>
+                                                          onClick={() => toggleSort('count')}
+                                                          title="Click to sort by book count">
                                                         Books{sortArrow('count')}
                                                     </span>
                                                     <span className="w-8"></span>
