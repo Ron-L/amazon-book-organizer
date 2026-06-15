@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1024,6 +1024,16 @@
             const isBookListFolder = (folderId) => folderId?.startsWith('__booklist_') && folderId?.endsWith('__');
             const getBookListId = (folderId) => isBookListFolder(folderId) ? folderId.slice(11, -2) : null;
             const getBookList = (folderId) => { const blid = getBookListId(folderId); return blid ? bookLists.find(bl => bl.id === blid) : null; };
+            // v6.12.0 - Add books to a Book List (additive, deduped; never tags, never touches folders). Returns count actually added.
+            const addBooksToBookList = (bookListId, bookIds) => {
+                const bl = bookLists.find(b => b.id === bookListId);
+                if (!bl) return 0;
+                const existing = new Set(bl.bookIds || []);
+                const toAdd = bookIds.filter(id => !existing.has(id));
+                if (toAdd.length === 0) return 0;
+                setBookLists(prev => prev.map(b => b.id === bookListId ? { ...b, bookIds: [...(b.bookIds || []), ...toAdd] } : b));
+                return toAdd.length;
+            };
 
             // v6.10.0-alpha.17 - Build filter object from current active filters
             const buildCurrentFilters = () => {
@@ -3457,6 +3467,14 @@
                             if (confirm(`Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
                                 await permanentlyDeleteBooks(bookIdsToDelete);
                             }
+                            return;
+                        }
+
+                        // v6.12.0 - Book List: remove selected books from this list only (supplemental — never trashes the book)
+                        if (isBookListFolder(selectedFolderId)) {
+                            const blId = getBookListId(selectedFolderId);
+                            setBookLists(prev => prev.map(bl => bl.id === blId ? { ...bl, bookIds: (bl.bookIds || []).filter(id => !bookIdsToDelete.includes(id)) } : bl));
+                            setExplorerSelectedItems(new Set());
                             return;
                         }
 
@@ -11595,6 +11613,31 @@
                                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === blFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                                         onClick={() => { if (editingBookListId !== bl.id) navigateToFolder(blFolderId); }}
                                                         onDoubleClick={() => { setEditingBookListId(bl.id); setEditingBookListName(bl.name); }}
+                                                        onDragOver={(e) => {
+                                                            const types = Array.from(e.dataTransfer.types);
+                                                            if (types.includes('application/x-readerwrangler') || types.includes('application/x-rw-items')) {
+                                                                e.preventDefault();
+                                                                e.dataTransfer.dropEffect = 'copy';
+                                                                setFolderDropHighlight(e.currentTarget);
+                                                            }
+                                                        }}
+                                                        onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setFolderDropHighlight(null); }}
+                                                        onDrop={(e) => {
+                                                            e.preventDefault();
+                                                            setFolderDropHighlight(null);
+                                                            const rwItems = e.dataTransfer.getData('application/x-rw-items');
+                                                            const rw = e.dataTransfer.getData('application/x-readerwrangler');
+                                                            let dropIds = [];
+                                                            if (rwItems) { const { itemIds } = JSON.parse(rwItems); dropIds = (itemIds || []).filter(id => bookMap.has(id)); }
+                                                            else if (rw) { const d = JSON.parse(rw); dropIds = (d.bookIds || []).filter(id => bookMap.has(id)); }
+                                                            if (dropIds.length === 0) return;
+                                                            const added = addBooksToBookList(bl.id, dropIds);
+                                                            setExplorerSelectedItems(new Set());
+                                                            stopDragVirtualization();
+                                                            setExplorerDragBookId(null);
+                                                            setExplorerDragData(null);
+                                                            showToast(added > 0 ? `Added ${added} ${added === 1 ? 'book' : 'books'} to "${bl.name}"` : `Already in "${bl.name}"`, e.clientX, e.clientY);
+                                                        }}
                                                         title={`Book List: ${bl.name} (${blCount} ${blCount === 1 ? 'book' : 'books'})`}>
                                                         <span className="pointer-events-none" style={{ fontSize: '14px' }}>📑</span>
                                                         {editingBookListId === bl.id ? (
