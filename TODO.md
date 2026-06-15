@@ -84,6 +84,18 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Add `title` + `aria-label` per established voice (concise, no jargon, what + why)
    - Impact: Discoverability of the collections-to-tags workflow — currently a hidden gem
 
+   **6f. Demo-whitelist footgun guard** - MEDIUM/LOW (~1-2 hours) — added 2026-06-15
+   - The demo whitelist (`readerwrangler-demo-whitelist-enabled` on amazon.com localStorage) is DESTRUCTIVE: it filters existing books down to the whitelist AND re-uploads only those to the relay, silently shrinking the real library. Cost a real scare (2624 → 119) when leftover demo state stayed enabled.
+   - Guard: fetcher should warn loudly / require confirmation before uploading a library dramatically smaller than what's on the relay (e.g., "About to replace 2624 books on relay with 119 — continue?")
+   - Make the active-whitelist banner unmissable (currently just a console line `🔒 Demo whitelist active`)
+   - Pre-launch: ensure no demo-whitelist state can ship; document the off-switch prominently (DEMO-LIBRARY-PLAN.md:100)
+
+   **6g. User-facing "Force full re-fetch" / clear relay library** - MEDIUM/LOW (~2 hours) — added 2026-06-15
+   - Incremental fetch is anchored to the relay's existing library and stops at first overlap; if the relay holds a partial/wrong set, there is NO user-facing way to force a complete re-fetch (currently requires `window.RWRelay.cleanup()` in DevTools).
+   - Add an app/Relay-Setup affordance: "Rebuild library from Amazon (full re-fetch)" that clears the relay library so the next fetch pulls ALL books.
+   - Pairs with 6f — together they prevent and recover from the shrink-to-demo trap.
+   - Related: Priority 6 "Relay Disconnect / Reset" (credentials reset is a separate gap).
+
    See post-mortems/ for the full thread on each. Automated test suite (also a recurring recommendation) is parked in Priority 6 — too large for pre-launch.
 
 ---
