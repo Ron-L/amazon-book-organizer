@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -740,6 +740,7 @@
             const [springLoadActive, setSpringLoadActive] = useState(false); // v6.8.0 - True while spring-load countdown is running (drives pulse animation)
             const [newFolderHiddenAlert, setNewFolderHiddenAlert] = useState(null); // v6.8.0 - { folderName } when newly created folder is hidden by active filters
             const [viewsSectionCollapsed, setViewsSectionCollapsed] = useState(false); // v6.4.0 - Collapse/expand Views section
+            const [bookListsSectionCollapsed, setBookListsSectionCollapsed] = useState(false); // v6.12.0 - Collapse/expand Book Lists section
             const [savedExpansionState, setSavedExpansionState] = useState(null); // v5.0.0-alpha.169 - Saved folder expansion state (Map of folderId → collapsed)
             const [visibleColumns, setVisibleColumns] = useState({ // v5.0.0-alpha.104 - Column visibility (Name always visible)
                 author: true,
@@ -11533,6 +11534,40 @@
                                         }}
                                     />
                                     </>}
+                                    {/* v6.12.0 - BOOK LISTS section header (curated, supplemental bookId sets) */}
+                                    <div className="flex items-center justify-between px-2 pt-2 pb-0.5 mt-1 border-t border-gray-100">
+                                        <span
+                                            className="text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-gray-600 cursor-default"
+                                            title="Hand-picked lists of books, like playlists. A book can be on many lists; removing it from a list never deletes the book.">
+                                            Book Lists
+                                        </span>
+                                        <button
+                                            onClick={() => setBookListsSectionCollapsed(prev => !prev)}
+                                            className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
+                                            title={bookListsSectionCollapsed ? 'Expand book lists' : 'Collapse book lists'}
+                                            aria-label={bookListsSectionCollapsed ? 'Expand book lists' : 'Collapse book lists'}>
+                                            {bookListsSectionCollapsed ? '▶' : '▼'}
+                                        </button>
+                                    </div>
+                                    {!bookListsSectionCollapsed && (
+                                        bookLists.length === 0
+                                            ? <div className="px-2 py-1.5 text-xs text-gray-400 italic">No book lists yet</div>
+                                            : [...bookLists].sort((a, b) => a.position - b.position).map(bl => {
+                                                const blFolderId = `__booklist_${bl.id}__`;
+                                                const blCount = bl.bookIds?.length || 0;
+                                                return (
+                                                    <div
+                                                        key={blFolderId}
+                                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === blFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                                        onClick={() => navigateToFolder(blFolderId)}
+                                                        title={`Book List: ${bl.name} (${blCount} ${blCount === 1 ? 'book' : 'books'})`}>
+                                                        <span className="pointer-events-none" style={{ fontSize: '14px' }}>📑</span>
+                                                        <span className="flex-1 pointer-events-none">{bl.name}</span>
+                                                        <span className="text-xs text-gray-500 pointer-events-none">({blCount})</span>
+                                                    </div>
+                                                );
+                                            })
+                                    )}
                                     {/* v6.4.0 - FOLDERS section header */}
                                     <div className="flex items-center justify-between px-2 pt-2 pb-0.5 mt-1 border-t border-gray-100">
                                         <span
