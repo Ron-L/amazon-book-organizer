@@ -18,8 +18,8 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Load-bearing: custodial-vs-supplemental invariant; snapshot-before-delete so Trash/Undo rebuild the full placement set
    - **Pre-launch blocker** — invalidates Tutorial 1 (Scene 6 Tags & Views); user cannot re-record
    - On implementation, align: features.html, README.md (+ index.html mirror), USER-GUIDE.md, sizzle reel + tutorial scripts (docs/design/VIDEO-PRODUCTION-GUIDE.md), in-app help/tooltips, CHANGELOG
-   - Low priority / optional: landing-page before/after slider image shows the old left-panel style; its point (folder organization vs. Amazon) still lands, so refresh the screenshot only when convenient
    - Build dev-first per workflow
+   - Note: landing-page before/after screenshot refresh is tracked separately as a post-launch item (Priority 6)
 
 **2. 🎬 Training Videos, Site Restructure & Docs** - HIGH/HIGH (40-60 hours) — **IN PROGRESS**
    - ⚠️ DECISION (2026-06-15): Tutorial 1 will NOT be re-recorded. Instructional weight moves to the Custom GPT (item 4), which now replaces Tutorials 1–8. Only the sizzle reel remains as video — after its script is updated for Book Lists/Searches.
@@ -148,6 +148,12 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Note: User loads the page once per session, so this is a one-time cost per use
    - Problem: 14s initial load is noticeable, especially for first-time users
    - Impact: Option A reduces load time; Option B makes the wait enjoyable; both improve first impression
+
+**5. 🖼️ Refresh Landing-Page Before/After Screenshot** - LOW/LOW (~30 min) — added 2026-06-15
+   - The landing-page before/after slider shows the old left-panel style (pre Book Lists/Searches redesign)
+   - Its point (folder organization vs. Amazon's wall of covers) still lands, so this is cosmetic only — no rush
+   - Recapture the "after" screenshot once the Book Lists/Searches redesign has shipped
+   - Files: index.html before/after slider images
 
 ---
 
