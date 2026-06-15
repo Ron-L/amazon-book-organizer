@@ -18,10 +18,11 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Load-bearing: custodial-vs-supplemental invariant; snapshot-before-delete so Trash/Undo rebuild the full placement set
    - **Pre-launch blocker** — invalidates Tutorial 1 (Scene 6 Tags & Views); user cannot re-record
    - On implementation, align: features.html, README.md (+ index.html mirror), USER-GUIDE.md, sizzle reel + tutorial scripts (docs/design/VIDEO-PRODUCTION-GUIDE.md), in-app help/tooltips, CHANGELOG
+   - Low priority / optional: landing-page before/after slider image shows the old left-panel style; its point (folder organization vs. Amazon) still lands, so refresh the screenshot only when convenient
    - Build dev-first per workflow
 
 **2. 🎬 Training Videos, Site Restructure & Docs** - HIGH/HIGH (40-60 hours) — **IN PROGRESS**
-   - ⚠️ Book Lists/Searches redesign (item 1) invalidates Tutorial 1 (Scene 6 Tags & Views), which cannot be re-recorded; revisit video strategy alongside item 4 (Custom GPT already slated to replace videos 2–8)
+   - ⚠️ DECISION (2026-06-15): Tutorial 1 will NOT be re-recorded. Instructional weight moves to the Custom GPT (item 4), which now replaces Tutorials 1–8. Only the sizzle reel remains as video — after its script is updated for Book Lists/Searches.
    - Delete 3 obsolete design docs (ENHANCED-GETTING-STARTED-UX, VIDEO-PRODUCTION-PLAN, BOOK-EXPLORER-VIDEO-SCENARIOS)
    - Create VIDEO-PRODUCTION-GUIDE.md — sizzle reel + 8 tutorial video scripts, scene prep, production setup
    - Restructure index.html → slim landing page (hook → convert)
@@ -29,7 +30,7 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Create features.html — feature deep-dive, version history, competitive positioning
    - Add "Watch Tutorials" to app Help menu
    - Capture updated before/after screenshots
-   - Record and produce 9 videos (OBS + CapCut + Google TTS)
+   - Record and produce sizzle reel only (Tutorials 1–8 → Custom GPT, item 4); update sizzle script for Book Lists/Searches first
    - README.md diverges from index.html (GitHub audience only)
 
 **3. 📋 FAQ Page** - LOW/LOW (2-3 hours)
