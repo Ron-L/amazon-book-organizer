@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16923,6 +16923,24 @@
                                                         <span className="ml-auto text-xs text-gray-400">Del</span>
                                                     </div>
                                                 </>
+                                            ) : isBookListFolder(selectedFolderId) ? (
+                                                <div
+                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600" role="menuitem"
+                                                    onClick={() => {
+                                                        const blId = getBookListId(selectedFolderId);
+                                                        const ids = getSelectedBookIds();
+                                                        const bl = bookLists.find(b => b.id === blId);
+                                                        setBookLists(prev => prev.map(b => b.id === blId ? { ...b, bookIds: (b.bookIds || []).filter(id => !ids.includes(id)) } : b));
+                                                        const w = ids.length === 1 ? 'book' : 'books';
+                                                        showToast(`Removed ${ids.length} ${w} from "${bl?.name || 'list'}"`);
+                                                        setExplorerSelectedItems(new Set());
+                                                        setExplorerBookContextMenu(null);
+                                                        setContextSubmenu(null);
+                                                    }}>
+                                                    <span>🗑️</span>
+                                                    <span>Remove from "{getBookList(selectedFolderId)?.name || 'list'}"</span>
+                                                    <span className="ml-auto text-xs text-gray-400">Del</span>
+                                                </div>
                                             ) : isTagViewCtx ? (
                                                 <div
                                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600" role="menuitem"
