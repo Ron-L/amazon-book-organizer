@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -602,6 +602,8 @@
             const [explorerCoverCols, setExplorerCoverCols] = useState(150); // Cover width in px (60-300), used with auto-fill grid
             const [editingFolderId, setEditingFolderId] = useState(null); // Folder being renamed (left panel)
             const [editingFolderName, setEditingFolderName] = useState(''); // Folder rename input (left panel)
+            const [editingBookListId, setEditingBookListId] = useState(null); // v6.12.0 - Book List being renamed
+            const [editingBookListName, setEditingBookListName] = useState(''); // v6.12.0 - Book List rename input
             const [isPlaceholderMode, setIsPlaceholderMode] = useState(false); // v5.0.0-alpha.134 - Placeholder text mode for new folder rename (left panel)
             const [rightPanelEditingId, setRightPanelEditingId] = useState(null); // v5.0.0-alpha.156 - Folder being renamed (right panel)
             const [rightPanelEditingName, setRightPanelEditingName] = useState(''); // v5.0.0-alpha.156 - Folder rename input (right panel)
@@ -1018,6 +1020,11 @@
             const getView = (folderId) => { const vid = getViewId(folderId); return vid ? savedSearches.find(v => v.id === vid) : null; };
             const getViewTagId = (folderId) => { const v = getView(folderId); return v?.filters?.tags?.[0] || null; };
 
+            // v6.12.0 - Book List helpers
+            const isBookListFolder = (folderId) => folderId?.startsWith('__booklist_') && folderId?.endsWith('__');
+            const getBookListId = (folderId) => isBookListFolder(folderId) ? folderId.slice(11, -2) : null;
+            const getBookList = (folderId) => { const blid = getBookListId(folderId); return blid ? bookLists.find(bl => bl.id === blid) : null; };
+
             // v6.10.0-alpha.17 - Build filter object from current active filters
             const buildCurrentFilters = () => {
                 const f = {};
@@ -1107,6 +1114,11 @@
                 // v6.10.0-alpha.27 - Saved view: return all books, filters are applied via filter bar state
                 if (isViewFolder(folderId)) {
                     return [...books.filter(b => !b.isDeleted).map(b => b.id)].reverse();
+                }
+                // v6.12.0 - Book List: its curated bookIds (in stored order, excluding any trashed)
+                if (isBookListFolder(folderId)) {
+                    const bl = bookLists.find(b => b.id === getBookListId(folderId));
+                    return (bl?.bookIds || []).filter(id => { const bk = bookMap.get(id); return bk && !bk.isDeleted; });
                 }
                 const folder = folders.find(f => f.id === folderId);
                 return folder?.bookIds || [];
@@ -1357,7 +1369,7 @@
                 collectionFilter, selectedCollections, minAmazonRating, minMyRating,
                 ratingFilter, ownershipFilter, showHidden, seriesFilter, selectedSeries,
                 dateFrom, dateTo, dealsFilterActive, tagFilter, explorerSort,
-                explorerGroupOn, collapsedGroups]);
+                explorerGroupOn, collapsedGroups, bookLists]);
 
             // Sorted books array derived from display items (for shift-click range selection)
             const explorerSortedBooks = useMemo(() =>
@@ -3221,9 +3233,14 @@
                 const VIRTUAL_IDS = new Set(['__all__', '__library__', '__views__', '__trash__', '__inbox__']);
                 if (VIRTUAL_IDS.has(selectedFolderId)) return;
                 if (isViewFolder(selectedFolderId)) return; // v6.10.0-alpha.27 - View folders are valid
+                if (isBookListFolder(selectedFolderId)) { // v6.12.0 - Book List folders are valid if the list still exists
+                    if (bookLists.some(bl => `__booklist_${bl.id}__` === selectedFolderId)) return;
+                    setSelectedFolderId('__all__');
+                    return;
+                }
                 const exists = folders.some(f => f.id === selectedFolderId);
                 if (!exists) setSelectedFolderId('__all__');
-            }, [syncStatus, folders, selectedFolderId]);
+            }, [syncStatus, folders, selectedFolderId, bookLists]);
 
             // Expose books to window for debugging
             useEffect(() => {
@@ -11541,13 +11558,30 @@
                                             title="Hand-picked lists of books, like playlists. A book can be on many lists; removing it from a list never deletes the book.">
                                             Book Lists
                                         </span>
-                                        <button
-                                            onClick={() => setBookListsSectionCollapsed(prev => !prev)}
-                                            className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
-                                            title={bookListsSectionCollapsed ? 'Expand book lists' : 'Collapse book lists'}
-                                            aria-label={bookListsSectionCollapsed ? 'Expand book lists' : 'Collapse book lists'}>
-                                            {bookListsSectionCollapsed ? '▶' : '▼'}
-                                        </button>
+                                        <div className="flex items-center gap-0.5">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const maxPos = bookLists.reduce((m, b) => Math.max(m, b.position ?? 0), -1);
+                                                    const newBL = { id: `bl-${Date.now()}`, name: 'New List', bookIds: [], position: maxPos + 1 };
+                                                    setBookLists(prev => [...prev, newBL]);
+                                                    if (bookListsSectionCollapsed) setBookListsSectionCollapsed(false);
+                                                    navigateToFolder(`__booklist_${newBL.id}__`);
+                                                    setEditingBookListId(newBL.id);
+                                                    setEditingBookListName('New List');
+                                                }}
+                                                className="text-blue-500 hover:text-blue-700 text-sm px-1 hover:bg-gray-100 rounded"
+                                                title="New book list" aria-label="New book list">
+                                                +
+                                            </button>
+                                            <button
+                                                onClick={() => setBookListsSectionCollapsed(prev => !prev)}
+                                                className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
+                                                title={bookListsSectionCollapsed ? 'Expand book lists' : 'Collapse book lists'}
+                                                aria-label={bookListsSectionCollapsed ? 'Expand book lists' : 'Collapse book lists'}>
+                                                {bookListsSectionCollapsed ? '▶' : '▼'}
+                                            </button>
+                                        </div>
                                     </div>
                                     {!bookListsSectionCollapsed && (
                                         bookLists.length === 0
@@ -11558,12 +11592,44 @@
                                                 return (
                                                     <div
                                                         key={blFolderId}
-                                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === blFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
-                                                        onClick={() => navigateToFolder(blFolderId)}
+                                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === blFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                                        onClick={() => { if (editingBookListId !== bl.id) navigateToFolder(blFolderId); }}
+                                                        onDoubleClick={() => { setEditingBookListId(bl.id); setEditingBookListName(bl.name); }}
                                                         title={`Book List: ${bl.name} (${blCount} ${blCount === 1 ? 'book' : 'books'})`}>
                                                         <span className="pointer-events-none" style={{ fontSize: '14px' }}>📑</span>
-                                                        <span className="flex-1 pointer-events-none">{bl.name}</span>
-                                                        <span className="text-xs text-gray-500 pointer-events-none">({blCount})</span>
+                                                        {editingBookListId === bl.id ? (
+                                                            <input
+                                                                type="text"
+                                                                className="flex-1 px-1 py-0 border border-blue-400 rounded text-sm focus:outline-none"
+                                                                value={editingBookListName}
+                                                                onChange={(e) => setEditingBookListName(e.target.value)}
+                                                                onBlur={() => {
+                                                                    const nm = editingBookListName.trim();
+                                                                    if (nm) setBookLists(prev => prev.map(x => x.id === bl.id ? { ...x, name: nm } : x));
+                                                                    setEditingBookListId(null); setEditingBookListName('');
+                                                                }}
+                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); else if (e.key === 'Escape') { setEditingBookListId(null); setEditingBookListName(''); } }}
+                                                                autoFocus
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            />
+                                                        ) : (
+                                                            <span className="flex-1 pointer-events-none">{bl.name}</span>
+                                                        )}
+                                                        <span className="text-xs text-gray-500 pointer-events-none group-hover:hidden">({blCount})</span>
+                                                        <div className="hidden group-hover:flex items-center gap-0.5">
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (await showConfirmDialog('Delete Book List', `Delete the book list "${bl.name}"? The books themselves are not deleted.`)) {
+                                                                        setBookLists(prev => prev.filter(x => x.id !== bl.id));
+                                                                        if (selectedFolderId === blFolderId) navigateToFolder('__all__');
+                                                                    }
+                                                                }}
+                                                                className="text-gray-400 hover:text-red-500 p-0.5 rounded hover:bg-red-50"
+                                                                title="Delete book list">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 );
                                             })
