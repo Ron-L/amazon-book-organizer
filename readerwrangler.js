@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.11.9";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -590,6 +590,7 @@
 
             // v5.0.0 - Book Explorer state
             const [folders, setFolders] = useState([]); // User-created folders
+            const [bookLists, setBookLists] = useState([]); // v6.12.0 - Book Lists: curated, supplemental bookId sets [{id, name, bookIds, position}]
             const [selectedFolderId, setSelectedFolderId] = useState('__all__'); // Current folder
             // v5.0.0-alpha.174 - Multi-column sorting: array of sort criteria (max 3)
             const [explorerSort, setExplorerSort] = useState([{ column: 'dateAdded', direction: 'desc' }]);
@@ -2639,6 +2640,11 @@
                         const savedFolders = localStorage.getItem(FOLDERS_KEY);
                         let loadedFolders = savedFolders ? JSON.parse(savedFolders) : [];
 
+                        // v6.12.0 - Load Book Lists (read before first await, mirroring folders, so the
+                        // save-effect's initial empty write can't clobber persisted data)
+                        const savedBookLists = localStorage.getItem(BOOKLISTS_KEY);
+                        const loadedBookLists = savedBookLists ? JSON.parse(savedBookLists) : [];
+
                         // v6.0.0-alpha.53 - Ensure Inbox exists for fresh installs
                         if (loadedFolders.length === 0) {
                             loadedFolders = [{
@@ -2681,6 +2687,7 @@
                             }
 
                             setFolders(loadedFolders);
+                            setBookLists(loadedBookLists); // v6.12.0
                             setBooks(loadedBooks);
                             // Update IndexedDB with merged data
                             await saveBooksToIndexedDB(loadedBooks);
@@ -3035,6 +3042,11 @@
             useEffect(() => {
                 localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
             }, [folders]);
+
+            // v6.12.0 - Save Book Lists to localStorage (mirrors folder persistence)
+            useEffect(() => {
+                localStorage.setItem(BOOKLISTS_KEY, JSON.stringify(bookLists));
+            }, [bookLists]);
 
             // v5.0.0-alpha.175.2 - Close menus on outside click, close dialogs on ESC
             // v5.0.0-alpha.175.4 - Extended to close filter dropdowns
