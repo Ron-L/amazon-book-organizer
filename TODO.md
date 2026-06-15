@@ -10,13 +10,18 @@ _Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)
 
 See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for full checklist.
 
-**1. ✅ Demo Backup File** (shipped v6.8.1)
-   - 119-book curated demo library for instant trial without Amazon account
+**1. 📚 Book Lists / Searches / Folders Redesign** - HIGH/HIGH — design complete 2026-06-15
+   - Full spec: [docs/design/BookLists-Searches-Redesign.md](docs/design/BookLists-Searches-Redesign.md)
+   - Replaces the overloaded "Views" concept with three honest sidebar categories: All Books (standalone), Searches (saved live queries), Book Lists (curated static), Folders (unchanged)
+   - "Collections" stays reserved for Amazon Kindle Collections; the new curated concept is "Book Lists"
+   - Hidden grab handles removed → one visible "Save these results…" control (save as Search, save as Book List, or add to existing)
+   - Load-bearing: custodial-vs-supplemental invariant; snapshot-before-delete so Trash/Undo rebuild the full placement set
+   - **Pre-launch blocker** — invalidates Tutorial 1 (Scene 6 Tags & Views); user cannot re-record
+   - On implementation, align: features.html, README.md (+ index.html mirror), USER-GUIDE.md, sizzle reel + tutorial scripts (docs/design/VIDEO-PRODUCTION-GUIDE.md), in-app help/tooltips, CHANGELOG
+   - Build dev-first per workflow
 
-**2. ✅ Whitelist Filter** (shipped v6.8.1)
-   - Fetcher filter for controlled demo recordings
-
-**3. 🎬 Training Videos, Site Restructure & Docs** - HIGH/HIGH (40-60 hours) — **IN PROGRESS**
+**2. 🎬 Training Videos, Site Restructure & Docs** - HIGH/HIGH (40-60 hours) — **IN PROGRESS**
+   - ⚠️ Book Lists/Searches redesign (item 1) invalidates Tutorial 1 (Scene 6 Tags & Views), which cannot be re-recorded; revisit video strategy alongside item 4 (Custom GPT already slated to replace videos 2–8)
    - Delete 3 obsolete design docs (ENHANCED-GETTING-STARTED-UX, VIDEO-PRODUCTION-PLAN, BOOK-EXPLORER-VIDEO-SCENARIOS)
    - Create VIDEO-PRODUCTION-GUIDE.md — sizzle reel + 8 tutorial video scripts, scene prep, production setup
    - Restructure index.html → slim landing page (hook → convert)
@@ -27,52 +32,52 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Record and produce 9 videos (OBS + CapCut + Google TTS)
    - README.md diverges from index.html (GitHub audience only)
 
-**4. 📋 FAQ Page** - LOW/LOW (2-3 hours)
+**3. 📋 FAQ Page** - LOW/LOW (2-3 hours)
    - Create faq.html — answers to common questions
    - Link from: Help menu, README, features.html footer, tutorials.html footer
    - Sections: Security/Privacy, Data/Backup, Troubleshooting, Library, General
    - Include: relay revocation, encryption explanation, moving to new computer, bookmarklet troubleshooting (including blank-tab limitation), stale data, physical books, multi-browser, pricing
 
-**5. AI-Powered User Support via Custom GPT — Create a shareable Custom GPT as an interactive help resource, replacing tutorial videos 2–8
+**4. AI-Powered User Support via Custom GPT — Create a shareable Custom GPT as an interactive help resource, replacing tutorial videos 2–8
    - Pre-load with ReaderWrangler documentation (README, user guide, etc.) as knowledge files
    - Set system instructions to scope it as a ReaderWrangler support assistant
    - Add link to Help menu in the app so users land directly in a ready-to-go ChatGPT session
    - Works with free tier ChatGPT accounts — no setup required from users
    - Evaluate Claude Projects equivalent if/when shareable project links become available
 
-**6. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
+**5. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
    - Document relay credential recovery paths
    - Document backup files include relay credentials
    - Problem: Users have no guidance for recovering from data loss
    - Impact: Confidence that data is recoverable
 
-**7. 🔧 Pre-Launch Follow-Ups from PM Synthesis (2026-06-07)** - MIXED (sized below)
+**6. 🔧 Pre-Launch Follow-Ups from PM Synthesis (2026-06-07)** - MIXED (sized below)
    - Items flagged across multiple post-mortems but never addressed during normal release work. Audit found "Recommendations for Future" tends to recur unaddressed unless given a dedicated session.
 
-   **7a. `integrity-homeless` investigation** - MEDIUM/MEDIUM (2-4 hours)
+   **6a. `integrity-homeless` investigation** - MEDIUM/MEDIUM (2-4 hours)
    - Real user fired `integrity-homeless` GoatCounter event in v6.11.5 (carried forward in v6.11.6 PM)
    - DATA-INTEGRITY.md: homeless = books in IndexedDB no folder references; should NOT happen on a fresh import
    - Three candidate causes per v6.11.5 PM: (a) import bug writing to IndexedDB without updating Inbox bookIds, (b) race between integrity check and import completion, (c) user action between fetch and import
    - Impact: Bug affecting at least one real user; affects launch confidence
 
-   **7b. v4 → v5 feature parity audit** - MEDIUM/MEDIUM (3-5 hours)
+   **6b. v4 → v5 feature parity audit** - MEDIUM/MEDIUM (3-5 hours)
    - Flagged in v5.0.6, v5.0.7, v5.0.8 PMs — never executed; 4-time recommendation that didn't happen during normal release work
    - 6 v5.0.x patch releases were cleanup bugs from v5.0.0's BookExplorer rewrite; suggests more may still be hiding
    - Method: walk v4 features, verify each exists in v6 with parity (or document why intentionally dropped)
    - Impact: Find missing features before users do
 
-   **7c. `console.log` audit** - LOW/LOW (1-2 hours)
+   **6c. `console.log` audit** - LOW/LOW (1-2 hours)
    - ~70 statements remain (per v6.10.0 PM)
    - Decide which to keep (real diagnostics), gate behind a `DEBUG` flag, or remove
    - Impact: Cleaner DevTools console for users who open it
 
-   **7d. ✅ Tooltip inventory & audit** — shipped v6.11.9 (2026-06-08)
+   **6d. ✅ Tooltip inventory & audit** — shipped v6.11.9 (2026-06-08)
    - Systematic audit of 155 interactive UI elements
    - 19 new tooltips added (7 mobile + 12 desktop)
    - aria-label added to mobile icon buttons for touch accessibility (title doesn't render on touch in modern Chrome)
-   - Did NOT audit Tag from Collections wizard — see 7e below
+   - Did NOT audit Tag from Collections wizard — see 6e below
 
-   **7e. Tooltip audit — Tag from Collections wizard** - LOW/LOW (~1 hour) — added 2026-06-08
+   **6e. Tooltip audit — Tag from Collections wizard** - LOW/LOW (~1 hour) — added 2026-06-08
    - Inventory agent (v6.11.9 audit) deferred this area as a separate pass
    - Walk the entire Tag from Collections wizard (all steps): collection list, checkboxes, "New books only" filter, "Removed from Kindle" handling, action buttons
    - Add `title` + `aria-label` per established voice (concise, no jargon, what + why)
