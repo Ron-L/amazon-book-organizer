@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -559,7 +559,7 @@
             const [datePreset, setDatePreset] = useState(''); // Date filter preset: '' | 'last30' | 'last90' | 'lastYear' | '2025' | '2024' | '2023' | 'custom' (NEW v4.15.6)
             const [tagFilter, setTagFilter] = useState([]); // v4.27.0 - Filter by tags (array of tag names, OR logic)
             const [tagRegistry, setTagRegistry] = useState({}); // v4.27.0 - Central tag registry {tagName: {label, count}}
-            const [savedViews, setSavedViews] = useState([]); // v6.10.0-alpha.16 - Saved filter views [{id, name, filters, position, bookOrder?, description?}]
+            const [savedSearches, setSavedSearches] = useState([]); // v6.12.0 - Saved searches (live filters) [{id, name?, filters, position}] — formerly "savedViews"
             // savedFilterStateRef removed in v6.11.0-alpha.3 — views no longer replace filter bar state
             const [selectedTags, setSelectedTags] = useState(new Set()); // v5.5.15-alpha.24 - Tag selection for bulk delete (unified, replaces selectedOrphans)
             const [tagSortColumn, setTagSortColumn] = useState('name'); // v5.5.15-alpha.24 - Tag Manager sort column ('name' | 'count')
@@ -1014,7 +1014,7 @@
             // v6.10.0-alpha.16 - Saved View helpers
             const isViewFolder = (folderId) => folderId?.startsWith('__view_') && folderId?.endsWith('__');
             const getViewId = (folderId) => isViewFolder(folderId) ? folderId.slice(7, -2) : null;
-            const getView = (folderId) => { const vid = getViewId(folderId); return vid ? savedViews.find(v => v.id === vid) : null; };
+            const getView = (folderId) => { const vid = getViewId(folderId); return vid ? savedSearches.find(v => v.id === vid) : null; };
             const getViewTagId = (folderId) => { const v = getView(folderId); return v?.filters?.tags?.[0] || null; };
 
             // v6.10.0-alpha.17 - Build filter object from current active filters
@@ -1054,11 +1054,11 @@
                 return `${parts[0]} + ${parts.length - 1} more`;
             };
 
-            // v6.10.0-alpha.17 - Create a saved view from filters and add to savedViews
+            // v6.10.0-alpha.17 - Create a saved view from filters and add to savedSearches
             const createSavedView = (filters, position) => {
                 // Duplicate check: reject if an identical filter combination already exists
                 const filterKey = JSON.stringify(filters, Object.keys(filters).sort());
-                const duplicate = savedViews.find(v => {
+                const duplicate = savedSearches.find(v => {
                     const vKey = JSON.stringify(v.filters, Object.keys(v.filters || {}).sort());
                     return vKey === filterKey;
                 });
@@ -1073,7 +1073,7 @@
                 const viewId = `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
                 const name = autoNameView(filters);
                 const newView = { id: viewId, name, filters, position };
-                setSavedViews(prev => [...prev, newView]);
+                setSavedSearches(prev => [...prev, newView]);
                 // v6.10.0-alpha.23 - Show Tag Manager back if it was hidden during drag
                 // (onDragEnd won't fire because React re-render replaces the drag handle with 📌)
                 if (tagManagerBackdropRef.current) {
@@ -1352,7 +1352,7 @@
                     }
                 });
                 return items;
-            }, [bookMap, books, folders, savedViews, selectedFolderId, searchTerm, readStatusFilter,
+            }, [bookMap, books, folders, savedSearches, selectedFolderId, searchTerm, readStatusFilter,
                 collectionFilter, selectedCollections, minAmazonRating, minMyRating,
                 ratingFilter, ownershipFilter, showHidden, seriesFilter, selectedSeries,
                 dateFrom, dateTo, dealsFilterActive, tagFilter, explorerSort,
@@ -1953,7 +1953,7 @@
             // v5.5.15-alpha.31 - Reorder books within a tag view's bookOrder
             // v5.6.3-alpha.1 - Fix: include unordered books (newly tagged) in bookOrder before reordering
             const reorderBooksInTagView = (tagId, bookIdsToMove, targetIndex) => {
-                setSavedViews(prev => prev.map(v => {
+                setSavedSearches(prev => prev.map(v => {
                     if (v.id !== tagId) return v;
                     // Build full working list: ordered + unordered (mirrors getFolderBookIds render logic)
                     const taggedBookIds = books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
@@ -2712,23 +2712,10 @@
                                     setBlankImageBooks(new Set(state.organization.blankImageBooks || []));
                                     setHiddenInstances(new Set(state.organization.hiddenInstances || [])); // v4.16.0.z
                                     setTagRegistry(state.organization.tagRegistry || {}); // v4.27.0
-                                    // v6.10.0-alpha.16 - Load savedViews (or migrate from pinnedTagFolders)
+                                    // v6.12.0 - Load saved searches. Legacy saved-views and pinnedTagFolders
+                                    // are intentionally dropped (not migrated) per the Book Lists/Searches redesign.
                                     const loadedFolders = state.organization.folders || [];
-                                    const loadedTagReg = state.organization.tagRegistry || {};
-                                    let loadedViews = state.organization.savedViews || [];
-                                    if (loadedViews.length === 0 && state.organization.pinnedTagFolders) {
-                                        // Migrate from old pinnedTagFolders format
-                                        const oldPinned = state.organization.pinnedTagFolders;
-                                        loadedViews = oldPinned.map(p => ({
-                                            id: p.tagId,
-                                            name: loadedTagReg[p.tagId]?.label || p.tagId,
-                                            filters: { tags: [p.tagId] },
-                                            position: p.position,
-                                            ...(p.bookOrder ? { bookOrder: p.bookOrder } : {}),
-                                            ...(p.description ? { description: p.description } : {})
-                                        }));
-                                        console.log(`🔄 Migrated ${oldPinned.length} pinnedTagFolders → savedViews`);
-                                    }
+                                    let loadedViews = state.organization.savedSearches || [];
                                     // Position migration for interleaved display
                                     if (loadedViews.length > 0 && loadedFolders.length > 0) {
                                         const rootCount = loadedFolders.filter(f => f.parentId === null && f.id !== '__inbox__').length;
@@ -2739,7 +2726,7 @@
                                             loadedViews.forEach(v => { v.position += offset; });
                                         }
                                     }
-                                    setSavedViews(loadedViews);
+                                    setSavedSearches(loadedViews);
                                     setFolders(loadedFolders); // v5.0.0
                                     setDataSource(state.organization.dataSource || 'enriched');
                                     effectiveLastSync = state.lastSyncTime || Date.now();
@@ -2796,7 +2783,7 @@
                                 blankImageBooks: Array.from(blankImageBooks),
                                 hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
                                 tagRegistry,  // v4.27.0 - Tag registry
-                                savedViews  // v6.10.0-alpha.16 - Saved filter views
+                                savedSearches  // v6.10.0-alpha.16 - Saved filter views
                             },
                             lastSyncTime: lastSyncTime || Date.now(),
                             savedAt: Date.now()
@@ -2806,7 +2793,7 @@
                         console.warn('Could not auto-save organization:', e);
                     }
                 }
-            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedViews]);
+            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches]);
 
             // v6.0.0 Phase 2 - Debounced device-state push to relay (15s after last change)
             // Watches same dependencies as auto-save org + books for cross-device sync
@@ -2845,7 +2832,7 @@
                         clearTimeout(deviceStatePushTimerRef.current);
                     }
                 };
-            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedViews, books]);
+            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches, books]);
 
             // v6.3.0 - Post-import/restore integrity check
             // Fires when integrityCheckPending is set by importFromRelay / importBackup.
@@ -3325,7 +3312,7 @@
                         if (selectedFolderId === '__library__' || selectedFolderId === '__views__') {
                             const specialFolders = selectedFolderId === '__library__'
                                 ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
-                                : [FOLDER_ALL_BOOKS, ...[...savedViews].sort((a, b) => a.position - b.position).map(v => ({ id: `__view_${v.id}__`, name: v.name }))];
+                                : [FOLDER_ALL_BOOKS, ...[...savedSearches].sort((a, b) => a.position - b.position).map(v => ({ id: `__view_${v.id}__`, name: v.name }))];
                             allIds.push(...specialFolders.map(f => f.id));
                         }
                         setExplorerSelectedItems(new Set(allIds));
@@ -4185,7 +4172,7 @@
                         },
                         exportDate: new Date().toISOString(),
                         tagRegistry,
-                        savedViews,
+                        savedSearches,
                         hiddenInstances: Array.from(hiddenInstances),
                         appVersion: ORGANIZER_VERSION
                     }
@@ -4300,7 +4287,7 @@
                             },
                             exportDate: new Date().toISOString(),
                             tagRegistry, // v5.0.0-alpha.175 - Tag registry
-                            savedViews, // v6.10.0-alpha.16 - Saved filter views
+                            savedSearches, // v6.10.0-alpha.16 - Saved filter views
                             hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
                             appVersion: ORGANIZER_VERSION
                         }
@@ -4389,7 +4376,7 @@
                     setExplorerSort([{ column: 'dateAdded', direction: 'desc' }]);
                     setFolderSortSettings({}); // v5.0.0-alpha.100 - Clear per-folder sort settings
                     setTagRegistry({}); // v5.0.0-alpha.175.28 - Clear tag registry on reset
-                    setSavedViews([]); // v6.10.0-alpha.16 - Clear saved views on reset
+                    setSavedSearches([]); // v6.10.0-alpha.16 - Clear saved views on reset
                     setExplorerView('list');
 
                     console.log('✅ Cleared library - app reset to initial state');
@@ -4859,19 +4846,9 @@
                 if (orgToRestore) {
                     setBlankImageBooks(new Set(orgToRestore.blankImageBooks || []));
                     setTagRegistry(orgToRestore.tagRegistry || {}); // v5.0.0-alpha.175.17
-                    // v6.10.0-alpha.16 - Restore savedViews (or migrate from pinnedTagFolders)
-                    const restoredTagReg = orgToRestore.tagRegistry || {};
-                    let restoredViews = (orgToRestore.savedViews || []).map(v => ({...v}));
-                    if (restoredViews.length === 0 && orgToRestore.pinnedTagFolders) {
-                        restoredViews = orgToRestore.pinnedTagFolders.map(p => ({
-                            id: p.tagId,
-                            name: restoredTagReg[p.tagId]?.label || p.tagId,
-                            filters: { tags: [p.tagId] },
-                            position: p.position,
-                            ...(p.bookOrder ? { bookOrder: p.bookOrder } : {}),
-                            ...(p.description ? { description: p.description } : {})
-                        }));
-                    }
+                    // v6.12.0 - Restore saved searches. Legacy saved-views and pinnedTagFolders from
+                    // old backups are intentionally dropped (not migrated).
+                    let restoredViews = (orgToRestore.savedSearches || []).map(v => ({...v}));
                     const restoredFolderList = orgToRestore.folders || [];
                     if (restoredViews.length > 0 && restoredFolderList.length > 0) {
                         const rootCount = restoredFolderList.filter(f => f.parentId === null && f.id !== '__inbox__').length;
@@ -4882,7 +4859,7 @@
                             restoredViews.forEach(v => { v.position += offset; });
                         }
                     }
-                    setSavedViews(restoredViews);
+                    setSavedSearches(restoredViews);
 
                     // v5.0.0-alpha.99 - Restore folders from backup (if present)
                     if (orgToRestore.folders && Array.isArray(orgToRestore.folders)) {
@@ -11263,7 +11240,7 @@
                                             const filterDropData = e.dataTransfer.getData('application/x-filter-view');
                                             if (filterDropData) {
                                                 const filters = JSON.parse(filterDropData);
-                                                const maxPos = savedViews.reduce((max, v) => Math.max(max, v.position), -1);
+                                                const maxPos = savedSearches.reduce((max, v) => Math.max(max, v.position), -1);
                                                 if (createSavedView(filters, maxPos + 1)) {
                                                     showToast(`View saved`, e.clientX, e.clientY);
                                                 } else {
@@ -11302,7 +11279,7 @@
                                     {/* v6.10.0-alpha.16 - Saved views render under VIEWS */}
                                     {/* v6.11.0-alpha.1 - Filter views when hasActiveFilters (like folders) */}
                                     {(() => {
-                                        const sortedViewList = [...savedViews].sort((a, b) => a.position - b.position);
+                                        const sortedViewList = [...savedSearches].sort((a, b) => a.position - b.position);
                                         // When filters are active, compute which books pass current filters
                                         // then check each view's filters against that list
                                         const currentFilteredBooks = hasActiveFilters
@@ -11377,7 +11354,7 @@
                                                                 const next = viewIndex < sortedViewList.length - 1 ? sortedViewList[viewIndex + 1] : null;
                                                                 newPos = next ? (sv.position + next.position) / 2 : sv.position + 1;
                                                             }
-                                                            setSavedViews(prev => prev.map(v => v.id === draggedViewId ? { ...v, position: newPos } : v));
+                                                            setSavedSearches(prev => prev.map(v => v.id === draggedViewId ? { ...v, position: newPos } : v));
                                                             return;
                                                         }
                                                         // v6.10.0-alpha.17 - Filter view drop → create new saved view at position
@@ -11461,7 +11438,7 @@
                                                             onBlur={() => {
                                                                 if (editingFolderName.trim()) {
                                                                     const newName = editingFolderName.trim();
-                                                                    setSavedViews(prev => prev.map(v => v.id === sv.id ? { ...v, name: newName } : v));
+                                                                    setSavedSearches(prev => prev.map(v => v.id === sv.id ? { ...v, name: newName } : v));
                                                                 }
                                                                 setEditingFolderId(null);
                                                                 setEditingFolderName('');
@@ -11485,7 +11462,7 @@
                                                                 e.stopPropagation();
                                                                 const viewId = getViewId(viewFolderId);
                                                                 if (await showConfirmDialog('Delete View', `Remove "${viewLabel}" from Views?`)) {
-                                                                    setSavedViews(prev => prev.filter(v => v.id !== viewId));
+                                                                    setSavedSearches(prev => prev.filter(v => v.id !== viewId));
                                                                     if (selectedFolderId === viewFolderId) navigateToFolder('__all__');
                                                                 }
                                                             }}
@@ -11499,13 +11476,13 @@
                                         });
                                     })()}
                                     {/* v6.11.0-alpha.1 - "X of Y views match" indicator when filters hide some views */}
-                                    {hasActiveFilters && savedViews.length > 0 && (() => {
+                                    {hasActiveFilters && savedSearches.length > 0 && (() => {
                                         const filteredBooks = books.filter(b => !b.isDeleted && filterBookForExplorer(b));
-                                        const matchingViewCount = savedViews.filter(sv =>
+                                        const matchingViewCount = savedSearches.filter(sv =>
                                             filteredBooks.some(b => bookMatchesFilters(b, sv.filters))
                                         ).length;
-                                        if (matchingViewCount === savedViews.length) return null;
-                                        const text = matchingViewCount === 0 ? 'No views match' : `${matchingViewCount} of ${savedViews.length} views match`;
+                                        if (matchingViewCount === savedSearches.length) return null;
+                                        const text = matchingViewCount === 0 ? 'No views match' : `${matchingViewCount} of ${savedSearches.length} views match`;
                                         return (
                                             <div className="mx-2 my-1 px-2 py-1 text-xs rounded border bg-amber-50 border-amber-200 text-amber-700">
                                                 {text}
@@ -11535,7 +11512,7 @@
                                             const filterDropData = e.dataTransfer.getData('application/x-filter-view');
                                             if (filterDropData) {
                                                 const filters = JSON.parse(filterDropData);
-                                                const maxPos = savedViews.reduce((max, v) => Math.max(max, v.position), -1);
+                                                const maxPos = savedSearches.reduce((max, v) => Math.max(max, v.position), -1);
                                                 if (createSavedView(filters, maxPos + 1)) {
                                                     showToast(`View saved`, e.clientX, e.clientY);
                                                 } else {
@@ -11924,7 +11901,7 @@
                                                                         const next = myIndex < mergedItems.length - 1 ? mergedItems[myIndex + 1] : null;
                                                                         newPos = next ? (folderDisplayPos + next.displayPos) / 2 : folderDisplayPos + 1;
                                                                     }
-                                                                    setSavedViews(prev => prev.map(v =>
+                                                                    setSavedSearches(prev => prev.map(v =>
                                                                         v.id === draggedViewId ? { ...v, position: newPos } : v
                                                                     ));
                                                                 } catch (err) {
@@ -12582,7 +12559,7 @@
                                                     : selectedFolderId === '__library__'
                                                         ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
                                                         : selectedFolderId === '__views__'
-                                                            ? [FOLDER_ALL_BOOKS, ...savedViews]
+                                                            ? [FOLDER_ALL_BOOKS, ...savedSearches]
                                                             : getChildFolders(selectedFolderId);
                                                 const folderCount = childFolders.length;
                                                 const allBookIds = getFolderBookIds(selectedFolderId);
@@ -13176,7 +13153,7 @@
                                                     if (selectedFolderId === '__views__') {
                                                         const viewItems = [
                                                             { ...FOLDER_ALL_BOOKS },
-                                                            ...[...savedViews].sort((a, b) => a.position - b.position).map(sv => ({
+                                                            ...[...savedSearches].sort((a, b) => a.position - b.position).map(sv => ({
                                                                 id: `__view_${sv.id}__`,
                                                                 name: sv.name,
                                                                 virtual: true, icon: '🏷️'
@@ -13933,7 +13910,7 @@
                                                 if (selectedFolderId === '__views__') {
                                                     const viewItems = [
                                                         { ...FOLDER_ALL_BOOKS },
-                                                        ...[...savedViews].sort((a, b) => a.position - b.position).map(sv => ({
+                                                        ...[...savedSearches].sort((a, b) => a.position - b.position).map(sv => ({
                                                             id: `__view_${sv.id}__`,
                                                             name: sv.name,
                                                             virtual: true, icon: '🏷️',
@@ -14524,7 +14501,7 @@
                                         // v5.5.15-alpha.24 - Unified Tag Manager: single sorted table, no orphan section
                                         const allTags = Object.entries(tagRegistry).map(([tagId, data]) => ({
                                             tagId, label: data.label, count: getTagCount(tagId),
-                                            isPinned: savedViews.some(v => v.filters?.tags?.includes(tagId))
+                                            isPinned: savedSearches.some(v => v.filters?.tags?.includes(tagId))
                                         }));
                                         const sorted = [...allTags].sort((a, b) => {
                                             let cmp;
@@ -14619,7 +14596,7 @@
                                                     return updated;
                                                 });
                                                 setTagFilter(prev => prev.filter(t => !toDelete.has(t)));
-                                                setSavedViews(prev => prev.filter(v => !v.filters?.tags?.some(t => toDelete.has(t))));
+                                                setSavedSearches(prev => prev.filter(v => !v.filters?.tags?.some(t => toDelete.has(t))));
                                                 setSelectedTags(new Set());
                                             }
                                         };
@@ -14685,7 +14662,7 @@
                                                                 </td>
                                                                 <td className="py-1.5 w-7 text-center">
                                                                     {/* v6.10.0-alpha.21 - Pin indicator for tags with a dedicated single-tag view */}
-                                                                    {savedViews.some(v => v.filters?.tags?.length === 1 && v.filters.tags[0] === tagId && Object.keys(v.filters).length === 1) && (
+                                                                    {savedSearches.some(v => v.filters?.tags?.length === 1 && v.filters.tags[0] === tagId && Object.keys(v.filters).length === 1) && (
                                                                         <span className="text-xs" title="Saved as a view">📌</span>
                                                                     )}
                                                                 </td>
@@ -14793,7 +14770,7 @@
                                                                                     return updated;
                                                                                 });
                                                                                 setTagFilter(prev => prev.filter(t => t !== tagId));
-                                                                                setSavedViews(prev => prev.filter(v => !v.filters?.tags?.includes(tagId)));
+                                                                                setSavedSearches(prev => prev.filter(v => !v.filters?.tags?.includes(tagId)));
                                                                                 setSelectedTags(prev => { const next = new Set(prev); next.delete(tagId); return next; });
                                                                             }
                                                                         }}
@@ -15647,7 +15624,7 @@
                                     role="menuitem"
                                     onClick={() => {
                                         const viewId = getViewId(folderContextMenu.folderId);
-                                        setSavedViews(prev => prev.filter(v => v.id !== viewId));
+                                        setSavedSearches(prev => prev.filter(v => v.id !== viewId));
                                         if (selectedFolderId === folderContextMenu.folderId) {
                                             navigateToFolder('__all__');
                                         }
@@ -15684,7 +15661,7 @@
                                             });
                                             setTagFilter(prev => prev.filter(t => t !== tagId));
                                             // Cascading delete: remove saved views that reference this tag
-                                            setSavedViews(prev => prev.filter(v => !v.filters?.tags?.includes(tagId)));
+                                            setSavedSearches(prev => prev.filter(v => !v.filters?.tags?.includes(tagId)));
                                             if (selectedFolderId === `__view_${tagId}__`) {
                                                 navigateToFolder('__all__');
                                             }
@@ -16862,7 +16839,7 @@
                             if (!tag) return null;
                             const tagLabel = tag.label || tagId;
                             const bookCount = getTagCount(tagId);
-                            const isPinned = savedViews.some(v => v.filters?.tags?.includes(tagId));
+                            const isPinned = savedSearches.some(v => v.filters?.tags?.includes(tagId));
                             const tagBooks = books.filter(b => b.tags?.includes(tagId));
                             const ownedBooks = tagBooks.filter(b => !b.onWishlist).length;
                             const wishlistBooks = tagBooks.filter(b => b.onWishlist).length;
@@ -16876,7 +16853,7 @@
                                     ...prev,
                                     [tagId]: { ...prev[tagId], label: folderPropertiesEditedName.trim() }
                                 }));
-                                setSavedViews(prev => prev.map(v =>
+                                setSavedSearches(prev => prev.map(v =>
                                     v.id === tagId ? { ...v, name: folderPropertiesEditedName.trim(), description: folderPropertiesEditedDescription.trim() || undefined } : v
                                 ));
                                 setFolderPropertiesDialog(null);
