@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4133,7 +4133,7 @@
 
                 const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
                 const payload = {
-                    schemaVersion: "2.3",
+                    schemaVersion: "2.4",
                     isBackup: true,
                     books: {
                         fetchDate: libraryStatus.loadDate || new Date().toISOString(),
@@ -4151,6 +4151,7 @@
                             collapsed: folder.collapsed,
                             childFolderIds: folder.childFolderIds
                         })),
+                        bookLists: bookLists.map(bl => ({ id: bl.id, name: bl.name, bookIds: bl.bookIds || [], position: bl.position })), // v6.12.0 - Curated Book Lists (mobile consumes in Phase 8)
                         explorerSettings: {
                             folderSortSettings,
                             explorerView,
@@ -4244,7 +4245,7 @@
                     // v4.15.1.b: Only include collections section if we have real collections data
                     const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
                     const exportData = {
-                        schemaVersion: "2.3",
+                        schemaVersion: "2.4",
                         isBackup: true,
                         books: {
                             fetchDate: libraryStatus.loadDate || new Date().toISOString(),
@@ -4287,7 +4288,8 @@
                             },
                             exportDate: new Date().toISOString(),
                             tagRegistry, // v5.0.0-alpha.175 - Tag registry
-                            savedSearches, // v6.10.0-alpha.16 - Saved filter views
+                            savedSearches, // v6.10.0-alpha.16 - Saved searches (live filters)
+                            bookLists: bookLists.map(bl => ({ id: bl.id, name: bl.name, bookIds: bl.bookIds || [], position: bl.position })), // v6.12.0 - Curated Book Lists
                             hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
                             appVersion: ORGANIZER_VERSION
                         }
@@ -4344,6 +4346,7 @@
                     localStorage.removeItem(FILTERS_KEY); // v3.8.0.h - clear saved filters
                     localStorage.removeItem(EXPLORER_KEY); // v5.0.0-alpha.99 - clear Explorer view settings
                     localStorage.removeItem(FOLDERS_KEY); // v5.0.0-alpha.99 - clear folder organization
+                    localStorage.removeItem(BOOKLISTS_KEY); // v6.12.0 - clear Book Lists
 
                     // Reset all filters (v3.8.0.h, updated v3.8.0.k, v4.1.0.d)
                     setSearchTerm('');
@@ -4376,7 +4379,8 @@
                     setExplorerSort([{ column: 'dateAdded', direction: 'desc' }]);
                     setFolderSortSettings({}); // v5.0.0-alpha.100 - Clear per-folder sort settings
                     setTagRegistry({}); // v5.0.0-alpha.175.28 - Clear tag registry on reset
-                    setSavedSearches([]); // v6.10.0-alpha.16 - Clear saved views on reset
+                    setSavedSearches([]); // v6.10.0-alpha.16 - Clear saved searches on reset
+                    setBookLists([]); // v6.12.0 - Clear Book Lists on reset
                     setExplorerView('list');
 
                     console.log('✅ Cleared library - app reset to initial state');
@@ -4860,6 +4864,13 @@
                         }
                     }
                     setSavedSearches(restoredViews);
+
+                    // v6.12.0 - Restore Book Lists (legacy backups lack them → empty)
+                    const restoredBookLists = Array.isArray(orgToRestore.bookLists)
+                        ? orgToRestore.bookLists.map(bl => ({ id: bl.id, name: bl.name, bookIds: bl.bookIds || [], position: bl.position }))
+                        : [];
+                    setBookLists(restoredBookLists);
+                    localStorage.setItem(BOOKLISTS_KEY, JSON.stringify(restoredBookLists));
 
                     // v5.0.0-alpha.99 - Restore folders from backup (if present)
                     if (orgToRestore.folders && Array.isArray(orgToRestore.folders)) {
