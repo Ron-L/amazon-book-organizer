@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -11226,7 +11226,20 @@
                                 {/* v6.4.0 - Single scroll zone: Views + Folders + all contents */}
                                 <div className="flex-1 overflow-y-auto folder-scroll-container" style={{ contain: 'layout style paint' }}>
                                 <div className="p-2">
-                                    {/* v6.4.0 - VIEWS section header, v6.10.0-alpha.17 - Drop zone for filter-view drag */}
+                                    {/* v6.12.0 - All Books: standalone top item (dynamic, read-only) — outside the Searches collapsible */}
+                                    <div
+                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                        onClick={() => navigateToFolder('__all__')}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault();
+                                            setFolderContextMenu({ folderId: '__all__', x: e.clientX, y: e.clientY, source: 'left' });
+                                        }}
+                                        title="Every unique book in your library, organized or not. You can't move books out of here — use folders to arrange them.">
+                                        <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
+                                        <span className="flex-1 pointer-events-none font-semibold">{FOLDER_ALL_BOOKS.name}</span>
+                                        <span className="text-xs text-gray-500 pointer-events-none">({hasActiveFilters ? `${books.filter(b => !b.isDeleted && filterBookForExplorer(b)).length}/${books.filter(b => !b.isDeleted).length}` : books.filter(b => !b.isDeleted).length})</span>
+                                    </div>
+                                    {/* v6.12.0 - SEARCHES section header (was "Views"), v6.10.0-alpha.17 - Drop zone for filter-view drag */}
                                     <div
                                         className="flex items-center justify-between px-2 pt-1 pb-0.5 rounded transition-colors"
                                         style={sidebarFolderDragTarget?.type === 'filter-view-header' ? { background: 'rgba(59,130,246,0.12)' } : {}}
@@ -11262,32 +11275,19 @@
                                         <span
                                             className={`text-xs font-semibold uppercase tracking-wide cursor-pointer ${selectedFolderId === '__views__' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                                             onClick={() => navigateToFolder('__views__')}
-                                            title="Different ways to see the same books — not separate copies">
-                                            Views
+                                            title="Saved searches — live filters that re-run every time you open them">
+                                            Searches
                                         </span>
                                         <button
                                             onClick={() => setViewsSectionCollapsed(prev => !prev)}
                                             className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
-                                            title={viewsSectionCollapsed ? 'Expand views' : 'Collapse views'}
-                                            aria-label={viewsSectionCollapsed ? 'Expand views' : 'Collapse views'}>
+                                            title={viewsSectionCollapsed ? 'Expand searches' : 'Collapse searches'}
+                                            aria-label={viewsSectionCollapsed ? 'Expand searches' : 'Collapse searches'}>
                                             {viewsSectionCollapsed ? '▶' : '▼'}
                                         </button>
                                     </div>
                                     {!viewsSectionCollapsed && <>
-                                    {/* All Books (virtual, view-only) */}
-                                    <div
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__all__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
-                                        onClick={() => navigateToFolder('__all__')}
-                                        onContextMenu={(e) => {
-                                            e.preventDefault();
-                                            setFolderContextMenu({ folderId: '__all__', x: e.clientX, y: e.clientY, source: 'left' });
-                                        }}
-                                        title="Every unique book in your library, organized or not. You can't move books out of here — use folders to arrange them.">
-                                        <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
-                                        <span className="flex-1 pointer-events-none font-semibold">{FOLDER_ALL_BOOKS.name}</span>
-                                        <span className="text-xs text-gray-500 pointer-events-none">({hasActiveFilters ? `${books.filter(b => !b.isDeleted && filterBookForExplorer(b)).length}/${books.filter(b => !b.isDeleted).length}` : books.filter(b => !b.isDeleted).length})</span>
-                                    </div>
-                                    {/* v6.10.0-alpha.16 - Saved views render under VIEWS */}
+                                    {/* v6.12.0 - Saved searches render under SEARCHES */}
                                     {/* v6.11.0-alpha.1 - Filter views when hasActiveFilters (like folders) */}
                                     {(() => {
                                         const sortedViewList = [...savedSearches].sort((a, b) => a.position - b.position);
@@ -11434,7 +11434,7 @@
                                                         e.preventDefault();
                                                         setFolderContextMenu({ folderId: viewFolderId, x: e.clientX, y: e.clientY, source: 'left' });
                                                     }}
-                                                    title={sv.description || `${viewTagId ? 'Tag view' : 'View'}: ${viewLabel} (${hasActiveFilters ? `${bookCount} of ${totalViewBooks}` : bookCount} books)`}>
+                                                    title={sv.description || `Search: ${viewLabel} (${hasActiveFilters ? `${bookCount} of ${totalViewBooks}` : bookCount} books)`}>
                                                     <span className="pointer-events-none">
                                                         {viewTagId && Object.keys(sv.filters).length === 1 && sv.filters.tags?.length === 1
                                                             ? <TagIconSVG size={16} color="#d97706" />
@@ -11472,13 +11472,13 @@
                                                             onClick={async (e) => {
                                                                 e.stopPropagation();
                                                                 const viewId = getViewId(viewFolderId);
-                                                                if (await showConfirmDialog('Delete View', `Remove "${viewLabel}" from Views?`)) {
+                                                                if (await showConfirmDialog('Delete Search', `Remove "${viewLabel}" from Searches?`)) {
                                                                     setSavedSearches(prev => prev.filter(v => v.id !== viewId));
                                                                     if (selectedFolderId === viewFolderId) navigateToFolder('__all__');
                                                                 }
                                                             }}
                                                             className="text-gray-400 hover:text-red-500 p-0.5 rounded hover:bg-red-50"
-                                                            title="Delete view">
+                                                            title="Delete search">
                                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                                                         </button>
                                                     </div>
