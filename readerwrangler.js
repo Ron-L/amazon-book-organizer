@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.16";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.17";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4689,7 +4689,7 @@
                             ratingCount: item.reviewCount || '',
                             description: item.description || '',
                             topReviews: item.topReviews || [],
-                            binding: item.binding || 'Kindle eBook',
+                            binding: item.binding || (normalized.onWishlist ? undefined : 'Kindle eBook'), // v6.12.0 - don't claim "Kindle" for unknown-format wishlist books
                             coverUrl: item.coverUrl,
                             publicationDate: item.publicationDate || '',
                             hasEnrichedData: true,
@@ -4751,7 +4751,7 @@
                             ratingCount: amazonData?.customerReviewsSummary?.count?.displayString || '',
                             description: extractDescription(amazonData?.description),
                             topReviews: amazonData?.customerReviewsTop?.reviews || [],
-                            binding: amazonData?.bindingInformation?.binding?.displayString || 'Kindle eBook',
+                            binding: amazonData?.bindingInformation?.binding?.displayString || (normalized.onWishlist ? undefined : 'Kindle eBook'), // v6.12.0 - real format if known; never falsely "Kindle" for wishlist
                             coverUrl: coverUrl,
                             publicationDate: '', // Legacy format doesn't have publication date
                             hasEnrichedData: true,
