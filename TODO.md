@@ -194,6 +194,17 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Costs/complexity: relay worker must store/list multiple items per channel; merge logic in BOTH app and mobile; periodic compaction (fold deltas back into base = an occasional full upload) so deltas don't grow unbounded; the library fetcher must understand/compact deltas too.
    - OPTIONAL: 7s is bearable today. Revisit when libraries get large, or alongside the precompile/perf work.
 
+**8. 💬 Book detail dialog — add tooltips** - LOW/LOW (~1 hour) — added 2026-06-16
+   - The book detail dialog's fields/controls have no tooltips. Especially **Collections**: explain that collections come from Amazon and are set on a Kindle device (read-only here), mirroring the filter-bar Collections tooltip and File › Tag from Collections.
+   - Audit all dialog controls (edit fields, ownership toggle, price-goal chips, series dropdown, share, etc.) in the established tooltip voice. Pairs with the broader tooltip audits (Priority 4 #6d/#6e).
+
+**9. 📥 Metadata import (paste-list / CSV) + matching** - MEDIUM/HIGH — added 2026-06-16
+   - Full design: [docs/design/Metadata-Import.md](docs/design/Metadata-Import.md)
+   - Tier 1: paste an ordered title list → auto-number by line → set series position. Tier 2: CSV (Title/ASIN, Series, SeriesNum, Tags, MyRating, ReadStatus, Note) → match → apply.
+   - Match by title (normalized) or ASIN, with a review step (matched/ambiguous/unmatched). Unmatched = a "missing books" report the user copies and adds via the wishlist bookmarklet (app can't auto-add — wrong domain).
+   - Tier 2 is the engine for Goodreads/StoryGraph import (Priority 11 third-party integrations).
+   - NOTE: the no-matching common case already shipped — the "Number in reading order" wizard (v6.12.0).
+
 ---
 
 ### 🚀 Priority 7: Post-Launch Enhancements
