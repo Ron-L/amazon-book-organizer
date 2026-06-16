@@ -96,6 +96,15 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Pairs with 6f — together they prevent and recover from the shrink-to-demo trap.
    - Related: Priority 6 "Relay Disconnect / Reset" (credentials reset is a separate gap).
 
+   **6h. Pin ALL CDN dependencies to exact versions** - LOW/LOW (~1 hour) — added 2026-06-16
+   - Caused a PROD OUTAGE 2026-06-16: `@babel/standalone` was unpinned; unpkg's latest flipped to Babel 8.0.0, whose react preset defaults to the automatic JSX runtime (emits `import {jsx} ...`) → "Cannot use import statement outside a module" → app wouldn't load. Hotfixed in 6.11.10 by pinning Babel to `@7.29.7`.
+   - Remaining unpinned/floating CDN deps in readerwrangler.html:
+     - React / ReactDOM: `@18` (floats within 18.x — pin to an exact 18.x)
+     - Tailwind: `https://cdn.tailwindcss.com` (evergreen Play CDN, currently v3; can't be version-pinned the normal way — Tailwind explicitly says Play CDN is dev-only). Real fix = precompile CSS (see Priority 6 "Improve Load Time Experience").
+     - qrcodejs: already pinned `@1.0.0` ✓
+   - **The durable fix is the precompile build step** (Priority 6) — it removes the in-browser Babel AND Tailwind CDN entirely. Pinning is the interim safety net.
+   - Audit other HTML entry points too (index.html, reset.html, etc.) for unpinned CDN tags.
+
    See post-mortems/ for the full thread on each. Automated test suite (also a recurring recommendation) is parked in Priority 6 — too large for pre-launch.
 
 ---
