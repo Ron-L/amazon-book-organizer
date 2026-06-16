@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.20";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -196,6 +196,41 @@
                 dialog.appendChild(btnRow);
                 overlay.appendChild(dialog);
                 document.body.appendChild(overlay);
+            });
+        }
+
+        // v6.12.0 - Promise-based single-line input dialog. Resolves to the entered string, or null on cancel.
+        function showInputDialog(title, message, defaultValue = '', placeholder = '', confirmText = 'OK', cancelText = 'Cancel') {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;`;
+                const dialog = document.createElement('div');
+                dialog.style.cssText = `background: var(--bg-surface); border-radius: 8px; padding: 24px; max-width: 500px; width: 90%; box-shadow: var(--shadow-modal); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;`;
+                const titleEl = document.createElement('h2');
+                titleEl.textContent = title;
+                titleEl.style.cssText = `margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: var(--text-primary);`;
+                const messageEl = document.createElement('div');
+                messageEl.style.cssText = `margin-bottom: 16px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); white-space: pre-line;`;
+                messageEl.textContent = message;
+                const input = document.createElement('input');
+                input.type = 'text'; input.value = defaultValue; input.placeholder = placeholder;
+                input.style.cssText = `width: 100%; box-sizing: border-box; margin-bottom: 24px; padding: 8px 10px; font-size: 14px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--bg-page); color: var(--text-primary);`;
+                const btnRow = document.createElement('div');
+                btnRow.style.cssText = `display: flex; gap: 8px; justify-content: flex-end;`;
+                const close = (val) => { document.body.removeChild(overlay); resolve(val); };
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = cancelText;
+                cancelBtn.style.cssText = `background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;`;
+                cancelBtn.onclick = () => close(null);
+                const confirmBtn = document.createElement('button');
+                confirmBtn.textContent = confirmText;
+                confirmBtn.style.cssText = `background: var(--bg-accent); color: var(--text-on-accent); border: none; border-radius: 4px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer;`;
+                confirmBtn.onclick = () => close(input.value);
+                input.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); close(input.value); } else if (e.key === 'Escape') { e.preventDefault(); close(null); } };
+                btnRow.appendChild(cancelBtn); btnRow.appendChild(confirmBtn);
+                dialog.appendChild(titleEl); dialog.appendChild(messageEl); dialog.appendChild(input); dialog.appendChild(btnRow);
+                overlay.appendChild(dialog); document.body.appendChild(overlay);
+                setTimeout(() => { input.focus(); input.select(); }, 50);
             });
         }
 
@@ -2012,6 +2047,34 @@
                     return { ...bl, bookIds: remaining };
                 }));
                 recordAction({ type: 'REORDER_BOOKS_BOOKLIST', bookListId, bookIds: bookIdsToMove, fromIndices, toIndex: targetIndex });
+            };
+
+            // v6.12.0 - Sequentially number a folder/list's books (1,2,3…) by their stored manual order;
+            // optionally set a series name. Undoable. Skips trashed books.
+            const numberBooksInOrder = (containerId, seriesName) => {
+                let orderedIds = [];
+                if (isBookListFolder(containerId)) {
+                    orderedIds = bookLists.find(b => b.id === getBookListId(containerId))?.bookIds || [];
+                } else {
+                    orderedIds = folders.find(f => f.id === containerId)?.bookIds || [];
+                }
+                orderedIds = orderedIds.filter(id => { const bk = bookMap.get(id); return bk && !bk.isDeleted; });
+                if (orderedIds.length === 0) { showToast('No books to number'); return; }
+                const name = (seriesName || '').trim();
+                const prev = orderedIds.map(id => { const bk = bookMap.get(id); return { id, series: bk.series, seriesPosition: bk.seriesPosition }; });
+                setBooks(prevBooks => {
+                    const posMap = new Map(orderedIds.map((id, i) => [id, i + 1]));
+                    const updated = prevBooks.map(b => {
+                        if (!posMap.has(b.id)) return b;
+                        const nb = { ...b, seriesPosition: posMap.get(b.id) };
+                        if (name) nb.series = name;
+                        return nb;
+                    });
+                    saveBooksToIndexedDB(updated);
+                    return updated;
+                });
+                recordAction({ type: 'SEQUENCE_SERIES', prev, seriesName: name });
+                showToast(`Numbered ${orderedIds.length} book${orderedIds.length !== 1 ? 's' : ''} in order${name ? ` (series "${name}")` : ''}`);
             };
 
             // v5.5.15-alpha.31 - Reorder books within a tag view's bookOrder
@@ -5350,6 +5413,15 @@
                             ? { ...bl, bookIds: [...(bl.bookIds || []), ...action.bookIds.filter(id => !(bl.bookIds || []).includes(id))] }
                             : bl));
                         break;
+                    // v6.12.0 - Undo sequential numbering: restore each book's prior series & position
+                    case 'SEQUENCE_SERIES':
+                        setBooks(prevBooks => {
+                            const m = new Map(action.prev.map(p => [p.id, p]));
+                            const updated = prevBooks.map(b => m.has(b.id) ? { ...b, series: m.get(b.id).series, seriesPosition: m.get(b.id).seriesPosition } : b);
+                            saveBooksToIndexedDB(updated);
+                            return updated;
+                        });
+                        break;
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Restore each book's previous hidden state
                         setBooks(prevBooks => {
@@ -5835,6 +5907,20 @@
                         setBookLists(prev => prev.map(bl => bl.id === action.bookListId
                             ? { ...bl, bookIds: (bl.bookIds || []).filter(id => !action.bookIds.includes(id)) }
                             : bl));
+                        break;
+                    // v6.12.0 - Redo sequential numbering: re-apply 1..N + series name
+                    case 'SEQUENCE_SERIES':
+                        setBooks(prevBooks => {
+                            const posMap = new Map(action.prev.map((p, i) => [p.id, i + 1]));
+                            const updated = prevBooks.map(b => {
+                                if (!posMap.has(b.id)) return b;
+                                const nb = { ...b, seriesPosition: posMap.get(b.id) };
+                                if (action.seriesName) nb.series = action.seriesName;
+                                return nb;
+                            });
+                            saveBooksToIndexedDB(updated);
+                            return updated;
+                        });
                         break;
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Re-apply the hide/unhide action
@@ -15174,6 +15260,19 @@
                                             <span>✏️</span>
                                             <span>Rename</span>
                                         </div>
+                                        <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                            role="menuitem"
+                                            onClick={async () => {
+                                                const target = folderContextMenu.folderId;
+                                                setFolderContextMenu(null);
+                                                const name = await showInputDialog('Number books in reading order', "These books will be numbered 1, 2, 3… in their current (manual) order, setting each book's series position.\n\nOptionally give them a series name (blank = none):", '', 'Series name (optional)', 'Apply', 'Cancel');
+                                                if (name === null) return;
+                                                numberBooksInOrder(target, name);
+                                            }}>
+                                            <span>🔢</span>
+                                            <span>Number in reading order</span>
+                                        </div>
                                         <div className="border-t border-gray-200 my-1" role="separator"></div>
                                         <div
                                             className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
@@ -15482,6 +15581,23 @@
                                         <span>✏️</span>
                                         <span>Rename</span>
                                         <span className="ml-auto text-gray-400 text-xs">F2</span>
+                                    </div>
+                                )}
+
+                                {/* v6.12.0 - Number books in reading order */}
+                                {!isSpecialFolder && (
+                                    <div
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        role="menuitem"
+                                        onClick={async () => {
+                                            const target = folderContextMenu.folderId;
+                                            setFolderContextMenu(null);
+                                            const name = await showInputDialog('Number books in reading order', "These books will be numbered 1, 2, 3… in their current (manual) order, setting each book's series position.\n\nOptionally give them a series name (blank = none):", '', 'Series name (optional)', 'Apply', 'Cancel');
+                                            if (name === null) return;
+                                            numberBooksInOrder(target, name);
+                                        }}>
+                                        <span>🔢</span>
+                                        <span>Number in reading order</span>
                                     </div>
                                 )}
 
