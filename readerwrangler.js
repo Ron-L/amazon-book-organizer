@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4901,12 +4901,14 @@
                     }
                     setSavedSearches(restoredViews);
 
-                    // v6.12.0 - Restore Book Lists (legacy backups lack them → empty)
-                    const restoredBookLists = Array.isArray(orgToRestore.bookLists)
-                        ? orgToRestore.bookLists.map(bl => ({ id: bl.id, name: bl.name, bookIds: bl.bookIds || [], position: bl.position }))
-                        : [];
-                    setBookLists(restoredBookLists);
-                    localStorage.setItem(BOOKLISTS_KEY, JSON.stringify(restoredBookLists));
+                    // v6.12.0 - Restore Book Lists ONLY if the source actually carries them (mirrors folders).
+                    // A relay library or pre-6.12 backup has no bookLists — in that case leave the current
+                    // lists intact rather than wiping them (fix: import-from-relay was erasing local lists).
+                    if (Array.isArray(orgToRestore.bookLists)) {
+                        const restoredBookLists = orgToRestore.bookLists.map(bl => ({ id: bl.id, name: bl.name, bookIds: bl.bookIds || [], position: bl.position }));
+                        setBookLists(restoredBookLists);
+                        localStorage.setItem(BOOKLISTS_KEY, JSON.stringify(restoredBookLists));
+                    }
 
                     // v5.0.0-alpha.99 - Restore folders from backup (if present)
                     if (orgToRestore.folders && Array.isArray(orgToRestore.folders)) {
