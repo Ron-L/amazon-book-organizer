@@ -461,6 +461,20 @@ async function addToWishlist() {
         console.log(`   Price found: ${currentPrice || 'NONE'}`);
         console.log(`   Description found: ${description ? 'YES (' + description.substring(0, 50) + '...)' : 'NONE'}`);
 
+        // v6.12.0 - Extract format/binding (Paperback, Hardcover, Kindle Edition, ...) so wishlist
+        // adds carry the real format instead of being defaulted to "Kindle" by the app.
+        let binding = null;
+        const subtitleEl = doc.querySelector('#productSubtitle');
+        if (subtitleEl) {
+            // e.g. "Paperback – Illustrated, January 1, 2020" / "Hardcover" / "Kindle Edition"
+            binding = subtitleEl.textContent.trim().split(/\s+[–—-]\s+/)[0].trim() || null;
+        }
+        if (!binding) {
+            const selectedSwatch = doc.querySelector('#tmmSwatches .a-button-selected .a-button-text, #tmmSwatches .swatchElement.selected .a-button-text');
+            if (selectedSwatch) binding = selectedSwatch.textContent.trim().split('\n')[0].trim() || null;
+        }
+        console.log(`   Binding/format found: ${binding || 'NONE'}`);
+
         return {
             asin,
             onWishlist: true,
@@ -474,6 +488,7 @@ async function addToWishlist() {
             series,
             seriesPosition,
             description,
+            ...(binding && { binding }), // v6.12.0 - real format, so the app doesn't default to "Kindle"
             // Include price fields if price was found
             ...(currentPrice && { currentPrice, priceAsOf: getTodayDate() })
         };
