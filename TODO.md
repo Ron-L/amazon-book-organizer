@@ -109,12 +109,17 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
 
 ### 🚀 Priority 6: Post-Launch Internal Improvements
 
-**1. 🔔 Credential Mismatch Detection** - LOW/LOW (1-2 hours)
-   - Restoring a backup with different relay credentials leaves the bookmarklet out of sync (it still has the old channelId/passphrase in amazon.com localStorage)
-   - The app and bookmarklet can't communicate cross-domain to detect this
-   - **Fix**: After backup restore, compare relay credentials before/after. If changed, show toast: "Your relay credentials changed. Reinstall the bookmarklet from File → Relay Setup."
-   - The app knows credentials changed; it can't fix the bookmarklet but can tell the user
-   - Future: bookmarklet could ping `/status/{channelId}` before fetching and warn on 403/404
+**1. 🔔 Relay Credential Mismatch — safe restore** - MEDIUM/LOW (2-3 hours) — refined 2026-06-15
+   - **Problem:** a backup includes relay credentials (channelId + passphrase). Restore silently OVERWRITES the app's current creds. If the app was paired to a different channel than the backup, the installed bookmarklet no longer matches the app → fetches go to one channel, app reads another (books appear to vanish). Real scare 2026-06-15 (compounded by the demo whitelist).
+   - **Why creds are in the backup (keep them):** device migration — restoring on a new computer/browser adopts the channel so the EXISTING bookmarklet keeps working without re-pairing. This is the legitimate use case, so don't remove creds from backups.
+   - **Why cross-detection can't work:** app and bookmarklet are different origins (can't read each other's localStorage), and relay channels are isolated (a mismatched pair can't see each other through the relay). The ONLY reliable detection point is the restore operation, where the app momentarily holds both current creds and the backup's creds.
+   - **Fix — compare on restore:**
+     - App has no creds (fresh / migration) → adopt backup's silently (bookmarklet already matches)
+     - Backup creds == current → adopt silently (no-op)
+     - Backup creds ≠ current → **PROMPT: Keep current** (default, recommended — matches your installed bookmarklet) vs **Use backup's**
+   - **"Use backup's" branch:** adopt the backup's creds AND render the matching bookmarklet inline (reuse the Relay Setup generator). Wording: *"Delete the existing bookmark and then drag this bookmarklet to your bar."* — delete FIRST (avoids two-bookmarklet confusion); say "existing" not "old" (a restore can go newer→older, making "old" ambiguous). The existing bookmarklet can be right-clicked → delete while the dialog is open (confirmed 2026-06-15).
+   - **Note:** channel ID only decides which relay bucket app+bookmarklet share — not the book set. Keeping current creds never costs books; a re-fetch tops up recent books on the current channel.
+   - Future: bookmarklet could ping `/status/{channelId}` before fetching and warn on 403/404 (separate revoked-channel case, not mismatch).
 
 **2. 🔌 Relay Disconnect / Reset** - LOW/LOW (1 hour)
    - Relay Setup has no way to intentionally disconnect or reset credentials
