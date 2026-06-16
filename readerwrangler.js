@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.13";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1730,6 +1730,12 @@
                 setFolders(prev => prev.map(f => ({
                     ...f,
                     bookIds: (f.bookIds || []).filter(id => !bookIdsSet.has(id))
+                })));
+
+                // v6.12.0 - Also purge from Book Lists (supplemental membership; trash kept the id, permanent delete clears it)
+                setBookLists(prev => prev.map(bl => ({
+                    ...bl,
+                    bookIds: (bl.bookIds || []).filter(id => !bookIdsSet.has(id))
                 })));
 
                 setExplorerSelectedItems(new Set());
@@ -11613,7 +11619,7 @@
                                             ? <div className="px-2 py-1.5 text-xs text-gray-400 italic">No book lists yet</div>
                                             : [...bookLists].sort((a, b) => a.position - b.position).map(bl => {
                                                 const blFolderId = `__booklist_${bl.id}__`;
-                                                const blCount = bl.bookIds?.length || 0;
+                                                const blCount = (bl.bookIds || []).filter(id => { const bk = bookMap.get(id); return bk && !bk.isDeleted; }).length; // v6.12.0 - exclude trashed books, matching the list view
                                                 return (
                                                     <div
                                                         key={blFolderId}
