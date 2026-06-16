@@ -181,6 +181,19 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Recapture the "after" screenshot once the Book Lists/Searches redesign has shipped
    - Files: index.html before/after slider images
 
+**6. 🏷️ Wishlist fetcher — capture real book format (binding)** - LOW/MEDIUM (~2 hours) — added 2026-06-16
+   - `amazon-wishlist-fetcher.js` extracts NO binding (a series card doesn't expose format), so non-Kindle wishlist adds arrive with no format.
+   - App side already fixed in v6.12.0: suppress the false `'Kindle eBook'` default for wishlist books (shows the real format if enrichment provides it, else nothing) — so paperbacks no longer *claim* Kindle.
+   - Remaining enhancement: in the fetcher, fetch the product page for the added ASIN and extract `bindingInformation` (Paperback/Hardcover/Kindle) so the format is correct immediately, not only after enrichment. Cost: one extra product-page request per wishlist add.
+   - Also: existing mis-bound books keep `'Kindle eBook'` until re-enriched — a one-time re-fetch corrects them.
+
+**7. ⚡ (OPTIONAL) Relay delta-append for cheap incremental sync** - MEDIUM/HIGH — added 2026-06-16
+   - Today any relay-library change (e.g. the add-to-wishlist bookmarklet) does a full client-side read-modify-write: download + decrypt the ENTIRE encrypted library, append, re-encrypt + upload. ~7s for a ~2,600-book library; cost ∝ library size per change.
+   - Server-side append is IMPOSSIBLE by design: the relay is end-to-end encrypted (`relay-crypto.js`); the Cloudflare worker only sees ciphertext and can't decrypt to append.
+   - Delta model (E2E-compatible): upload each change as its own small encrypted item; clients (app + mobile) read base + deltas and merge by ASIN (last-write-wins). Cost ∝ 1 book per change.
+   - Costs/complexity: relay worker must store/list multiple items per channel; merge logic in BOTH app and mobile; periodic compaction (fold deltas back into base = an occasional full upload) so deltas don't grow unbounded; the library fetcher must understand/compact deltas too.
+   - OPTIONAL: 7s is bearable today. Revisit when libraries get large, or alongside the precompile/perf work.
+
 ---
 
 ### 🚀 Priority 7: Post-Launch Enhancements
