@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.11.10] - 2026-06-16
+
+### Fixed
+- **Production outage from Babel 8 (CDN dependency)** — The app loads `@babel/standalone` unpinned from unpkg, which began serving the newly-released Babel 8.0.0. Babel 8's React preset defaults to the automatic JSX runtime, emitting `import {jsx} from "react/jsx-runtime"` into the transformed output — an ES import in a non-module script, which threw "Cannot use import statement outside a module" and prevented the app from loading. Pinned Babel to `@7.29.7` (classic JSX runtime). No application code changed.
+
 ## [6.11.9] - 2026-06-08
 
 ### Added
