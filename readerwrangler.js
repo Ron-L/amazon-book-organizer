@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4886,20 +4886,23 @@
                 if (orgToRestore) {
                     setBlankImageBooks(new Set(orgToRestore.blankImageBooks || []));
                     setTagRegistry(orgToRestore.tagRegistry || {}); // v5.0.0-alpha.175.17
-                    // v6.12.0 - Restore saved searches. Legacy saved-views and pinnedTagFolders from
-                    // old backups are intentionally dropped (not migrated).
-                    let restoredViews = (orgToRestore.savedSearches || []).map(v => ({...v}));
-                    const restoredFolderList = orgToRestore.folders || [];
-                    if (restoredViews.length > 0 && restoredFolderList.length > 0) {
-                        const rootCount = restoredFolderList.filter(f => f.parentId === null && f.id !== '__inbox__').length;
-                        const maxFolderDisplayPos = rootCount > 0 ? (rootCount - 1) * 2 : -1;
-                        const maxViewPos = Math.max(...restoredViews.map(v => v.position));
-                        if (maxViewPos <= maxFolderDisplayPos) {
-                            const offset = maxFolderDisplayPos + 1;
-                            restoredViews.forEach(v => { v.position += offset; });
+                    // v6.12.0 - Restore saved searches ONLY if the source carries them (mirrors folders/book lists).
+                    // A relay library or pre-6.12 backup has none → leave current searches intact rather than wiping.
+                    // Legacy saved-views and pinnedTagFolders are intentionally dropped (not migrated).
+                    if (Array.isArray(orgToRestore.savedSearches)) {
+                        let restoredViews = orgToRestore.savedSearches.map(v => ({...v}));
+                        const restoredFolderList = orgToRestore.folders || [];
+                        if (restoredViews.length > 0 && restoredFolderList.length > 0) {
+                            const rootCount = restoredFolderList.filter(f => f.parentId === null && f.id !== '__inbox__').length;
+                            const maxFolderDisplayPos = rootCount > 0 ? (rootCount - 1) * 2 : -1;
+                            const maxViewPos = Math.max(...restoredViews.map(v => v.position));
+                            if (maxViewPos <= maxFolderDisplayPos) {
+                                const offset = maxFolderDisplayPos + 1;
+                                restoredViews.forEach(v => { v.position += offset; });
+                            }
                         }
+                        setSavedSearches(restoredViews);
                     }
-                    setSavedSearches(restoredViews);
 
                     // v6.12.0 - Restore Book Lists ONLY if the source actually carries them (mirrors folders).
                     // A relay library or pre-6.12 backup has no bookLists — in that case leave the current
