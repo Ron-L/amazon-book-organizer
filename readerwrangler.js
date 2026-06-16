@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.14";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1032,6 +1032,7 @@
                 const toAdd = bookIds.filter(id => !existing.has(id));
                 if (toAdd.length === 0) return 0;
                 setBookLists(prev => prev.map(b => b.id === bookListId ? { ...b, bookIds: [...(b.bookIds || []), ...toAdd] } : b));
+                recordAction({ type: 'BOOKLIST_ADD', bookListId, bookIds: toAdd }); // v6.12.0 - undoable
                 return toAdd.length;
             };
 
@@ -3479,7 +3480,10 @@
                         // v6.12.0 - Book List: remove selected books from this list only (supplemental — never trashes the book)
                         if (isBookListFolder(selectedFolderId)) {
                             const blId = getBookListId(selectedFolderId);
+                            const blForUndo = bookLists.find(b => b.id === blId);
+                            const removedIds = (blForUndo?.bookIds || []).filter(id => bookIdsToDelete.includes(id));
                             setBookLists(prev => prev.map(bl => bl.id === blId ? { ...bl, bookIds: (bl.bookIds || []).filter(id => !bookIdsToDelete.includes(id)) } : bl));
+                            if (removedIds.length) recordAction({ type: 'BOOKLIST_REMOVE', bookListId: blId, bookIds: removedIds }); // v6.12.0 - undoable
                             setExplorerSelectedItems(new Set());
                             return;
                         }
@@ -5301,6 +5305,17 @@
                     return;
                 }
                 switch (action.type) {
+                    // v6.12.0 - Book List add/remove (undo = reverse)
+                    case 'BOOKLIST_ADD':
+                        setBookLists(prev => prev.map(bl => bl.id === action.bookListId
+                            ? { ...bl, bookIds: (bl.bookIds || []).filter(id => !action.bookIds.includes(id)) }
+                            : bl));
+                        break;
+                    case 'BOOKLIST_REMOVE':
+                        setBookLists(prev => prev.map(bl => bl.id === action.bookListId
+                            ? { ...bl, bookIds: [...(bl.bookIds || []), ...action.bookIds.filter(id => !(bl.bookIds || []).includes(id))] }
+                            : bl));
+                        break;
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Restore each book's previous hidden state
                         setBooks(prevBooks => {
@@ -5765,6 +5780,17 @@
                     return;
                 }
                 switch (action.type) {
+                    // v6.12.0 - Book List add/remove (redo = re-apply)
+                    case 'BOOKLIST_ADD':
+                        setBookLists(prev => prev.map(bl => bl.id === action.bookListId
+                            ? { ...bl, bookIds: [...(bl.bookIds || []), ...action.bookIds.filter(id => !(bl.bookIds || []).includes(id))] }
+                            : bl));
+                        break;
+                    case 'BOOKLIST_REMOVE':
+                        setBookLists(prev => prev.map(bl => bl.id === action.bookListId
+                            ? { ...bl, bookIds: (bl.bookIds || []).filter(id => !action.bookIds.includes(id)) }
+                            : bl));
+                        break;
                     case 'TOGGLE_HIDE':
                         // v4.8.0 - Re-apply the hide/unhide action
                         setBooks(prevBooks => {
@@ -16943,7 +16969,9 @@
                                                         const blId = getBookListId(selectedFolderId);
                                                         const ids = getSelectedBookIds();
                                                         const bl = bookLists.find(b => b.id === blId);
+                                                        const removedIds = (bl?.bookIds || []).filter(id => ids.includes(id));
                                                         setBookLists(prev => prev.map(b => b.id === blId ? { ...b, bookIds: (b.bookIds || []).filter(id => !ids.includes(id)) } : b));
+                                                        if (removedIds.length) recordAction({ type: 'BOOKLIST_REMOVE', bookListId: blId, bookIds: removedIds }); // v6.12.0 - undoable
                                                         const w = ids.length === 1 ? 'book' : 'books';
                                                         showToast(`Removed ${ids.length} ${w} from "${bl?.name || 'list'}"`);
                                                         setExplorerSelectedItems(new Set());
