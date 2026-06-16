@@ -125,7 +125,10 @@
     <!-- Libraries (moved from head to allow splash to paint first) -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- v6.12.0 - PINNED to Babel 7: Babel 8's react preset defaults to the automatic JSX runtime,
+         which emits `import {jsx} from "react/jsx-runtime"` and breaks the non-module text/babel script
+         ("Cannot use import statement outside a module"). Unpinned unpkg started serving 8.0.0. -->
+    <script src="https://unpkg.com/@babel/standalone@7.29.7/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Shared modules (pure JS, no Babel needed) -->
