@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.15";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.16";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1988,6 +1988,24 @@
                     toIndex: targetIndex
                 });
                 console.log(`🔄 Reordered ${bookIdsToMove.length} book(s) in folder`);
+            };
+
+            // v6.12.0 - Reorder books within a Book List (manual order); mirrors reorderBooksInFolder
+            const reorderBooksInBookList = (bookListId, bookIdsToMove, targetIndex) => {
+                const cur = bookLists.find(bl => bl.id === bookListId);
+                const fromIndices = bookIdsToMove.map(id => (cur?.bookIds || []).indexOf(id));
+                setBookLists(prev => prev.map(bl => {
+                    if (bl.id !== bookListId) return bl;
+                    const bookIds = [...(bl.bookIds || [])];
+                    const moveSet = new Set(bookIdsToMove);
+                    const remaining = bookIds.filter(id => !moveSet.has(id));
+                    const removedBefore = bookIds.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
+                    const adjustedIndex = targetIndex - removedBefore;
+                    const orderedBooksToMove = bookIdsToMove.filter(id => bookIds.includes(id));
+                    remaining.splice(adjustedIndex, 0, ...orderedBooksToMove);
+                    return { ...bl, bookIds: remaining };
+                }));
+                recordAction({ type: 'REORDER_BOOKS_BOOKLIST', bookListId, bookIds: bookIdsToMove, fromIndices, toIndex: targetIndex });
             };
 
             // v5.5.15-alpha.31 - Reorder books within a tag view's bookOrder
@@ -5448,6 +5466,17 @@
                             return folder;
                         }));
                         break;
+                    // v6.12.0 - Undo Book List reorder: restore original positions
+                    case 'REORDER_BOOKS_BOOKLIST':
+                        setBookLists(prev => prev.map(bl => {
+                            if (bl.id !== action.bookListId) return bl;
+                            const newBookIds = [...(bl.bookIds || [])];
+                            action.bookIds.forEach(id => { const idx = newBookIds.indexOf(id); if (idx !== -1) newBookIds.splice(idx, 1); });
+                            const sortedPairs = action.bookIds.map((id, i) => ({ id, index: action.fromIndices[i] })).sort((a, b) => a.index - b.index);
+                            sortedPairs.forEach(({ id, index }) => { newBookIds.splice(index, 0, id); });
+                            return { ...bl, bookIds: newBookIds };
+                        }));
+                        break;
                     case 'DELETE_FOLDERS':
                         // Undo delete: restore folders with their bookIds and hierarchy
                         // v5.0.0-alpha.56 - Also remove orphaned books from destination and restore selection
@@ -5903,6 +5932,19 @@
                                 return { ...folder, bookIds: newBookIds };
                             }
                             return folder;
+                        }));
+                        break;
+                    // v6.12.0 - Redo Book List reorder
+                    case 'REORDER_BOOKS_BOOKLIST':
+                        setBookLists(prev => prev.map(bl => {
+                            if (bl.id !== action.bookListId) return bl;
+                            const newBookIds = [...(bl.bookIds || [])];
+                            const sortedIndices = [...action.fromIndices].sort((a, b) => b - a);
+                            sortedIndices.forEach(idx => { if (idx >= 0 && idx < newBookIds.length) newBookIds.splice(idx, 1); });
+                            let adjustedIndex = action.toIndex;
+                            action.fromIndices.forEach(origIdx => { if (origIdx < action.toIndex) adjustedIndex--; });
+                            newBookIds.splice(adjustedIndex, 0, ...action.bookIds);
+                            return { ...bl, bookIds: newBookIds };
                         }));
                         break;
                     case 'DELETE_FOLDERS':
@@ -13904,6 +13946,8 @@
                                                                         if (isViewFolder(selectedFolderId)) {
                                                                             const tagId = getViewTagId(selectedFolderId);
                                                                             if (tagId) reorderBooksInTagView(tagId, dragData.bookIds, index);
+                                                                        } else if (isBookListFolder(selectedFolderId)) {
+                                                                            reorderBooksInBookList(getBookListId(selectedFolderId), dragData.bookIds, index);
                                                                         } else {
                                                                             reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                         }
@@ -14520,6 +14564,8 @@
                                                                     if (isViewFolder(selectedFolderId)) {
                                                                         const tagId = getViewTagId(selectedFolderId);
                                                                         if (tagId) reorderBooksInTagView(tagId, dragData.bookIds, index);
+                                                                    } else if (isBookListFolder(selectedFolderId)) {
+                                                                        reorderBooksInBookList(getBookListId(selectedFolderId), dragData.bookIds, index);
                                                                     } else {
                                                                         reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
                                                                     }
