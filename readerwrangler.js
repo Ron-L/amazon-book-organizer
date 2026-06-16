@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.15";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1122,6 +1122,7 @@
                 if (folderId === '__trash__') return books.filter(b => b.isDeleted).sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0)).map(b => b.id);
                 if (folderId === '__library__') return []; // v5.0.0-alpha.63 - Folders section shows folders, not books
                 if (folderId === '__views__') return []; // v6.4.0 - Views section shows views, not books
+                if (folderId === '__booklists__') return []; // v6.12.0 - Book Lists section container (no books of its own)
                 // v6.10.0-alpha.27 - Saved view: return all books, filters are applied via filter bar state
                 if (isViewFolder(folderId)) {
                     return [...books.filter(b => !b.isDeleted).map(b => b.id)].reverse();
@@ -1437,10 +1438,19 @@
                 if (folderId === '__library__') return [FOLDER_LIBRARY];
                 if (folderId === '__views__') return [FOLDER_VIEWS]; // v6.4.0
                 if (folderId === '__trash__') return [FOLDER_TRASH]; // v6.0.0-alpha.50
+                if (folderId === '__booklists__') return [{ id: '__booklists__', name: 'Book Lists', virtual: true }]; // v6.12.0
                 // v6.10.0-alpha.16 - Saved view breadcrumb
                 if (isViewFolder(folderId)) {
                     const view = getView(folderId);
                     return [{ id: folderId, name: view?.name || getViewId(folderId), virtual: true }];
+                }
+                // v6.12.0 - Book List breadcrumb: "Book Lists › <name>"
+                if (isBookListFolder(folderId)) {
+                    const bl = getBookList(folderId);
+                    return [
+                        { id: '__booklists__', name: 'Book Lists', virtual: true },
+                        { id: folderId, name: bl?.name || getBookListId(folderId), virtual: true }
+                    ];
                 }
 
                 const path = [];
@@ -3247,7 +3257,7 @@
             // v6.8.1 - Validate selectedFolderId after load; reset to All Books if stale/deleted
             useEffect(() => {
                 if (syncStatus === 'loading') return;
-                const VIRTUAL_IDS = new Set(['__all__', '__library__', '__views__', '__trash__', '__inbox__']);
+                const VIRTUAL_IDS = new Set(['__all__', '__library__', '__views__', '__booklists__', '__trash__', '__inbox__']);
                 if (VIRTUAL_IDS.has(selectedFolderId)) return;
                 if (isViewFolder(selectedFolderId)) return; // v6.10.0-alpha.27 - View folders are valid
                 if (isBookListFolder(selectedFolderId)) { // v6.12.0 - Book List folders are valid if the list still exists
