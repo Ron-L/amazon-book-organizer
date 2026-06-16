@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.18";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.19";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -11710,6 +11710,7 @@
                                                         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === blFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                                         onClick={() => { if (editingBookListId !== bl.id) navigateToFolder(blFolderId); }}
                                                         onDoubleClick={() => { setEditingBookListId(bl.id); setEditingBookListName(bl.name); }}
+                                                        onContextMenu={(e) => { e.preventDefault(); setFolderContextMenu({ folderId: blFolderId, x: e.clientX, y: e.clientY, source: 'left' }); }}
                                                         onDragOver={(e) => {
                                                             const types = Array.from(e.dataTransfer.types);
                                                             if (types.includes('application/x-readerwrangler') || types.includes('application/x-rw-items')) {
@@ -15147,6 +15148,51 @@
 
                     {/* v5.0.0-alpha.133 - Folder context menu (left panel) */}
                     {folderContextMenu && (() => {
+                        // v6.12.0 - Book List context menu (Rename, Delete) — matches folder right-click
+                        if (isBookListFolder(folderContextMenu.folderId)) {
+                            const blId = getBookListId(folderContextMenu.folderId);
+                            const bl = bookLists.find(b => b.id === blId);
+                            const menuWidth = 180;
+                            const menuX = Math.max(10, Math.min(folderContextMenu.x, window.innerWidth - menuWidth - 10));
+                            const menuY = Math.max(10, Math.min(folderContextMenu.y, window.innerHeight - 100));
+                            return (
+                                <>
+                                    <div className="fixed inset-0 z-50" onClick={() => setFolderContextMenu(null)} />
+                                    <div
+                                        className="fixed bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[180px] z-50"
+                                        role="menu" aria-label="Book List options"
+                                        style={{ left: `${menuX}px`, top: `${menuY}px` }}
+                                        onClick={(e) => e.stopPropagation()}>
+                                        <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                            role="menuitem"
+                                            onClick={() => {
+                                                setEditingBookListId(blId);
+                                                setEditingBookListName(bl?.name || '');
+                                                setFolderContextMenu(null);
+                                            }}>
+                                            <span>✏️</span>
+                                            <span>Rename</span>
+                                        </div>
+                                        <div className="border-t border-gray-200 my-1" role="separator"></div>
+                                        <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
+                                            role="menuitem"
+                                            onClick={async () => {
+                                                setFolderContextMenu(null);
+                                                if (await showConfirmDialog('Delete Book List', `Delete the book list "${bl?.name || 'list'}"? The books themselves are not deleted.`)) {
+                                                    setBookLists(prev => prev.filter(x => x.id !== blId));
+                                                    if (selectedFolderId === folderContextMenu.folderId) navigateToFolder('__all__');
+                                                }
+                                            }}>
+                                            <span>🗑️</span>
+                                            <span>Delete</span>
+                                        </div>
+                                    </div>
+                                </>
+                            );
+                        }
+
                         // v6.0.0-alpha.50 - Trash Bin context menu (Empty Trash)
                         if (folderContextMenu.folderId === '__trash__') {
                             return (
