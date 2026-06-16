@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.17";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.18";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1326,7 +1326,13 @@
                             } else if (sort.column === 'author') {
                                 comparison = (a.author || '').localeCompare(b.author || '');
                             } else if (sort.column === 'series') {
+                                // v6.12.0 - Sort by series name, then by reading position within the series
                                 comparison = (a.series || '').localeCompare(b.series || '');
+                                if (comparison === 0) {
+                                    const posA = parseFloat(a.seriesPosition) || Infinity;
+                                    const posB = parseFloat(b.seriesPosition) || Infinity;
+                                    comparison = posA - posB;
+                                }
                             } else if (sort.column === 'seriesNum') {
                                 const posA = parseFloat(a.seriesPosition) || Infinity;
                                 const posB = parseFloat(b.seriesPosition) || Infinity;
