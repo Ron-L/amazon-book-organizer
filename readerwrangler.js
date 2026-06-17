@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.20";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.21";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2049,17 +2049,11 @@
                 recordAction({ type: 'REORDER_BOOKS_BOOKLIST', bookListId, bookIds: bookIdsToMove, fromIndices, toIndex: targetIndex });
             };
 
-            // v6.12.0 - Sequentially number a folder/list's books (1,2,3…) by their stored manual order;
+            // v6.12.0 - Sequentially number the given book ids (1,2,3…) in the order provided;
             // optionally set a series name. Undoable. Skips trashed books.
-            const numberBooksInOrder = (containerId, seriesName) => {
-                let orderedIds = [];
-                if (isBookListFolder(containerId)) {
-                    orderedIds = bookLists.find(b => b.id === getBookListId(containerId))?.bookIds || [];
-                } else {
-                    orderedIds = folders.find(f => f.id === containerId)?.bookIds || [];
-                }
-                orderedIds = orderedIds.filter(id => { const bk = bookMap.get(id); return bk && !bk.isDeleted; });
-                if (orderedIds.length === 0) { showToast('No books to number'); return; }
+            const applySequentialNumbering = (orderedIds, seriesName) => {
+                orderedIds = (orderedIds || []).filter(id => { const bk = bookMap.get(id); return bk && !bk.isDeleted; });
+                if (orderedIds.length === 0) return;
                 const name = (seriesName || '').trim();
                 const prev = orderedIds.map(id => { const bk = bookMap.get(id); return { id, series: bk.series, seriesPosition: bk.seriesPosition }; });
                 setBooks(prevBooks => {
@@ -2074,7 +2068,7 @@
                     return updated;
                 });
                 recordAction({ type: 'SEQUENCE_SERIES', prev, seriesName: name });
-                showToast(`Numbered ${orderedIds.length} book${orderedIds.length !== 1 ? 's' : ''} in order${name ? ` (series "${name}")` : ''}`);
+                showToast(`Numbered ${orderedIds.length} book${orderedIds.length !== 1 ? 's' : ''} in current order${name ? ` (series "${name}")` : ''}`);
             };
 
             // v5.5.15-alpha.31 - Reorder books within a tag view's bookOrder
@@ -15260,19 +15254,6 @@
                                             <span>✏️</span>
                                             <span>Rename</span>
                                         </div>
-                                        <div
-                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
-                                            role="menuitem"
-                                            onClick={async () => {
-                                                const target = folderContextMenu.folderId;
-                                                setFolderContextMenu(null);
-                                                const name = await showInputDialog('Number books in reading order', "These books will be numbered 1, 2, 3… in their current (manual) order, setting each book's series position.\n\nOptionally give them a series name (blank = none):", '', 'Series name (optional)', 'Apply', 'Cancel');
-                                                if (name === null) return;
-                                                numberBooksInOrder(target, name);
-                                            }}>
-                                            <span>🔢</span>
-                                            <span>Number in reading order</span>
-                                        </div>
                                         <div className="border-t border-gray-200 my-1" role="separator"></div>
                                         <div
                                             className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600"
@@ -15581,23 +15562,6 @@
                                         <span>✏️</span>
                                         <span>Rename</span>
                                         <span className="ml-auto text-gray-400 text-xs">F2</span>
-                                    </div>
-                                )}
-
-                                {/* v6.12.0 - Number books in reading order */}
-                                {!isSpecialFolder && (
-                                    <div
-                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
-                                        role="menuitem"
-                                        onClick={async () => {
-                                            const target = folderContextMenu.folderId;
-                                            setFolderContextMenu(null);
-                                            const name = await showInputDialog('Number books in reading order', "These books will be numbered 1, 2, 3… in their current (manual) order, setting each book's series position.\n\nOptionally give them a series name (blank = none):", '', 'Series name (optional)', 'Apply', 'Cancel');
-                                            if (name === null) return;
-                                            numberBooksInOrder(target, name);
-                                        }}>
-                                        <span>🔢</span>
-                                        <span>Number in reading order</span>
                                     </div>
                                 )}
 
@@ -17155,6 +17119,28 @@
 
                                             {/* Separator before Delete/Restore */}
                                             <div className="border-t border-gray-200 my-1" role="separator"></div>
+
+                                            {/* v6.12.0 - Number by current order (operates on selection, in display order) */}
+                                            <div className="border-t border-gray-200 my-1" role="separator"></div>
+                                            <div
+                                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
+                                                onClick={async () => {
+                                                    setExplorerBookContextMenu(null);
+                                                    setContextSubmenu(null);
+                                                    const orderedIds = explorerDisplayItems.filter(it => it.type === 'book' && explorerSelectedItems.has(it.book.id)).map(it => it.book.id);
+                                                    if (orderedIds.length < 2) {
+                                                        await showConfirmDialog('Number by current order', "Select 2 or more books first.\n\nThis numbers the selected books 1, 2, 3… in the order currently shown — it sets each book's series position, handy for putting an author's books in publication order. Tip: switch to Manual Order sort, drag them into the order you want, select them, then run this.", 'OK', 'Close');
+                                                        return;
+                                                    }
+                                                    const sortCol = explorerSort[0]?.column;
+                                                    const sortLabel = !sortCol || sortCol === 'custom' ? 'Manual' : sortCol;
+                                                    const name = await showInputDialog('Number by current order', `Number the ${orderedIds.length} selected books 1, 2, 3… in the order currently shown (sorted by ${sortLabel}), setting each book's series position.\n\nOptionally give them a series name (blank = none):`, '', 'Series name (optional)', 'Apply', 'Cancel');
+                                                    if (name === null) return;
+                                                    applySequentialNumbering(orderedIds, name);
+                                                }}>
+                                                <span>🔢</span>
+                                                <span>Number by current order…</span>
+                                            </div>
 
                                             {/* v6.0.0-alpha.49 - Delete / Trash actions */}
                                             {selectedFolderId === '__trash__' ? (
