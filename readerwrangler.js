@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.23";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.24";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3417,12 +3417,14 @@
                     }
 
                     // v4.8.0 - Ctrl+Z: Undo (v4.21.0.g - use ref to check modal state, consume keystroke)
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
                         e.preventDefault();
                         if (!modalBookRef.current) undo();
                     }
                     // v4.8.0 - Ctrl+Y or Ctrl+Shift+Z: Redo (v4.21.0.g - use ref to check modal state, consume keystroke)
-                    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                    // v6.12.0 - toLowerCase(): with Shift held, e.key is 'Z' (uppercase), so the old `e.key === 'z'`
+                    // never matched and Ctrl+Shift+Z redo was silently dead. Also handles Caps Lock.
+                    if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
                         e.preventDefault();
                         if (!modalBookRef.current) redo();
                     }
