@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.24";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.25";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4288,7 +4288,8 @@
                             bookIds: folder.bookIds || [],
                             parentId: folder.parentId,
                             collapsed: folder.collapsed,
-                            childFolderIds: folder.childFolderIds
+                            childFolderIds: folder.childFolderIds,
+                            sortIndex: folder.sortIndex  // v6.12.0 - root-level folder order (preserve through backup/restore)
                         })),
                         bookLists: bookLists.map(bl => ({ id: bl.id, name: bl.name, bookIds: bl.bookIds || [], position: bl.position })), // v6.12.0 - Curated Book Lists (mobile consumes in Phase 8)
                         explorerSettings: {
@@ -4401,7 +4402,8 @@
                                 bookIds: folder.bookIds || [],
                                 parentId: folder.parentId,
                                 collapsed: folder.collapsed,
-                                childFolderIds: folder.childFolderIds
+                                childFolderIds: folder.childFolderIds,
+                                sortIndex: folder.sortIndex  // v6.12.0 - root-level folder order (preserve through backup/restore)
                             })),
                             // v5.0.0-alpha.101 - Include Explorer view settings
                             explorerSettings: {
@@ -5026,7 +5028,8 @@
                             bookIds: folder.bookIds || [],
                             parentId: folder.parentId,
                             collapsed: folder.collapsed,
-                            childFolderIds: folder.childFolderIds
+                            childFolderIds: folder.childFolderIds,
+                            sortIndex: folder.sortIndex  // v6.12.0 - root-level folder order (was dropped → import-from-relay reverted folder order, bug #3)
                         }));
 
                         // Ensure Inbox exists (for backward compatibility with old backups)
