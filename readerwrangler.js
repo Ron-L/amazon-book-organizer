@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.21";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.22";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5379,6 +5379,7 @@
             }, [isEditingBook]);
 
             const recordAction = (action) => {
+                console.trace(`🟠 [DEBUG] recordAction("${action.type}") — this CLEARS the redo stack`); // v6.12.0 TEMP — remove after redo diagnosis
                 setUndoStack(prev => {
                     const newStack = [...prev, { ...action, timestamp: Date.now() }];
                     if (newStack.length > MAX_UNDO) newStack.shift();
@@ -6358,8 +6359,10 @@
             const redo = () => {
                 // Use ref to get current stack (avoids stale closure from keyboard handler)
                 const currentStack = redoStackRef.current;
+                console.log(`🔁 [DEBUG] redo() — redoStack=[${currentStack.map(a => a.type).join(', ')}] (len ${currentStack.length})`); // v6.12.0 TEMP
                 if (currentStack.length === 0) return;
                 const action = currentStack[currentStack.length - 1];
+                console.log(`🔁 [DEBUG] redo applying "${action.type}"`); // v6.12.0 TEMP
                 executeRedo(action);
                 setRedoStack(prev => prev.slice(0, -1));
                 setUndoStack(prev => [...prev, action]);
