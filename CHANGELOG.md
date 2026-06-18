@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+> Running notes for the next release (6.12.0). The Book Lists / Searches redesign is
+> still in progress; this section is finalized at release (with a `git log` sweep of the
+> branch as a backstop, and README/features.html synced per the release checklist).
+
+### Added
+- **Book Lists** *(in progress)* — A new sidebar category for curated reading lists: hand-picked sets of books kept separate from your folders. Adding or removing a book from a list never tags, moves, or deletes the book itself. The sidebar now separates **All Books**, **Searches** (saved live filters), **Book Lists**, and **Folders**. *(Still to come: a "save these results" control, mobile support, and polish.)*
+- **Ownership at a glance** — A new sortable **Ownership** column (hidden by default — turn it on via Show Columns) and an **Ownership** line in the book details dialog show whether a book is a Sample, Borrowed, Prime, Kindle Unlimited, and so on. Previously this was only visible on book covers or by filtering.
+
+### Fixed
+- **Hidden books reappearing** — Books you'd hidden could quietly un-hide after refreshing your library from Amazon. Hidden now stays hidden — including books hidden in earlier versions.
+- **Folder order resetting on import** — Your custom top-level folder order no longer reverts to alphabetical after importing from the relay or restoring a backup.
+- **Edited series names reverting** — Series names you changed or cleared (for example, removing a publisher's marketing "series" such as "CAEZIK Notables") no longer reappear the next time you import from Amazon.
+- **Series numbering being overwritten** — Numbers you apply with "Number by current order" are now preserved across imports.
+- **Sort by series** — Sorting by series now respects the chosen direction and orders books by their position within the series.
+- **Wishlist book format** — Wishlist items whose format Amazon doesn't report are no longer mislabeled as "Kindle eBook".
+- **Redo shortcut** — Ctrl+Shift+Z now redoes (previously only Ctrl+Y worked).
+- **"Show hidden" filter** — The toggle now actually filters hidden books (it had no effect before).
+
 ## [6.11.9] - 2026-06-08
 
 ### Added
