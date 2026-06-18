@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.33";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.34";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1138,12 +1138,10 @@
                 setSeriesFilter('');
             };
 
-            // v6.12.0 - The books currently displayed (current folder + active filters), for "Save these
-            // results" snapshots. This is "what you're seeing", not a behind-the-scenes library query.
-            const getDisplayedBookIds = () => getFolderBookIds(selectedFolderId)
-                .map(id => bookMap.get(id))
-                .filter(b => b && filterBookForExplorer(b))
-                .map(b => b.id);
+            // v6.12.0 - The books currently displayed, IN THEIR VISIBLE SORT ORDER, for "Save these
+            // results" snapshots. Uses explorerSortedBooks (the same sorted+filtered list the explorer
+            // renders) so a freshly-created Book List matches what you were just looking at — no jumping.
+            const getDisplayedBookIds = () => explorerSortedBooks.map(b => b.id);
 
             // v6.10.0-alpha.17 - Auto-name a view from its filters
             const autoNameView = (filters) => {
@@ -8476,7 +8474,7 @@
                                             title="Save these results as a Search (live filter) or a Book List (snapshot)"
                                             onClick={() => setSaveResultsMenuOpen(o => !o)}
                                             className="text-blue-700 hover:text-white hover:bg-blue-600 font-semibold text-sm whitespace-nowrap px-2 py-1 rounded border border-blue-400 bg-white">
-                                            💾 Save {count} result{count !== 1 ? 's' : ''} ▾
+                                            💾 {count} result{count !== 1 ? 's' : ''} · Save ▾
                                         </button>
                                         {saveResultsMenuOpen && (
                                             <>
@@ -8486,10 +8484,15 @@
                                                         className="block w-full text-left px-3 py-1.5 hover:bg-gray-100"
                                                         onClick={() => {
                                                             const filters = buildCurrentFilters();
-                                                            const maxPos = savedSearches.length > 0 ? Math.max(...savedSearches.map(v => v.position ?? 0)) : -1;
-                                                            const ok = createSavedView(filters, maxPos + 1);
-                                                            showToast(ok ? 'Saved as a Search' : 'A matching Search already exists');
                                                             setSaveResultsMenuOpen(false);
+                                                            if (Object.keys(filters).length === 0) { showToast('No filters to save'); return; }
+                                                            const key = JSON.stringify(filters, Object.keys(filters).sort());
+                                                            const dup = savedSearches.find(v => JSON.stringify(v.filters, Object.keys(v.filters || {}).sort()) === key);
+                                                            if (dup) { showToast(`Already saved as a Search: "${dup.name}"`); return; }
+                                                            const maxPos = savedSearches.length > 0 ? Math.max(...savedSearches.map(v => v.position ?? 0)) : -1;
+                                                            const newView = { id: `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name: autoNameView(filters), filters, position: maxPos + 1 };
+                                                            setSavedSearches(prev => [...prev, newView]);
+                                                            showToast(`Saved as a Search: "${newView.name}"`);
                                                         }}>
                                                         Save as a <b>Search</b> <span className="text-gray-400">(live filter)</span>
                                                     </button>
@@ -8498,10 +8501,16 @@
                                                         className={`block w-full text-left px-3 py-1.5 ${count === 0 ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}`}
                                                         onClick={async () => {
                                                             setSaveResultsMenuOpen(false);
+                                                            if (count === 0) return;
                                                             const suggested = autoNameView(buildCurrentFilters());
-                                                            const name = await showInputDialog('Save as a Book List', `Freeze these ${count} book${count !== 1 ? 's' : ''} into a new list.`, suggested === 'New View' ? '' : suggested, 'List name (optional)');
+                                                            const name = await showInputDialog('Save as a Book List', `Save these ${count} book${count !== 1 ? 's' : ''} as a Book List.`, suggested === 'New View' ? '' : suggested, 'List name (optional)');
                                                             if (name === null) return;
                                                             const trimmed = (name || '').trim() || 'Saved results';
+                                                            const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
+                                                            if (existing) {
+                                                                const proceed = await showConfirmDialog('Duplicate name', `A Book List named "${existing.name}" already exists. Create a second list with the same name?\n\n(To add these books to the existing list instead, cancel and use "Add to a Book List".)`);
+                                                                if (!proceed) return;
+                                                            }
                                                             const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
                                                             const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...displayedIds], position: maxPos + 1 };
                                                             setBookLists(prev => [...prev, newBL]);
