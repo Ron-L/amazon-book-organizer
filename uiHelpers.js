@@ -66,6 +66,14 @@ const normalizeBook = (book) => {
     normalized.onWishlist = normalized.onWishlist ?? false;
     normalized.ownershipType = normalized.ownershipType || 'purchased';
 
+    // v6.12.0 - F4 backfill: a hidden book is always user-hidden (no auto-hide path exists), so ensure
+    // it carries the userEdited.isHidden flag. Without this, a book hidden before isHidden became a
+    // tracked userEdited field has no flag, and the import merge silently un-hides it. normalizeBook
+    // runs both on load and when building previousBook for the merge, so this protects historical hides.
+    if (normalized.isHidden && !(normalized.userEdited && normalized.userEdited.isHidden)) {
+        normalized.userEdited = { ...(normalized.userEdited || {}), isHidden: true };
+    }
+
     return normalized;
 };
 
