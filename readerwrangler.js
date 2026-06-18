@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.31";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.32";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -22,8 +22,29 @@
             price: { label: 'Price', sortKey: 'price', defaultDir: 'asc', cssVar: '--col-price' },
             priceGoal: { label: 'Goal', sortKey: 'priceGoal', defaultDir: 'asc', cssVar: '--col-priceGoal' },
             delta: { label: 'Under', sortKey: 'delta', defaultDir: 'desc', cssVar: '--col-delta' },
+            ownership: { label: 'Ownership', sortKey: 'ownership', defaultDir: 'asc', cssVar: '--col-ownership' }, // v6.12.0
             amazon: { label: 'Amazon', sortKey: null, cssVar: '--col-amazon', textCenter: true, noResize: true }
         };
+
+        // v6.12.0 - Single source of truth for acquisition/ownership type (label + dialog badge color).
+        // Cover view keeps its own short labels (KU/COMIX) for the tiny tile badge.
+        const OWNERSHIP_META = {
+            purchased:       { label: 'Purchased',        badge: null },          // no badge (the common case)
+            sample:          { label: 'Sample',           badge: 'bg-amber-500' },
+            wishlist:        { label: 'Wishlist',         badge: 'bg-pink-600' },
+            borrowed:        { label: 'Borrowed',         badge: 'bg-teal-500' },
+            prime:           { label: 'Prime',            badge: 'bg-purple-500' },
+            kindleUnlimited: { label: 'Kindle Unlimited', badge: 'bg-purple-500' },
+            koll:            { label: 'KOLL',             badge: 'bg-purple-500' },
+            comixology:      { label: 'Comixology',       badge: 'bg-purple-500' },
+            insideAmazon:    { label: 'Insider',          badge: 'bg-purple-500' },
+            unknown:         { label: 'Unknown',          badge: 'bg-gray-500' }
+        };
+        const getOwnershipType = (book) =>
+            (book.onWishlist && (!book.ownershipType || book.ownershipType === 'wishlist'))
+                ? 'wishlist'
+                : (book.ownershipType || 'purchased');
+        const getOwnershipLabel = (book) => (OWNERSHIP_META[getOwnershipType(book)] || OWNERSHIP_META.unknown).label;
         document.title = "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
@@ -789,6 +810,7 @@
                 price: true,
                 priceGoal: true,
                 delta: true,
+                ownership: false, // v6.12.0 - Ownership/acquisition type column (hidden by default)
                 amazon: false // v5.0.0-alpha.167.6 - Amazon link column (hidden by default)
             });
             const [explorerColumnMenuOpen, setExplorerColumnMenuOpen] = useState(false); // v5.0.0-alpha.104 - Explorer column chooser menu
@@ -804,12 +826,13 @@
                 price: 80,
                 priceGoal: 80,
                 delta: 80,
+                ownership: 110, // v6.12.0 - Ownership column width
                 amazon: 70 // v5.0.0-alpha.167.6 - Amazon link column width
             });
             const [resizingColumn, setResizingColumn] = useState(null); // v5.0.0-alpha.109 - { columnId, startX, startWidth }
             const [columnOrder, setColumnOrder] = useState([ // v5.0.0-alpha.172 - Column display order (drag to reorder)
                 'title', 'author', 'series', 'seriesNum', 'rating', 'myRating',
-                'dateAdded', 'price', 'priceGoal', 'delta', 'amazon'
+                'dateAdded', 'price', 'priceGoal', 'delta', 'ownership', 'amazon'
             ]);
             const [draggingColumn, setDraggingColumn] = useState(null); // v5.0.0-alpha.172 - Column header being dragged
             const [headerDropTarget, setHeaderDropTarget] = useState(null); // v5.0.0-alpha.172 - { column, side: 'left'|'right' }
@@ -982,6 +1005,7 @@
                     const delta = book.priceTrigger - book.currentPrice;
                     return delta >= 0 ? `$${delta.toFixed(2)} under` : `$${Math.abs(delta).toFixed(2)} over`;
                 }
+                if (col === 'ownership') return getOwnershipLabel(book); // v6.12.0
                 return '';
             };
 
@@ -1392,6 +1416,8 @@
                                 const deltaA = (a.priceTrigger != null && a.currentPrice != null) ? (a.priceTrigger - a.currentPrice) : -Infinity;
                                 const deltaB = (b.priceTrigger != null && b.currentPrice != null) ? (b.priceTrigger - b.currentPrice) : -Infinity;
                                 comparison = deltaA - deltaB;
+                            } else if (sort.column === 'ownership') {
+                                comparison = getOwnershipLabel(a).localeCompare(getOwnershipLabel(b));
                             }
                             if (comparison !== 0) return dir * comparison;
                         }
@@ -2754,7 +2780,13 @@
                                 );
                                 setColumnWidths(sanitizedWidths);
                             }
-                            if (explorerData.columnOrder) setColumnOrder(explorerData.columnOrder); // v5.0.0-alpha.172
+                            if (explorerData.columnOrder) {
+                                // v6.12.0 - Reconcile: append any columns added since this order was saved
+                                // (e.g. 'ownership') so they render instead of being silently dropped.
+                                const savedOrder = explorerData.columnOrder.filter(k => COLUMN_CONFIG[k]);
+                                const missing = Object.keys(COLUMN_CONFIG).filter(k => !savedOrder.includes(k));
+                                setColumnOrder([...savedOrder, ...missing]);
+                            } // v5.0.0-alpha.172
                             if (explorerData.explorerGroupOn) setExplorerGroupOn(true); // v5.4.5
                         }
                         // v5.0.0-alpha.169.10 - Mark settings loaded (even if no saved data)
@@ -10883,6 +10915,21 @@
                                                         <span className="text-gray-600">{modalBook.binding}</span>
                                                     </div>
                                                 )}
+                                                {/* v6.12.0 - Ownership/acquisition type (badge for non-purchased, muted for purchased) */}
+                                                {(() => {
+                                                    const otype = getOwnershipType(modalBook);
+                                                    const meta = OWNERSHIP_META[otype] || OWNERSHIP_META.unknown;
+                                                    return (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-semibold text-gray-700">Ownership:</span>
+                                                            {meta.badge ? (
+                                                                <span className={`${meta.badge} text-white text-xs font-bold rounded px-2 py-0.5`}>{meta.label}</span>
+                                                            ) : (
+                                                                <span className="text-gray-400">{meta.label}</span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
                                                 {modalBook.acquired && (
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-semibold text-gray-700">Acquired:</span>
@@ -13217,7 +13264,7 @@
                                                                 const labels = {
                                                                     title: 'Name', author: 'Author', series: 'Series', seriesNum: '#',
                                                                     rating: 'Rating', myRating: 'My Rating', dateAdded: 'Date Added', price: 'Price',
-                                                                    priceGoal: 'Goal', delta: 'Under', amazon: 'Amazon'
+                                                                    priceGoal: 'Goal', delta: 'Under', ownership: 'Ownership', amazon: 'Amazon'
                                                                 };
                                                                 return columnOrder.map(colKey => {
                                                                     if (colKey === 'title') {
@@ -13254,6 +13301,7 @@
                                                                         price: true,
                                                                         priceGoal: true,
                                                                         delta: true,
+                                                                        ownership: true, // v6.12.0
                                                                         amazon: true
                                                                     });
                                                                 }}
@@ -14189,6 +14237,13 @@
                                                                             </span>;
                                                                         }
                                                                         cellClass += ' text-xs';
+                                                                        break;
+                                                                    }
+                                                                    case 'ownership': {
+                                                                        // v6.12.0 - Purchased shown muted; other types stand out
+                                                                        const otype = getOwnershipType(book);
+                                                                        content = getOwnershipLabel(book);
+                                                                        cellClass += otype === 'purchased' ? ' text-xs text-gray-400' : ' text-xs text-gray-700 font-medium';
                                                                         break;
                                                                     }
                                                                     case 'amazon':
