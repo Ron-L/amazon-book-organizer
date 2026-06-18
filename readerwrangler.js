@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.32";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.33";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -813,6 +813,7 @@
                 ownership: false, // v6.12.0 - Ownership/acquisition type column (hidden by default)
                 amazon: false // v5.0.0-alpha.167.6 - Amazon link column (hidden by default)
             });
+            const [saveResultsMenuOpen, setSaveResultsMenuOpen] = useState(false); // v6.12.0 - "Save these results…" dropdown (Phase 4)
             const [explorerColumnMenuOpen, setExplorerColumnMenuOpen] = useState(false); // v5.0.0-alpha.104 - Explorer column chooser menu
             const [explorerColumnMenuPos, setExplorerColumnMenuPos] = useState(null); // v5.0.0-alpha.107 - Context menu position { x, y } or null
             const [columnWidths, setColumnWidths] = useState({ // v5.0.0-alpha.109 - Column widths (px)
@@ -1113,6 +1114,36 @@
                 if (dealsFilterActive) f.deals = true;
                 return f;
             };
+
+            // v6.12.0 - Restore a saved Search's filter state into the live filter bar (in place — no
+            // navigation). Inverse of buildCurrentFilters; clears every filter not in the saved set so
+            // the result is identical to typing exactly these filters by hand (recalled == typed).
+            const applySavedFilters = (filters) => {
+                const f = filters || {};
+                setSearchTerm(f.search || '');
+                setReadStatusFilter(f.readStatus || '');
+                setSelectedCollections(f.collections ? [...f.collections] : []);
+                setOwnershipFilter(f.ownership || '');
+                setSelectedSeries(f.series ? [...f.series] : []);
+                setMinAmazonRating(f.minAmazonRating || '');
+                setMinMyRating(f.minMyRating || '');
+                setTagFilter(f.tags ? [...f.tags] : []);
+                setDatePreset(f.datePreset || '');
+                setDateFrom(f.dateFrom || '');
+                setDateTo(f.dateTo || '');
+                setDealsFilterActive(!!f.deals);
+                // Legacy single-select filters aren't part of saved searches — clear so none linger.
+                setCollectionFilter('');
+                setRatingFilter('');
+                setSeriesFilter('');
+            };
+
+            // v6.12.0 - The books currently displayed (current folder + active filters), for "Save these
+            // results" snapshots. This is "what you're seeing", not a behind-the-scenes library query.
+            const getDisplayedBookIds = () => getFolderBookIds(selectedFolderId)
+                .map(id => bookMap.get(id))
+                .filter(b => b && filterBookForExplorer(b))
+                .map(b => b.id);
 
             // v6.10.0-alpha.17 - Auto-name a view from its filters
             const autoNameView = (filters) => {
@@ -8435,6 +8466,70 @@
                                     e.dataTransfer.setData('text/plain', autoNameView(filters));
                                 }}
                                 style={{ fontSize: '16px', lineHeight: 1, marginLeft: '8px' }}>⠿</span>
+                            {/* v6.12.0 Phase 4 - Visible "Save these results…" control (replaces the hidden drag handle's job) */}
+                            {(() => {
+                                const displayedIds = getDisplayedBookIds();
+                                const count = displayedIds.length;
+                                return (
+                                    <div className="relative" style={{ marginLeft: '8px' }}>
+                                        <button
+                                            title="Save these results as a Search (live filter) or a Book List (snapshot)"
+                                            onClick={() => setSaveResultsMenuOpen(o => !o)}
+                                            className="text-blue-700 hover:text-white hover:bg-blue-600 font-semibold text-sm whitespace-nowrap px-2 py-1 rounded border border-blue-400 bg-white">
+                                            💾 Save {count} result{count !== 1 ? 's' : ''} ▾
+                                        </button>
+                                        {saveResultsMenuOpen && (
+                                            <>
+                                                <div className="fixed inset-0 z-40" onClick={() => setSaveResultsMenuOpen(false)} />
+                                                <div className="absolute left-0 mt-1 z-50 bg-white border border-gray-300 rounded shadow-lg py-1 min-w-[230px] text-sm text-gray-700">
+                                                    <button
+                                                        className="block w-full text-left px-3 py-1.5 hover:bg-gray-100"
+                                                        onClick={() => {
+                                                            const filters = buildCurrentFilters();
+                                                            const maxPos = savedSearches.length > 0 ? Math.max(...savedSearches.map(v => v.position ?? 0)) : -1;
+                                                            const ok = createSavedView(filters, maxPos + 1);
+                                                            showToast(ok ? 'Saved as a Search' : 'A matching Search already exists');
+                                                            setSaveResultsMenuOpen(false);
+                                                        }}>
+                                                        Save as a <b>Search</b> <span className="text-gray-400">(live filter)</span>
+                                                    </button>
+                                                    <button
+                                                        disabled={count === 0}
+                                                        className={`block w-full text-left px-3 py-1.5 ${count === 0 ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+                                                        onClick={async () => {
+                                                            setSaveResultsMenuOpen(false);
+                                                            const suggested = autoNameView(buildCurrentFilters());
+                                                            const name = await showInputDialog('Save as a Book List', `Freeze these ${count} book${count !== 1 ? 's' : ''} into a new list.`, suggested === 'New View' ? '' : suggested, 'List name (optional)');
+                                                            if (name === null) return;
+                                                            const trimmed = (name || '').trim() || 'Saved results';
+                                                            const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
+                                                            const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...displayedIds], position: maxPos + 1 };
+                                                            setBookLists(prev => [...prev, newBL]);
+                                                            showToast(`Saved ${count} book${count !== 1 ? 's' : ''} to "${trimmed}"`);
+                                                        }}>
+                                                        Save as a <b>Book List</b> <span className="text-gray-400">(snapshot)</span>
+                                                    </button>
+                                                    {bookLists.length > 0 && <div className="border-t border-gray-200 my-1" />}
+                                                    {bookLists.length > 0 && <div className="px-3 py-1 text-xs text-gray-400">Add to a Book List</div>}
+                                                    {bookLists.map(bl => (
+                                                        <button
+                                                            key={bl.id}
+                                                            disabled={count === 0}
+                                                            className={`block w-full text-left px-3 py-1.5 truncate ${count === 0 ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+                                                            onClick={() => {
+                                                                const added = addBooksToBookList(bl.id, displayedIds);
+                                                                showToast(added > 0 ? `Added ${added} to "${bl.name}"` : `All ${count} already in "${bl.name}"`);
+                                                                setSaveResultsMenuOpen(false);
+                                                            }}>
+                                                            {bl.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                             <button
                                 title="Clear all active filters"
                                 onClick={() => {
@@ -11684,7 +11779,14 @@
                                                             }
                                                         }
                                                     }}
-                                                    onClick={() => { if (editingFolderId !== viewFolderId) navigateToFolder(viewFolderId); }}
+                                                    onClick={() => {
+                                                        // v6.12.0 - Search = restore filter state in place (no library-wide navigation).
+                                                        // If currently inside a legacy view-folder context, drop to All Books so the
+                                                        // restored filters have a real folder to apply against.
+                                                        if (editingFolderId === viewFolderId) return;
+                                                        if (isViewFolder(selectedFolderId)) navigateToFolder('__all__');
+                                                        applySavedFilters(sv.filters);
+                                                    }}
                                                     onContextMenu={(e) => {
                                                         e.preventDefault();
                                                         setFolderContextMenu({ folderId: viewFolderId, x: e.clientX, y: e.clientY, source: 'left' });
