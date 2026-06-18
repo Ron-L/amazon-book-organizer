@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.28";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.29";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4285,16 +4285,12 @@
                     },
                     organization: {
                         blankImageBooks: Array.from(blankImageBooks),
-                        folders: folders.map(folder => ({
-                            id: folder.id,
-                            name: folder.name,
-                            bookIds: folder.bookIds || [],
-                            parentId: folder.parentId,
-                            collapsed: folder.collapsed,
-                            childFolderIds: folder.childFolderIds,
-                            sortIndex: folder.sortIndex  // v6.12.0 - root-level folder order (preserve through backup/restore)
-                        })),
-                        bookLists: bookLists.map(bl => ({ id: bl.id, name: bl.name, bookIds: bl.bookIds || [], position: bl.position })), // v6.12.0 - Curated Book Lists (mobile consumes in Phase 8)
+                        // v6.12.0 - Deny-list serialization: spread the whole object so a newly-added field
+                        // persists automatically. The old allow-list silently dropped sortIndex (bug #3).
+                        // Folder/bookList objects carry only persistent fields (counts and drag state live
+                        // elsewhere), so there is nothing transient to strip — just normalize bookIds.
+                        folders: folders.map(folder => ({ ...folder, bookIds: folder.bookIds || [] })),
+                        bookLists: bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] })), // v6.12.0 - Curated Book Lists (mobile consumes in Phase 8)
                         explorerSettings: {
                             folderSortSettings,
                             explorerView,
@@ -4399,15 +4395,8 @@
                         organization: {
                             blankImageBooks: Array.from(blankImageBooks),
                             // v5.0.0-alpha.99 - Include folder organization for Explorer view
-                            folders: folders.map(folder => ({
-                                id: folder.id,
-                                name: folder.name,
-                                bookIds: folder.bookIds || [],
-                                parentId: folder.parentId,
-                                collapsed: folder.collapsed,
-                                childFolderIds: folder.childFolderIds,
-                                sortIndex: folder.sortIndex  // v6.12.0 - root-level folder order (preserve through backup/restore)
-                            })),
+                            // v6.12.0 - Deny-list serialization (see the other backup builder above): spread whole.
+                            folders: folders.map(folder => ({ ...folder, bookIds: folder.bookIds || [] })),
                             // v5.0.0-alpha.101 - Include Explorer view settings
                             explorerSettings: {
                                 // v5.0.2 - viewMode removed (always Explorer mode)
@@ -4433,7 +4422,7 @@
                             exportDate: new Date().toISOString(),
                             tagRegistry, // v5.0.0-alpha.175 - Tag registry
                             savedSearches, // v6.10.0-alpha.16 - Saved searches (live filters)
-                            bookLists: bookLists.map(bl => ({ id: bl.id, name: bl.name, bookIds: bl.bookIds || [], position: bl.position })), // v6.12.0 - Curated Book Lists
+                            bookLists: bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] })), // v6.12.0 - Curated Book Lists (deny-list spread)
                             hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
                             appVersion: ORGANIZER_VERSION
                         }
@@ -5018,22 +5007,16 @@
                     // A relay library or pre-6.12 backup has no bookLists — in that case leave the current
                     // lists intact rather than wiping them (fix: import-from-relay was erasing local lists).
                     if (Array.isArray(orgToRestore.bookLists)) {
-                        const restoredBookLists = orgToRestore.bookLists.map(bl => ({ id: bl.id, name: bl.name, bookIds: bl.bookIds || [], position: bl.position }));
+                        // v6.12.0 - Deny-list spread: keep every field the source carries (mirrors serialization)
+                        const restoredBookLists = orgToRestore.bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }));
                         setBookLists(restoredBookLists);
                         localStorage.setItem(BOOKLISTS_KEY, JSON.stringify(restoredBookLists));
                     }
 
                     // v5.0.0-alpha.99 - Restore folders from backup (if present)
                     if (orgToRestore.folders && Array.isArray(orgToRestore.folders)) {
-                        const restoredFolders = orgToRestore.folders.map(folder => ({
-                            id: folder.id,
-                            name: folder.name,
-                            bookIds: folder.bookIds || [],
-                            parentId: folder.parentId,
-                            collapsed: folder.collapsed,
-                            childFolderIds: folder.childFolderIds,
-                            sortIndex: folder.sortIndex  // v6.12.0 - root-level folder order (was dropped → import-from-relay reverted folder order, bug #3)
-                        }));
+                        // v6.12.0 - Deny-list spread: keep every field the backup carries (sortIndex drop was bug #3)
+                        const restoredFolders = orgToRestore.folders.map(folder => ({ ...folder, bookIds: folder.bookIds || [] }));
 
                         // Ensure Inbox exists (for backward compatibility with old backups)
                         const hasInbox = restoredFolders.some(f => f.id === '__inbox__');
