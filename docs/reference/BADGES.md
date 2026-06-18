@@ -1,17 +1,24 @@
 # Badge System Design
 
-**Feature**: Visual indicators on book covers
-**Status**: In Development
+**Feature**: Visual indicators for book metadata
+**Status**: Implemented
 **Created**: 2025-12-19
+**Updated**: 2026-06-18 (v6.12.0 — ownership now also surfaced in the table column + book dialog)
 
 ---
 
 ## Overview
 
-Book covers display up to 3 badges showing key metadata at a glance:
+Book covers display up to 4 badges showing key metadata at a glance:
 - **Top-left**: Collections, Wishlist, or Selection status (mutually exclusive)
 - **Top-right**: Rating
+- **Bottom-left**: Price tag (wishlist) or Ownership badge (mutually exclusive)
 - **Bottom-right**: Read status checkmark
+
+**v6.12.0**: Ownership/acquisition type (Sample, Borrowed, Prime, KU, …) is no
+longer cover-only. It also appears as a sortable/groupable **Ownership column**
+in table view and an **Ownership row** in the book dialog. See
+[Ownership indicators beyond covers](#ownership-indicators-beyond-covers).
 
 ---
 
@@ -25,12 +32,13 @@ Book covers display up to 3 badges showing key metadata at a glance:
    - `className`: `absolute top-1 left-1 bg-blue-600 rounded-full w-6 h-6 flex items-center justify-center z-10`
    - Icon: SVG checkmark (white)
 
-2. **Wishlist Badge** (when `book.isWishlist === true`)
-   - Small badge with heart + plus icon (❤️+)
-   - Background: Semi-transparent red/pink
-   - `className`: `absolute top-1 left-1 bg-red-500 bg-opacity-80 rounded px-1.5 py-0.5 text-xs font-bold text-white`
-   - Text: `❤+` (heart + plus sign overlaid)
-   - Future: Gray out entire book cover when wishlist
+2. **Wishlist Badge** (when `book.onWishlist === true`)
+   - Small badge with open-heart + plus icon
+   - Background: Semi-transparent pink
+   - `className`: `absolute top-1 left-1 bg-pink-600 bg-opacity-85 rounded px-1.5 py-0.5 text-xs font-bold text-white`
+   - Text: `♡+` (open heart + plus sign)
+   - Wishlist covers are also grayed out (`opacity-40` on the cover image) — implemented.
+   - Note: `isWishlist` is the legacy field; the live field is `onWishlist` (see `normalizeBook`).
 
 3. **Collections Count** (when `book.collections.length > 0`)
    - Folder icon with count
@@ -46,6 +54,12 @@ Book covers display up to 3 badges showing key metadata at a glance:
 - **Status**: Already implemented
 
 ### 3. Bottom-Left Corner
+
+**Price tag vs Ownership badge (mutually exclusive):**
+- If the book is **on the wishlist and has a current price**, the bottom-left shows a
+  **price tag** (green when at/under goal, gray otherwise) instead of the ownership badge.
+- Otherwise the **ownership badge** shows. A plain Sample (not on the wishlist) therefore
+  always shows its SAMPLE badge regardless of price.
 
 **Ownership Badge** (when `book.ownershipType !== 'purchased'`)
 - Shows ownership status for non-purchased books
@@ -109,8 +123,47 @@ Book covers display up to 3 badges showing key metadata at a glance:
 | KOLL | (none) | Rating (if >0) | KOLL (purple) | ✓ (if read) |
 | Comixology | (none) | Rating (if >0) | COMIX (purple) | ✓ (if read) |
 | Amazon Insider | (none) | Rating (if >0) | INSIDER (purple) | ✓ (if read) |
-| Wishlist | ❤+ | Rating (if >0) | (none) | (none) |
+| Wishlist | ♡+ | Rating (if >0) | Price tag (if priced) | (none) |
 | Selected (any type) | ✓ blue | Rating (if >0) | (ownership) | ✓ green (if read) |
+
+---
+
+## Ownership indicators beyond covers
+
+**Added v6.12.0.** Ownership/acquisition type is surfaced in three places, driven by a
+single source of truth so labels and colors stay consistent:
+
+```javascript
+// Module scope, near COLUMN_CONFIG
+const OWNERSHIP_META = {
+    purchased:       { label: 'Purchased',        badge: null },          // no badge (common case)
+    sample:          { label: 'Sample',           badge: 'bg-amber-500' },
+    wishlist:        { label: 'Wishlist',         badge: 'bg-pink-600' },
+    borrowed:        { label: 'Borrowed',         badge: 'bg-teal-500' },
+    prime:           { label: 'Prime',            badge: 'bg-purple-500' },
+    kindleUnlimited: { label: 'Kindle Unlimited', badge: 'bg-purple-500' },
+    koll:            { label: 'KOLL',             badge: 'bg-purple-500' },
+    comixology:      { label: 'Comixology',       badge: 'bg-purple-500' },
+    insideAmazon:    { label: 'Insider',          badge: 'bg-purple-500' },
+    unknown:         { label: 'Unknown',          badge: 'bg-gray-500' }
+};
+const getOwnershipType  = (book) => /* onWishlist → 'wishlist', else book.ownershipType || 'purchased' */;
+const getOwnershipLabel = (book) => OWNERSHIP_META[getOwnershipType(book)].label;
+```
+
+| Surface | Treatment |
+|---------|-----------|
+| **Cover view** | Short badge in bottom-left (SAMPLE / KU / COMIX …) — see §3. Tiny tile keeps the short text rather than the full `label`. |
+| **Table column** ("Ownership") | Sortable + groupable. Hidden by default. Purchased shown muted gray; other types in normal weight. Uses the full `label`. |
+| **Book dialog** | "Ownership" row: colored badge (`OWNERSHIP_META[type].badge`) for non-purchased, muted "Purchased" otherwise. |
+
+Notes:
+- The table column registers in `COLUMN_CONFIG`, `visibleColumns`, `columnWidths`,
+  `columnOrder`, the column-chooser menu, and "Show All". On load, a saved `columnOrder`
+  is reconciled against `COLUMN_CONFIG` so columns added later (like this one) are appended
+  rather than silently dropped.
+- Cover view keeps its own inline short labels (KU/COMIX) because the tile badge is too
+  small for the full names; the colors match `OWNERSHIP_META`.
 
 ---
 
@@ -124,8 +177,8 @@ let topLeftBadge = null;
 
 if (selectedBooks.has(book.id)) {
     topLeftBadge = 'selection'; // Blue checkmark
-} else if (book.isWishlist) {
-    topLeftBadge = 'wishlist'; // ❤+
+} else if (book.onWishlist) {
+    topLeftBadge = 'wishlist'; // ♡+
 } else if (book.collections && book.collections.length > 0) {
     topLeftBadge = 'collections'; // 📁 count
 }
@@ -163,6 +216,10 @@ if (selectedBooks.has(book.id)) {
 
 ## Related Files
 
-- `readerwrangler.js` - Badge rendering logic (lines 2549-2596)
-- `TODO.md` - Priority 1, #1 (Collections Integration UI)
-- `TODO.md` - Priority 1, #3 (Wishlist Integration)
+- `readerwrangler.js`:
+  - Cover badge rendering — in the cover-tile JSX (search `Cover badges`)
+  - `OWNERSHIP_META`, `getOwnershipType`, `getOwnershipLabel` — module scope, just after `COLUMN_CONFIG`
+  - Ownership table column — `COLUMN_CONFIG.ownership`, the cell `switch` (`case 'ownership'`), sort comparator, `getGroupLabel`
+  - Ownership dialog row — book modal metadata section (search `Ownership:`)
+- `uiHelpers.js` - `normalizeBook` (owns the `onWishlist`/`ownershipType` normalization)
+- `docs/reference/DATA-SCHEMA.md` - `ownershipType` field values
