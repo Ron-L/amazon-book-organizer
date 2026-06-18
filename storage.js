@@ -100,9 +100,9 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                     // New book is owned, replace wishlist entry
                     // Preserve user metadata from wishlist entry (column assignment preserved via localStorage)
                     wishlistToOwned.push(book.asin);
-                    // v5.4.7 - Respect userEdited flags (Amazon only, not backups)
-                    const isBackupWish = !!book.userEdited;
-                    const ueWish = isBackupWish ? {} : (existing.userEdited || {});
+                    // v6.12.0 - Per-field userEdited merge (see the previousBook branch below for rationale).
+                    // `existing` is the earlier same-ASIN entry, which already carries merged local flags.
+                    const ueWish = existing.userEdited || {};
                     // v5.4.8 - If user manually set ownership, preserve their choice
                     const preserveOwnership = ueWish.onWishlist;
                     booksByAsin.set(book.asin, {
@@ -118,7 +118,7 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         priceTrigger: existing.priceTrigger ?? book.priceTrigger,
                         targetPrice: existing.targetPrice ?? book.targetPrice,
                         myRating: existing.myRating ?? book.myRating,  // v5.0.0-alpha.175.31 - Personal rating
-                        userEdited: isBackupWish ? book.userEdited : ueWish
+                        userEdited: { ...(book.userEdited || {}), ...ueWish }  // v6.12.0 - union flags
                     });
                 } else if (!existing.onWishlist && book.onWishlist) {
                     // Existing is owned, new is wishlist - keep existing
@@ -143,11 +143,16 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                     // v5.0.0-alpha.169.7 - Prefer incoming values, fall back to IndexedDB if null
                     // v5.0.0-alpha.173.1 - Only during imports (preserveUserData = true)
                     // v5.0.0-alpha.175.7 - Preserve tags, notes, hidden status
-                    // v5.4.7 - Respect userEdited flags: only for Amazon imports (not backups)
-                    // If incoming book has userEdited, it's a backup — use its values as-is
-                    // If incoming book lacks userEdited, it's Amazon — check previousBook's flags
-                    const isBackupData = !!book.userEdited;
-                    const ue = isBackupData ? {} : (previousBook.userEdited || {});
+                    // v6.12.0 - Per-field userEdited merge (replaces the old "incoming has userEdited ⇒ it's a
+                    // backup, apply its values wholesale" heuristic). Genuine backup restores never reach this
+                    // branch — they call saveBooksToIndexedDB with preserveUserData=false and save as-is. So
+                    // incoming data here is ALWAYS relay/Amazon, which the app itself may have re-uploaded WITH
+                    // userEdited (e.g. after permanent delete). Treating that as a backup let stale relay values
+                    // clobber local edits — a cleared series reappearing on import (bug #4).
+                    // Rule per field: if the LOCAL copy edited it, keep local; otherwise take the incoming value
+                    // (which already carries another device's edit, if any). Union the flags so an edit-marker
+                    // propagates across devices in both directions. Same-field two-device conflict → local wins.
+                    const ue = previousBook.userEdited || {};
                     if (Object.keys(ue).length > 0) {
                         console.log(`🛡️ Preserving user-edited fields for "${previousBook.title}":`, Object.keys(ue).join(', '));
                     }
@@ -166,12 +171,12 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         note: book.note ?? previousBook.note,
                         hidden: book.hidden ?? previousBook.hidden,
                         myRating: book.myRating ?? previousBook.myRating,  // v5.0.0-alpha.175.31 - Personal rating
-                        userEdited: isBackupData ? book.userEdited : ue,  // Backup: restore its flags; Amazon: preserve existing flags
+                        userEdited: { ...(book.userEdited || {}), ...ue },  // v6.12.0 - union: inherit other-device flags, keep local
                         // v6.0.0-alpha.48 - Preserve Trash state (user-initiated, survives relay imports)
-                        // v6.6.0 - Backup restore: use backup's isDeleted (not OR-merge); relay imports: OR-merge preserves soft-delete state
-                        isDeleted: isBackupData ? (book.isDeleted || false) : (previousBook.isDeleted || book.isDeleted || false),
-                        deletedAt: isBackupData ? (book.deletedAt || null) : (previousBook.deletedAt || book.deletedAt || null),
-                        deletedFromFolderIds: isBackupData ? (book.deletedFromFolderIds || null) : (previousBook.deletedFromFolderIds || book.deletedFromFolderIds || null)
+                        // v6.12.0 - OR-merge soft-delete (backups don't reach this branch; relay imports preserve it)
+                        isDeleted: previousBook.isDeleted || book.isDeleted || false,
+                        deletedAt: previousBook.deletedAt || book.deletedAt || null,
+                        deletedFromFolderIds: previousBook.deletedFromFolderIds || book.deletedFromFolderIds || null
                     });
                 } else {
                     // React saves: just save as-is, no merge

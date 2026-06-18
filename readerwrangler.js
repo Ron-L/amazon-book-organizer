@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.25";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.26";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2055,12 +2055,15 @@
                 orderedIds = (orderedIds || []).filter(id => { const bk = bookMap.get(id); return bk && !bk.isDeleted; });
                 if (orderedIds.length === 0) return;
                 const name = (seriesName || '').trim();
-                const prev = orderedIds.map(id => { const bk = bookMap.get(id); return { id, series: bk.series, seriesPosition: bk.seriesPosition }; });
+                const prev = orderedIds.map(id => { const bk = bookMap.get(id); return { id, series: bk.series, seriesPosition: bk.seriesPosition, userEdited: bk.userEdited }; });
                 setBooks(prevBooks => {
                     const posMap = new Map(orderedIds.map((id, i) => [id, i + 1]));
                     const updated = prevBooks.map(b => {
                         if (!posMap.has(b.id)) return b;
-                        const nb = { ...b, seriesPosition: posMap.get(b.id) };
+                        // v6.12.0 - Flag as user-edited so a later Amazon/relay import won't overwrite the numbering
+                        const userEdited = { ...(b.userEdited || {}), seriesPosition: true };
+                        if (name) userEdited.series = true;
+                        const nb = { ...b, seriesPosition: posMap.get(b.id), userEdited };
                         if (name) nb.series = name;
                         return nb;
                     });
@@ -5416,7 +5419,8 @@
                     case 'SEQUENCE_SERIES':
                         setBooks(prevBooks => {
                             const m = new Map(action.prev.map(p => [p.id, p]));
-                            const updated = prevBooks.map(b => m.has(b.id) ? { ...b, series: m.get(b.id).series, seriesPosition: m.get(b.id).seriesPosition } : b);
+                            // v6.12.0 - Restore prior userEdited flags too (numbering set seriesPosition/series flags)
+                            const updated = prevBooks.map(b => m.has(b.id) ? { ...b, series: m.get(b.id).series, seriesPosition: m.get(b.id).seriesPosition, userEdited: m.get(b.id).userEdited } : b);
                             saveBooksToIndexedDB(updated);
                             return updated;
                         });
@@ -5913,7 +5917,10 @@
                             const posMap = new Map(action.prev.map((p, i) => [p.id, i + 1]));
                             const updated = prevBooks.map(b => {
                                 if (!posMap.has(b.id)) return b;
-                                const nb = { ...b, seriesPosition: posMap.get(b.id) };
+                                // v6.12.0 - Re-apply user-edited flags (mirror applySequentialNumbering)
+                                const userEdited = { ...(b.userEdited || {}), seriesPosition: true };
+                                if (action.seriesName) userEdited.series = true;
+                                const nb = { ...b, seriesPosition: posMap.get(b.id), userEdited };
                                 if (action.seriesName) nb.series = action.seriesName;
                                 return nb;
                             });
