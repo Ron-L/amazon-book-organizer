@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.26";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.27";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2248,6 +2248,19 @@
                 const targetFolder = folders.find(f => f.id === targetFolderId);
                 const existingInTarget = new Set(targetFolder?.bookIds || []);
                 const newBookIds = bookIds.filter(id => !existingInTarget.has(id));
+
+                // 🔎 [DEBUG alpha.27] move-vs-copy diagnostic — remove after bug #1/#2 is fixed
+                console.log('🔎 [moveItems]', {
+                    itemIds,
+                    resolvedBookIds: bookIds,
+                    sourceFolderId,
+                    sourceFolderFound: !!sourceFolderObj,
+                    bookIdsInSource: bookIds.filter(id => (sourceFolderObj?.bookIds || []).includes(id)),
+                    targetFolderId,
+                    newBookIds,
+                    isCopy,
+                    willRemoveFromSource: !isCopy && !!sourceFolderObj && bookIds.length > 0
+                });
 
                 if (folderIdsToMove.length === 0 && newBookIds.length === 0) {
                     if (bookIds.length > 0) showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder');
