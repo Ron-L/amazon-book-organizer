@@ -169,7 +169,7 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
                         targetPrice: book.targetPrice ?? previousBook.targetPrice,
                         tags: book.tags ?? previousBook.tags,
                         note: book.note ?? previousBook.note,
-                        hidden: book.hidden ?? previousBook.hidden,
+                        isHidden: ue.isHidden ? previousBook.isHidden : book.isHidden,  // v6.12.0 - F4: was a phantom `hidden` field (real field is isHidden). isHidden is user-owned → defer to local edit, else take incoming.
                         myRating: book.myRating ?? previousBook.myRating,  // v5.0.0-alpha.175.31 - Personal rating
                         userEdited: { ...(book.userEdited || {}), ...ue },  // v6.12.0 - union: inherit other-device flags, keep local
                         // v6.0.0-alpha.48 - Preserve Trash state (user-initiated, survives relay imports)

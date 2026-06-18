@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.29";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.30";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1673,7 +1673,7 @@
                             };
                         }
                         if (hideInsteadIds.has(b.id)) {
-                            return { ...b, isHidden: true };
+                            return { ...b, isHidden: true, userEdited: { ...(b.userEdited || {}), isHidden: true } }; // v6.12.0 - F4: protect hide from import overwrite
                         }
                         return b;
                     });
@@ -5414,7 +5414,7 @@
                             const updatedBooks = prevBooks.map(book => {
                                 if (action.bookIds.includes(book.id)) {
                                     const prevState = action.previousStates[book.id];
-                                    return { ...book, isHidden: prevState };
+                                    return { ...book, isHidden: prevState, userEdited: { ...(book.userEdited || {}), isHidden: true } }; // v6.12.0 - F4: keep isHidden user-owned
                                 }
                                 return book;
                             });
@@ -5916,7 +5916,7 @@
                         setBooks(prevBooks => {
                             const updatedBooks = prevBooks.map(book => {
                                 if (action.bookIds.includes(book.id)) {
-                                    return { ...book, isHidden: action.newState };
+                                    return { ...book, isHidden: action.newState, userEdited: { ...(book.userEdited || {}), isHidden: true } }; // v6.12.0 - F4: keep isHidden user-owned
                                 }
                                 return book;
                             });
@@ -7824,7 +7824,7 @@
 
                                 // Show hidden filter
                                 if (!showHidden) {
-                                    filtered = filtered.filter(book => !book.hidden);
+                                    filtered = filtered.filter(book => !book.isHidden); // v6.12.0 - F4: was phantom `book.hidden` (real field is isHidden) → filter never applied
                                 }
 
                                 // Deals filter (v4.17.0.j)
@@ -10504,7 +10504,7 @@
                                                         const legacyBookIds = legacyEntries.map(sel => sel.bookId);
                                                         const updatedBooks = books.map(book => {
                                                             if (legacyBookIds.includes(book.id)) {
-                                                                return { ...book, isHidden: true };
+                                                                return { ...book, isHidden: true, userEdited: { ...(book.userEdited || {}), isHidden: true } }; // v6.12.0 - F4: protect hide from import overwrite
                                                             }
                                                             return book;
                                                         });
@@ -17089,7 +17089,7 @@
 
                                                             const updatedBooks = books.map(book => {
                                                                 if (bookIdsToToggle.includes(book.id)) {
-                                                                    return { ...book, isHidden: newHiddenState };
+                                                                    return { ...book, isHidden: newHiddenState, userEdited: { ...(book.userEdited || {}), isHidden: true } }; // v6.12.0 - F4: protect hide/un-hide from import overwrite
                                                                 }
                                                                 return book;
                                                             });
