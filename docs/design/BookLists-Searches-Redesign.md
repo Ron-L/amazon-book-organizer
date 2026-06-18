@@ -32,13 +32,40 @@ This was bottom-up design: the old "view = filter/tag" model made sense while bu
 The single word "View" was conflating concepts that are genuinely different. The redesign gives each behavior exactly one clearly-named home in the sidebar, plus the search bar:
 
 - **All Books** — the one built-in dynamic aggregate. Lists every unique non-deleted book, updates itself, read-only. A standalone item at the top of the sidebar.
-- **Searches** — saved live queries. A search re-runs against the current library every time it's opened, so its membership is always current. This is the honest home for the "always-current shelf" idea (Unread, Deals, KU, etc.).
+- **Searches** — saved filter presets. Opening a Search **restores its saved filter state in place** (the filter bar shows exactly those chips), applied to wherever you currently are — identical to typing those filters by hand. It's "live" in that the filters re-evaluate against current data, but it does **not** navigate you anywhere or force a library-wide scope. See [the scope decision below](#searches-restore-filter-state-in-place-decided-2026-06-18).
 - **Book Lists** — hand-picked, curated sets, like music playlists. Explicit membership; stable; changes only when the user adds or removes a specific book.
 - **Folders** — unchanged: hierarchical, custodial, drive Auto-Organize.
 
 Because every section is named for exactly what it is, the user no longer needs a memorized rule to tell live from static — **the category name carries the meaning.** A thing under *Searches* is obviously live; a thing under *Book Lists* is obviously a fixed list.
 
 > **Note — a principle from the original discussion was retired.** An earlier draft leaned on the rule *"if you made it, it's a fixed list; if the app made it, it might be live."* That rule no longer holds, because the user now makes Searches and those are live. It was only ever a crutch needed while live queries hid in the search bar; with an explicitly-named *Searches* group, the crutch is unnecessary and has been dropped.
+
+### Searches restore filter state in place (decided 2026-06-18)
+
+**A Search is a saved filter *preset*, not a smart-folder destination.** Opening a Search
+sets the filter bar to its saved chips and applies them **to your current folder** — exactly
+as if you had typed those filters by hand. It does not navigate you to a library-wide view.
+
+**Why (the governing principle is least astonishment):** how you *arrive* at a filter state
+must not change its meaning. Setting "Rating 4+" by hand and recalling a saved "Rating 4+"
+Search must yield the **same** result. In ReaderWrangler, filters are already an overlay on
+the current folder, so a saved filter must compose the same way; anything else makes recalled
+filters behave differently from typed ones — the exact confusion this redesign exists to remove.
+
+**Why not the Smart-Folder pattern** (Finder/Lightroom/Outlook, where a saved search is a
+library-wide *place* you navigate into): that model fits apps with no "folder you're already
+in" to compose with. RW has real folders and overlay filters, so importing smart-folder
+semantics would reintroduce the recalled-≠-typed inconsistency. Rejected.
+
+**Consequences:**
+- Clicking a Search restores the global filter state and **leaves you in your current folder**;
+  the Active Filters banner lights up identically to a hand-typed set.
+- Result scope follows *where you are*: in **All Books** a Search spans the library; inside a
+  folder it's that folder filtered. Same Search, context-dependent results — and that's correct,
+  because it's just filters.
+- This **removes** the virtual "view-folder" navigation the earlier phases used — simplifying
+  the design (that machinery was already slated for Phase 7 cleanup).
+- Earlier doc language ("re-runs against the current library") is superseded by this section.
 
 A Book List is structurally almost identical to a Folder (both are `bookIds` sets). The difference is **intent**, not mechanism: a Folder is an exclusive bucket in a hierarchy (genre/author/series) and participates in Auto-Organize; a Book List is a flat, cross-cutting, supplemental list that does not.
 
@@ -154,7 +181,7 @@ Explainer dialog (reachable from an ⓘ icon on a section and/or the Help menu; 
 
 > **All Books** lists every unique book in your library and updates itself; you can't move books out of it.
 >
-> **Searches** are saved filters that stay current. Run a search (e.g. "everything unread" or "on sale right now"), then save it — it re-runs live every time you open it, and you can give it a name. Great for shelves that should always reflect the latest state.
+> **Searches** are saved filter presets. Set up a filter (e.g. "everything unread" or "on sale right now") and save it — clicking it later puts those same filters back exactly as if you'd typed them, applied to wherever you are. You can give it a name. Great for filter combinations you reach for often.
 >
 > **Book Lists** are sets you build by hand — like a "read next" shelf, or music playlists. Click **+** to make an empty list and name it, then drag books into it from any folder. A book can be on as many lists as you like, and a list never changes on its own. Removing a book from a list only affects that list — it doesn't untag, move, or delete the book. You can also capture a set of results at once: run a search and choose **Save these results → as a Book List**. That's a one-time snapshot, not a live link.
 >
@@ -162,11 +189,11 @@ Explainer dialog (reachable from an ⓘ icon on a section and/or the Help menu; 
 
 Tooltip on the **"Save these results…"** control:
 
-> Keep this set of books. *Save as a Search* to re-run it live whenever you open it, or *Save as a Book List* to freeze these exact books into a hand-editable list.
+> Keep this set of books. *Save as a Search* to save these filters and re-apply them anytime, or *Save as a Book List* to freeze these exact books into a hand-editable list.
 
 Tooltip on a **saved Search** row:
 
-> A saved search — re-runs live against your current library every time you open it.
+> A saved filter — click to re-apply these filters to your current view.
 
 Tooltip on a **Book List** row / the `+`:
 

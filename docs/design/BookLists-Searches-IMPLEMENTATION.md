@@ -64,7 +64,8 @@ What exists today, confirmed by code investigation:
 - **Test:** backup→restore round-trip preserves everything; restoring an old 2.3 backup doesn't crash and silently drops old views.
 
 **Phase 2 — Sidebar restructure (render only).**
-- All Books standalone top item; **Searches** group (renders `savedSearches`, click runs the filter live); **Book Lists** group (renders lists, read-only for now); Folders unchanged. Remove the old "Views" section + its drop zone (~L11229-11290).
+- All Books standalone top item; **Searches** group (renders `savedSearches`); **Book Lists** group (renders lists, read-only for now); Folders unchanged. Remove the old "Views" section + its drop zone (~L11229-11290).
+- **Search click semantics (revised 2026-06-18, see Redesign doc):** clicking a Search **restores its saved filter state in place** (sets the filter bar to its chips, stays in the current folder) — it does NOT navigate to a library-wide virtual view. Result = current folder + filters, identical to typing the filters by hand. This removes the `isViewFolder` virtual-view navigation (already slated for Phase 7 cleanup); update the click handler when wiring Phase 4/5.
 - **Test:** existing saved filters now appear under Searches and run on click; layout correct in light/dark.
 
 **Phase 3 — Book Lists CRUD + membership.**
@@ -75,8 +76,10 @@ What exists today, confirmed by code investigation:
 - **Test:** create/add/remove/reorder/delete; explicitly verify remove-from-list never trashes or untags, even when it's the book's only list.
 
 **Phase 4 — "Save these results…" control.**
-- Visible control at the search bar / active-filter chips: **Save as a Search** / **Save as a Book List** (snapshot of current matches) / **Add to an existing Book List**. Dedup on add.
-- **Test:** all three paths; duplicates discarded; snapshot is frozen (later tag/filter changes don't alter it).
+- Visible control in the Active Filters banner (~L8388, replacing the discoverability of the hidden drag handle ~L8427): **Save as a Search** (saves the current filter state; re-applies in place when opened) / **Save as a Book List** (snapshot of the **currently displayed** matches — folder + filters) / **Add to an existing Book List**. Dedup on add.
+- Button shows the live match count; the two Book List actions disable at 0 matches; **Save as a Search** stays enabled (saving an empty-result filter is valid).
+- Drag handle stays until Phase 7.
+- **Test:** all three paths; duplicates discarded; snapshot is frozen (later tag/filter changes don't alter it); saved Search re-applies filters in the current folder (recalled == typed).
 
 **Phase 5 — Searches behavior polish.**
 - Recents in the search-bar dropdown (ephemeral; commit on debounced text, dedup by the canonical filter key already used for view dedup); saving graduates one to the Searches sidebar group (persistent).
