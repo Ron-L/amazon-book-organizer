@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.34";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.35";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -212,6 +212,48 @@
 
                 btnRow.appendChild(cancelBtn);
                 btnRow.appendChild(confirmBtn);
+                dialog.appendChild(titleEl);
+                dialog.appendChild(messageEl);
+                dialog.appendChild(btnRow);
+                overlay.appendChild(dialog);
+                document.body.appendChild(overlay);
+            });
+        }
+
+        // v6.12.0 - Promise-based multi-button choice dialog. choices: [{ label, value, primary? }] shown
+        // left→right (put the primary/default last so it sits at the right). Resolves to the chosen value,
+        // or null if dismissed via the backdrop. Buttons name their own action (no ambiguous OK).
+        function showChoiceDialog(title, message, choices) {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;`;
+                const dialog = document.createElement('div');
+                dialog.style.cssText = `background: var(--bg-surface); border-radius: 8px; padding: 24px; max-width: 540px; width: 90%; box-shadow: var(--shadow-modal); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;`;
+                const titleEl = document.createElement('h2');
+                titleEl.textContent = title;
+                titleEl.style.cssText = `margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: var(--text-primary);`;
+                const messageEl = document.createElement('div');
+                messageEl.style.cssText = `margin-bottom: 24px; font-size: 14px; line-height: 1.6; color: var(--text-secondary); white-space: pre-line;`;
+                messageEl.textContent = message;
+                const btnRow = document.createElement('div');
+                btnRow.style.cssText = `display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap;`;
+                const close = (val) => { document.body.removeChild(overlay); resolve(val); };
+                overlay.onclick = (e) => { if (e.target === overlay) close(null); };
+                choices.forEach((c) => {
+                    const btn = document.createElement('button');
+                    btn.textContent = c.label;
+                    if (c.primary) {
+                        btn.style.cssText = `background: var(--bg-accent); color: var(--text-on-accent); border: none; border-radius: 4px; padding: 8px 16px; font-size: 14px; font-weight: 500; cursor: pointer;`;
+                        btn.onmouseover = () => btn.style.background = 'var(--bg-accent-hover)';
+                        btn.onmouseout = () => btn.style.background = 'var(--bg-accent)';
+                    } else {
+                        btn.style.cssText = `background: var(--bg-elevated); color: var(--text-primary); border: 1px solid var(--border-strong); border-radius: 4px; padding: 8px 16px; font-size: 14px; cursor: pointer;`;
+                        btn.onmouseover = () => btn.style.background = 'var(--bg-hover)';
+                        btn.onmouseout = () => btn.style.background = 'var(--bg-elevated)';
+                    }
+                    btn.onclick = () => close(c.value);
+                    btnRow.appendChild(btn);
+                });
                 dialog.appendChild(titleEl);
                 dialog.appendChild(messageEl);
                 dialog.appendChild(btnRow);
@@ -8496,30 +8538,44 @@
                                                         }}>
                                                         Save as a <b>Search</b> <span className="text-gray-400">(live filter)</span>
                                                     </button>
+                                                    <div className="border-t border-gray-200 my-1" />
+                                                    <div className="px-3 py-1 text-xs text-gray-400">Save to a Book List</div>
+                                                    {/* ＋ New list… on top, existing lists below — the familiar "Add to playlist" pattern */}
                                                     <button
                                                         disabled={count === 0}
-                                                        className={`block w-full text-left px-3 py-1.5 ${count === 0 ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+                                                        className={`block w-full text-left px-3 py-1.5 font-medium ${count === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-blue-700 hover:bg-gray-100'}`}
                                                         onClick={async () => {
                                                             setSaveResultsMenuOpen(false);
                                                             if (count === 0) return;
-                                                            const suggested = autoNameView(buildCurrentFilters());
-                                                            const name = await showInputDialog('Save as a Book List', `Save these ${count} book${count !== 1 ? 's' : ''} as a Book List.`, suggested === 'New View' ? '' : suggested, 'List name (optional)');
-                                                            if (name === null) return;
-                                                            const trimmed = (name || '').trim() || 'Saved results';
-                                                            const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
-                                                            if (existing) {
-                                                                const proceed = await showConfirmDialog('Duplicate name', `A Book List named "${existing.name}" already exists. Create a second list with the same name?\n\n(To add these books to the existing list instead, cancel and use "Add to a Book List".)`);
-                                                                if (!proceed) return;
+                                                            let proposed = autoNameView(buildCurrentFilters());
+                                                            if (proposed === 'New View') proposed = '';
+                                                            while (true) {
+                                                                const name = await showInputDialog('New Book List', `Save these ${count} book${count !== 1 ? 's' : ''} as a new Book List.`, proposed, 'List name (optional)');
+                                                                if (name === null) return;
+                                                                const trimmed = (name || '').trim() || 'Saved results';
+                                                                const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
+                                                                if (existing) {
+                                                                    const choice = await showChoiceDialog('Name already in use', `A Book List named "${existing.name}" already exists.`, [
+                                                                        { label: 'Cancel', value: 'cancel' },
+                                                                        { label: 'Use a different name', value: 'rename' },
+                                                                        { label: `Add to "${existing.name}"`, value: 'add', primary: true }
+                                                                    ]);
+                                                                    if (choice === 'rename') { proposed = trimmed; continue; }
+                                                                    if (choice === 'add') {
+                                                                        const added = addBooksToBookList(existing.id, displayedIds);
+                                                                        showToast(added > 0 ? `Added ${added} to "${existing.name}"` : `All ${count} already in "${existing.name}"`);
+                                                                    }
+                                                                    return; // cancel / backdrop / add → done
+                                                                }
+                                                                const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
+                                                                const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...displayedIds], position: maxPos + 1 };
+                                                                setBookLists(prev => [...prev, newBL]);
+                                                                showToast(`Saved ${count} book${count !== 1 ? 's' : ''} to "${trimmed}"`);
+                                                                return;
                                                             }
-                                                            const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
-                                                            const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...displayedIds], position: maxPos + 1 };
-                                                            setBookLists(prev => [...prev, newBL]);
-                                                            showToast(`Saved ${count} book${count !== 1 ? 's' : ''} to "${trimmed}"`);
                                                         }}>
-                                                        Save as a <b>Book List</b> <span className="text-gray-400">(snapshot)</span>
+                                                        ＋ New list…
                                                     </button>
-                                                    {bookLists.length > 0 && <div className="border-t border-gray-200 my-1" />}
-                                                    {bookLists.length > 0 && <div className="px-3 py-1 text-xs text-gray-400">Add to a Book List</div>}
                                                     {bookLists.map(bl => (
                                                         <button
                                                             key={bl.id}
