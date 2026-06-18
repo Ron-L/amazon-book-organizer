@@ -91,7 +91,7 @@ Strategies:
 | `publicationDate` | amazon | take-incoming | ❌ | |
 | `topReviews` | amazon | take-incoming | ❌ | |
 | `readStatus` / `collections` | amazon (collections fetch) | take-incoming | ❌ | from collections map |
-| `isHidden` | user | take-incoming (via `...book`) | ⚠️ | **see Finding F4** |
+| `isHidden` | user | defer-local-if-edited | ✅ hide/un-hide | fixed in F4 (alpha.30); was phantom `hidden` |
 
 ---
 
@@ -151,15 +151,18 @@ Stored folder objects carry only persistent fields; counts are computed
   but the asymmetry with folders is a trap.
 - **F3 — The book rename map is triplicated** (S5/S6/S7 forward, S8 inverse).
   Four hand-kept copies of the same internal↔external mapping. Prime Tier-2 target.
-- **F4 — `hidden` vs `isHidden` mismatch in the merge.** storage.js S4 has
-  `hidden: book.hidden ?? previousBook.hidden`, but the real field is `isHidden`.
-  The `hidden` line operates on a non-existent property; `isHidden` is carried
-  only via `...book` (take-incoming), so a user-hidden book could be un-hidden by
-  a re-import that reports it visible. **Needs its own verification + fix ticket.**
-- **F5 — Only 5 fields are user-protectable** (title, author, series,
-  seriesPosition, onWishlist) because the edit dialog sets `userEdited` only for
-  those. Any future "edit this Amazon field" UI must also set the flag, or it
-  silently reverts (the #4 pattern).
+- **F4 — `hidden` vs `isHidden` mismatch in the merge.** ✅ **RESOLVED (alpha.30).**
+  storage.js S4 read a phantom `book.hidden`; the real field is `isHidden`, which
+  was carried only via `...book` (take-incoming), so a fresh Amazon fetcher import
+  (reports `isHidden:false`) silently un-hid hidden books. Fixed by making
+  `isHidden` a user-owned protectable field (Option 2): the 5 write sites set
+  `userEdited.isHidden`; merge is now `ue.isHidden ? previousBook.isHidden : book.isHidden`.
+  A sibling bug — the "show hidden" filter at ~L7827 testing the same phantom
+  `book.hidden` — was fixed in the same pass.
+- **F5 — Only 6 fields are user-protectable** (title, author, series,
+  seriesPosition, onWishlist, isHidden) because the edit dialog / hide actions set
+  `userEdited` only for those. Any future "edit this Amazon field" UI must also set
+  the flag, or it silently reverts (the #4 pattern).
 
 ---
 
