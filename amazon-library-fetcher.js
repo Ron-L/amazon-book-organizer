@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.10.2';
+    const FETCHER_VERSION = 'v4.10.3';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -61,6 +61,14 @@ async function fetchAmazonLibrary() {
             console.warn('⚠️ Demo whitelist parse error, ignoring:', e.message);
         }
     }
+
+    // Default library view filter — hides two tag buckets, mirroring the YourBooks default view.
+    // Tag IDs decoded from the YourBooks page (2026-06-21):
+    //   222711ade9d0f22714af93d1c8afec60 = "V"                  (decoded label; purpose unknown — not a
+    //                                                            collection on this account)
+    //   858f501de8e2d7ece33f768936463ac8 = "Permanently Remove" (items flagged to remove from the library)
+    // Used in all three library queries (Phase 0 test, Phase 1 fetch, Phase 5 orphan scan).
+    const LIBRARY_EXCLUDE_TAGS = 'NOT (222711ade9d0f22714af93d1c8afec60 OR 858f501de8e2d7ece33f768936463ac8)';
 
     // Book-only bindings (filter out non-book items)
     const BOOK_BINDINGS = [
@@ -908,7 +916,7 @@ async function fetchAmazonLibrary() {
         // Test library query with minimal request (1 book)
         const testLibraryQuery = `query ccGetCustomerLibraryBooks {
             getCustomerLibrary {
-                books(after: "", first: 1, sortBy: {sortField: ACQUISITION_DATE, sortOrder: DESCENDING}, selectionCriteria: {tags: [], query: "NOT (222711ade9d0f22714af93d1c8afec60 OR 858f501de8e2d7ece33f768936463ac8)"}, groupBySeries: false) {
+                books(after: "", first: 1, sortBy: {sortField: ACQUISITION_DATE, sortOrder: DESCENDING}, selectionCriteria: {tags: [], query: "${LIBRARY_EXCLUDE_TAGS}"}, groupBySeries: false) {
                     pageInfo {
                         hasNextPage
                         endCursor
@@ -1273,6 +1281,7 @@ async function fetchAmazonLibrary() {
 
         const newBooks = [];
         const seenASINs = new Map();  // Track ASINs to detect duplicates
+        let skippedDelisted = 0; // Owned entries Amazon has delisted (product=null) — no metadata to fetch
 
         // Seed seenASINs with existing books so Phase 1 doesn't re-add them as new
         for (let i = 0; i < existingBooks.length; i++) {
@@ -1295,7 +1304,7 @@ async function fetchAmazonLibrary() {
             
             const query = `query ccGetCustomerLibraryBooks {
                 getCustomerLibrary {
-                    books(after: "${cursor}", first: ${PAGE_SIZE}, sortBy: {sortField: ACQUISITION_DATE, sortOrder: DESCENDING}, selectionCriteria: {tags: [], query: "NOT (222711ade9d0f22714af93d1c8afec60 OR 858f501de8e2d7ece33f768936463ac8)"}, groupBySeries: false) {
+                    books(after: "${cursor}", first: ${PAGE_SIZE}, sortBy: {sortField: ACQUISITION_DATE, sortOrder: DESCENDING}, selectionCriteria: {tags: [], query: "${LIBRARY_EXCLUDE_TAGS}"}, groupBySeries: false) {
                         pageInfo {
                             hasNextPage
                             endCursor
@@ -1423,8 +1432,12 @@ async function fetchAmazonLibrary() {
                 for (const edge of books) {
                     const node = edge.node;
                     const product = node.product;
-                    
-                    if (!product) continue;
+
+                    // Delisted-by-Amazon owned title: entitlement remains but the catalog product is gone
+                    // (product=null, and getProducts returns nothing). No title/author/cover to import —
+                    // skip, but count so we can surface it instead of dropping silently. Wishlist a live
+                    // edition to add one of these.
+                    if (!product) { skippedDelisted++; continue; }
                     
                     // Use relationshipCreationDate (always present in the node)
                     const acquisitionDate = node.relationshipCreationDate || null;
@@ -1579,6 +1592,10 @@ async function fetchAmazonLibrary() {
             console.log('✅ No new books to fetch - checking tags & prices...\n');
         } else {
             console.log(`\n✅ Phase 1 complete: Found ${newBooks.length} new books\n`);
+        }
+
+        if (skippedDelisted > 0) {
+            console.log(`ℹ️  ${skippedDelisted} owned ${skippedDelisted === 1 ? 'entry is' : 'entries are'} delisted by Amazon (no catalog data available) — skipped. Wishlist a live edition to add one.\n`);
         }
 
         // Step 4: Enrich books (Phase 2) - BATCH MODE
@@ -2402,7 +2419,7 @@ async function fetchAmazonLibrary() {
                 // Minimal query - just ASINs and binding (to filter non-books)
                 const orphanQuery = `query ccGetCustomerLibraryBooks {
                     getCustomerLibrary {
-                        books(after: "${orphanCursor}", first: ${PAGE_SIZE}, sortBy: {sortField: ACQUISITION_DATE, sortOrder: DESCENDING}, selectionCriteria: {tags: [], query: "NOT (222711ade9d0f22714af93d1c8afec60 OR 858f501de8e2d7ece33f768936463ac8)"}, groupBySeries: false) {
+                        books(after: "${orphanCursor}", first: ${PAGE_SIZE}, sortBy: {sortField: ACQUISITION_DATE, sortOrder: DESCENDING}, selectionCriteria: {tags: [], query: "${LIBRARY_EXCLUDE_TAGS}"}, groupBySeries: false) {
                             pageInfo {
                                 hasNextPage
                                 endCursor
