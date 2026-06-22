@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.36";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.37";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16191,11 +16191,13 @@
 
                     {/* v6.10.0-alpha.16 - Saved View Context Menu */}
                     {folderContextMenu && isViewFolder(folderContextMenu.folderId) && (() => {
-                        const tagId = getViewTagId(folderContextMenu.folderId);
-                        const tag = tagRegistry[tagId];
-                        if (!tag) return null;
-                        const tagLabel = tag.label || tagId;
-                        const bookCount = getTagCount(tagId);
+                        // v6.12.0 - Search context menu (general filter searches, not just legacy tag-views).
+                        // Searches don't own tags — tag management lives in the Tag Manager — so this menu only
+                        // acts on the saved Search itself (apply / rename / delete).
+                        const view = getView(folderContextMenu.folderId);
+                        if (!view) return null;
+                        const isNamedSearch = !!(view.name && view.name.trim());
+                        const searchLabel = isNamedSearch ? view.name : filterChipsLabel(view.filters);
 
                         // Viewport-aware positioning
                         const menuWidth = 200;
@@ -16206,20 +16208,21 @@
                         return (
                             <div
                                 className="fixed bg-white border border-gray-300 shadow-lg rounded z-50 py-1 min-w-[200px]"
-                                role="menu" aria-label="Tag options"
+                                role="menu" aria-label="Search options"
                                 style={{ left: `${menuX}px`, top: `${menuY}px` }}
                                 onClick={(e) => e.stopPropagation()}>
 
-                                {/* Open */}
+                                {/* Apply */}
                                 <div
                                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
                                     role="menuitem"
                                     onClick={() => {
-                                        navigateToFolder(folderContextMenu.folderId);
+                                        if (isViewFolder(selectedFolderId)) navigateToFolder('__all__');
+                                        applySavedFilters(view.filters);
                                         setFolderContextMenu(null);
                                     }}>
-                                    <span>📂</span>
-                                    <span>Open</span>
+                                    <span>🔍</span>
+                                    <span>Apply Search</span>
                                 </div>
 
                                 {/* Rename */}
@@ -16228,90 +16231,32 @@
                                     role="menuitem"
                                     onClick={() => {
                                         setEditingFolderId(folderContextMenu.folderId);
-                                        setEditingFolderName(tagLabel);
+                                        setEditingFolderName(isNamedSearch ? view.name : '');
                                         setFolderContextMenu(null);
                                     }}>
                                     <span>✏️</span>
-                                    <span>Rename</span>
+                                    <span>{isNamedSearch ? 'Rename' : 'Name this Search'}</span>
                                     <span className="ml-auto text-gray-400 text-xs">F2</span>
                                 </div>
 
                                 <div className="border-t border-gray-200 my-1" role="separator"></div>
 
-                                {/* Unpin */}
-                                <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
-                                    role="menuitem"
-                                    onClick={() => {
-                                        const viewId = getViewId(folderContextMenu.folderId);
-                                        setSavedSearches(prev => prev.filter(v => v.id !== viewId));
-                                        if (selectedFolderId === folderContextMenu.folderId) {
-                                            navigateToFolder('__all__');
-                                        }
-                                        setFolderContextMenu(null);
-                                    }}>
-                                    <span>📌</span>
-                                    <span>Unpin from Sidebar</span>
-                                </div>
-
-                                {/* Delete Tag */}
+                                {/* Delete — removes the saved Search only (never touches tags or books) */}
                                 <div
                                     className="px-4 py-2 hover:bg-red-50 cursor-pointer flex items-center gap-3 text-red-600"
                                     role="menuitem"
                                     onClick={async () => {
                                         setFolderContextMenu(null);
-                                        const msg = bookCount > 0
-                                            ? `Delete tag "${tagLabel}"? This will remove it from ${bookCount} book${bookCount !== 1 ? 's' : ''}.`
-                                            : `Delete tag "${tagLabel}"?`;
-                                        if (await showConfirmDialog('Delete Tag', msg)) {
-                                            setBooks(prev => {
-                                                const updated = prev.map(b => {
-                                                    if (b.tags?.includes(tagId)) {
-                                                        return { ...b, tags: b.tags.filter(t => t !== tagId) };
-                                                    }
-                                                    return b;
-                                                });
-                                                saveBooksToIndexedDB(updated);
-                                                return updated;
-                                            });
-                                            setTagRegistry(prev => {
-                                                const updated = { ...prev };
-                                                delete updated[tagId];
-                                                return updated;
-                                            });
-                                            setTagFilter(prev => prev.filter(t => t !== tagId));
-                                            // Cascading delete: remove saved views that reference this tag
-                                            setSavedSearches(prev => prev.filter(v => !v.filters?.tags?.includes(tagId)));
-                                            if (selectedFolderId === `__view_${tagId}__`) {
+                                        const label = isNamedSearch ? `"${view.name}"` : `this search (${searchLabel})`;
+                                        if (await showConfirmDialog('Delete Search', `Remove ${label} from Searches?\n\nYour books and tags are not affected.`)) {
+                                            setSavedSearches(prev => prev.filter(v => v.id !== view.id));
+                                            if (isViewFolder(selectedFolderId) && getViewId(selectedFolderId) === view.id) {
                                                 navigateToFolder('__all__');
                                             }
                                         }
                                     }}>
                                     <span>🗑️</span>
-                                    <span>Delete Tag</span>
-                                </div>
-
-                                <div className="border-t border-gray-200 my-1" role="separator"></div>
-
-                                {/* Properties */}
-                                <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
-                                    role="menuitem"
-                                    onClick={() => {
-                                        setFolderPropertiesEditedName(tagLabel);
-                                        setFolderPropertiesEditedDescription(getView(folderContextMenu.folderId)?.description || ''); // v6.5.0
-                                        setFolderPropertiesDialog({ folderId: folderContextMenu.folderId });
-                                        setDialogDrag({
-                                            isDragging: false,
-                                            offsetX: 0,
-                                            offsetY: 0,
-                                            dialogX: window.innerWidth / 2 - 224,
-                                            dialogY: window.innerHeight / 2 - 200
-                                        });
-                                        setFolderContextMenu(null);
-                                    }}>
-                                    <span>ℹ️</span>
-                                    <span>Tag Properties</span>
+                                    <span>Delete Search</span>
                                 </div>
                             </div>
                         );
