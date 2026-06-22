@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.40";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.41";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -374,14 +374,15 @@
         // v5.5.7-alpha.13: CSS variables for dark mode support
 
         // v5.5.4 - Isolated search input component (prevents 10K-row re-render on every keystroke)
-        function SearchInput({ value, onSearch, searchHistory, addToSearchHistory, removeFromSearchHistory, clearSearchHistory }) {
+        // v6.12.0 - Recents = full filter combos. Parent passes pre-labeled recents + apply/save/remove actions.
+        function SearchInput({ value, onSearch, recents, onApplyRecent, onSaveRecent, onRemoveRecent, onClearRecents }) {
             const [inputValue, setInputValue] = useState(value);
             const [historyOpen, setHistoryOpen] = useState(false);
             const [historyIndex, setHistoryIndex] = useState(-1);
             const debounceRef = useRef(null);
             const lastSentRef = useRef(value); // Track what we last sent to parent
 
-            // Sync from parent only for external changes (e.g., Clear All filters),
+            // Sync from parent only for external changes (e.g., Clear All filters, applying a Search),
             // not when parent echoes back our own debounced value
             useEffect(() => {
                 if (value !== lastSentRef.current) {
@@ -393,19 +394,24 @@
             const handleChange = (val) => {
                 setInputValue(val);
                 setHistoryIndex(-1);
-                if (searchHistory.length > 0) setHistoryOpen(true);
+                if (recents.length > 0) setHistoryOpen(true);
                 if (debounceRef.current) clearTimeout(debounceRef.current);
                 debounceRef.current = setTimeout(() => { lastSentRef.current = val; onSearch(val); }, 300);
             };
 
-            const commitSearch = (val) => {
-                setInputValue(val);
+            const clearText = () => {
+                setInputValue('');
                 if (debounceRef.current) clearTimeout(debounceRef.current);
-                lastSentRef.current = val;
-                onSearch(val);
+                lastSentRef.current = '';
+                onSearch('');
             };
 
-            // Click-outside to close history dropdown
+            // Recents filtered by the typed text (match the recent's text term or its chip label)
+            const visibleRecents = inputValue.trim()
+                ? recents.filter(r => `${r.text} ${r.label}`.toLowerCase().includes(inputValue.toLowerCase()))
+                : recents;
+
+            // Click-outside to close recents dropdown
             useEffect(() => {
                 if (!historyOpen) return;
                 const handler = (e) => {
@@ -430,34 +436,21 @@
                         }}
                         onFocus={(e) => {
                             e.target.style.borderColor = 'var(--border-focus)';
-                            if (searchHistory.length > 0) setHistoryOpen(true);
+                            if (recents.length > 0) setHistoryOpen(true);
                         }}
-                        onBlur={(e) => { e.target.style.borderColor = 'var(--border-strong)'; addToSearchHistory(inputValue); }}
+                        onBlur={(e) => { e.target.style.borderColor = 'var(--border-strong)'; }}
                         onKeyDown={(e) => {
                             e.stopPropagation();
                             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                                if (!historyOpen || searchHistory.length === 0) return;
+                                if (!historyOpen || visibleRecents.length === 0) return;
                                 e.preventDefault();
-                                const filtered = inputValue.trim()
-                                    ? searchHistory.filter(h => h.toLowerCase().includes(inputValue.toLowerCase()))
-                                    : searchHistory;
-                                if (filtered.length === 0) return;
                                 setHistoryIndex(prev => {
-                                    if (e.key === 'ArrowDown') return prev < filtered.length - 1 ? prev + 1 : 0;
-                                    return prev > 0 ? prev - 1 : filtered.length - 1;
+                                    if (e.key === 'ArrowDown') return prev < visibleRecents.length - 1 ? prev + 1 : 0;
+                                    return prev > 0 ? prev - 1 : visibleRecents.length - 1;
                                 });
                             } else if (e.key === 'Enter') {
-                                if (historyOpen && historyIndex >= 0) {
-                                    const filtered = inputValue.trim()
-                                        ? searchHistory.filter(h => h.toLowerCase().includes(inputValue.toLowerCase()))
-                                        : searchHistory;
-                                    if (historyIndex < filtered.length) {
-                                        const selected = filtered[historyIndex];
-                                        commitSearch(selected);
-                                        addToSearchHistory(selected);
-                                    }
-                                } else {
-                                    addToSearchHistory(inputValue);
+                                if (historyOpen && historyIndex >= 0 && historyIndex < visibleRecents.length) {
+                                    onApplyRecent(visibleRecents[historyIndex].key);
                                 }
                                 setHistoryOpen(false);
                                 setHistoryIndex(-1);
@@ -467,7 +460,7 @@
                                     setHistoryOpen(false);
                                     setHistoryIndex(-1);
                                 } else {
-                                    commitSearch('');
+                                    clearText();
                                 }
                                 e.target.blur();
                             }
@@ -475,7 +468,7 @@
                     />
                     {inputValue && (
                         <button
-                            onClick={() => { commitSearch(''); setHistoryOpen(false); }}
+                            onClick={() => { clearText(); setHistoryOpen(false); }}
                             title="Clear search"
                             style={{
                                 position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
@@ -486,46 +479,53 @@
                             onMouseLeave={(e) => e.target.style.color = 'var(--text-secondary)'}
                         >×</button>
                     )}
-                    {historyOpen && (() => {
-                        const filtered = inputValue.trim()
-                            ? searchHistory.filter(h => h.toLowerCase().includes(inputValue.toLowerCase()))
-                            : searchHistory;
-                        if (filtered.length === 0) return null;
-                        return (
-                            <div style={{
-                                position: 'absolute', top: '32px', left: 0, right: 0,
-                                background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
-                                borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-                                zIndex: 1000, maxHeight: '200px', overflowY: 'auto'
-                            }}>
-                                {filtered.map((term, i) => (
-                                    <div key={i}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={() => { commitSearch(term); setHistoryOpen(false); setHistoryIndex(-1); addToSearchHistory(term); }}
-                                        style={{ padding: '6px 12px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: i === historyIndex ? 'var(--bg-selected)' : 'var(--bg-surface)' }}
-                                        onMouseEnter={() => setHistoryIndex(i)}
-                                        onMouseLeave={() => setHistoryIndex(-1)}
-                                    >
-                                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{term}</span>
+                    {historyOpen && visibleRecents.length > 0 && (
+                        <div style={{
+                            position: 'absolute', top: '32px', left: 0, right: 0,
+                            background: 'var(--bg-elevated)', border: '1px solid var(--border-strong)',
+                            borderRadius: '4px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                            zIndex: 1000, maxHeight: '240px', overflowY: 'auto'
+                        }}>
+                            <div style={{ padding: '4px 12px', fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent searches</div>
+                            {visibleRecents.map((r, i) => (
+                                <div key={r.key}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => { onApplyRecent(r.key); setHistoryOpen(false); setHistoryIndex(-1); }}
+                                    title={r.fullLabel}
+                                    style={{ padding: '6px 12px', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: i === historyIndex ? 'var(--bg-selected)' : 'var(--bg-surface)' }}
+                                    onMouseEnter={() => setHistoryIndex(i)}
+                                    onMouseLeave={() => setHistoryIndex(-1)}
+                                >
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.label}</span>
+                                    <span style={{ display: 'flex', flexShrink: 0, marginLeft: '8px', gap: '2px' }}>
                                         <button
                                             onMouseDown={(e) => e.preventDefault()}
-                                            onClick={(e) => { e.stopPropagation(); removeFromSearchHistory(term); }}
-                                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '14px', cursor: 'pointer', padding: '0 2px', flexShrink: 0, marginLeft: '8px' }}
+                                            onClick={(e) => { e.stopPropagation(); setHistoryOpen(false); onSaveRecent(r.key); }}
+                                            title="Save to Searches"
+                                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer', padding: '0 2px' }}
+                                            onMouseEnter={(e) => e.target.style.color = 'var(--border-focus)'}
+                                            onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}
+                                        >💾</button>
+                                        <button
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={(e) => { e.stopPropagation(); onRemoveRecent(r.key); }}
+                                            title="Remove from recents"
+                                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '14px', cursor: 'pointer', padding: '0 2px' }}
                                             onMouseEnter={(e) => e.target.style.color = 'var(--text-danger)'}
                                             onMouseLeave={(e) => e.target.style.color = 'var(--text-muted)'}
                                         >×</button>
-                                    </div>
-                                ))}
-                                <div
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => { clearSearchHistory(); setHistoryOpen(false); }}
-                                    style={{ borderTop: '1px solid var(--border-default)', padding: '6px 12px', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', textAlign: 'center' }}
-                                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
-                                >Clear history</div>
-                            </div>
-                        );
-                    })()}
+                                    </span>
+                                </div>
+                            ))}
+                            <div
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => { onClearRecents(); setHistoryOpen(false); }}
+                                style={{ borderTop: '1px solid var(--border-default)', padding: '6px 12px', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', textAlign: 'center' }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text-secondary)'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-muted)'}
+                            >Clear recents</div>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -1212,6 +1212,34 @@
             // v6.12.0 - Canonical signature of a filter set (key-order independent). Used to dedupe saved
             // searches and to light up the saved Search whose filters match the current active filters.
             const filterKey = (f) => JSON.stringify(f || {}, Object.keys(f || {}).sort());
+            // v6.12.0 - Is f a STRICT superset of g? (every chip in g is also in f, and f has more.) Used to
+            // collapse a "building up" sequence of recents (Niven → Niven+Purchased) against the adjacent top.
+            const isSupersetFilters = (f, g) => {
+                if (filterKey(f) === filterKey(g)) return false; // identical, not a strict superset
+                for (const k of Object.keys(g)) {
+                    const gv = g[k], fv = f[k];
+                    if (Array.isArray(gv)) {
+                        if (!Array.isArray(fv) || !gv.every(x => fv.includes(x))) return false;
+                    } else if (fv !== gv) return false;
+                }
+                return true;
+            };
+            // v6.12.0 - Save a filter set as a Search (optional name; blank → chips). Shared by the "Save as a
+            // Search" control and the Recents "save" action. Returns true if saved.
+            const saveFiltersAsSearch = async (filters) => {
+                if (!filters || Object.keys(filters).length === 0) { showToast('No filters to save'); return false; }
+                const key = filterKey(filters);
+                const dup = savedSearches.find(v => filterKey(v.filters) === key);
+                if (dup) { showToast(dup.name && dup.name.trim() ? `Already saved as a Search: "${dup.name}"` : 'These filters are already a saved Search'); return false; }
+                const suggested = autoNameView(filters);
+                const name = await showInputDialog('Save as a Search', 'Name (optional — leave blank to show the filter chips):', '', suggested === 'New View' ? 'e.g. Unread sci-fi' : suggested);
+                if (name === null) return false;
+                const trimmed = (name || '').trim();
+                const maxPos = savedSearches.length > 0 ? Math.max(...savedSearches.map(v => v.position ?? 0)) : -1;
+                setSavedSearches(prev => [...prev, { id: `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name: trimmed, filters, position: maxPos + 1 }]);
+                showToast(trimmed ? `Saved as a Search: "${trimmed}"` : 'Saved as a Search');
+                return true;
+            };
             // v6.10.0-alpha.17 - Suggested name for the "Save as a Search" prompt (placeholder only — naming is optional)
             const autoNameView = (filters) => {
                 const parts = filterChips(filters);
@@ -2572,9 +2600,16 @@
                         }
                     }
                     // v5.4.9: Load search history (separate from filters)
+                    // v6.12.0: Recents are now filter combos { filters }. Migrate legacy string entries.
                     const savedHistory = localStorage.getItem(SEARCH_HISTORY_KEY);
                     if (savedHistory) {
-                        try { setSearchHistory(JSON.parse(savedHistory)); } catch(e) {}
+                        try {
+                            const parsed = JSON.parse(savedHistory);
+                            const migrated = (Array.isArray(parsed) ? parsed : [])
+                                .map(h => typeof h === 'string' ? { filters: { search: h } } : h)
+                                .filter(h => h && h.filters && Object.keys(h.filters).length > 0);
+                            setSearchHistory(migrated);
+                        } catch(e) {}
                     }
                 } catch (e) {
                     console.error('Failed to load filters from localStorage:', e);
@@ -2667,28 +2702,53 @@
                 }
             }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter, ownershipFilter, seriesFilter, datePreset, dateFrom, dateTo, showHidden, tagFilter, selectedCollections, minAmazonRating, minMyRating, selectedSeries]);
 
-            // v5.4.9 - Search history helpers
-            const addToSearchHistory = (term) => {
-                const trimmed = term.trim();
-                if (trimmed.length < 3) return;
+            // v6.12.0 - Recents (full filter combos). searchHistory entries are { filters }.
+            const RECENTS_CAP = 8;
+            const recordRecent = (filters) => {
+                if (!filters || Object.keys(filters).length === 0) return;
+                const key = filterKey(filters);
                 setSearchHistory(prev => {
-                    const filtered = prev.filter(t => t.toLowerCase() !== trimmed.toLowerCase());
-                    const updated = [trimmed, ...filtered].slice(0, 15);
+                    let next;
+                    if (prev.some(h => filterKey(h.filters) === key)) {
+                        next = [{ filters }, ...prev.filter(h => filterKey(h.filters) !== key)]; // identical → move to top
+                    } else if (prev.length > 0 && isSupersetFilters(filters, prev[0].filters)) {
+                        next = [{ filters }, ...prev.slice(1)]; // strict superset of the adjacent top → collapse
+                    } else {
+                        next = [{ filters }, ...prev];
+                    }
+                    next = next.slice(0, RECENTS_CAP);
+                    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next));
+                    return next;
+                });
+            };
+            const removeRecent = (key) => {
+                setSearchHistory(prev => {
+                    const updated = prev.filter(h => filterKey(h.filters) !== key);
                     localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
                     return updated;
                 });
             };
-            const removeFromSearchHistory = (term) => {
-                setSearchHistory(prev => {
-                    const updated = prev.filter(t => t !== term);
-                    localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(updated));
-                    return updated;
-                });
-            };
-            const clearSearchHistory = () => {
-                setSearchHistory([]);
-                localStorage.removeItem(SEARCH_HISTORY_KEY);
-            };
+            const clearRecents = () => { setSearchHistory([]); localStorage.removeItem(SEARCH_HISTORY_KEY); };
+
+            // v6.12.0 - Capture the current filter combo into Recents after a pause (debounced). Empty filter
+            // states are skipped (Clear All neither records nor wipes recents). Not while in a legacy view context.
+            useEffect(() => {
+                if (isViewFolder(selectedFolderId)) return;
+                const f = buildCurrentFilters();
+                if (Object.keys(f).length === 0) return;
+                const t = setTimeout(() => recordRecent(f), 1500);
+                return () => clearTimeout(t);
+            }, [searchTerm, readStatusFilter, ownershipFilter, selectedCollections, selectedSeries, minAmazonRating, minMyRating, datePreset, dateFrom, dateTo, tagFilter, dealsFilterActive, selectedFolderId]);
+
+            // v6.12.0 - Recents shaped for the search-box dropdown + its apply/save actions
+            const recents = searchHistory.map(h => ({
+                key: filterKey(h.filters),
+                label: filterChipsLabel(h.filters),
+                fullLabel: filterChipsFull(h.filters),
+                text: h.filters.search || ''
+            }));
+            const applyRecent = (key) => { const h = searchHistory.find(x => filterKey(x.filters) === key); if (h) applySavedFilters(h.filters); };
+            const saveRecent = async (key) => { const h = searchHistory.find(x => filterKey(x.filters) === key); if (h) await saveFiltersAsSearch(h.filters); };
 
             // v5.1.0-alpha.23 - Load wizard settings from localStorage on mount
             React.useEffect(() => {
@@ -7462,10 +7522,11 @@
                         <SearchInput
                             value={searchTerm}
                             onSearch={setSearchTerm}
-                            searchHistory={searchHistory}
-                            addToSearchHistory={addToSearchHistory}
-                            removeFromSearchHistory={removeFromSearchHistory}
-                            clearSearchHistory={clearSearchHistory}
+                            recents={recents}
+                            onApplyRecent={applyRecent}
+                            onSaveRecent={saveRecent}
+                            onRemoveRecent={removeRecent}
+                            onClearRecents={clearRecents}
                         />
 
                         {/* v5.0.0-alpha.175.4 - Toolbar Tier 1 Filters */}
@@ -8546,22 +8607,7 @@
                                                 <div className="absolute left-0 mt-1 z-50 bg-white border border-gray-300 rounded shadow-lg py-1 min-w-[230px] text-sm text-gray-700">
                                                     <button
                                                         className="block w-full text-left px-3 py-1.5 hover:bg-gray-100"
-                                                        onClick={async () => {
-                                                            const filters = buildCurrentFilters();
-                                                            setSaveResultsMenuOpen(false);
-                                                            if (Object.keys(filters).length === 0) { showToast('No filters to save'); return; }
-                                                            const key = JSON.stringify(filters, Object.keys(filters).sort());
-                                                            const dup = savedSearches.find(v => JSON.stringify(v.filters, Object.keys(v.filters || {}).sort()) === key);
-                                                            if (dup) { showToast(dup.name && dup.name.trim() ? `Already saved as a Search: "${dup.name}"` : 'These filters are already a saved Search'); return; }
-                                                            // v6.12.0 - Optional name; blank → the Search shows its filter chips (naming is optional)
-                                                            const name = await showInputDialog('Save as a Search', 'Name (optional — leave blank to show the filter chips):', '', autoNameView(filters) === 'New View' ? 'e.g. Unread sci-fi' : autoNameView(filters));
-                                                            if (name === null) return;
-                                                            const trimmed = (name || '').trim();
-                                                            const maxPos = savedSearches.length > 0 ? Math.max(...savedSearches.map(v => v.position ?? 0)) : -1;
-                                                            const newView = { id: `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name: trimmed, filters, position: maxPos + 1 };
-                                                            setSavedSearches(prev => [...prev, newView]);
-                                                            showToast(trimmed ? `Saved as a Search: "${trimmed}"` : 'Saved as a Search');
-                                                        }}>
+                                                        onClick={() => { setSaveResultsMenuOpen(false); saveFiltersAsSearch(buildCurrentFilters()); }}>
                                                         Save as a <b>Search</b> <span className="text-gray-400">(live filter)</span>
                                                     </button>
                                                     <div className="border-t border-gray-200 my-1" />
