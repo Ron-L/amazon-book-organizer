@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.35";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.36";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1185,8 +1185,9 @@
             // renders) so a freshly-created Book List matches what you were just looking at — no jumping.
             const getDisplayedBookIds = () => explorerSortedBooks.map(b => b.id);
 
-            // v6.10.0-alpha.17 - Auto-name a view from its filters
-            const autoNameView = (filters) => {
+            // v6.10.0-alpha.17 - Build display chips from a filter set. Shared by autoNameView (suggestion)
+            // and the Searches sidebar (unnamed searches render as chips). Returns an array of chip strings.
+            const filterChips = (filters) => {
                 const parts = [];
                 if (filters.tags?.length > 0) parts.push(filters.tags.map(t => tagRegistry[t]?.label || t).join(', '));
                 if (filters.readStatus) parts.push(filters.readStatus === 'READ' ? 'Read' : filters.readStatus === 'UNREAD' ? 'Unread' : filters.readStatus);
@@ -1198,6 +1199,19 @@
                 if (filters.datePreset) parts.push(filters.datePreset === 'last30' ? 'Last 30 Days' : filters.datePreset === 'last90' ? 'Last 90 Days' : filters.datePreset === 'lastYear' ? 'Last Year' : filters.datePreset);
                 if (filters.search) parts.push(`"${filters.search}"`);
                 if (filters.deals) parts.push('Deals');
+                return parts;
+            };
+            // v6.12.0 - Compact chip label for an unnamed Search (truncated) and the full chips for hover.
+            const filterChipsLabel = (filters) => {
+                const parts = filterChips(filters);
+                if (parts.length === 0) return 'All books';
+                if (parts.length <= 2) return parts.join(' · ');
+                return `${parts[0]} · +${parts.length - 1} more`;
+            };
+            const filterChipsFull = (filters) => filterChips(filters).join(' · ') || 'All books';
+            // v6.10.0-alpha.17 - Suggested name for the "Save as a Search" prompt (placeholder only — naming is optional)
+            const autoNameView = (filters) => {
+                const parts = filterChips(filters);
                 if (parts.length === 0) return 'New View';
                 if (parts.length <= 2) return parts.join(' + ');
                 return `${parts[0]} + ${parts.length - 1} more`;
@@ -8524,17 +8538,21 @@
                                                 <div className="absolute left-0 mt-1 z-50 bg-white border border-gray-300 rounded shadow-lg py-1 min-w-[230px] text-sm text-gray-700">
                                                     <button
                                                         className="block w-full text-left px-3 py-1.5 hover:bg-gray-100"
-                                                        onClick={() => {
+                                                        onClick={async () => {
                                                             const filters = buildCurrentFilters();
                                                             setSaveResultsMenuOpen(false);
                                                             if (Object.keys(filters).length === 0) { showToast('No filters to save'); return; }
                                                             const key = JSON.stringify(filters, Object.keys(filters).sort());
                                                             const dup = savedSearches.find(v => JSON.stringify(v.filters, Object.keys(v.filters || {}).sort()) === key);
-                                                            if (dup) { showToast(`Already saved as a Search: "${dup.name}"`); return; }
+                                                            if (dup) { showToast(dup.name && dup.name.trim() ? `Already saved as a Search: "${dup.name}"` : 'These filters are already a saved Search'); return; }
+                                                            // v6.12.0 - Optional name; blank → the Search shows its filter chips (naming is optional)
+                                                            const name = await showInputDialog('Save as a Search', 'Name (optional — leave blank to show the filter chips):', '', autoNameView(filters) === 'New View' ? 'e.g. Unread sci-fi' : autoNameView(filters));
+                                                            if (name === null) return;
+                                                            const trimmed = (name || '').trim();
                                                             const maxPos = savedSearches.length > 0 ? Math.max(...savedSearches.map(v => v.position ?? 0)) : -1;
-                                                            const newView = { id: `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name: autoNameView(filters), filters, position: maxPos + 1 };
+                                                            const newView = { id: `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`, name: trimmed, filters, position: maxPos + 1 };
                                                             setSavedSearches(prev => [...prev, newView]);
-                                                            showToast(`Saved as a Search: "${newView.name}"`);
+                                                            showToast(trimmed ? `Saved as a Search: "${trimmed}"` : 'Saved as a Search');
                                                         }}>
                                                         Save as a <b>Search</b> <span className="text-gray-400">(live filter)</span>
                                                     </button>
@@ -11713,7 +11731,10 @@
                                             : null;
                                         return sortedViewList.map((sv, viewIndex) => {
                                             const viewFolderId = `__view_${sv.id}__`;
-                                            const viewLabel = sv.name;
+                                            // v6.12.0 - Named search shows its name; unnamed shows compact filter chips (full chips on hover)
+                                            const isNamed = !!(sv.name && sv.name.trim());
+                                            const viewLabel = isNamed ? sv.name : filterChipsLabel(sv.filters);
+                                            const viewFull = isNamed ? sv.name : filterChipsFull(sv.filters);
                                             const viewTagId = sv.filters?.tags?.[0];
                                             // v6.11.0-alpha.1 - Use bookMatchesFilters for accurate count across all filter types
                                             const totalViewBooks = books.filter(b => !b.isDeleted && bookMatchesFilters(b, sv.filters)).length;
@@ -11856,7 +11877,7 @@
                                                         e.preventDefault();
                                                         setFolderContextMenu({ folderId: viewFolderId, x: e.clientX, y: e.clientY, source: 'left' });
                                                     }}
-                                                    title={sv.description || `Search: ${viewLabel} (${hasActiveFilters ? `${bookCount} of ${totalViewBooks}` : bookCount} books)`}>
+                                                    title={sv.description || `Search: ${viewFull} (${hasActiveFilters ? `${bookCount} of ${totalViewBooks}` : bookCount} books)`}>
                                                     <span className="pointer-events-none">
                                                         {viewTagId && Object.keys(sv.filters).length === 1 && sv.filters.tags?.length === 1
                                                             ? <TagIconSVG size={16} color="#d97706" />
@@ -11885,7 +11906,7 @@
                                                             onClick={(e) => e.stopPropagation()}
                                                         />
                                                     ) : (
-                                                        <span className="flex-1 pointer-events-none">{viewLabel}</span>
+                                                        <span className={`flex-1 pointer-events-none ${isNamed ? '' : 'italic text-gray-600'}`}>{viewLabel}</span>
                                                     )}
                                                     <span className="text-xs text-gray-500 pointer-events-none group-hover:hidden">({hasActiveFilters ? `${bookCount}/${totalViewBooks}` : bookCount})</span>
                                                     {/* v6.10.0-alpha.17 - Delete button on hover (overlays count, same as folders) */}
