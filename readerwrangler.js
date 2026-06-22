@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.37";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.38";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1209,6 +1209,9 @@
                 return `${parts[0]} · +${parts.length - 1} more`;
             };
             const filterChipsFull = (filters) => filterChips(filters).join(' · ') || 'All books';
+            // v6.12.0 - Canonical signature of a filter set (key-order independent). Used to dedupe saved
+            // searches and to light up the saved Search whose filters match the current active filters.
+            const filterKey = (f) => JSON.stringify(f || {}, Object.keys(f || {}).sort());
             // v6.10.0-alpha.17 - Suggested name for the "Save as a Search" prompt (placeholder only — naming is optional)
             const autoNameView = (filters) => {
                 const parts = filterChips(filters);
@@ -8507,6 +8510,12 @@
                                 {/* v5.0.0-alpha.175.44 - Phase 5.5: Series filter */}
                                 {minMyRating && selectedSeries.length > 0 && <span>|</span>}
                                 {selectedSeries.length > 0 && <span>Series: {selectedSeries.map(s => s === 'NOT_IN_SERIES' ? 'Not in series' : s).join(', ')}</span>}
+                                {/* v6.12.0 - When the active filters exactly match a saved Search, name it */}
+                                {(() => {
+                                    const ck = filterKey(buildCurrentFilters());
+                                    const ms = savedSearches.find(v => filterKey(v.filters) === ck);
+                                    return ms ? <span className="text-blue-700 font-semibold whitespace-nowrap" title="The active filters match this saved Search">✓ Search: {(ms.name && ms.name.trim()) ? ms.name : filterChipsLabel(ms.filters)}</span> : null;
+                                })()}
                             {/* v6.10.0-alpha.17 - Drag handle to save current filters as a view */}
                             {/* v6.11.0-alpha.3 - Drag handle and Clear All always available */}
                             <span
@@ -11729,8 +11738,11 @@
                                         const currentFilteredBooks = hasActiveFilters
                                             ? books.filter(b => !b.isDeleted && filterBookForExplorer(b))
                                             : null;
+                                        // v6.12.0 - Signature of the current active filters → highlight the matching saved Search
+                                        const currentSearchKey = hasActiveFilters ? filterKey(buildCurrentFilters()) : null;
                                         return sortedViewList.map((sv, viewIndex) => {
                                             const viewFolderId = `__view_${sv.id}__`;
+                                            const isActiveSearch = currentSearchKey !== null && filterKey(sv.filters) === currentSearchKey;
                                             // v6.12.0 - Named search shows its name; unnamed shows compact filter chips (full chips on hover)
                                             const isNamed = !!(sv.name && sv.name.trim());
                                             const viewLabel = isNamed ? sv.name : filterChipsLabel(sv.filters);
@@ -11747,7 +11759,7 @@
                                                 <div
                                                     key={viewFolderId}
                                                     data-folder-id={viewFolderId}
-                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${selectedFolderId === viewFolderId ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                                                    className={`w-full flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer group ${isActiveSearch ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                                                     style={sidebarFolderDragTarget?.type === 'reorder' && sidebarFolderDragTarget?.folderId === viewFolderId
                                                         ? sidebarFolderDragTarget.position === 'before'
                                                             ? { borderTop: '3px solid var(--border-focus)' }
@@ -11976,8 +11988,10 @@
                                         }}
                                     />
                                     </>}
-                                    {/* v6.12.0 - BOOK LISTS section header (curated, supplemental bookId sets) */}
-                                    <div className="flex items-center justify-between px-2 pt-2 pb-0.5 mt-1 border-t border-gray-100">
+                                    {/* v6.12.0 - BOOK LISTS section header (curated, supplemental bookId sets).
+                                        Bolder top divider signals these are LOCATIONS (clicking replaces your view),
+                                        distinct from Searches above (filter presets that overlay the current view). */}
+                                    <div className="flex items-center justify-between px-2 pt-2 pb-0.5 mt-2 border-t-2 border-gray-300">
                                         <span
                                             className="text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-gray-600 cursor-default"
                                             title="Hand-picked lists of books, like playlists. A book can be on many lists; removing it from a list never deletes the book.">
