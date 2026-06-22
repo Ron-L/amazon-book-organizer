@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.38";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.39";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -835,7 +835,7 @@
             const [folderPropertiesEditedName, setFolderPropertiesEditedName] = useState(''); // v5.0.0-alpha.143 - Edited name in properties dialog
             const [folderPropertiesEditedDescription, setFolderPropertiesEditedDescription] = useState(''); // v6.5.0 - Description in properties dialog
             const [dialogDrag, setDialogDrag] = useState(null); // v5.0.0-alpha.144 - Dragging state { isDragging, offsetX, offsetY, dialogX, dialogY }
-            const [showAllFoldersOverride, setShowAllFoldersOverride] = useState(false); // v5.0.0-alpha.169 - Override auto-hide when filter active
+            const [showAllFoldersOverride, setShowAllFoldersOverride] = useState(() => localStorage.getItem('readerwrangler-show-all-folders') === 'true'); // v5.0.0-alpha.169 - Override auto-hide when filter active; v6.12.0 - sticky persisted preference
             const springLoadTimerRef = useRef(null); // v6.8.0 - Spring-load timer for Show All drag hover
             const [springLoadActive, setSpringLoadActive] = useState(false); // v6.8.0 - True while spring-load countdown is running (drives pulse animation)
             const [newFolderHiddenAlert, setNewFolderHiddenAlert] = useState(null); // v6.8.0 - { folderName } when newly created folder is hidden by active filters
@@ -6594,17 +6594,16 @@
                         })));
                         setSavedExpansionState(null);
                     }
-                    // Reset show all override
-                    setShowAllFoldersOverride(false);
+                    // v6.12.0 - Do NOT reset the Show all / Hide empty override here. It's a sticky user
+                    // preference (persisted), remembered across filter changes and Clear All.
                 }
                 // eslint-disable-next-line react-hooks/exhaustive-deps
             }, [hasActiveFilters]);
 
-            // v5.0.0-alpha.169 - Reset "show all" override when any filter changes
+            // v6.12.0 - Persist the Show all / Hide empty preference (sticky until the user changes it again)
             useEffect(() => {
-                setShowAllFoldersOverride(false);
-            }, [searchTerm, readStatusFilter, collectionFilter, ratingFilter,
-                ownershipFilter, seriesFilter, dateFrom, dateTo, tagFilter, dealsFilterActive]);
+                localStorage.setItem('readerwrangler-show-all-folders', String(showAllFoldersOverride));
+            }, [showAllFoldersOverride]);
 
             // Calculate combined urgency from Library and Collections status
             // v6.10.0-alpha.29: Two-level freshness — relay data trumps age-based when newer data exists
@@ -11753,8 +11752,11 @@
                                             const bookCount = hasActiveFilters && currentFilteredBooks
                                                 ? currentFilteredBooks.filter(b => bookMatchesFilters(b, sv.filters)).length
                                                 : totalViewBooks;
-                                            // Hide views with 0 matching books when filters are active
-                                            if (hasActiveFilters && bookCount === 0) return null;
+                                            // v6.12.0 - Searches always render. Unlike Folders/Book Lists (locations
+                                            // that hide when empty under an active filter), a Search is a saved filter
+                                            // you want available to click regardless. The highlight shows which one
+                                            // matches the current filters; hiding the rest was confusing (and Show All
+                                            // didn't even restore them).
                                             return (
                                                 <div
                                                     key={viewFolderId}
