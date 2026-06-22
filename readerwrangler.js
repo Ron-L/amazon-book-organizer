@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.39";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.40";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -11943,20 +11943,8 @@
                                             );
                                         });
                                     })()}
-                                    {/* v6.11.0-alpha.1 - "X of Y views match" indicator when filters hide some views */}
-                                    {hasActiveFilters && savedSearches.length > 0 && (() => {
-                                        const filteredBooks = books.filter(b => !b.isDeleted && filterBookForExplorer(b));
-                                        const matchingViewCount = savedSearches.filter(sv =>
-                                            filteredBooks.some(b => bookMatchesFilters(b, sv.filters))
-                                        ).length;
-                                        if (matchingViewCount === savedSearches.length) return null;
-                                        const text = matchingViewCount === 0 ? 'No views match' : `${matchingViewCount} of ${savedSearches.length} views match`;
-                                        return (
-                                            <div className="mx-2 my-1 px-2 py-1 text-xs rounded border bg-amber-50 border-amber-200 text-amber-700">
-                                                {text}
-                                            </div>
-                                        );
-                                    })()}
+                                    {/* v6.12.0 - "X of Y views match" banner removed: Searches always render now
+                                        (they're filter presets, not locations), so a "some hidden" prompt is moot. */}
                                     {/* v6.10.0-alpha.17 - Drop zone for creating new views from filter bar drag */}
                                     <div
                                         className="w-full px-2 py-1 rounded transition-colors"
@@ -12024,12 +12012,29 @@
                                             </button>
                                         </div>
                                     </div>
-                                    {!bookListsSectionCollapsed && (
-                                        bookLists.length === 0
-                                            ? <div className="px-2 py-1.5 text-xs text-gray-400 italic">No book lists yet</div>
-                                            : [...bookLists].sort((a, b) => a.position - b.position).map(bl => {
+                                    {!bookListsSectionCollapsed && (() => {
+                                        if (bookLists.length === 0) return <div className="px-2 py-1.5 text-xs text-gray-400 italic">No book lists yet</div>;
+                                        // v6.12.0 - Book Lists honor the active filter like Folders: matching/total counts and
+                                        // hide when nothing matches (unless Show all). They're locations below the bold line.
+                                        const blWithCounts = [...bookLists].sort((a, b) => a.position - b.position).map(bl => {
+                                            const blBooks = (bl.bookIds || []).map(id => bookMap.get(id)).filter(bk => bk && !bk.isDeleted);
+                                            const blCount = blBooks.length; // total (non-trashed), matching the list view
+                                            const blMatching = hasActiveFilters ? blBooks.filter(filterBookForExplorer).length : blCount;
+                                            return { bl, blCount, blMatching };
+                                        });
+                                        const blHiding = hasActiveFilters && !showAllFoldersOverride;
+                                        const blVisible = blHiding ? blWithCounts.filter(x => x.blMatching > 0) : blWithCounts;
+                                        const blHiddenCount = blWithCounts.length - blVisible.length;
+                                        return (<>
+                                            {blHiddenCount > 0 && (
+                                                <div className="mx-2 my-1 px-2 py-1 text-xs rounded border bg-amber-50 border-amber-200 text-amber-700 flex items-center justify-between">
+                                                    <span>{blVisible.length} of {blWithCounts.length} lists match</span>
+                                                    <button className="ml-2 border font-medium px-2 py-0.5 rounded bg-white border-amber-300 text-amber-700 hover:bg-amber-100"
+                                                        onClick={() => setShowAllFoldersOverride(true)} title="Show book lists with no matches">Show all</button>
+                                                </div>
+                                            )}
+                                            {blVisible.map(({ bl, blCount, blMatching }) => {
                                                 const blFolderId = `__booklist_${bl.id}__`;
-                                                const blCount = (bl.bookIds || []).filter(id => { const bk = bookMap.get(id); return bk && !bk.isDeleted; }).length; // v6.12.0 - exclude trashed books, matching the list view
                                                 return (
                                                     <div
                                                         key={blFolderId}
@@ -12082,7 +12087,7 @@
                                                         ) : (
                                                             <span className="flex-1 pointer-events-none">{bl.name}</span>
                                                         )}
-                                                        <span className="text-xs text-gray-500 pointer-events-none group-hover:hidden">({blCount})</span>
+                                                        <span className="text-xs text-gray-500 pointer-events-none group-hover:hidden">({hasActiveFilters ? `${blMatching}/${blCount}` : blCount})</span>
                                                         <div className="hidden group-hover:flex items-center gap-0.5">
                                                             <button
                                                                 onClick={async (e) => {
@@ -12099,8 +12104,9 @@
                                                         </div>
                                                     </div>
                                                 );
-                                            })
-                                    )}
+                                            })}
+                                        </>);
+                                    })()}
                                     {/* v6.4.0 - FOLDERS section header */}
                                     <div className="flex items-center justify-between px-2 pt-2 pb-0.5 mt-1 border-t border-gray-100">
                                         <span
