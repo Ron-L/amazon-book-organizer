@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.44";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.45";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -23,6 +23,8 @@
             priceGoal: { label: 'Goal', sortKey: 'priceGoal', defaultDir: 'asc', cssVar: '--col-priceGoal' },
             delta: { label: 'Under', sortKey: 'delta', defaultDir: 'desc', cssVar: '--col-delta' },
             ownership: { label: 'Ownership', sortKey: 'ownership', defaultDir: 'asc', cssVar: '--col-ownership' }, // v6.12.0
+            format: { label: 'Format', sortKey: 'format', defaultDir: 'asc', cssVar: '--col-format' }, // v6.12.0 - book.binding
+            asin: { label: 'ASIN', sortKey: 'asin', defaultDir: 'asc', cssVar: '--col-asin' }, // v6.12.0
             amazon: { label: 'Amazon', sortKey: null, cssVar: '--col-amazon', textCenter: true, noResize: true }
         };
 
@@ -853,6 +855,8 @@
                 priceGoal: true,
                 delta: true,
                 ownership: false, // v6.12.0 - Ownership/acquisition type column (hidden by default)
+                format: false, // v6.12.0 - Format/binding column (hidden by default)
+                asin: false, // v6.12.0 - ASIN column (hidden by default)
                 amazon: false // v5.0.0-alpha.167.6 - Amazon link column (hidden by default)
             });
             const [saveResultsMenuOpen, setSaveResultsMenuOpen] = useState(false); // v6.12.0 - "Save these results…" dropdown (Phase 4)
@@ -870,12 +874,14 @@
                 priceGoal: 80,
                 delta: 80,
                 ownership: 110, // v6.12.0 - Ownership column width
+                format: 110, // v6.12.0 - Format column width
+                asin: 110, // v6.12.0 - ASIN column width
                 amazon: 70 // v5.0.0-alpha.167.6 - Amazon link column width
             });
             const [resizingColumn, setResizingColumn] = useState(null); // v5.0.0-alpha.109 - { columnId, startX, startWidth }
             const [columnOrder, setColumnOrder] = useState([ // v5.0.0-alpha.172 - Column display order (drag to reorder)
                 'title', 'author', 'series', 'seriesNum', 'rating', 'myRating',
-                'dateAdded', 'price', 'priceGoal', 'delta', 'ownership', 'amazon'
+                'dateAdded', 'price', 'priceGoal', 'delta', 'ownership', 'format', 'asin', 'amazon'
             ]);
             const [draggingColumn, setDraggingColumn] = useState(null); // v5.0.0-alpha.172 - Column header being dragged
             const [headerDropTarget, setHeaderDropTarget] = useState(null); // v5.0.0-alpha.172 - { column, side: 'left'|'right' }
@@ -1049,6 +1055,8 @@
                     return delta >= 0 ? `$${delta.toFixed(2)} under` : `$${Math.abs(delta).toFixed(2)} over`;
                 }
                 if (col === 'ownership') return getOwnershipLabel(book); // v6.12.0
+                if (col === 'format') return book.binding || 'Unknown Format'; // v6.12.0
+                if (col === 'asin') return book.asin || 'No ASIN'; // v6.12.0
                 return '';
             };
 
@@ -1546,6 +1554,10 @@
                                 comparison = deltaA - deltaB;
                             } else if (sort.column === 'ownership') {
                                 comparison = getOwnershipLabel(a).localeCompare(getOwnershipLabel(b));
+                            } else if (sort.column === 'format') {
+                                comparison = (a.binding || '').localeCompare(b.binding || '');
+                            } else if (sort.column === 'asin') {
+                                comparison = (a.asin || '').localeCompare(b.asin || '');
                             }
                             if (comparison !== 0) return dir * comparison;
                         }
@@ -13539,7 +13551,7 @@
                                                                 const labels = {
                                                                     title: 'Name', author: 'Author', series: 'Series', seriesNum: '#',
                                                                     rating: 'Rating', myRating: 'My Rating', dateAdded: 'Date Added', price: 'Price',
-                                                                    priceGoal: 'Goal', delta: 'Under', ownership: 'Ownership', amazon: 'Amazon'
+                                                                    priceGoal: 'Goal', delta: 'Under', ownership: 'Ownership', format: 'Format', asin: 'ASIN', amazon: 'Amazon'
                                                                 };
                                                                 return columnOrder.map(colKey => {
                                                                     if (colKey === 'title') {
@@ -13577,6 +13589,8 @@
                                                                         priceGoal: true,
                                                                         delta: true,
                                                                         ownership: true, // v6.12.0
+                                                                        format: true, // v6.12.0
+                                                                        asin: true, // v6.12.0
                                                                         amazon: true
                                                                     });
                                                                 }}
@@ -14521,6 +14535,14 @@
                                                                         cellClass += otype === 'purchased' ? ' text-xs text-gray-400' : ' text-xs text-gray-700 font-medium';
                                                                         break;
                                                                     }
+                                                                    case 'format': // v6.12.0
+                                                                        content = book.binding || '-';
+                                                                        cellClass += ' text-gray-600 text-xs';
+                                                                        break;
+                                                                    case 'asin': // v6.12.0
+                                                                        content = book.asin || '-';
+                                                                        cellClass += ' text-gray-500 text-xs font-mono';
+                                                                        break;
                                                                     case 'amazon':
                                                                         content = <a href={getAmazonUrl(book.asin)} target="_blank" rel="noopener noreferrer"
                                                                             className="text-blue-600 hover:text-blue-800 hover:underline text-xs"
