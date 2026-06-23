@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.41";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.42";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1187,17 +1187,20 @@
 
             // v6.10.0-alpha.17 - Build display chips from a filter set. Shared by autoNameView (suggestion)
             // and the Searches sidebar (unnamed searches render as chips). Returns an array of chip strings.
+            // v6.12.0 - Chip order follows the on-screen filter order so labels read predictably: search text
+            // first, then the toolbar buttons (Read Status · Tags · Ownership), then the "More" panel. This is
+            // display-only — matching/dedup is by filterKey, which is order-independent.
             const filterChips = (filters) => {
                 const parts = [];
-                if (filters.tags?.length > 0) parts.push(filters.tags.map(t => tagRegistry[t]?.label || t).join(', '));
+                if (filters.search) parts.push(`"${filters.search}"`);
                 if (filters.readStatus) parts.push(filters.readStatus === 'READ' ? 'Read' : filters.readStatus === 'UNREAD' ? 'Unread' : filters.readStatus);
+                if (filters.tags?.length > 0) parts.push(filters.tags.map(t => tagRegistry[t]?.label || t).join(', '));
                 if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership === 'insideAmazon' ? 'Insider' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
                 if (filters.collections?.length > 0) parts.push(filters.collections.join(', '));
-                if (filters.series?.length > 0) parts.push(filters.series.map(s => s === 'NOT_IN_SERIES' ? 'Not in series' : s).join(', '));
                 if (filters.minAmazonRating) parts.push(`${filters.minAmazonRating}+★`);
                 if (filters.minMyRating) parts.push(`My ${filters.minMyRating === 'unrated' ? 'Unrated' : filters.minMyRating + '+★'}`);
+                if (filters.series?.length > 0) parts.push(filters.series.map(s => s === 'NOT_IN_SERIES' ? 'Not in series' : s).join(', '));
                 if (filters.datePreset) parts.push(filters.datePreset === 'last30' ? 'Last 30 Days' : filters.datePreset === 'last90' ? 'Last 90 Days' : filters.datePreset === 'lastYear' ? 'Last Year' : filters.datePreset);
-                if (filters.search) parts.push(`"${filters.search}"`);
                 if (filters.deals) parts.push('Deals');
                 return parts;
             };
@@ -1211,7 +1214,16 @@
             const filterChipsFull = (filters) => filterChips(filters).join(' · ') || 'All books';
             // v6.12.0 - Canonical signature of a filter set (key-order independent). Used to dedupe saved
             // searches and to light up the saved Search whose filters match the current active filters.
-            const filterKey = (f) => JSON.stringify(f || {}, Object.keys(f || {}).sort());
+            // v6.12.0 - Order-independent signature: keys sorted AND array values sorted, so the same filter
+            // set keys identically no matter what order it was built in (incl. multi-tag selection order).
+            const filterKey = (f) => {
+                const norm = {};
+                for (const k of Object.keys(f || {}).sort()) {
+                    const v = (f || {})[k];
+                    norm[k] = Array.isArray(v) ? [...v].sort() : v;
+                }
+                return JSON.stringify(norm);
+            };
             // v6.12.0 - Is f a STRICT superset of g? (every chip in g is also in f, and f has more.) Used to
             // collapse a "building up" sequence of recents (Niven → Niven+Purchased) against the adjacent top.
             const isSupersetFilters = (f, g) => {
