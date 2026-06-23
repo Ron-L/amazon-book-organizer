@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.46";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.47";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1268,48 +1268,8 @@
                 return `${parts[0]} + ${parts.length - 1} more`;
             };
 
-            // v6.10.0-alpha.17 - Create a saved view from filters and add to savedSearches
-            const createSavedView = (filters, position) => {
-                // Duplicate check: reject if an identical filter combination already exists
-                const filterKey = JSON.stringify(filters, Object.keys(filters).sort());
-                const duplicate = savedSearches.find(v => {
-                    const vKey = JSON.stringify(v.filters, Object.keys(v.filters || {}).sort());
-                    return vKey === filterKey;
-                });
-                if (duplicate) {
-                    // v6.10.0-alpha.23 - Show Tag Manager back if it was hidden during drag
-                    if (tagManagerBackdropRef.current) {
-                        tagManagerBackdropRef.current.style.visibility = '';
-                        tagManagerBackdropRef.current.style.pointerEvents = '';
-                    }
-                    return null;
-                }
-                const viewId = `view_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-                const name = autoNameView(filters);
-                const newView = { id: viewId, name, filters, position };
-                setSavedSearches(prev => [...prev, newView]);
-                // v6.10.0-alpha.23 - Show Tag Manager back if it was hidden during drag
-                // (onDragEnd won't fire because React re-render replaces the drag handle with 📌)
-                if (tagManagerBackdropRef.current) {
-                    tagManagerBackdropRef.current.style.visibility = '';
-                    tagManagerBackdropRef.current.style.pointerEvents = '';
-                    // Restore scroll after React re-renders
-                    setTimeout(() => {
-                        if (tagManagerScrollRef.current) {
-                            tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
-                        }
-                    }, 50);
-                }
-                // Trigger inline rename (skip if Tag Manager is open — modal covers sidebar)
-                if (!tagManagementOpen) {
-                    const folderId = `__view_${viewId}__`;
-                    setTimeout(() => {
-                        setEditingFolderId(folderId);
-                        setEditingFolderName(name);
-                    }, 100);
-                }
-                return viewId;
-            };
+            // v6.12.0 Phase 7 - createSavedView removed (was only used by the drag-to-save-view drop zones).
+            // Saving a Search now goes through saveFiltersAsSearch (the visible "Save" control + recents).
 
             // Get books for a folder (handles All Books and My Library virtual folders)
             const getFolderBookIds = (folderId) => {
@@ -8606,19 +8566,7 @@
                                     const ms = savedSearches.find(v => filterKey(v.filters) === ck);
                                     return ms ? <span className="text-blue-700 font-semibold whitespace-nowrap" title="The active filters match this saved Search">✓ Search: {(ms.name && ms.name.trim()) ? ms.name : filterChipsLabel(ms.filters)}</span> : null;
                                 })()}
-                            {/* v6.10.0-alpha.17 - Drag handle to save current filters as a view */}
-                            {/* v6.11.0-alpha.3 - Drag handle and Clear All always available */}
-                            <span
-                                className="cursor-grab active:cursor-grabbing text-blue-400 hover:text-blue-700 select-none"
-                                title="Drag to Views in sidebar to save this filter as a view"
-                                draggable={true}
-                                onDragStart={(e) => {
-                                    const filters = buildCurrentFilters();
-                                    e.dataTransfer.effectAllowed = 'copy';
-                                    e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
-                                    e.dataTransfer.setData('text/plain', autoNameView(filters));
-                                }}
-                                style={{ fontSize: '16px', lineHeight: 1, marginLeft: '8px' }}>⠿</span>
+                            {/* v6.12.0 Phase 7 - Removed the hidden ⠿ drag-to-save-view handle (replaced by the visible "Save" control) */}
                             {/* v6.12.0 Phase 4 - Visible "Save these results…" control (replaces the hidden drag handle's job) */}
                             {(() => {
                                 const displayedIds = getDisplayedBookIds();
@@ -11756,39 +11704,9 @@
                                         <span className="flex-1 pointer-events-none font-semibold">{FOLDER_ALL_BOOKS.name}</span>
                                         <span className="text-xs text-gray-500 pointer-events-none">({hasActiveFilters ? `${books.filter(b => !b.isDeleted && filterBookForExplorer(b)).length}/${books.filter(b => !b.isDeleted).length}` : books.filter(b => !b.isDeleted).length})</span>
                                     </div>
-                                    {/* v6.12.0 - SEARCHES section header (was "Views"), v6.10.0-alpha.17 - Drop zone for filter-view drag */}
+                                    {/* v6.12.0 - SEARCHES section header (was "Views"); Phase 7 removed the filter-view drop zone (use the visible "Save" control) */}
                                     <div
-                                        className="flex items-center justify-between px-2 pt-1 pb-0.5 rounded transition-colors"
-                                        style={sidebarFolderDragTarget?.type === 'filter-view-header' ? { background: 'rgba(59,130,246,0.12)' } : {}}
-                                        onDragOver={(e) => {
-                                            const types = Array.from(e.dataTransfer.types);
-                                            if (types.includes('application/x-filter-view')) {
-                                                e.preventDefault();
-                                                e.dataTransfer.dropEffect = 'copy';
-                                                if (sidebarFolderDragTarget?.type !== 'filter-view-header') {
-                                                    setSidebarFolderDragTarget({ type: 'filter-view-header' });
-                                                }
-                                                // Auto-expand views section on drag hover
-                                                if (viewsSectionCollapsed) setViewsSectionCollapsed(false);
-                                            }
-                                        }}
-                                        onDragLeave={(e) => {
-                                            if (!e.currentTarget.contains(e.relatedTarget)) setSidebarFolderDragTarget(null);
-                                        }}
-                                        onDrop={(e) => {
-                                            e.preventDefault();
-                                            setSidebarFolderDragTarget(null);
-                                            const filterDropData = e.dataTransfer.getData('application/x-filter-view');
-                                            if (filterDropData) {
-                                                const filters = JSON.parse(filterDropData);
-                                                const maxPos = savedSearches.reduce((max, v) => Math.max(max, v.position), -1);
-                                                if (createSavedView(filters, maxPos + 1)) {
-                                                    showToast(`View saved`, e.clientX, e.clientY);
-                                                } else {
-                                                    showToast(`This filter combination is already saved as a view`, e.clientX, e.clientY);
-                                                }
-                                            }
-                                        }}>
+                                        className="flex items-center justify-between px-2 pt-1 pb-0.5 rounded transition-colors">
                                         <span
                                             className={`text-xs font-semibold uppercase tracking-wide cursor-pointer ${selectedFolderId === '__views__' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                                             onClick={() => navigateToFolder('__views__')}
@@ -11854,12 +11772,11 @@
                                                         const types = Array.from(e.dataTransfer.types);
                                                         const isViewDrag = types.includes('application/x-tagview-reorder');
                                                         const isBookDrag = types.includes('application/x-readerwrangler');
-                                                        const isFilterDrag = types.includes('application/x-filter-view');
                                                         if (isBookDrag && viewTagId) {
                                                             e.dataTransfer.dropEffect = ctrlKeyRef.current ? 'copy' : 'move';
                                                             setFolderDropHighlight(e.currentTarget);
-                                                        } else if (isViewDrag || isFilterDrag) {
-                                                            e.dataTransfer.dropEffect = isFilterDrag ? 'copy' : 'move';
+                                                        } else if (isViewDrag) {
+                                                            e.dataTransfer.dropEffect = 'move';
                                                             const rect = e.currentTarget.getBoundingClientRect();
                                                             const position = (e.clientY - rect.top) < rect.height / 2 ? 'before' : 'after';
                                                             const current = sidebarFolderDragTarget;
@@ -11894,25 +11811,7 @@
                                                             setSavedSearches(prev => prev.map(v => v.id === draggedViewId ? { ...v, position: newPos } : v));
                                                             return;
                                                         }
-                                                        // v6.10.0-alpha.17 - Filter view drop → create new saved view at position
-                                                        const filterDropData = e.dataTransfer.getData('application/x-filter-view');
-                                                        if (filterDropData) {
-                                                            const filters = JSON.parse(filterDropData);
-                                                            let newPos;
-                                                            if (target?.position === 'before') {
-                                                                const prev = viewIndex > 0 ? sortedViewList[viewIndex - 1] : null;
-                                                                newPos = prev ? (prev.position + sv.position) / 2 : sv.position - 1;
-                                                            } else {
-                                                                const next = viewIndex < sortedViewList.length - 1 ? sortedViewList[viewIndex + 1] : null;
-                                                                newPos = next ? (sv.position + next.position) / 2 : sv.position + 1;
-                                                            }
-                                                            if (createSavedView(filters, newPos)) {
-                                                                showToast(`View saved`, e.clientX, e.clientY);
-                                                            } else {
-                                                                showToast(`This filter combination is already saved as a view`, e.clientX, e.clientY);
-                                                            }
-                                                            return;
-                                                        }
+                                                        // v6.12.0 Phase 7 - filter-view drop removed (use the visible "Save" control)
                                                         // Book drop → add tag (only for tag-based views)
                                                         const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
                                                         if (bookDataStr && viewTagId) {
@@ -12021,38 +11920,7 @@
                                     })()}
                                     {/* v6.12.0 - "X of Y views match" banner removed: Searches always render now
                                         (they're filter presets, not locations), so a "some hidden" prompt is moot. */}
-                                    {/* v6.10.0-alpha.17 - Drop zone for creating new views from filter bar drag */}
-                                    <div
-                                        className="w-full px-2 py-1 rounded transition-colors"
-                                        style={sidebarFolderDragTarget?.type === 'filter-view-append' ? { borderBottom: '3px solid var(--border-focus)', background: 'rgba(59,130,246,0.08)' } : { minHeight: '4px' }}
-                                        onDragOver={(e) => {
-                                            const types = Array.from(e.dataTransfer.types);
-                                            if (types.includes('application/x-filter-view')) {
-                                                e.preventDefault();
-                                                e.dataTransfer.dropEffect = 'copy';
-                                                if (sidebarFolderDragTarget?.type !== 'filter-view-append') {
-                                                    setSidebarFolderDragTarget({ type: 'filter-view-append' });
-                                                }
-                                            }
-                                        }}
-                                        onDragLeave={(e) => {
-                                            if (!e.currentTarget.contains(e.relatedTarget)) setSidebarFolderDragTarget(null);
-                                        }}
-                                        onDrop={(e) => {
-                                            e.preventDefault();
-                                            setSidebarFolderDragTarget(null);
-                                            const filterDropData = e.dataTransfer.getData('application/x-filter-view');
-                                            if (filterDropData) {
-                                                const filters = JSON.parse(filterDropData);
-                                                const maxPos = savedSearches.reduce((max, v) => Math.max(max, v.position), -1);
-                                                if (createSavedView(filters, maxPos + 1)) {
-                                                    showToast(`View saved`, e.clientX, e.clientY);
-                                                } else {
-                                                    showToast(`This filter combination is already saved as a view`, e.clientX, e.clientY);
-                                                }
-                                            }
-                                        }}
-                                    />
+                                    {/* v6.12.0 Phase 7 - removed the filter-view append drop zone (use the visible "Save" control) */}
                                     </>}
                                     {/* v6.12.0 - BOOK LISTS section header (curated, supplemental bookId sets).
                                         Bolder top divider signals these are LOCATIONS (clicking replaces your view),
