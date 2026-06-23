@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.49";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.50";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1128,7 +1128,6 @@
             const isViewFolder = (folderId) => folderId?.startsWith('__view_') && folderId?.endsWith('__');
             const getViewId = (folderId) => isViewFolder(folderId) ? folderId.slice(7, -2) : null;
             const getView = (folderId) => { const vid = getViewId(folderId); return vid ? savedSearches.find(v => v.id === vid) : null; };
-            const getViewTagId = (folderId) => { const v = getView(folderId); return v?.filters?.tags?.[0] || null; };
 
             // v6.12.0 - Book List helpers
             const isBookListFolder = (folderId) => folderId?.startsWith('__booklist_') && folderId?.endsWith('__');
@@ -17227,138 +17226,10 @@
 
                     {/* Folder Properties Dialog - v5.0.0-alpha.142 */}
                     {folderPropertiesDialog && (() => {
-                        // v6.10.0-alpha.16 - Saved View Properties
-                        const isTagViewProp = isViewFolder(folderPropertiesDialog.folderId);
-                        if (isTagViewProp) {
-                            const tagId = getViewTagId(folderPropertiesDialog.folderId);
-                            const tag = tagId ? tagRegistry[tagId] : null;
-                            if (!tag) return null;
-                            const tagLabel = tag.label || tagId;
-                            const bookCount = getTagCount(tagId);
-                            const isPinned = savedSearches.some(v => v.filters?.tags?.includes(tagId));
-                            const tagBooks = books.filter(b => b.tags?.includes(tagId));
-                            const ownedBooks = tagBooks.filter(b => !b.onWishlist).length;
-                            const wishlistBooks = tagBooks.filter(b => b.onWishlist).length;
-
-                            const handleSave = () => {
-                                if (!folderPropertiesEditedName.trim()) {
-                                    showInfoDialog('Invalid Name', 'Tag name cannot be empty.');
-                                    return;
-                                }
-                                setTagRegistry(prev => ({
-                                    ...prev,
-                                    [tagId]: { ...prev[tagId], label: folderPropertiesEditedName.trim() }
-                                }));
-                                setSavedSearches(prev => prev.map(v =>
-                                    v.id === tagId ? { ...v, name: folderPropertiesEditedName.trim(), description: folderPropertiesEditedDescription.trim() || undefined } : v
-                                ));
-                                setFolderPropertiesDialog(null);
-                                console.log(`💾 Updated tag "${tagLabel}" → "${folderPropertiesEditedName.trim()}"`);
-                            };
-
-                            return (
-                                <>
-                                    <div
-                                        className="fixed inset-0 bg-black bg-opacity-50 z-50"
-                                        onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }}
-                                        onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setFolderPropertiesDialog(null); backdropMouseDownRef.current = null; }}
-                                    />
-                                    <div
-                                        className="bg-white rounded-lg shadow-xl w-full max-w-md pointer-events-auto fixed z-50"
-                                        role="dialog" aria-modal="true" aria-labelledby="modal-tag-properties"
-                                        style={{
-                                            left: `${dialogDrag?.dialogX || 0}px`,
-                                            top: `${dialogDrag?.dialogY || 0}px`,
-                                            cursor: dialogDrag?.isDragging ? 'grabbing' : 'default'
-                                        }}
-                                        onClick={(e) => e.stopPropagation()}>
-                                        <h2
-                                            id="modal-tag-properties"
-                                            className="text-xl font-semibold mb-4 p-6 pb-0 cursor-grab active:cursor-grabbing select-none"
-                                            onMouseDown={(e) => {
-                                                const rect = e.currentTarget.parentElement.getBoundingClientRect();
-                                                setDialogDrag({
-                                                    isDragging: true,
-                                                    offsetX: e.clientX - rect.left,
-                                                    offsetY: e.clientY - rect.top,
-                                                    dialogX: rect.left,
-                                                    dialogY: rect.top
-                                                });
-                                            }}>
-                                            Tag Properties
-                                        </h2>
-                                        <div className="px-6 pb-6">
-                                            {/* Name */}
-                                            <div className="mb-4">
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                                                <input
-                                                    type="text"
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                    value={folderPropertiesEditedName}
-                                                    onChange={(e) => setFolderPropertiesEditedName(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key !== 'Escape') e.stopPropagation();
-                                                        if (e.key === 'Enter') handleSave();
-                                                    }}
-                                                    autoFocus
-                                                />
-                                            </div>
-
-                                            {/* Statistics */}
-                                            <div className="border-t border-gray-200 pt-4 mb-4 space-y-2 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Books:</span>
-                                                    <span className="text-gray-900">
-                                                        {bookCount} total ({ownedBooks} owned, {wishlistBooks} wishlist)
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span className="text-gray-600">Status:</span>
-                                                    <span className="text-gray-900">{isPinned ? 'Pinned to sidebar' : 'Not pinned'}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Description - v6.5.0 */}
-                                            <div className="mb-4">
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                                <textarea
-                                                    className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
-                                                    rows={3}
-                                                    placeholder="Add a description… (shown as tooltip on hover)"
-                                                    value={folderPropertiesEditedDescription}
-                                                    onChange={(e) => setFolderPropertiesEditedDescription(e.target.value)}
-                                                    onKeyDown={(e) => { if (e.key !== 'Escape') e.stopPropagation(); }}
-                                                />
-                                            </div>
-
-                                            {/* Buttons */}
-                                            <div className="flex gap-2 justify-end">
-                                                <button
-                                                    className="px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
-                                                    onClick={() => {
-                                                        setFolderPropertiesDialog(null);
-                                                        setTagManagementOpen(true);
-                                                    }}>
-                                                    Open Tag Manager
-                                                </button>
-                                                <div className="flex-1"></div>
-                                                <button
-                                                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
-                                                    onClick={() => setFolderPropertiesDialog(null)}>
-                                                    Cancel
-                                                </button>
-                                                <button
-                                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                                                    onClick={handleSave}>
-                                                    Save
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            );
-                        }
-
+                        // v6.12.0 Phase 7 - "Saved View Properties" dialog removed. It was reachable only when
+                        // folderPropertiesDialog.folderId was a view folder, but the only opener (the folder
+                        // context menu's "Folder Properties" item) returns null for view folders, and the Search
+                        // context menu offers Apply/Rename/Delete — no Properties. So the block was dead.
                         const folder = folders.find(f => f.id === folderPropertiesDialog.folderId);
                         if (!folder) return null;
 
