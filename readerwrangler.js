@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.45";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.46";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2964,13 +2964,13 @@
                                     title: 200, author: 150, series: 150, seriesNum: 50, rating: 96,
                                     myRating: 100, dateAdded: 112, price: 80, priceGoal: 80, delta: 80, amazon: 70
                                 };
-                                // Iterate over defaults, overlay localStorage values, filter nulls
-                                const sanitizedWidths = Object.fromEntries(
-                                    Object.keys(defaultWidths).map(key => [
-                                        key,
-                                        explorerData.columnWidths[key] ?? defaultWidths[key]
-                                    ])
-                                );
+                                // v6.12.0 - Iterate ALL columns (COLUMN_CONFIG), not a stale hardcoded list, so a
+                                // column added later never loads with an undefined width — which would NaN-out the
+                                // table width and collapse the fixed layout (columns overlap). Saved ?? default ?? 110.
+                                const sanitizedWidths = {};
+                                Object.keys(COLUMN_CONFIG).forEach(key => {
+                                    sanitizedWidths[key] = explorerData.columnWidths[key] ?? defaultWidths[key] ?? 110;
+                                });
                                 setColumnWidths(sanitizedWidths);
                             }
                             if (explorerData.columnOrder) {
@@ -5284,13 +5284,12 @@
                                 title: 200, author: 150, series: 150, seriesNum: 50, rating: 96,
                                 myRating: 100, dateAdded: 112, price: 80, priceGoal: 80, delta: 80, amazon: 70
                             };
-                            // Iterate over defaults to include new columns
-                            const sanitizedWidths = Object.fromEntries(
-                                Object.keys(defaultWidths).map(key => [
-                                    key,
-                                    settings.columnWidths[key] ?? defaultWidths[key]
-                                ])
-                            );
+                            // v6.12.0 - Cover ALL columns (COLUMN_CONFIG) so later-added columns never load with an
+                            // undefined width (NaN table width → fixed-layout collapse → overlap).
+                            const sanitizedWidths = {};
+                            Object.keys(COLUMN_CONFIG).forEach(key => {
+                                sanitizedWidths[key] = settings.columnWidths[key] ?? defaultWidths[key] ?? 110;
+                            });
                             setColumnWidths(sanitizedWidths);
                         }
                     } else {
