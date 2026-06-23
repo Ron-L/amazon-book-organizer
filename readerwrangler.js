@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.47";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.48";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2223,29 +2223,8 @@
 
             // v5.5.15-alpha.31 - Reorder books within a tag view's bookOrder
             // v5.6.3-alpha.1 - Fix: include unordered books (newly tagged) in bookOrder before reordering
-            const reorderBooksInTagView = (tagId, bookIdsToMove, targetIndex) => {
-                setSavedSearches(prev => prev.map(v => {
-                    if (v.id !== tagId) return v;
-                    // Build full working list: ordered + unordered (mirrors getFolderBookIds render logic)
-                    const taggedBookIds = books.filter(b => b.tags?.includes(tagId)).map(b => b.id);
-                    let bookOrder;
-                    if (v.bookOrder && v.bookOrder.length > 0) {
-                        const orderedSet = new Set(v.bookOrder);
-                        const ordered = v.bookOrder.filter(id => taggedBookIds.includes(id));
-                        const unordered = taggedBookIds.filter(id => !orderedSet.has(id));
-                        bookOrder = [...ordered, ...unordered];
-                    } else {
-                        bookOrder = [...taggedBookIds];
-                    }
-                    const moveSet = new Set(bookIdsToMove);
-                    const remaining = bookOrder.filter(id => !moveSet.has(id));
-                    const removedBefore = bookOrder.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
-                    const adjustedIndex = targetIndex - removedBefore;
-                    const orderedToMove = bookIdsToMove.filter(id => bookOrder.includes(id));
-                    remaining.splice(adjustedIndex, 0, ...orderedToMove);
-                    return { ...v, bookOrder: remaining };
-                }));
-            };
+            // v6.12.0 Phase 7 - reorderBooksInTagView removed (Searches no longer hold a manual book order;
+            // they are read-only filter presets). Book-list/folder reorder paths remain.
 
             // v5.0.0-alpha.79 - Reorder folders within their parent (with undo)
             // Updates parent's childFolderIds array to persist custom order
@@ -3766,30 +3745,9 @@
                             return;
                         }
 
-                        // Saved view with tag filter: remove tag (existing behavior)
-                        if (isViewFolder(selectedFolderId)) {
-                            const tagId = getViewTagId(selectedFolderId);
-                            setBooks(prev => {
-                                const updated = prev.map(b => {
-                                    if (bookIdsToDelete.includes(b.id) && (b.tags || []).includes(tagId)) {
-                                        return { ...b, tags: b.tags.filter(t => t !== tagId) };
-                                    }
-                                    return b;
-                                });
-                                saveBooksToIndexedDB(updated);
-                                return updated;
-                            });
-                            recordAction({
-                                type: 'TAG_BOOKS_DRAG',
-                                bookIds: bookIdsToDelete,
-                                destTagId: null,
-                                sourceTagId: tagId,
-                                addedDest: [],
-                                removedSource: bookIdsToDelete
-                            });
-                            setExplorerSelectedItems(new Set());
-                            return;
-                        }
+                        // v6.12.0 Phase 7 - removed DEL-strips-tag for Searches. A Search is a read-only filter
+                        // preset, not a tag bucket you delete out of; clicking one restores filters in place
+                        // (never navigates into a view folder), so this path is unreachable.
 
                         // All Books: delete disabled (aggregate view)
                         if (selectedFolderId === '__all__') return;
@@ -11771,11 +11729,8 @@
                                                         e.preventDefault();
                                                         const types = Array.from(e.dataTransfer.types);
                                                         const isViewDrag = types.includes('application/x-tagview-reorder');
-                                                        const isBookDrag = types.includes('application/x-readerwrangler');
-                                                        if (isBookDrag && viewTagId) {
-                                                            e.dataTransfer.dropEffect = ctrlKeyRef.current ? 'copy' : 'move';
-                                                            setFolderDropHighlight(e.currentTarget);
-                                                        } else if (isViewDrag) {
+                                                        // v6.12.0 Phase 7 - Searches are read-only filter presets: accept reorder drags only, no book drops
+                                                        if (isViewDrag) {
                                                             e.dataTransfer.dropEffect = 'move';
                                                             const rect = e.currentTarget.getBoundingClientRect();
                                                             const position = (e.clientY - rect.top) < rect.height / 2 ? 'before' : 'after';
@@ -11811,48 +11766,8 @@
                                                             setSavedSearches(prev => prev.map(v => v.id === draggedViewId ? { ...v, position: newPos } : v));
                                                             return;
                                                         }
-                                                        // v6.12.0 Phase 7 - filter-view drop removed (use the visible "Save" control)
-                                                        // Book drop → add tag (only for tag-based views)
-                                                        const bookDataStr = e.dataTransfer.getData('application/x-readerwrangler');
-                                                        if (bookDataStr && viewTagId) {
-                                                            const { sourceFolder, bookIds } = JSON.parse(bookDataStr);
-                                                            const destTagId = viewTagId;
-                                                            const destTagLabel = tagRegistry[destTagId]?.label || destTagId;
-                                                            const isCopy = ctrlKeyRef.current;
-                                                            const isFromView = isViewFolder(sourceFolder);
-                                                            const sourceTagId = isFromView ? getViewTagId(sourceFolder) : null;
-                                                            const isMove = isFromView && !isCopy && sourceTagId && sourceTagId !== destTagId;
-                                                            const bookIdSet = new Set(bookIds);
-                                                            const addedDest = books.filter(b => bookIdSet.has(b.id) && !(b.tags || []).includes(destTagId)).map(b => b.id);
-                                                            const removedSource = isMove ? books.filter(b => bookIdSet.has(b.id) && (b.tags || []).includes(sourceTagId)).map(b => b.id) : [];
-                                                            const addedCount = addedDest.length;
-                                                            setBooks(prev => {
-                                                                const updated = prev.map(b => {
-                                                                    if (!bookIdSet.has(b.id)) return b;
-                                                                    let tags = [...(b.tags || [])];
-                                                                    if (isMove && tags.includes(sourceTagId)) tags = tags.filter(t => t !== sourceTagId);
-                                                                    if (!tags.includes(destTagId)) tags.push(destTagId);
-                                                                    return { ...b, tags };
-                                                                });
-                                                                saveBooksToIndexedDB(updated);
-                                                                return updated;
-                                                            });
-                                                            if (addedDest.length > 0 || removedSource.length > 0) {
-                                                                recordAction({ type: 'TAG_BOOKS_DRAG', bookIds, destTagId, sourceTagId: isMove ? sourceTagId : null, addedDest, removedSource });
-                                                            }
-                                                            setFolderDropHighlight(null);
-                                                            setExplorerSelectedItems(new Set());
-                                                            stopDragVirtualization();
-                                                            setExplorerDragBookId(null);
-                                                            setExplorerDragData(null);
-                                                            if (isMove) {
-                                                                showToast(`Moved ${bookIds.length} ${bookIds.length === 1 ? 'book' : 'books'}: "${tagRegistry[sourceTagId]?.label || sourceTagId}" → "${destTagLabel}"`, e.clientX, e.clientY);
-                                                            } else if (addedCount > 0) {
-                                                                showToast(`Tagged ${addedCount} ${addedCount === 1 ? 'book' : 'books'} as "${destTagLabel}"`, e.clientX, e.clientY);
-                                                            } else {
-                                                                showToast(`Already tagged as "${destTagLabel}"`, e.clientX, e.clientY);
-                                                            }
-                                                        }
+                                                        // v6.12.0 Phase 7 - filter-view drop and book-drop-to-tag removed.
+                                                        // Searches are read-only filter presets (use the visible "Save" control + applySavedFilters).
                                                     }}
                                                     onClick={() => {
                                                         // v6.12.0 - Search = restore filter state in place (no library-wide navigation).
@@ -14228,11 +14143,8 @@
                                                                 if (bookDataStr && explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && selectedFolderId !== '__views__') {
                                                                     const dragData = JSON.parse(bookDataStr);
                                                                     if (dragData.sourceFolder === selectedFolderId) {
-                                                                        // v6.10.0-alpha.16 - Route to view reorder for saved views
-                                                                        if (isViewFolder(selectedFolderId)) {
-                                                                            const tagId = getViewTagId(selectedFolderId);
-                                                                            if (tagId) reorderBooksInTagView(tagId, dragData.bookIds, index);
-                                                                        } else if (isBookListFolder(selectedFolderId)) {
+                                                                        // v6.12.0 Phase 7 - Searches are read-only presets (no manual reorder)
+                                                                        if (isBookListFolder(selectedFolderId)) {
                                                                             reorderBooksInBookList(getBookListId(selectedFolderId), dragData.bookIds, index);
                                                                         } else {
                                                                             reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
@@ -14861,11 +14773,8 @@
                                                             if (bookDataStr && explorerSort[0].column === 'custom' && selectedFolderId !== '__all__' && selectedFolderId !== '__library__' && selectedFolderId !== '__views__') {
                                                                 const dragData = JSON.parse(bookDataStr);
                                                                 if (dragData.sourceFolder === selectedFolderId) {
-                                                                    // v6.10.0-alpha.16 - Route to view reorder for saved views
-                                                                    if (isViewFolder(selectedFolderId)) {
-                                                                        const tagId = getViewTagId(selectedFolderId);
-                                                                        if (tagId) reorderBooksInTagView(tagId, dragData.bookIds, index);
-                                                                    } else if (isBookListFolder(selectedFolderId)) {
+                                                                    // v6.12.0 Phase 7 - Searches are read-only presets (no manual reorder)
+                                                                    if (isBookListFolder(selectedFolderId)) {
                                                                         reorderBooksInBookList(getBookListId(selectedFolderId), dragData.bookIds, index);
                                                                     } else {
                                                                         reorderBooksInFolder(selectedFolderId, dragData.bookIds, index);
