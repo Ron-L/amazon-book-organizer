@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.42";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.43";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1862,7 +1862,12 @@
 
                 // Toast messages
                 const msgs = [];
-                if (actualBooksToTrash.length > 0) msgs.push(`Moved ${actualBooksToTrash.length} to Trash`);
+                if (actualBooksToTrash.length > 0) {
+                    // v6.12.0 - Disclose Book List fallout: trashed books are hidden from their lists (membership
+                    // survives — they return on restore). Reversible, so a toast note is enough (no extra dialog).
+                    const onLists = actualBooksToTrash.some(id => bookLists.some(bl => (bl.bookIds || []).includes(id)));
+                    msgs.push(`Moved ${actualBooksToTrash.length} to Trash${onLists ? ' (hidden from Book Lists until restored)' : ''}`);
+                }
                 if (hideInsteadIds.size > 0) msgs.push(`Hid ${hideInsteadIds.size} purchased book${hideInsteadIds.size !== 1 ? 's' : ''}`);
                 const removedFromFolder = booksToRemoveFromFolder.length - actualBooksToTrash.length;
                 if (removedFromFolder > 0) msgs.push(`Removed ${removedFromFolder} from folder`);
@@ -1921,11 +1926,22 @@
 
                 setExplorerSelectedItems(new Set());
                 const count = bookIds.length;
-                showToast(`Restored ${count} book${count !== 1 ? 's' : ''}`);
+                // v6.12.0 - Book List membership returns automatically on restore (trashed IDs were only filtered)
+                const onLists = restoredBooks.some(({ id }) => bookLists.some(bl => (bl.bookIds || []).includes(id)));
+                showToast(`Restored ${count} book${count !== 1 ? 's' : ''}${onLists ? ' to their folders and Book Lists' : ''}`);
             };
 
             const permanentlyDeleteBooks = async (bookIds) => {
+                if (!bookIds || bookIds.length === 0) return;
                 const bookIdsSet = new Set(bookIds);
+                const count = bookIds.length;
+                // v6.12.0 - Centralized confirm + Book List fallout disclosure. Permanent delete purges
+                // supplemental (Book List) membership and, unlike Trash, cannot be undone.
+                const affectedLists = bookLists.filter(bl => (bl.bookIds || []).some(id => bookIdsSet.has(id)));
+                const listNote = affectedLists.length > 0
+                    ? `\n\nThis also removes ${count === 1 ? 'it' : 'them'} from ${affectedLists.length} Book List${affectedLists.length !== 1 ? 's' : ''}${affectedLists.length <= 3 ? ` (${affectedLists.map(bl => `"${bl.name}"`).join(', ')})` : ''}.`
+                    : '';
+                if (!await showConfirmDialog('Permanently Delete', `Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.${listNote}`)) return;
 
                 // Remove from books state and IndexedDB
                 const updatedBooks = books.filter(b => !bookIdsSet.has(b.id));
@@ -1945,7 +1961,6 @@
                 })));
 
                 setExplorerSelectedItems(new Set());
-                const count = bookIds.length;
                 showToast(`Permanently deleted ${count} book${count !== 1 ? 's' : ''}`);
 
                 // v6.0.0-alpha.58 - Re-upload library to relay in fetcher format (not backup format)
@@ -3758,10 +3773,7 @@
 
                         // Trash view: permanently delete with confirmation
                         if (selectedFolderId === '__trash__') {
-                            const count = bookIdsToDelete.length;
-                            if (confirm(`Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
-                                await permanentlyDeleteBooks(bookIdsToDelete);
-                            }
+                            await permanentlyDeleteBooks(bookIdsToDelete); // self-confirms + discloses Book List fallout
                             return;
                         }
 
@@ -15606,11 +15618,8 @@
                                             role="menuitem"
                                             onClick={async () => {
                                                 const deletedBooks = books.filter(b => b.isDeleted);
-                                                if (deletedBooks.length > 0 && confirm(`Permanently delete ${deletedBooks.length} book${deletedBooks.length !== 1 ? 's' : ''} from Trash? This cannot be undone.`)) {
-                                                    setFolderContextMenu(null);
-                                                    await permanentlyDeleteBooks(deletedBooks.map(b => b.id));
-                                                }
                                                 setFolderContextMenu(null);
+                                                await permanentlyDeleteBooks(deletedBooks.map(b => b.id)); // self-confirms (no-op if Trash empty)
                                             }}>
                                             <span>🗑️</span>
                                             <span>Empty Trash</span>
@@ -17422,13 +17431,10 @@
                                                     <div
                                                         className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600" role="menuitem"
                                                         onClick={async () => {
-                                                            if (confirm(`Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.`)) {
-                                                                setExplorerBookContextMenu(null);
-                                                                setContextSubmenu(null);
-                                                                await permanentlyDeleteBooks(getSelectedBookIds());
-                                                            }
+                                                            const ids = getSelectedBookIds();
                                                             setExplorerBookContextMenu(null);
                                                             setContextSubmenu(null);
+                                                            await permanentlyDeleteBooks(ids); // self-confirms + discloses Book List fallout
                                                         }}>
                                                         <span>🗑️</span>
                                                         <span>Delete Permanently</span>
