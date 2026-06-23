@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.43";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.44";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1734,17 +1734,28 @@
 
             // v6.0.0-alpha.48 - Trash Bin: soft delete, restore, permanent delete
             // v6.2.0 - Async: warns before trashing purchased books (they'll reappear from Amazon)
+            // v6.12.0 - Folder-membership entries are { folderId, index } so restore/undo put a book back at its
+            // original slot (matching Book Lists, which never lose position). Legacy entries were bare folderId
+            // strings → treated as front (index 0).
+            const normFolderMembership = (e) => (typeof e === 'string' ? { folderId: e, index: 0 } : e);
+            const addBookAtIndex = (bookIds, id, index) => {
+                const arr = [...(bookIds || [])];
+                if (arr.includes(id)) return arr;
+                arr.splice(Math.max(0, Math.min(index ?? 0, arr.length)), 0, id);
+                return arr;
+            };
+
             const softDeleteBooks = async (bookIds) => {
                 const bookIdsSet = new Set(bookIds);
                 const currentFolderId = selectedFolderId;
 
-                // Capture current folder membership for each book (for restore)
+                // Capture current folder membership (with index) for each book (for position-preserving restore)
                 const folderMembership = {};
                 folders.forEach(folder => {
-                    (folder.bookIds || []).forEach(bookId => {
+                    (folder.bookIds || []).forEach((bookId, idx) => {
                         if (bookIdsSet.has(bookId)) {
                             if (!folderMembership[bookId]) folderMembership[bookId] = [];
-                            folderMembership[bookId].push(folder.id);
+                            folderMembership[bookId].push({ folderId: folder.id, index: idx });
                         }
                     });
                 });
@@ -1904,15 +1915,10 @@
                     const folderIds = new Set(prev.map(f => f.id));
                     let updated = prev.map(f => ({ ...f }));
                     restoredBooks.forEach(({ id, deletedFromFolderIds }) => {
-                        let targetFolders = (deletedFromFolderIds || []).filter(fid => folderIds.has(fid));
-                        if (targetFolders.length === 0) targetFolders = ['__inbox__'];
-                        targetFolders.forEach(folderId => {
-                            updated = updated.map(f => {
-                                if (f.id === folderId && !(f.bookIds || []).includes(id)) {
-                                    return { ...f, bookIds: [id, ...(f.bookIds || [])] };
-                                }
-                                return f;
-                            });
+                        let targets = (deletedFromFolderIds || []).map(normFolderMembership).filter(m => folderIds.has(m.folderId));
+                        if (targets.length === 0) targets = [{ folderId: '__inbox__', index: 0 }];
+                        targets.forEach(({ folderId, index }) => {
+                            updated = updated.map(f => f.id === folderId ? { ...f, bookIds: addBookAtIndex(f.bookIds, id, index) } : f);
                         });
                     });
                     return updated;
@@ -6019,14 +6025,8 @@
                         setFolders(prev => {
                             let updated = prev.map(f => ({ ...f }));
                             action.bookIds.forEach(bookId => {
-                                const originalFolders = action.folderMembership[bookId] || [];
-                                originalFolders.forEach(folderId => {
-                                    updated = updated.map(f => {
-                                        if (f.id === folderId && !(f.bookIds || []).includes(bookId)) {
-                                            return { ...f, bookIds: [bookId, ...(f.bookIds || [])] };
-                                        }
-                                        return f;
-                                    });
+                                (action.folderMembership[bookId] || []).map(normFolderMembership).forEach(({ folderId, index }) => {
+                                    updated = updated.map(f => f.id === folderId ? { ...f, bookIds: addBookAtIndex(f.bookIds, bookId, index) } : f);
                                 });
                             });
                             return updated;
@@ -6058,10 +6058,10 @@
                         setFolders(prev => {
                             let updated = prev.map(f => ({ ...f }));
                             action.restoredBooks.forEach(({ id, deletedFromFolderIds }) => {
-                                const targetFolders = (deletedFromFolderIds || []).filter(fid =>
-                                    updated.some(f => f.id === fid)
+                                const targets = (deletedFromFolderIds || []).map(normFolderMembership).filter(m =>
+                                    updated.some(f => f.id === m.folderId)
                                 );
-                                const foldersToRemoveFrom = targetFolders.length > 0 ? targetFolders : ['__inbox__'];
+                                const foldersToRemoveFrom = targets.length > 0 ? targets.map(m => m.folderId) : ['__inbox__'];
                                 foldersToRemoveFrom.forEach(folderId => {
                                     updated = updated.map(f => {
                                         if (f.id === folderId) {
@@ -6524,15 +6524,10 @@
                             const folderIds = new Set(prev.map(f => f.id));
                             let updated = prev.map(f => ({ ...f }));
                             action.restoredBooks.forEach(({ id, deletedFromFolderIds }) => {
-                                let targetFolders = (deletedFromFolderIds || []).filter(fid => folderIds.has(fid));
-                                if (targetFolders.length === 0) targetFolders = ['__inbox__'];
-                                targetFolders.forEach(folderId => {
-                                    updated = updated.map(f => {
-                                        if (f.id === folderId && !(f.bookIds || []).includes(id)) {
-                                            return { ...f, bookIds: [id, ...(f.bookIds || [])] };
-                                        }
-                                        return f;
-                                    });
+                                let targets = (deletedFromFolderIds || []).map(normFolderMembership).filter(m => folderIds.has(m.folderId));
+                                if (targets.length === 0) targets = [{ folderId: '__inbox__', index: 0 }];
+                                targets.forEach(({ folderId, index }) => {
+                                    updated = updated.map(f => f.id === folderId ? { ...f, bookIds: addBookAtIndex(f.bookIds, id, index) } : f);
                                 });
                             });
                             return updated;
