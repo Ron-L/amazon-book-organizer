@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.48";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.49";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2524,7 +2524,6 @@
             const lastClickedTagRef = useRef(null);
 
             // v6.10.0-alpha.20 - Tag Manager drag-to-view: hide modal during drag via direct DOM
-            const tagDragScrollRef = useRef(0); // scroll position before drag
             const tagManagerBackdropRef = useRef(null); // modal backdrop for direct DOM visibility toggle
             const tagManagerScrollRef = useRef(null); // scrollable container for scroll position restore
 
@@ -14960,16 +14959,12 @@
                                     ) : (() => {
                                         // v5.5.15-alpha.24 - Unified Tag Manager: single sorted table, no orphan section
                                         const allTags = Object.entries(tagRegistry).map(([tagId, data]) => ({
-                                            tagId, label: data.label, count: getTagCount(tagId),
-                                            isPinned: savedSearches.some(v => v.filters?.tags?.includes(tagId))
+                                            tagId, label: data.label, count: getTagCount(tagId)
                                         }));
                                         const sorted = [...allTags].sort((a, b) => {
                                             let cmp;
                                             if (tagSortColumn === 'count') {
                                                 cmp = a.count - b.count;
-                                                if (cmp === 0) cmp = a.label.localeCompare(b.label);
-                                            } else if (tagSortColumn === 'pinned') {
-                                                cmp = (a.isPinned === b.isPinned) ? 0 : a.isPinned ? -1 : 1;
                                                 if (cmp === 0) cmp = a.label.localeCompare(b.label);
                                             } else {
                                                 cmp = a.label.localeCompare(b.label);
@@ -15078,11 +15073,6 @@
                                                             }}
                                                             className="rounded" />
                                                     </span>
-                                                    <span className="w-7 flex-shrink-0 text-center cursor-pointer select-none hover:text-blue-600 text-xs"
-                                                          onClick={() => toggleSort('pinned')}
-                                                          title="Sort by view status">
-                                                        {sortArrow('pinned') || '📌'}
-                                                    </span>
                                                     <span className="flex-1 cursor-pointer select-none hover:text-blue-600"
                                                           onClick={() => toggleSort('name')}
                                                           title="Click to sort by tag name">
@@ -15093,7 +15083,6 @@
                                                           title="Click to sort by book count">
                                                         Books{sortArrow('count')}
                                                     </span>
-                                                    <span className="w-8"></span>
                                                     <span className="w-8"></span>
                                                     <span className="w-8 flex-shrink-0 text-center">
                                                         {selectedTags.size > 0 && (
@@ -15119,12 +15108,6 @@
                                                                     <input type="checkbox" checked={isSelected}
                                                                         onChange={() => handleCheckboxChange(tagId)}
                                                                         className="rounded" />
-                                                                </td>
-                                                                <td className="py-1.5 w-7 text-center">
-                                                                    {/* v6.10.0-alpha.21 - Pin indicator for tags with a dedicated single-tag view */}
-                                                                    {savedSearches.some(v => v.filters?.tags?.length === 1 && v.filters.tags[0] === tagId && Object.keys(v.filters).length === 1) && (
-                                                                        <span className="text-xs" title="Saved as a view">📌</span>
-                                                                    )}
                                                                 </td>
                                                                 <td className="py-1.5" onClick={editingTagId === tagId ? (e) => e.stopPropagation() : undefined}>
                                                                     {editingTagId === tagId ? (
@@ -15172,43 +15155,7 @@
                                                                         <PencilIconSVG size={14} color="#9ca3af" />
                                                                     </button>
                                                                 </td>
-                                                                {/* v6.10.0-alpha.22 - Drag handle (right side, between rename and delete) */}
-                                                                <td className="py-1.5 text-center w-8" onClick={(e) => e.stopPropagation()}>
-                                                                    <span
-                                                                        className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-700 select-none"
-                                                                        title="Drag to Views in sidebar to save as a view"
-                                                                        draggable={true}
-                                                                        onDragStart={(e) => {
-                                                                            e.stopPropagation();
-                                                                            const tagsToView = (selectedTags.has(tagId) && selectedTags.size > 1)
-                                                                                ? [...selectedTags] : [tagId];
-                                                                            const filters = { tags: tagsToView };
-                                                                            e.dataTransfer.effectAllowed = 'copy';
-                                                                            e.dataTransfer.setData('application/x-filter-view', JSON.stringify(filters));
-                                                                            e.dataTransfer.setData('text/plain', autoNameView(filters));
-                                                                            // Save scroll position, then hide modal via direct DOM (no React re-render)
-                                                                            tagDragScrollRef.current = tagManagerScrollRef.current?.scrollTop || 0;
-                                                                            setTimeout(() => {
-                                                                                if (tagManagerBackdropRef.current) {
-                                                                                    tagManagerBackdropRef.current.style.visibility = 'hidden';
-                                                                                    tagManagerBackdropRef.current.style.pointerEvents = 'none';
-                                                                                }
-                                                                            }, 0);
-                                                                        }}
-                                                                        onDragEnd={() => {
-                                                                            // Show modal again via direct DOM, restore scroll
-                                                                            if (tagManagerBackdropRef.current) {
-                                                                                tagManagerBackdropRef.current.style.visibility = '';
-                                                                                tagManagerBackdropRef.current.style.pointerEvents = '';
-                                                                            }
-                                                                            setTimeout(() => {
-                                                                                if (tagManagerScrollRef.current) {
-                                                                                    tagManagerScrollRef.current.scrollTop = tagDragScrollRef.current;
-                                                                                }
-                                                                            }, 50);
-                                                                        }}
-                                                                        style={{ fontSize: '14px', lineHeight: 1 }}>⠿</span>
-                                                                </td>
+                                                                {/* v6.12.0 Phase 7 - drag-to-save-view handle removed (Searches are saved via the filter-bar "Save" control) */}
                                                                 <td className="py-1.5 text-center w-8" onClick={(e) => e.stopPropagation()}>
                                                                     <button
                                                                         onClick={async () => {
@@ -16189,10 +16136,6 @@
                         // v6.0.0-alpha.53 - Inbox is a real folder, allow Cut/Move/Paste for books
                         const isSpecialFolder = ['__all__', '__library__'].includes(selectedFolderId);
                         const isTrashView = selectedFolderId === '__trash__';
-                        // v6.10.0-alpha.16 - Detect saved view for "Remove from [tag]" context menu
-                        const isTagViewCtx = isViewFolder(selectedFolderId);
-                        const tagViewCtxId = isTagViewCtx ? getViewTagId(selectedFolderId) : null;
-                        const tagViewCtxLabel = isTagViewCtx ? (tagRegistry[tagViewCtxId]?.label || tagViewCtxId) : null;
 
                         // Move books to target folder
                         const handleMoveToFolder = (targetFolderId) => {
@@ -17252,39 +17195,6 @@
                                                     }}>
                                                     <span>🗑️</span>
                                                     <span>Remove from "{getBookList(selectedFolderId)?.name || 'list'}"</span>
-                                                    <span className="ml-auto text-xs text-gray-400">Del</span>
-                                                </div>
-                                            ) : isTagViewCtx ? (
-                                                <div
-                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 text-red-600" role="menuitem"
-                                                    onClick={() => {
-                                                        const bookIdsToRemove = getSelectedBookIds();
-                                                        setBooks(prev => {
-                                                            const updated = prev.map(b => {
-                                                                if (bookIdsToRemove.includes(b.id) && (b.tags || []).includes(tagViewCtxId)) {
-                                                                    return { ...b, tags: b.tags.filter(t => t !== tagViewCtxId) };
-                                                                }
-                                                                return b;
-                                                            });
-                                                            saveBooksToIndexedDB(updated);
-                                                            return updated;
-                                                        });
-                                                        recordAction({
-                                                            type: 'TAG_BOOKS_DRAG',
-                                                            bookIds: bookIdsToRemove,
-                                                            destTagId: null,
-                                                            sourceTagId: tagViewCtxId,
-                                                            addedDest: [],
-                                                            removedSource: bookIdsToRemove
-                                                        });
-                                                        const bookWord = bookIdsToRemove.length === 1 ? 'book' : 'books';
-                                                        showToast(`Removed ${bookIdsToRemove.length} ${bookWord} from "${tagViewCtxLabel}"`);
-                                                        setExplorerSelectedItems(new Set());
-                                                        setExplorerBookContextMenu(null);
-                                                        setContextSubmenu(null);
-                                                    }}>
-                                                    <span>🗑️</span>
-                                                    <span>Remove from "{tagViewCtxLabel}"</span>
                                                     <span className="ml-auto text-xs text-gray-400">Del</span>
                                                 </div>
                                             ) : selectedFolderId === '__all__' ? (
