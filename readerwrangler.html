@@ -200,6 +200,7 @@
             // switch has sticky session + desktopMode state, so on a phone-width viewport you can be looking
             // at desktop without realizing it. This chip flashes the current mode on vertical scroll, then
             // fades — visible when you move, out of the way when visualizing the actual UI at rest.
+            // TAP it to clear both mode locks and reload into the viewport's natural mode (the escape hatch).
             (function () {
                 var host = window.location.hostname;
                 if (host !== 'localhost' && host !== '127.0.0.1' && host !== '') return;
@@ -207,18 +208,30 @@
                 var label = isMobile ? 'MOBILE' : ('DESKTOP' + (narrow ? ' · phone width' : ''));
                 var chip = document.createElement('div');
                 chip.textContent = label;
+                chip.title = 'Tap: clear mode locks and reload into this viewport’s natural mode';
                 var chipBg = isMobile ? 'rgba(220,38,38,0.92)' : 'rgba(15,23,42,0.82)'; // mobile = red (stands out)
                 chip.style.cssText = 'position:fixed;top:6px;left:50%;transform:translateX(-50%);' +
-                    'z-index:2147483647;pointer-events:none;background:' + chipBg + ';color:#fff;' +
+                    'z-index:2147483647;pointer-events:none;cursor:pointer;background:' + chipBg + ';color:#fff;' +
                     'padding:3px 11px;border-radius:11px;font:700 11px/1.4 system-ui,-apple-system,sans-serif;' +
                     'letter-spacing:0.06em;white-space:nowrap;opacity:0;transition:opacity .25s;';
                 (document.body || document.documentElement).appendChild(chip);
                 var hideTimer;
-                window.addEventListener('scroll', function () {
+                // Tappable only while visible: toggle pointer-events with opacity so an invisible chip never
+                // intercepts taps over the real UI at rest.
+                function show() {
                     chip.style.opacity = '1';
+                    chip.style.pointerEvents = 'auto';
                     clearTimeout(hideTimer);
-                    hideTimer = setTimeout(function () { chip.style.opacity = '0'; }, 1000);
-                }, true); // capture: catches scrolls from inner containers (desktop) and window (mobile)
+                    hideTimer = setTimeout(function () { chip.style.opacity = '0'; chip.style.pointerEvents = 'none'; }, 1500);
+                }
+                window.addEventListener('scroll', show, true); // capture: catches inner-container scrolls (desktop) + window (mobile)
+                chip.addEventListener('pointerenter', function () { clearTimeout(hideTimer); chip.style.opacity = '1'; chip.style.pointerEvents = 'auto'; });
+                chip.addEventListener('pointerleave', show); // restart the fade once you move off
+                chip.addEventListener('click', function () {
+                    localStorage.removeItem('readerwrangler-desktopMode');
+                    sessionStorage.removeItem('readerwrangler-sessionMode');
+                    location.reload();
+                });
             })();
         }
     </script>
