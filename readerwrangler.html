@@ -200,20 +200,29 @@
             // switch has sticky session + desktopMode state, so on a phone-width viewport you can be looking
             // at desktop without realizing it. This chip flashes the current mode on vertical scroll, then
             // fades — visible when you move, out of the way when visualizing the actual UI at rest.
-            // TAP it to clear both mode locks and reload into the viewport's natural mode (the escape hatch).
+            // TAP it to toggle to the other mode (desktop<->mobile) — also the escape hatch from a stuck mode.
             (function () {
                 var host = window.location.hostname;
                 if (host !== 'localhost' && host !== '127.0.0.1' && host !== '') return;
                 var narrow = window.matchMedia('(max-width: 767px)').matches;
-                var label = isMobile ? 'MOBILE' : ('DESKTOP' + (narrow ? ' · phone width' : ''));
+                var modeLabel = isMobile ? 'MOBILE' : ('DESKTOP' + (narrow ? ' · phone width' : ''));
+                var target = isMobile ? 'DESKTOP' : 'MOBILE'; // tapping toggles to the other mode
+                var chipBg = narrow ? 'rgba(220,38,38,0.95)' : 'rgba(15,23,42,0.85)'; // red on any phone-width viewport
                 var chip = document.createElement('div');
-                chip.textContent = label;
-                chip.title = 'Tap: clear mode locks and reload into this viewport’s natural mode';
-                var chipBg = isMobile ? 'rgba(220,38,38,0.92)' : 'rgba(15,23,42,0.82)'; // mobile = red (stands out)
+                chip.title = 'Tap to switch to ' + target + ' mode';
                 chip.style.cssText = 'position:fixed;top:6px;left:50%;transform:translateX(-50%);' +
-                    'z-index:2147483647;pointer-events:none;cursor:pointer;background:' + chipBg + ';color:#fff;' +
-                    'padding:3px 11px;border-radius:11px;font:700 11px/1.4 system-ui,-apple-system,sans-serif;' +
-                    'letter-spacing:0.06em;white-space:nowrap;opacity:0;transition:opacity .25s;';
+                    'z-index:2147483647;pointer-events:none;cursor:pointer;display:flex;align-items:center;gap:8px;' +
+                    'background:' + chipBg + ';color:#fff;padding:3px 10px;border-radius:11px;' +
+                    'border:1px solid rgba(255,255,255,0.5);box-shadow:0 2px 7px rgba(0,0,0,0.4);' +
+                    'font:700 11px/1.4 system-ui,-apple-system,sans-serif;letter-spacing:0.05em;white-space:nowrap;' +
+                    'opacity:0;transition:opacity .25s;';
+                var modeSeg = document.createElement('span');
+                modeSeg.textContent = modeLabel;
+                var actionSeg = document.createElement('span');
+                actionSeg.textContent = '⇄ tap for ' + target;
+                actionSeg.style.cssText = 'padding-left:8px;border-left:1px solid rgba(255,255,255,0.45);opacity:0.95;';
+                chip.appendChild(modeSeg);
+                chip.appendChild(actionSeg);
                 (document.body || document.documentElement).appendChild(chip);
                 var hideTimer;
                 // Tappable only while visible: toggle pointer-events with opacity so an invisible chip never
@@ -228,8 +237,9 @@
                 chip.addEventListener('pointerenter', function () { clearTimeout(hideTimer); chip.style.opacity = '1'; chip.style.pointerEvents = 'auto'; });
                 chip.addEventListener('pointerleave', show); // restart the fade once you move off
                 chip.addEventListener('click', function () {
+                    // Toggle to the other mode: force it via sessionMode, clear the persistent desktop flag.
                     localStorage.removeItem('readerwrangler-desktopMode');
-                    sessionStorage.removeItem('readerwrangler-sessionMode');
+                    sessionStorage.setItem('readerwrangler-sessionMode', isMobile ? 'desktop' : 'mobile');
                     location.reload();
                 });
             })();
