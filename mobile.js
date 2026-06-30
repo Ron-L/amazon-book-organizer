@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.3.0';
+const MOBILE_VERSION = '1.3.1';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -1402,6 +1402,7 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
                 count: allByDate.length,
                 sections: [{ type: 'standalone', books: capped }],
                 folderId: '__recent__',
+                section: 'allbooks',
                 isCapped: !isExpanded && capped.length < allByDate.length
             });
         }
@@ -1422,6 +1423,7 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
                 count: matched.length,
                 sections: [{ type: 'standalone', books: capped }],
                 folderId,
+                section: 'search',
                 isCapped: !isExpanded && capped.length < matched.length
             });
         }
@@ -1444,6 +1446,7 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
                 count: listBooks.length,
                 sections: [{ type: 'standalone', books: capped }],
                 folderId,
+                section: 'booklist',
                 isCapped: !isExpanded && capped.length < listBooks.length
             });
         }
@@ -1463,6 +1466,7 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
                     count: inboxBooks.length,
                     sections: [{ type: 'standalone', books: capped }],
                     folderId: '__inbox__',
+                    section: 'folder',
                     isCapped: !isExpanded && capped.length < inboxBooks.length
                 });
             }
@@ -1498,6 +1502,7 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
                 count: orderedBooks.length,
                 sections: [{ type: 'standalone', books: capped }],
                 folderId,
+                section: 'folder',
                 isCapped: !isExpanded && capped.length < orderedBooks.length
             });
         }
@@ -1555,6 +1560,7 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
                     count: totalFiltered,
                     sections,
                     folderId: folder.id,
+                    section: 'folder',
                     isCapped: !isExpanded && displayedBooks < totalFiltered
                 });
             }
@@ -1574,26 +1580,48 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
         );
     }
 
+    // v6.12.0 Phase 8b - category dividers between shelf groups, mirroring the drawer + desktop sidebar
+    // (All Books standalone, then Searches / Book Lists / Folders). Heading shown before the first shelf
+    // of each section that has one; All Books has no heading.
+    const SECTION_LABELS = { search: 'Searches', booklist: 'Book Lists', folder: 'Folders' };
+    let lastSection = null;
+    const rows = [];
+    shelves.forEach((shelf, i) => {
+        if (shelf.section !== lastSection && SECTION_LABELS[shelf.section]) {
+            rows.push(
+                <div key={`section-${shelf.section}`} style={{
+                    padding: '4px 16px 6px', marginTop: i === 0 ? 0 : '8px',
+                    borderTop: '1px solid var(--border-default, #e2e8f0)',
+                    fontFamily: 'var(--font-heading)', fontSize: '12px', fontWeight: 700,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    color: 'var(--text-muted, #94a3b8)'
+                }}>{SECTION_LABELS[shelf.section]}</div>
+            );
+        }
+        lastSection = shelf.section;
+        rows.push(
+            <Shelf
+                key={shelf.title + '-' + i}
+                title={shelf.title}
+                count={shelf.count}
+                sections={shelf.sections}
+                isCapped={shelf.isCapped}
+                isExpanded={shelf.folderId ? expandedShelves.has(shelf.folderId) : false}
+                coverUrlMap={coverUrlMap}
+                blankImageBooks={blankImageBooks}
+                setBlankImageBooks={setBlankImageBooks}
+                onTapTitle={shelf.folderId ? () => onTapFolderTitle(shelf.folderId) : null}
+                onTapBook={onTapBook}
+                onTapSeries={onTapSeries}
+                onTapShowAll={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.add(shelf.folderId); return next; }) : null}
+                onShowLess={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.delete(shelf.folderId); return next; }) : null}
+            />
+        );
+    });
+
     return (
         <div style={{ paddingTop: '12px', paddingBottom: '24px' }}>
-            {shelves.map((shelf, i) => (
-                <Shelf
-                    key={shelf.title + '-' + i}
-                    title={shelf.title}
-                    count={shelf.count}
-                    sections={shelf.sections}
-                    isCapped={shelf.isCapped}
-                    isExpanded={shelf.folderId ? expandedShelves.has(shelf.folderId) : false}
-                    coverUrlMap={coverUrlMap}
-                    blankImageBooks={blankImageBooks}
-                    setBlankImageBooks={setBlankImageBooks}
-                    onTapTitle={shelf.folderId ? () => onTapFolderTitle(shelf.folderId) : null}
-                    onTapBook={onTapBook}
-                    onTapSeries={onTapSeries}
-                    onTapShowAll={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.add(shelf.folderId); return next; }) : null}
-                    onShowLess={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.delete(shelf.folderId); return next; }) : null}
-                />
-            ))}
+            {rows}
         </div>
     );
 }
