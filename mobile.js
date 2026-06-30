@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.2.0';
+const MOBILE_VERSION = '1.3.0';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -56,10 +56,12 @@ function mapBackupBook(item) {
         myRating: item.myRating || 0,
         onWishlist: item.onWishlist || false,
         ownershipType: item.ownershipType || 'purchased',
+        orphanStatus: item.orphanStatus || null, // v6.12.0 Phase 8b - for the "orphan" ownership filter
         isHidden: item.isHidden || false,
         addedToWishlist: item.addedToWishlist || '',
         topReviews: item.topReviews || [],
         userEdited: item.userEdited || {},
+        readStatus: item.readStatus || 'UNKNOWN', // v6.12.0 Phase 8b - overwritten by the collections-section merge
         collections: item.collections || []
     };
 }
@@ -244,6 +246,104 @@ function sortBooks(books, sortKey) {
     });
 }
 
+// v6.12.0 Phase 8b - Saved Search matcher. Ported from desktop bookMatchesFilters so a Search (saved
+// filter preset) can be applied to the whole library on mobile. Mobile book objects use the same field
+// names as desktop (author, acquired, series, tags, collections, ratings, ownership) after the
+// collections/readStatus merge in loadAllData, so no field remapping is needed.
+function bookMatchesFilters(book, filters) {
+    if (!book || !filters) return false;
+
+    if (filters.search) {
+        const term = filters.search.toLowerCase();
+        if (!(book.title || '').toLowerCase().includes(term) &&
+            !(book.author || '').toLowerCase().includes(term)) return false;
+    }
+    if (filters.readStatus && book.readStatus !== filters.readStatus) return false;
+
+    if (filters.collections?.length > 0) {
+        const hasUncollected = filters.collections.includes('UNCOLLECTED');
+        const otherCollections = filters.collections.filter(c => c !== 'UNCOLLECTED');
+        const bookCollections = book.collections || [];
+        const isInCollection = otherCollections.some(c => bookCollections.some(bc => bc.name === c));
+        const isUncollected = bookCollections.length === 0;
+        if (!((hasUncollected && isUncollected) || isInCollection)) return false;
+    }
+    if (filters.minAmazonRating &&
+        (book.rating === undefined || book.rating < parseFloat(filters.minAmazonRating))) return false;
+    if (filters.minMyRating) {
+        if (filters.minMyRating === 'unrated') {
+            if ((book.myRating || 0) !== 0) return false;
+        } else {
+            if ((book.myRating || 0) < parseFloat(filters.minMyRating)) return false;
+        }
+    }
+    if (filters.ownership) {
+        if (filters.ownership === 'wishlist') {
+            if (!(book.onWishlist || book.ownershipType === 'wishlist')) return false;
+        } else if (filters.ownership === 'orphan') {
+            if (book.orphanStatus !== 'orphan') return false;
+        } else {
+            if ((book.ownershipType || 'purchased') !== filters.ownership) return false;
+        }
+    }
+    if (filters.series?.length > 0) {
+        const hasNotInSeries = filters.series.includes('NOT_IN_SERIES');
+        const otherSeries = filters.series.filter(s => s !== 'NOT_IN_SERIES');
+        const bookSeries = book.series || '';
+        const isInSeries = otherSeries.includes(bookSeries);
+        const isNotInSeries = !bookSeries || bookSeries.trim() === '';
+        if (!((hasNotInSeries && isNotInSeries) || isInSeries)) return false;
+    }
+    if (filters.datePreset || filters.dateFrom || filters.dateTo) {
+        let fromDate = filters.dateFrom || '';
+        let toDate = filters.dateTo || '';
+        if (filters.datePreset && filters.datePreset !== 'custom') {
+            const today = new Date();
+            const fmt = (d) => d.toISOString().split('T')[0];
+            toDate = fmt(today);
+            if (filters.datePreset === 'last30') { const d = new Date(today); d.setDate(d.getDate() - 30); fromDate = fmt(d); }
+            else if (filters.datePreset === 'last90') { const d = new Date(today); d.setDate(d.getDate() - 90); fromDate = fmt(d); }
+            else if (filters.datePreset === 'lastYear') { const d = new Date(today); d.setFullYear(d.getFullYear() - 1); fromDate = fmt(d); }
+            else if (filters.datePreset.startsWith('year')) { const year = parseInt(filters.datePreset.substring(4)); fromDate = `${year}-01-01`; toDate = `${year}-12-31`; }
+        }
+        if (fromDate || toDate) {
+            if (!book.acquired) return false;
+            const bookDate = parseBookDate(book.acquired).toISOString().split('T')[0];
+            if (fromDate && bookDate < fromDate) return false;
+            if (toDate && bookDate > toDate) return false;
+        }
+    }
+    if (filters.deals &&
+        (book.priceTrigger == null || book.currentPrice == null || book.currentPrice > book.priceTrigger)) return false;
+    if (filters.tags?.length > 0 &&
+        !filters.tags.some(tag => book.tags?.includes(tag))) return false;
+
+    return true;
+}
+
+// v6.12.0 Phase 8b - Chip label for a Search (ported from desktop filterChips/filterChipsLabel). Used to
+// show a meaningful label for an unnamed Search in the drawer and as a Dashboard shelf title.
+function searchChips(filters, tagRegistry) {
+    const parts = [];
+    if (filters.search) parts.push(`"${filters.search}"`);
+    if (filters.readStatus) parts.push(filters.readStatus === 'READ' ? 'Read' : filters.readStatus === 'UNREAD' ? 'Unread' : filters.readStatus);
+    if (filters.tags?.length > 0) parts.push(filters.tags.map(t => (tagRegistry || {})[t]?.label || t).join(', '));
+    if (filters.ownership) parts.push(filters.ownership === 'kindleUnlimited' ? 'KU' : filters.ownership === 'insideAmazon' ? 'Insider' : filters.ownership.charAt(0).toUpperCase() + filters.ownership.slice(1));
+    if (filters.collections?.length > 0) parts.push(filters.collections.join(', '));
+    if (filters.minAmazonRating) parts.push(`${filters.minAmazonRating}+★`);
+    if (filters.minMyRating) parts.push(`My ${filters.minMyRating === 'unrated' ? 'Unrated' : filters.minMyRating + '+★'}`);
+    if (filters.series?.length > 0) parts.push(filters.series.map(s => s === 'NOT_IN_SERIES' ? 'Not in series' : s).join(', '));
+    if (filters.datePreset) parts.push(filters.datePreset === 'last30' ? 'Last 30 Days' : filters.datePreset === 'last90' ? 'Last 90 Days' : filters.datePreset === 'lastYear' ? 'Last Year' : filters.datePreset);
+    if (filters.deals) parts.push('Deals');
+    return parts;
+}
+function searchChipsLabel(filters, tagRegistry) {
+    const parts = searchChips(filters, tagRegistry);
+    if (parts.length === 0) return 'All books';
+    if (parts.length <= 2) return parts.join(' · ');
+    return `${parts[0]} · +${parts.length - 1} more`;
+}
+
 function checkIfBlankImage(img, bookId, setBlankImageBooks) {
     if (img.naturalWidth < 10 || img.naturalHeight < 10) {
         setBlankImageBooks(prev => new Set([...prev, bookId]));
@@ -337,7 +437,7 @@ function FolderTile({ folder, onTap }) {
 
 // --- Header component ---
 
-function Header({ currentNav, navStack, folders, books, tagRegistry, bookLists, onGoBack, onToggleDrawer, onToggleMenu, hasExpandedShelves, onCollapseAll, onOpenSearch, searchQuery, onSearchQueryChange }) {
+function Header({ currentNav, navStack, folders, books, tagRegistry, bookLists, savedSearches, onGoBack, onToggleDrawer, onToggleMenu, hasExpandedShelves, onCollapseAll, onOpenSearch, searchQuery, onSearchQueryChange }) {
     const isDashboard = currentNav.view === 'dashboard';
     const isSearch = currentNav.view === 'search';
     const showBack = !isDashboard;
@@ -353,6 +453,12 @@ function Header({ currentNav, navStack, folders, books, tagRegistry, bookLists, 
             const blId = id.slice(11, -2);
             const bl = (bookLists || []).find(b => b.id === blId);
             return bl ? bl.name : 'Book List';
+        }
+        if (id?.startsWith('__search_') && id?.endsWith('__')) {
+            const sId = id.slice(9, -2);
+            const sv = (savedSearches || []).find(s => s.id === sId);
+            if (!sv) return 'Search';
+            return (sv.name && sv.name.trim()) ? sv.name : searchChipsLabel(sv.filters, tagRegistry);
         }
         const f = folders.find(fl => fl.id === id);
         return f ? f.name : 'Library';
@@ -545,10 +651,11 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
                 <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({books.length})</span>
             </button>
 
-            {/* Searches — saved filter presets (tap results land in 8b) */}
+            {/* Searches — saved filter presets, applied to All Books */}
             {savedSearches && savedSearches.length > 0 && <SectionHeading label="Searches" />}
             {(savedSearches || []).map(s => {
-                const label = (s.name && s.name.trim()) ? s.name : 'Saved Search';
+                const label = (s.name && s.name.trim()) ? s.name : searchChipsLabel(s.filters, tagRegistry);
+                const count = books.filter(b => bookMatchesFilters(b, s.filters)).length;
                 return (
                     <button key={`search-${s.id}`}
                         onClick={() => onSelectSearch && onSelectSearch(s.id)}
@@ -557,6 +664,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
                     >
                         <span style={{ fontSize: '16px' }}>🔍</span>
                         <span className="flex-1 truncate">{label}</span>
+                        <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({count})</span>
                     </button>
                 );
             })}
@@ -1262,7 +1370,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
 
 // --- Dashboard component ---
 
-function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves }) {
+function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves }) {
     const filteredBooks = useMemo(() => {
         return filterBooks(books, { showDealsOnly, showHidden });
     }, [books, showDealsOnly, showHidden]);
@@ -1295,6 +1403,26 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
                 sections: [{ type: 'standalone', books: capped }],
                 folderId: '__recent__',
                 isCapped: !isExpanded && capped.length < allByDate.length
+            });
+        }
+
+        // v6.12.0 Phase 8b - Search shelves (saved filter presets applied to All Books), above Book Lists.
+        // A Search is a dynamic list: its books are everything matching the saved filter.
+        for (const sv of (savedSearches || [])) {
+            const matched = filteredBooks.filter(b => bookMatchesFilters(b, sv.filters));
+            if (matched.length === 0) continue;
+            const folderId = `__search_${sv.id}__`;
+            const title = (sv.name && sv.name.trim()) ? sv.name : searchChipsLabel(sv.filters, tagRegistry);
+            const isExpanded = expandedShelves.has(folderId);
+            const effectiveLimit = isExpanded ? Infinity
+                : (matched.length <= SHELF_LIMIT + 1 ? matched.length : SHELF_LIMIT);
+            const capped = effectiveLimit === Infinity ? matched : matched.slice(0, effectiveLimit);
+            result.push({
+                title,
+                count: matched.length,
+                sections: [{ type: 'standalone', books: capped }],
+                folderId,
+                isCapped: !isExpanded && capped.length < matched.length
             });
         }
 
@@ -1433,7 +1561,7 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
         }
 
         return result;
-    }, [filteredBooks, filteredBookIds, bookMap, folders, pinnedTagFolders, tagRegistry, bookLists, expandedShelves]);
+    }, [filteredBooks, filteredBookIds, bookMap, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, expandedShelves]);
 
     if (shelves.length === 0) {
         return (
@@ -1472,17 +1600,18 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
 
 // --- FolderView component ---
 
-function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, bookLists, showDealsOnly, showHidden, sortOption, onCycleSort, viewMode,
+function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, sortOption, onCycleSort, viewMode,
                       coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapSubfolder }) {
     const isAllBooks = folderId === '__recent__';
     const isTagView = folderId?.startsWith('__tag_') && folderId?.endsWith('__');
     const isBookList = folderId?.startsWith('__booklist_') && folderId?.endsWith('__');
-    const folder = (isAllBooks || isTagView || isBookList) ? null : folders.find(f => f.id === folderId);
+    const isSearch = folderId?.startsWith('__search_') && folderId?.endsWith('__');
+    const folder = (isAllBooks || isTagView || isBookList || isSearch) ? null : folders.find(f => f.id === folderId);
 
     const subfolders = useMemo(() => {
-        if (isAllBooks || isTagView || isBookList) return [];
+        if (isAllBooks || isTagView || isBookList || isSearch) return [];
         return folders.filter(f => f.parentId === folderId).sort((a, b) => a.name.localeCompare(b.name));
-    }, [folders, folderId, isAllBooks, isTagView, isBookList]);
+    }, [folders, folderId, isAllBooks, isTagView, isBookList, isSearch]);
 
     const folderBooks = useMemo(() => {
         const filtered = filterBooks(books, { showDealsOnly, showHidden });
@@ -1511,6 +1640,11 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, b
             const filteredSet = new Set(filtered.map(b => b.id));
             const bookMap = new Map(filtered.map(b => [b.id, b]));
             result = (bl?.bookIds || []).filter(id => filteredSet.has(id)).map(id => bookMap.get(id)).filter(Boolean);
+        } else if (isSearch) {
+            // v6.12.0 Phase 8b - dynamic list: every book matching the saved Search's filter
+            const sId = folderId.slice(9, -2);
+            const sv = (savedSearches || []).find(s => s.id === sId);
+            result = sv ? filtered.filter(b => bookMatchesFilters(b, sv.filters)) : [];
         } else if (!folder) {
             return [];
         } else {
@@ -1520,11 +1654,11 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, b
             result = (folder.bookIds || []).filter(id => filteredSet.has(id)).map(id => bookMap.get(id));
         }
         return sortBooks(result, sortOption);
-    }, [folder, books, pinnedTagFolders, bookLists, showDealsOnly, showHidden, isAllBooks, isTagView, isBookList, folderId, sortOption]);
+    }, [folder, books, pinnedTagFolders, bookLists, savedSearches, showDealsOnly, showHidden, isAllBooks, isTagView, isBookList, isSearch, folderId, sortOption]);
 
     const sortLabel = SORT_OPTIONS.find(o => o.key === sortOption)?.label || 'Date Added';
 
-    if (!isAllBooks && !isTagView && !isBookList && !folder) {
+    if (!isAllBooks && !isTagView && !isBookList && !isSearch && !folder) {
         return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Folder not found</div>;
     }
 
@@ -1629,7 +1763,7 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, b
                 )
             ) : (
                 <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    {isBookList ? 'No books in this list.' : 'No books in this folder.'}
+                    {isSearch ? 'No books match this search.' : isBookList ? 'No books in this list.' : 'No books in this folder.'}
                 </div>
             )}
 
@@ -2113,6 +2247,18 @@ function MobileApp() {
                         console.log(`📡 Device-state received: ${data.books.items.length} books`);
                         setLoadingMessage(`Loading ${data.books.items.length.toLocaleString()} books...`);
                         const mappedBooks = data.books.items.map(mapBackupBook);
+                        // v6.12.0 Phase 8b - Read Status + Collections ride in a separate collections section
+                        // (set together on the Kindle), keyed by asin. Merge them onto book objects so the
+                        // Search matcher (and the existing READ badge / collection count) have the data.
+                        const collById = {};
+                        (data.collections?.items || []).forEach(c => { collById[c.asin] = c; });
+                        mappedBooks.forEach(b => {
+                            const c = collById[b.asin];
+                            if (c) {
+                                b.readStatus = c.readStatus || 'UNKNOWN';
+                                b.collections = c.collections || [];
+                            }
+                        });
                         await saveBooksToIndexedDB(mappedBooks, false);
                         restoreOrganization(data.organization, mappedBooks.map(b => b.id));
                         console.log('✅ Device-state applied to local storage');
@@ -2169,6 +2315,7 @@ function MobileApp() {
                         if (entry.view === 'folder' && entry.folderId !== '__recent__'
                             && !(entry.folderId?.startsWith('__tag_') && entry.folderId?.endsWith('__'))
                             && !(entry.folderId?.startsWith('__booklist_') && entry.folderId?.endsWith('__'))
+                            && !(entry.folderId?.startsWith('__search_') && entry.folderId?.endsWith('__'))
                             && !folderIds.has(entry.folderId)) {
                             const reset = [{ view: 'dashboard', scrollY: 0 }];
                             persistNavStack(reset);
@@ -2313,9 +2460,10 @@ function MobileApp() {
         }
         closeOverlay();
     };
-    // v6.12.0 Phase 8 - Searches are listed in the drawer now; tapping applies the preset to All Books
-    // and shows the matches as a results view. That requires the filter matcher, which lands in 8b.
-    const handleSelectSearch = (_searchId) => {
+    // v6.12.0 Phase 8b - Tapping a Search applies its preset to All Books and shows the matches as a
+    // results view (reuses the folder view path with a __search_<id>__ id).
+    const handleSelectSearch = (searchId) => {
+        navigateTo('folder', { folderId: `__search_${searchId}__` });
         closeOverlay();
     };
 
@@ -2525,7 +2673,7 @@ function MobileApp() {
         <div className="min-h-screen" style={{ background: 'var(--bg-page, #ffffff)', color: 'var(--text-primary, #1e293b)' }}>
             {/* Header */}
             <Header
-                currentNav={currentNav} navStack={navStack} folders={folders} books={books} tagRegistry={tagRegistry} bookLists={bookLists}
+                currentNav={currentNav} navStack={navStack} folders={folders} books={books} tagRegistry={tagRegistry} bookLists={bookLists} savedSearches={savedSearches}
                 onGoBack={goBack} onToggleDrawer={toggleDrawer} onToggleMenu={toggleMenu}
                 hasExpandedShelves={expandedShelves.size > 0}
                 onCollapseAll={() => setExpandedShelves(new Set())}
@@ -2605,7 +2753,7 @@ function MobileApp() {
                 ) : currentNav.view === 'folder' ? (
                     <FolderView
                         folderId={currentNav.folderId}
-                        books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists}
+                        books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists} savedSearches={savedSearches}
                         showDealsOnly={showDealsOnly} showHidden={showHidden}
                         sortOption={sortOption} onCycleSort={cycleSortOption}
                         viewMode={viewMode}
@@ -2636,7 +2784,7 @@ function MobileApp() {
                     />
                 ) : (
                     <Dashboard
-                        books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists}
+                        books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists} savedSearches={savedSearches}
                         showDealsOnly={showDealsOnly} showHidden={showHidden}
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
                         setBlankImageBooks={setBlankImageBooks}

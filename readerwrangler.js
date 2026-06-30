@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.51";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.52";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4397,6 +4397,7 @@
                     priceTrigger: book.priceTrigger,
                     myRating: book.myRating || 0,
                     userEdited: book.userEdited || undefined,
+                    orphanStatus: book.orphanStatus || null, // v6.12.0 Phase 8b - mobile "orphan" ownership filter
                     // v6.0.0-alpha.48 - Trash Bin state
                     isDeleted: book.isDeleted || false,
                     deletedAt: book.deletedAt || null,
