@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.3.1';
+const MOBILE_VERSION = '1.4.0';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -1122,15 +1122,15 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
         };
     }, [hasSeries, sections]);
 
-    // Custom scrollbar metrics for expanded shelves
+    // v6.12.0 Phase 8b - Custom scrollbar metrics: show the slider whenever the row overflows the screen,
+    // not only when expanded. Gives a visible scrub affordance + "there's more →" cue on every long shelf.
     useEffect(() => {
-        if (!isExpanded) { setScrollMetrics(prev => ({ ...prev, visible: false })); return; }
         const container = scrollRef.current;
         if (!container) return;
 
         const update = () => {
             const { scrollLeft, scrollWidth, clientWidth } = container;
-            if (scrollWidth <= clientWidth) {
+            if (scrollWidth <= clientWidth + 1) {
                 setScrollMetrics(prev => ({ ...prev, visible: false }));
                 return;
             }
@@ -1188,26 +1188,19 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
     if (totalBooks === 0) return null;
 
     // Build flat list of items for the scroll row
+    // v6.12.0 Phase 8b - series no longer get a redundant folder tile: the tile and the floating label bar
+    // both just opened the sub-folder, and the books showed inline anyway. The tappable label bar (with a
+    // chevron) is the single "open this series" affordance now. Marker stays for label-bar tracking.
     const items = [];
     sections.forEach((section, si) => {
         if (section.type === 'series') {
-            // Marker element for this series (used by label bar tracking)
             items.push({ type: 'series-marker', section, sectionIndex: si });
-            // Folder tile
-            items.push({ type: 'folder-tile', section, sectionIndex: si });
         }
-        // Books
         section.books.forEach(book => {
             items.push({ type: 'book', book, section, sectionIndex: si });
         });
     });
-
-    // Show All / Show Less card
-    if (isCapped) {
-        items.push({ type: 'show-all' });
-    } else if (isExpanded) {
-        items.push({ type: 'show-less' });
-    }
+    // v6.12.0 Phase 8b - Show All / Show Less moved to the shelf header (no more in-row end cards).
 
     return (
         <div style={{ marginBottom: '24px' }}>
@@ -1229,11 +1222,23 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                             </svg>
                         </span>}
                 </span>
-                <span style={{ fontSize: '13px', color: 'var(--text-muted, #94a3b8)' }}>
-                    ({count})
+                <span style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    {(isCapped || isExpanded) && (onTapShowAll || onShowLess) && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); if (isExpanded) { onShowLess && onShowLess(); } else { onTapShowAll && onTapShowAll(); } }}
+                            style={{
+                                fontSize: '12px', fontWeight: 600, color: 'var(--text-accent, #3b82f6)',
+                                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                                touchAction: 'manipulation', whiteSpace: 'nowrap'
+                            }}>
+                            {isExpanded ? 'Show less' : 'Show all'}
+                        </button>
+                    )}
+                    <span style={{ fontSize: '13px', color: 'var(--text-muted, #94a3b8)' }}>({count})</span>
                 </span>
             </div>
-            <div style={{ position: 'relative' }}>
+            <div>
+              <div style={{ position: 'relative' }}>
                 <div ref={scrollRef} className="shelf-scroll" style={{
                     display: 'flex', gap: '12px',
                     overflowX: 'auto',
@@ -1253,14 +1258,6 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                                 data-series-folder-id={item.section.folder.id}
                                 style={{ width: 0, flexShrink: 0 }} />;
                         }
-                        if (item.type === 'folder-tile') {
-                            return <div key={`ft-${item.section.folder.id}`}
-                                data-section={item.section.folder.id}
-                                style={{ flexShrink: 0, width: '105px' }}>
-                                <FolderTile folder={item.section.folder}
-                                    onTap={() => onTapSeries && onTapSeries(item.section.folder.id)} />
-                            </div>;
-                        }
                         if (item.type === 'book') {
                             return <div key={item.book.id}
                                 data-section={item.section.type === 'series' ? item.section.folder.id : undefined}>
@@ -1273,72 +1270,11 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                                 />
                             </div>;
                         }
-                        if (item.type === 'show-all') {
-                            return <div key="show-all" onClick={onTapShowAll}
-                                style={{
-                                    width: '105px', flexShrink: 0, aspectRatio: '2/3',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    borderRadius: '4px', cursor: 'pointer', touchAction: 'manipulation',
-                                    border: '2px dashed var(--border-default, #e2e8f0)',
-                                    color: 'var(--text-accent, #3b82f6)',
-                                    fontSize: '13px', fontWeight: 600, textAlign: 'center',
-                                    padding: '12px'
-                                }}>
-                                Show All
-                            </div>;
-                        }
-                        if (item.type === 'show-less') {
-                            return <div key="show-less" onClick={onShowLess}
-                                style={{
-                                    width: '105px', flexShrink: 0, aspectRatio: '2/3',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    borderRadius: '4px', cursor: 'pointer', touchAction: 'manipulation',
-                                    border: '2px dashed var(--border-default, #e2e8f0)',
-                                    color: 'var(--text-muted, #94a3b8)',
-                                    fontSize: '13px', fontWeight: 600, textAlign: 'center',
-                                    padding: '12px'
-                                }}>
-                                Show Less
-                            </div>;
-                        }
                         return null;
                     })}
                 </div>
-                {/* Custom scrollbar for expanded shelves */}
-                {scrollMetrics.visible && (
-                    <div ref={trackRef} onClick={(e) => {
-                        const container = scrollRef.current;
-                        const track = trackRef.current;
-                        if (!container || !track) return;
-                        const trackRect = track.getBoundingClientRect();
-                        const ratio = (e.clientX - trackRect.left) / trackRect.width;
-                        container.scrollLeft = ratio * (container.scrollWidth - container.clientWidth);
-                    }} style={{
-                        position: 'relative',
-                        height: '12px',
-                        margin: '2px 16px 0',
-                        borderRadius: '6px',
-                        background: 'var(--border-default, #e2e8f0)',
-                        touchAction: 'none',
-                        cursor: 'pointer'
-                    }}>
-                        <div
-                            onTouchStart={handleThumbDrag}
-                            style={{
-                                position: 'absolute',
-                                top: '2px',
-                                left: `${scrollMetrics.thumbLeft - 16}px`,
-                                width: `${scrollMetrics.thumbWidth}px`,
-                                height: '8px',
-                                borderRadius: '4px',
-                                background: 'var(--text-secondary, #64748b)',
-                                cursor: 'grab',
-                                touchAction: 'none'
-                            }}
-                        />
-                    </div>
-                )}
-                {/* Floating series label bars — warm amber (Option B) */}
+                {/* Floating series label bars — warm amber. Tappable (chevron) → opens the series.
+                    Anchored to the bottom of the scroll row so the slider zone below never overlaps them. */}
                 {labelBars.map(bar => (
                     <div key={`label-${bar.id}`}
                         onClick={() => onTapSeries && onTapSeries(bar.folderId)}
@@ -1360,9 +1296,48 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                             pointerEvents: 'auto'
                         }}>
                         <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{bar.name}</span>
-                        <span style={{ flexShrink: 0, marginLeft: '6px', color: 'var(--text-muted, #94a3b8)' }}>({bar.count})</span>
+                        <span style={{ flexShrink: 0, marginLeft: '6px', display: 'flex', alignItems: 'center', gap: '2px', color: 'var(--text-muted, #94a3b8)' }}>
+                            ({bar.count})
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                        </span>
                     </div>
                 ))}
+              </div>
+              {/* Always-on horizontal scrollbar (when the row overflows). Its own zone below the row, so it
+                  never collides with the floating series label bar. */}
+              {scrollMetrics.visible && (
+                <div ref={trackRef} onClick={(e) => {
+                    const container = scrollRef.current;
+                    const track = trackRef.current;
+                    if (!container || !track) return;
+                    const trackRect = track.getBoundingClientRect();
+                    const ratio = (e.clientX - trackRect.left) / trackRect.width;
+                    container.scrollLeft = ratio * (container.scrollWidth - container.clientWidth);
+                }} style={{
+                    position: 'relative',
+                    height: '8px',
+                    margin: '6px 16px 0',
+                    borderRadius: '4px',
+                    background: 'var(--border-default, #e2e8f0)',
+                    touchAction: 'none',
+                    cursor: 'pointer'
+                }}>
+                    <div
+                        onTouchStart={handleThumbDrag}
+                        style={{
+                            position: 'absolute',
+                            top: '0px',
+                            left: `${scrollMetrics.thumbLeft - 16}px`,
+                            width: `${scrollMetrics.thumbWidth}px`,
+                            height: '8px',
+                            borderRadius: '4px',
+                            background: 'var(--text-secondary, #64748b)',
+                            cursor: 'grab',
+                            touchAction: 'none'
+                        }}
+                    />
+                </div>
+              )}
             </div>
         </div>
     );

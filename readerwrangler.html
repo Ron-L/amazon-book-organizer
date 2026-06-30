@@ -195,6 +195,30 @@
             script.type = 'text/babel';
             script.src = (isMobile ? 'mobile.js' : 'readerwrangler.js') + '?v=' + APP_VERSION;
             document.body.appendChild(script);
+
+            // Dev-only mode indicator (localhost / file:// only — never ships to users). The desktop/mobile
+            // switch has sticky session + desktopMode state, so on a phone-width viewport you can be looking
+            // at desktop without realizing it. This chip flashes the current mode on vertical scroll, then
+            // fades — visible when you move, out of the way when visualizing the actual UI at rest.
+            (function () {
+                var host = window.location.hostname;
+                if (host !== 'localhost' && host !== '127.0.0.1' && host !== '') return;
+                var narrow = window.matchMedia('(max-width: 767px)').matches;
+                var label = isMobile ? 'MOBILE' : ('DESKTOP' + (narrow ? ' · phone width' : ''));
+                var chip = document.createElement('div');
+                chip.textContent = label;
+                chip.style.cssText = 'position:fixed;top:6px;left:50%;transform:translateX(-50%);' +
+                    'z-index:2147483647;pointer-events:none;background:rgba(15,23,42,0.82);color:#fff;' +
+                    'padding:3px 11px;border-radius:11px;font:700 11px/1.4 system-ui,-apple-system,sans-serif;' +
+                    'letter-spacing:0.06em;white-space:nowrap;opacity:0;transition:opacity .25s;';
+                (document.body || document.documentElement).appendChild(chip);
+                var hideTimer;
+                window.addEventListener('scroll', function () {
+                    chip.style.opacity = '1';
+                    clearTimeout(hideTimer);
+                    hideTimer = setTimeout(function () { chip.style.opacity = '0'; }, 1000);
+                }, true); // capture: catches scrolls from inner containers (desktop) and window (mobile)
+            })();
         }
     </script>
     <!-- Emergency reset fallback: offer reset if app fails to mount -->
