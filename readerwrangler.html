@@ -207,8 +207,9 @@
                 var label = isMobile ? 'MOBILE' : ('DESKTOP' + (narrow ? ' · phone width' : ''));
                 var chip = document.createElement('div');
                 chip.textContent = label;
+                var chipBg = isMobile ? 'rgba(220,38,38,0.92)' : 'rgba(15,23,42,0.82)'; // mobile = red (stands out)
                 chip.style.cssText = 'position:fixed;top:6px;left:50%;transform:translateX(-50%);' +
-                    'z-index:2147483647;pointer-events:none;background:rgba(15,23,42,0.82);color:#fff;' +
+                    'z-index:2147483647;pointer-events:none;background:' + chipBg + ';color:#fff;' +
                     'padding:3px 11px;border-radius:11px;font:700 11px/1.4 system-ui,-apple-system,sans-serif;' +
                     'letter-spacing:0.06em;white-space:nowrap;opacity:0;transition:opacity .25s;';
                 (document.body || document.documentElement).appendChild(chip);

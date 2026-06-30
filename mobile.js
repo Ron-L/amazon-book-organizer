@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.4.0';
+const MOBILE_VERSION = '1.4.1';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -1296,9 +1296,9 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                             pointerEvents: 'auto'
                         }}>
                         <span style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis' }}>{bar.name}</span>
-                        <span style={{ flexShrink: 0, marginLeft: '6px', display: 'flex', alignItems: 'center', gap: '2px', color: 'var(--text-muted, #94a3b8)' }}>
+                        <span style={{ flexShrink: 0, marginLeft: '6px', display: 'flex', alignItems: 'center', gap: '3px', color: 'var(--text-muted, #94a3b8)' }}>
                             ({bar.count})
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ opacity: 0.85 }}><rect x="3" y="3" width="6" height="6" rx="1" /><rect x="12" y="3" width="6" height="6" rx="1" /><rect x="3" y="12" width="6" height="6" rx="1" /><rect x="12" y="12" width="6" height="6" rx="1" /></svg>
                         </span>
                     </div>
                 ))}
