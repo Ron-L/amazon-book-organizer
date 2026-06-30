@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.1.0';
+const MOBILE_VERSION = '1.2.0';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -83,6 +83,13 @@ function restoreOrganization(org, bookIds) {
         childFolderIds: f.childFolderIds
     }));
 
+    // v6.12.0 Phase 8 - Book Lists (curated, supplemental). Filter each list's bookIds to books
+    // that actually exist, mirroring how folder bookIds are guarded above.
+    const bookLists = (org.bookLists || []).map(bl => ({
+        ...bl,
+        bookIds: (bl.bookIds || []).filter(id => validIds.has(id))
+    }));
+
     localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
         organization: {
@@ -91,6 +98,8 @@ function restoreOrganization(org, bookIds) {
             hiddenInstances: org.hiddenInstances || [],
             blankImageBooks: org.blankImageBooks || [],
             pinnedTagFolders: org.pinnedTagFolders || [],
+            bookLists: bookLists, // v6.12.0 Phase 8 - curated lists (rendered as shelves + drawer)
+            savedSearches: org.savedSearches || [], // v6.12.0 Phase 8 - listed in drawer; results wired in 8b
             dataSource: 'enriched'
         },
         lastSyncTime: Date.now(),
@@ -328,7 +337,7 @@ function FolderTile({ folder, onTap }) {
 
 // --- Header component ---
 
-function Header({ currentNav, navStack, folders, books, tagRegistry, onGoBack, onToggleDrawer, onToggleMenu, hasExpandedShelves, onCollapseAll, onOpenSearch, searchQuery, onSearchQueryChange }) {
+function Header({ currentNav, navStack, folders, books, tagRegistry, bookLists, onGoBack, onToggleDrawer, onToggleMenu, hasExpandedShelves, onCollapseAll, onOpenSearch, searchQuery, onSearchQueryChange }) {
     const isDashboard = currentNav.view === 'dashboard';
     const isSearch = currentNav.view === 'search';
     const showBack = !isDashboard;
@@ -339,6 +348,11 @@ function Header({ currentNav, navStack, folders, books, tagRegistry, onGoBack, o
         if (id?.startsWith('__tag_') && id?.endsWith('__')) {
             const tagId = id.slice(6, -2);
             return tagRegistry[tagId]?.label || 'Tag View';
+        }
+        if (id?.startsWith('__booklist_') && id?.endsWith('__')) {
+            const blId = id.slice(11, -2);
+            const bl = (bookLists || []).find(b => b.id === blId);
+            return bl ? bl.name : 'Book List';
         }
         const f = folders.find(fl => fl.id === id);
         return f ? f.name : 'Library';
@@ -466,12 +480,21 @@ function Backdrop({ onClick }) {
 
 // --- Folder Drawer ---
 
-function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, onSelectFolder, onClose }) {
+function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists, savedSearches, onSelectFolder, onSelectSearch, onClose }) {
     const inbox = folders.find(f => f.id === '__inbox__');
     const inboxCount = inbox ? (inbox.bookIds || []).length : 0;
     // User folders: top-level (parentId === null), excluding Inbox
     const topLevel = folders.filter(f => !f.parentId && f.id !== '__inbox__');
     const childrenOf = (parentId) => folders.filter(f => f.parentId === parentId);
+
+    // v6.12.0 Phase 8 - section header to match desktop's Searches / Book Lists / Folders dividers
+    const SectionHeading = ({ label }) => (
+        <div style={{
+            padding: '10px 12px 4px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em',
+            textTransform: 'uppercase', color: 'var(--text-muted, #64748b)',
+            borderTop: '1px solid var(--border-default, #e2e8f0)', marginTop: '4px'
+        }}>{label}</div>
+    );
 
     const renderFolder = (folder, depth = 0) => {
         const count = (folder.bookIds || []).length;
@@ -522,39 +545,60 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, onSelectF
                 <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({books.length})</span>
             </button>
 
+            {/* Searches — saved filter presets (tap results land in 8b) */}
+            {savedSearches && savedSearches.length > 0 && <SectionHeading label="Searches" />}
+            {(savedSearches || []).map(s => {
+                const label = (s.name && s.name.trim()) ? s.name : 'Saved Search';
+                return (
+                    <button key={`search-${s.id}`}
+                        onClick={() => onSelectSearch && onSelectSearch(s.id)}
+                        className="w-full text-left py-2 px-3 flex items-center gap-2 text-sm"
+                        style={{ paddingLeft: '12px', color: 'var(--text-primary, #1e293b)', touchAction: 'manipulation' }}
+                    >
+                        <span style={{ fontSize: '16px' }}>🔍</span>
+                        <span className="flex-1 truncate">{label}</span>
+                    </button>
+                );
+            })}
+
+            {/* Book Lists — curated, supplemental */}
+            {bookLists && bookLists.length > 0 && <SectionHeading label="Book Lists" />}
+            {(bookLists || []).map(bl => (
+                <button key={`bl-${bl.id}`}
+                    onClick={() => onSelectFolder(`__booklist_${bl.id}__`)}
+                    className="w-full text-left py-2 px-3 flex items-center gap-2 text-sm"
+                    style={{ paddingLeft: '12px', color: 'var(--text-primary, #1e293b)', touchAction: 'manipulation' }}
+                >
+                    <span style={{ fontSize: '16px' }}>📄</span>
+                    <span className="flex-1 truncate">{bl.name}</span>
+                    <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({(bl.bookIds || []).length})</span>
+                </button>
+            ))}
+
+            {/* Folders */}
+            <SectionHeading label="Folders" />
             {/* Inbox — unorganized books */}
             <button
                 onClick={() => onSelectFolder('__inbox__')}
                 className="w-full text-left py-2 px-3 flex items-center gap-2 text-sm"
-                style={{
-                    paddingLeft: '12px',
-                    color: 'var(--text-primary, #1e293b)',
-                    borderBottom: '1px solid var(--border-default, #e2e8f0)',
-                    touchAction: 'manipulation'
-                }}
+                style={{ paddingLeft: '12px', color: 'var(--text-primary, #1e293b)', touchAction: 'manipulation' }}
             >
                 <span style={{ fontSize: '16px' }}>📥</span>
                 <span className="flex-1">Inbox</span>
                 <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({inboxCount})</span>
             </button>
 
-            {/* Pinned tag views */}
+            {/* Pinned tag views (legacy — normally empty after desktop redesign) */}
             {pinnedTagFolders.length > 0 && [...pinnedTagFolders]
                 .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-                .map((ptf, idx) => {
+                .map((ptf) => {
                     const tagLabel = tagRegistry[ptf.tagId]?.label || ptf.tagId;
                     const tagCount = books.filter(b => (b.tags || []).includes(ptf.tagId)).length;
-                    const isLast = idx === pinnedTagFolders.length - 1;
                     return (
                         <button key={`tag-${ptf.tagId}`}
                             onClick={() => onSelectFolder(`__tag_${ptf.tagId}__`)}
                             className="w-full text-left py-2 px-3 flex items-center gap-2 text-sm"
-                            style={{
-                                paddingLeft: '12px',
-                                color: 'var(--text-primary, #1e293b)',
-                                borderBottom: isLast ? '1px solid var(--border-default, #e2e8f0)' : 'none',
-                                touchAction: 'manipulation'
-                            }}
+                            style={{ paddingLeft: '12px', color: 'var(--text-primary, #1e293b)', touchAction: 'manipulation' }}
                         >
                             <span style={{ fontSize: '16px' }}>🏷️</span>
                             <span className="flex-1 truncate">{tagLabel}</span>
@@ -1218,7 +1262,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
 
 // --- Dashboard component ---
 
-function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves }) {
+function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves }) {
     const filteredBooks = useMemo(() => {
         return filterBooks(books, { showDealsOnly, showHidden });
     }, [books, showDealsOnly, showHidden]);
@@ -1251,6 +1295,28 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, showDealsOnl
                 sections: [{ type: 'standalone', books: capped }],
                 folderId: '__recent__',
                 isCapped: !isExpanded && capped.length < allByDate.length
+            });
+        }
+
+        // v6.12.0 Phase 8 - Book List shelves (curated, supplemental), above Folders.
+        // Books shown in the list's curated order; tapping the title opens the sortable list view.
+        for (const bl of (bookLists || [])) {
+            const listBooks = (bl.bookIds || [])
+                .filter(id => filteredBookIds.has(id))
+                .map(id => bookMap[id])
+                .filter(Boolean);
+            if (listBooks.length === 0) continue;
+            const folderId = `__booklist_${bl.id}__`;
+            const isExpanded = expandedShelves.has(folderId);
+            const effectiveLimit = isExpanded ? Infinity
+                : (listBooks.length <= SHELF_LIMIT + 1 ? listBooks.length : SHELF_LIMIT);
+            const capped = effectiveLimit === Infinity ? listBooks : listBooks.slice(0, effectiveLimit);
+            result.push({
+                title: bl.name,
+                count: listBooks.length,
+                sections: [{ type: 'standalone', books: capped }],
+                folderId,
+                isCapped: !isExpanded && capped.length < listBooks.length
             });
         }
 
@@ -1367,7 +1433,7 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, showDealsOnl
         }
 
         return result;
-    }, [filteredBooks, filteredBookIds, bookMap, folders, pinnedTagFolders, tagRegistry, expandedShelves]);
+    }, [filteredBooks, filteredBookIds, bookMap, folders, pinnedTagFolders, tagRegistry, bookLists, expandedShelves]);
 
     if (shelves.length === 0) {
         return (
@@ -1406,16 +1472,17 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, showDealsOnl
 
 // --- FolderView component ---
 
-function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, showDealsOnly, showHidden, sortOption, onCycleSort, viewMode,
+function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, bookLists, showDealsOnly, showHidden, sortOption, onCycleSort, viewMode,
                       coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapSubfolder }) {
     const isAllBooks = folderId === '__recent__';
     const isTagView = folderId?.startsWith('__tag_') && folderId?.endsWith('__');
-    const folder = (isAllBooks || isTagView) ? null : folders.find(f => f.id === folderId);
+    const isBookList = folderId?.startsWith('__booklist_') && folderId?.endsWith('__');
+    const folder = (isAllBooks || isTagView || isBookList) ? null : folders.find(f => f.id === folderId);
 
     const subfolders = useMemo(() => {
-        if (isAllBooks || isTagView) return [];
+        if (isAllBooks || isTagView || isBookList) return [];
         return folders.filter(f => f.parentId === folderId).sort((a, b) => a.name.localeCompare(b.name));
-    }, [folders, folderId, isAllBooks, isTagView]);
+    }, [folders, folderId, isAllBooks, isTagView, isBookList]);
 
     const folderBooks = useMemo(() => {
         const filtered = filterBooks(books, { showDealsOnly, showHidden });
@@ -1437,6 +1504,13 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, s
             } else {
                 result = taggedBooks;
             }
+        } else if (isBookList) {
+            // v6.12.0 Phase 8 - curated list: preserve the list's bookIds order (matches desktop)
+            const blId = folderId.slice(11, -2);
+            const bl = (bookLists || []).find(b => b.id === blId);
+            const filteredSet = new Set(filtered.map(b => b.id));
+            const bookMap = new Map(filtered.map(b => [b.id, b]));
+            result = (bl?.bookIds || []).filter(id => filteredSet.has(id)).map(id => bookMap.get(id)).filter(Boolean);
         } else if (!folder) {
             return [];
         } else {
@@ -1446,11 +1520,11 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, s
             result = (folder.bookIds || []).filter(id => filteredSet.has(id)).map(id => bookMap.get(id));
         }
         return sortBooks(result, sortOption);
-    }, [folder, books, pinnedTagFolders, showDealsOnly, showHidden, isAllBooks, isTagView, folderId, sortOption]);
+    }, [folder, books, pinnedTagFolders, bookLists, showDealsOnly, showHidden, isAllBooks, isTagView, isBookList, folderId, sortOption]);
 
     const sortLabel = SORT_OPTIONS.find(o => o.key === sortOption)?.label || 'Date Added';
 
-    if (!isAllBooks && !isTagView && !folder) {
+    if (!isAllBooks && !isTagView && !isBookList && !folder) {
         return <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Folder not found</div>;
     }
 
@@ -1555,7 +1629,7 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, s
                 )
             ) : (
                 <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                    No books in this folder.
+                    {isBookList ? 'No books in this list.' : 'No books in this folder.'}
                 </div>
             )}
 
@@ -1940,6 +2014,8 @@ function MobileApp() {
     const [folders, setFolders] = useState([]);
     const [tagRegistry, setTagRegistry] = useState({});
     const [pinnedTagFolders, setPinnedTagFolders] = useState([]);
+    const [bookLists, setBookLists] = useState([]); // v6.12.0 Phase 8 - curated, supplemental lists
+    const [savedSearches, setSavedSearches] = useState([]); // v6.12.0 Phase 8 - saved filter presets (drawer; results 8b)
     const [hiddenInstances, setHiddenInstances] = useState(new Set());
     const [coverUrlMap, setCoverUrlMap] = useState({});
     const [blankImageBooks, setBlankImageBooks] = useState(new Set());
@@ -2060,6 +2136,8 @@ function MobileApp() {
         const org = orgState.organization || {};
         setTagRegistry(org.tagRegistry || {});
         setPinnedTagFolders(org.pinnedTagFolders || []);
+        setBookLists(org.bookLists || []); // v6.12.0 Phase 8
+        setSavedSearches(org.savedSearches || []); // v6.12.0 Phase 8
         setHiddenInstances(new Set(org.hiddenInstances || []));
         setBlankImageBooks(new Set(org.blankImageBooks || []));
 
@@ -2090,6 +2168,7 @@ function MobileApp() {
                         }
                         if (entry.view === 'folder' && entry.folderId !== '__recent__'
                             && !(entry.folderId?.startsWith('__tag_') && entry.folderId?.endsWith('__'))
+                            && !(entry.folderId?.startsWith('__booklist_') && entry.folderId?.endsWith('__'))
                             && !folderIds.has(entry.folderId)) {
                             const reset = [{ view: 'dashboard', scrollY: 0 }];
                             persistNavStack(reset);
@@ -2232,6 +2311,11 @@ function MobileApp() {
         } else {
             navigateTo('folder', { folderId });
         }
+        closeOverlay();
+    };
+    // v6.12.0 Phase 8 - Searches are listed in the drawer now; tapping applies the preset to All Books
+    // and shows the matches as a results view. That requires the filter matcher, which lands in 8b.
+    const handleSelectSearch = (_searchId) => {
         closeOverlay();
     };
 
@@ -2441,7 +2525,7 @@ function MobileApp() {
         <div className="min-h-screen" style={{ background: 'var(--bg-page, #ffffff)', color: 'var(--text-primary, #1e293b)' }}>
             {/* Header */}
             <Header
-                currentNav={currentNav} navStack={navStack} folders={folders} books={books} tagRegistry={tagRegistry}
+                currentNav={currentNav} navStack={navStack} folders={folders} books={books} tagRegistry={tagRegistry} bookLists={bookLists}
                 onGoBack={goBack} onToggleDrawer={toggleDrawer} onToggleMenu={toggleMenu}
                 hasExpandedShelves={expandedShelves.size > 0}
                 onCollapseAll={() => setExpandedShelves(new Set())}
@@ -2464,7 +2548,10 @@ function MobileApp() {
                     books={books}
                     pinnedTagFolders={pinnedTagFolders}
                     tagRegistry={tagRegistry}
+                    bookLists={bookLists}
+                    savedSearches={savedSearches}
                     onSelectFolder={handleSelectFolder}
+                    onSelectSearch={handleSelectSearch}
                     onClose={closeOverlay}
                 />
             )}
@@ -2518,7 +2605,7 @@ function MobileApp() {
                 ) : currentNav.view === 'folder' ? (
                     <FolderView
                         folderId={currentNav.folderId}
-                        books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry}
+                        books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists}
                         showDealsOnly={showDealsOnly} showHidden={showHidden}
                         sortOption={sortOption} onCycleSort={cycleSortOption}
                         viewMode={viewMode}
@@ -2549,7 +2636,7 @@ function MobileApp() {
                     />
                 ) : (
                     <Dashboard
-                        books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry}
+                        books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists}
                         showDealsOnly={showDealsOnly} showHidden={showHidden}
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
                         setBlankImageBooks={setBlankImageBooks}

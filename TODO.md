@@ -129,6 +129,11 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - ~~Desktop Mode escape hatch~~ ✅ v6.0.0-alpha.18 — Interstitial in readerwrangler.html shows "Return to Mobile Mode" / "Continue in Desktop Mode" before loading any app code. Uses sessionStorage to lock mode per tab session.
    - Directional shadow consistency with mobile cover view
 
+**4b. 📱 Deferred Mobile Polish** - LOW/LOW — surfaced during Book Lists Phase 8 (2026-06)
+   - **Subfolder shown twice on Dashboard folder shelves**: a folder with a sub-folder (series) shows BOTH an openable folder tile AND that sub-folder's books inline (under the floating series label bar) in the same horizontal row. The books therefore appear at the top level and again inside the openable sub-folder — redundant/confusing on a fresh look. Revisit the folder/series display model (drop the inline duplication, or drop the tile, or make it a clearer "preview"). Book List shelves are unaffected (flat, no sub-folders).
+   - **Scroll slider on overflowing non-expanded shelves**: the custom horizontal scrollbar slider currently renders only for *expanded* shelves (after "Show All"). A shelf that overflows but isn't expanded has no visible scrub affordance (native scrollbars are CSS-hidden via `scrollbarWidth: none`). Consider showing the slider whenever a row overflows, so long series/title rows can be scrubbed without expanding first.
+     - Collision to fix: on series shelves the slider and the floating amber series-label bar both pin to the bottom and overlap (the slider edges poke out past the label-bar ends — confirmed on an expanded Jim Butcher shelf). Stack them (label bar, then a slim slider beneath) and reserve the room. Since an always-on slider is no longer toggled by Show All/Show Less, reserve the vertical space **statically at layout time** rather than dynamically on expand.
+
 **3. Improve Load Time Experience** - MEDIUM/LOW-MEDIUM (2-4 hours)
    - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
    - Console warnings (dev-only, users don't see): Tailwind CDN "not for production", Babel "precompile your scripts", Babel "deoptimised styling" (skips formatting for files >500KB — cosmetic, no functional impact)

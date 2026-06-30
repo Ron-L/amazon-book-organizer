@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.50";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.51";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3118,7 +3118,7 @@
                         clearTimeout(deviceStatePushTimerRef.current);
                     }
                 };
-            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches, books]);
+            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches, bookLists, books]); // v6.12.0 Phase 8 - bookLists so list-only edits push to relay/mobile
 
             // v6.3.0 - Post-import/restore integrity check
             // Fires when integrityCheckPending is set by importFromRelay / importBackup.
