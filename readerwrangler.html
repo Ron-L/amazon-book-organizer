@@ -210,7 +210,11 @@
                 var chipBg = narrow ? 'rgba(220,38,38,0.95)' : 'rgba(15,23,42,0.85)'; // red on any phone-width viewport
                 var chip = document.createElement('div');
                 chip.title = 'Tap to switch to ' + target + ' mode';
-                chip.style.cssText = 'position:fixed;top:6px;left:50%;transform:translateX(-50%);' +
+                // position:absolute + manual placement (not fixed): the desktop app overflows a phone-width
+                // viewport, and fixed/left:50% resolves against that wide layout width, parking the chip
+                // off-screen. Placing it in document coords centered on the *visible* area, updated on scroll,
+                // keeps it centered on whatever you're actually looking at.
+                chip.style.cssText = 'position:absolute;transform:translateX(-50%);' +
                     'z-index:2147483647;pointer-events:none;cursor:pointer;display:flex;align-items:center;gap:8px;' +
                     'background:' + chipBg + ';color:#fff;padding:3px 10px;border-radius:11px;' +
                     'border:1px solid rgba(255,255,255,0.5);box-shadow:0 2px 7px rgba(0,0,0,0.4);' +
@@ -224,16 +228,23 @@
                 chip.appendChild(modeSeg);
                 chip.appendChild(actionSeg);
                 (document.body || document.documentElement).appendChild(chip);
+                function place() {
+                    chip.style.left = (window.scrollX + window.innerWidth / 2) + 'px';
+                    chip.style.top = (window.scrollY + 6) + 'px';
+                }
+                place();
+                window.addEventListener('resize', place);
                 var hideTimer;
                 // Tappable only while visible: toggle pointer-events with opacity so an invisible chip never
                 // intercepts taps over the real UI at rest.
                 function show() {
+                    place();
                     chip.style.opacity = '1';
                     chip.style.pointerEvents = 'auto';
                     clearTimeout(hideTimer);
                     hideTimer = setTimeout(function () { chip.style.opacity = '0'; chip.style.pointerEvents = 'none'; }, 1500);
                 }
-                window.addEventListener('scroll', show, true); // capture: catches inner-container scrolls (desktop) + window (mobile)
+                window.addEventListener('scroll', show, true); // capture: catches inner-container scrolls (desktop) + window (mobile); also re-centers the chip
                 chip.addEventListener('pointerenter', function () { clearTimeout(hideTimer); chip.style.opacity = '1'; chip.style.pointerEvents = 'auto'; });
                 chip.addEventListener('pointerleave', show); // restart the fade once you move off
                 chip.addEventListener('click', function () {
