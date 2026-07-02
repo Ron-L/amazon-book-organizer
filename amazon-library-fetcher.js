@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.10.2';
+    const FETCHER_VERSION = 'v4.11.7-alpha.1';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -38,6 +38,11 @@ async function fetchAmazonLibrary() {
     const FETCH_DELAY_MS = 0; // No delay - network RTT provides natural throttling
     const ENRICH_DELAY_MS = 0; // No delay - network RTT provides natural throttling
     const ENRICH_BATCH_SIZE = 30; // Max ASINs per getProducts call (Amazon limit)
+    // v4.11.7 - Recovery batches 30 ASINs/call again. The old "empty batch" behavior was NOT batch-composition
+    // sensitivity — it was the missing ignorePSLD header (see apiHeaders). Without it, product-null ASINs
+    // resolve to nothing, so a batch made ENTIRELY of them returned empty (which is what the recovery batches
+    // were). With the header they resolve, so batching is safe again (validated: 30/30, incl. hash-dependent).
+    const RECOVERY_BATCH_SIZE = 30;
     const LIBRARY_FILENAME = 'amazon-library.json';
     const startTime = Date.now();
 
@@ -47,6 +52,25 @@ async function fetchAmazonLibrary() {
 
     // CSRF token (initialized later, but declared here for scope access in fetchWithRetry)
     let csrfToken = null;
+
+    // Headers for EVERY kindle-reader-api call. Centralized so the one fragile piece lives in one place.
+    // x-aapi-experimental-params carries ignorePSLD:true — it lets Amazon resolve products that lack
+    // Product Sales/Listing Data (older / library-only editions) instead of returning a null product.
+    // Without it, ~350 owned books (e.g. the Gideon Sable series) come back product-null and were dropped.
+    // Validated safe: ignorePSLD does NOT strip prices or genres from normal books.
+    // FRAGILITY: the blob embeds an experiment hash (…f3beacefbe4b) Amazon could rotate; Phase 0's canary
+    // self-test detects a stale hash and flags it (same rotation caveat as the LIBRARY exclude-tag hashes).
+    function apiHeaders() {
+        return {
+            'accept': 'application/json, text/plain, */*',
+            'content-type': 'application/json',
+            'anti-csrftoken-a2z': csrfToken,
+            'x-client-id': 'your-books',
+            'x-amz-portal-marketplace-id': 'ATVPDKIKX0DER',
+            'x-cc-currency-of-preference': 'USD',
+            'x-aapi-experimental-params': 'W3siZXhwZXJpbWVudElkIjoiaWdub3JlUFNMRF9mM2JlYWNlZmJlNGIiLCJleHBlcmltZW50S2V5IjoiaWdub3JlUFNMRCIsInZhbHVlIjoidHJ1ZSJ9XQ=='
+        };
+    }
 
     // Demo whitelist — filter to specific ASINs for tutorial video recording
     let whitelistASINs = null;
@@ -104,6 +128,13 @@ async function fetchAmazonLibrary() {
         apiErrorBooks: [],
         partialErrorBooks: [],  // Track books with partial errors (got data anyway)
         duplicatesFound: [],  // Track duplicate ASINs
+        // v4.11.0 - Completeness: no silent drops. Books the library query returns with product=null are
+        // recovered by ASIN via getProducts; whatever can't be resolved is flagged (delisted), never dropped.
+        recoveredBooks: [],     // null-product library nodes recovered via getProducts
+        unrecoverableBooks: [], // null-product nodes with no product data anywhere (delisted/unavailable)
+        unknownNodeTypes: [],   // library node __typenames we don't handle (flagged + GoatCounter, never silent)
+        recoveryCandidates: 0,  // how many missing books the recovery pass attempted (integrity: = recovered + unrecoverable + deferred)
+        libraryTotalCount: null, // Amazon's reported library total, for reconciliation
         errorCategories: {
             amazonTimeout: 0,      // 504.1 / Backend Future timed out
             customerMarketplace: 0, // Customer Id or Marketplace Id invalid
@@ -631,6 +662,24 @@ async function fetchAmazonLibrary() {
         };
     };
 
+    // v4.11.0 - Map Amazon relationshipSubType → our ownershipType, with stats tracking. Shared by the
+    // Phase 1 loop and the null-product recovery pass so both classify + count ownership identically.
+    const resolveOwnershipType = (rawType, asin, title) => {
+        switch (rawType) {
+            case 'Purchase': stats.ownershipTypes.purchased++; return 'purchased';
+            case 'Sample': stats.ownershipTypes.sample++; return 'sample';
+            case 'Sharing': stats.ownershipTypes.borrowed++; return 'borrowed';
+            case 'Prime': stats.ownershipTypes.prime++; return 'prime';
+            case 'KindleUnlimited': stats.ownershipTypes.kindleUnlimited++; return 'kindleUnlimited';
+            case 'KOLL': stats.ownershipTypes.koll++; return 'koll';
+            case 'Comixology': stats.ownershipTypes.comixology++; return 'comixology';
+            case 'InsideAmazon': stats.ownershipTypes.insideAmazon++; return 'insideAmazon';
+            default:
+                stats.ownershipTypes.unknown.push({ asin, title, rawType });
+                return 'unknown';
+        }
+    };
+
     const extractReviews = (product) => {
         return product.customerReviewsTop?.reviews?.map(review => ({
             stars: review.stars,
@@ -893,6 +942,7 @@ async function fetchAmazonLibrary() {
         const csrfMeta = document.querySelector('meta[name="anti-csrftoken-a2z"]');
 
         if (!csrfMeta) {
+            new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/fetch-phase0-no-csrf';
             throw new Error('❌ CSRF token not found. Make sure you are logged in.');
         }
 
@@ -937,12 +987,7 @@ async function fetchAmazonLibrary() {
             const result = await fetchWithRetry(async () => {
                 const testLibraryResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
                     method: 'POST',
-                    headers: {
-                        'accept': 'application/json, text/plain, */*',
-                        'content-type': 'application/json',
-                        'anti-csrftoken-a2z': csrfToken,
-                        'x-client-id': 'your-books'
-                    },
+                    headers: apiHeaders(),
                     credentials: 'include',
                     body: JSON.stringify({
                         query: testLibraryQuery,
@@ -974,6 +1019,7 @@ async function fetchAmazonLibrary() {
             console.log(`   ✅ Library API working (found ${testLibrary.totalCount?.number || 0} books)`);
 
         } catch (error) {
+            new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/fetch-phase0-library-fail';
             console.error('\n❌ LIBRARY API VALIDATION FAILED');
             console.error('========================================');
             console.error('The library query failed. This usually means:');
@@ -997,12 +1043,7 @@ async function fetchAmazonLibrary() {
         try {
             const testLibraryResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
                 method: 'POST',
-                headers: {
-                    'accept': 'application/json, text/plain, */*',
-                    'content-type': 'application/json',
-                    'anti-csrftoken-a2z': csrfToken,
-                    'x-client-id': 'your-books'
-                },
+                headers: apiHeaders(),
                 credentials: 'include',
                 body: JSON.stringify({
                     query: testLibraryQuery,
@@ -1112,12 +1153,7 @@ async function fetchAmazonLibrary() {
             const enrichResult = await fetchWithRetry(async () => {
                 const testEnrichResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
                     method: 'POST',
-                    headers: {
-                        'accept': 'application/json, text/plain, */*',
-                        'content-type': 'application/json',
-                        'anti-csrftoken-a2z': csrfToken,
-                        'x-client-id': 'your-books'
-                    },
+                    headers: apiHeaders(),
                     credentials: 'include',
                     body: JSON.stringify({
                         query: testEnrichQuery,
@@ -1240,6 +1276,7 @@ async function fetchAmazonLibrary() {
             console.log('✅ Phase 0 complete: All API endpoints and extraction logic validated\n');
 
         } catch (error) {
+            new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/fetch-phase0-enrich-fail';
             console.error('\n❌ ENRICHMENT API VALIDATION FAILED');
             console.error('========================================');
             console.error('The enrichment query failed. This usually means:');
@@ -1259,6 +1296,39 @@ async function fetchAmazonLibrary() {
             console.log('⚠️  Continuing without enrichment validation...\n');
         }
 
+        // Phase 0 canary: confirm the ignorePSLD experiment hash still resolves hash-dependent books.
+        // CANARY is an owned book that returns product-null WITHOUT the experimental header and resolves WITH it.
+        // If Amazon rotates the hash, recovery would silently under-perform — so detect + flag it here.
+        try {
+            const CANARY_ASIN = 'B0CVS92TRQ'; // Gideon Sable #5 — owned, hash-dependent (its edition lacks PSLD)
+            const leanHeaders = { 'accept': 'application/json, text/plain, */*', 'content-type': 'application/json', 'anti-csrftoken-a2z': csrfToken, 'x-client-id': 'your-books' };
+            const probe = async (asin, headers) => {
+                const resp = await fetch('https://www.amazon.com/kindle-reader-api', {
+                    method: 'POST', headers, credentials: 'include',
+                    body: JSON.stringify({ query: `query enrichBook { getProducts(input: [{asin: "${asin}"}]) { asin title { displayString } } }`, operationName: 'enrichBook' })
+                });
+                const d = await resp.json();
+                return (d?.data?.getProducts || []).length;
+            };
+            const withMods = await probe(CANARY_ASIN, apiHeaders());
+            if (withMods > 0) {
+                console.log('   ✅ Experimental-header canary OK (hash-dependent book resolves with the ignorePSLD header)\n');
+            } else if ((await probe(CANARY_ASIN, leanHeaders)) > 0) {
+                console.warn('   ⚠️ Canary no longer hash-dependent (resolves without the header) — mods still applied (harmless), but pick a new canary.\n');
+                new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/fetch-phase0-canary-stale';
+            } else if ((await probe(testAsin, leanHeaders)) > 0) {
+                console.error('   ❌ EXPERIMENTAL HASH LIKELY STALE: the canary failed WITH the header, but a normal book resolves WITHOUT it (endpoint OK).');
+                console.error('      Null-product recovery will under-perform. Update x-aapi-experimental-params in apiHeaders().\n');
+                new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/fetch-phase0-hash-stale';
+            } else {
+                console.error('   ❌ Endpoint/auth problem: even a normal book did not resolve — not a hash issue.\n');
+                new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/fetch-phase0-endpoint-fail';
+            }
+        } catch (e) {
+            console.warn('   ⚠️ Canary self-test could not run:', e.message, '\n');
+            new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/fetch-phase0-canary-error';
+        }
+
         // Step 3: Fetch new books (Phase 1)
         stats.timing.pass1Start = Date.now();
         console.log('[3/7] Fetching new books from library...');
@@ -1273,6 +1343,8 @@ async function fetchAmazonLibrary() {
 
         const newBooks = [];
         const seenASINs = new Map();  // Track ASINs to detect duplicates
+        // v4.11.0 - ASINs whose library node had product=null; recovered by ASIN after Phase 1 (never dropped)
+        const nullProductAsins = new Map(); // asin -> { asin, relationshipSubType, acquisitionDate }
 
         // Seed seenASINs with existing books so Phase 1 doesn't re-add them as new
         for (let i = 0; i < existingBooks.length; i++) {
@@ -1382,12 +1454,7 @@ async function fetchAmazonLibrary() {
                 const result = await fetchWithRetry(async () => {
                     const response = await fetch('https://www.amazon.com/kindle-reader-api', {
                         method: 'POST',
-                        headers: {
-                            'accept': 'application/json, text/plain, */*',
-                            'content-type': 'application/json',
-                            'anti-csrftoken-a2z': csrfToken,
-                            'x-client-id': 'your-books'
-                        },
+                        headers: apiHeaders(),
                         credentials: 'include',
                         body: JSON.stringify({
                             query: query,
@@ -1416,30 +1483,53 @@ async function fetchAmazonLibrary() {
                 }, `Pass 1 page ${pageNum}`);
 
                 const library = result.library;
-                
+
+                // v4.11.0 - Capture Amazon's reported library total once (page 1) for reconciliation.
+                if (stats.libraryTotalCount === null && typeof library.totalCount?.number === 'number') {
+                    stats.libraryTotalCount = library.totalCount.number;
+                }
+
                 const books = library.edges;
-                
+
                 // Process each book and check for overlap
                 for (const edge of books) {
                     const node = edge.node;
-                    const product = node.product;
-                    
-                    if (!product) continue;
-                    
-                    // Use relationshipCreationDate (always present in the node)
+
+                    // v4.11.0 - Overlap check first, using the node date (present with or without product),
+                    // so product-null nodes still participate in the incremental stop.
                     const acquisitionDate = node.relationshipCreationDate || null;
-                    
-                    // Check if this book already exists (by ASIN and date)
                     if (mostRecentDate && acquisitionDate) {
                         const bookDate = parseInt(acquisitionDate);
                         if (bookDate <= mostRecentDate) {
-                            // Found overlap - stop fetching
-                            console.log(`   🔍 Found overlap at ASIN ${product.asin}`);
+                            console.log(`   🔍 Found overlap at ASIN ${node.asin}`);
                             foundOverlap = true;
                             break;
                         }
                     }
-                    
+
+                    // v4.11.0 - Node-type classifier: NO silent drops. Handle known single-book / borrowed
+                    // nodes; anything else is counted + GoatCounter-flagged so a new Amazon shape surfaces.
+                    const typename = node.__typename;
+                    if (typename !== 'CustomerLibrarySingleBookNode' && typename !== 'CustomerLibraryBorrowedSingleBookNode') {
+                        stats.unknownNodeTypes.push({ asin: node.asin, typename: typename || null });
+                        new Image().src = `https://readerwrangler.goatcounter.com/count?p=/event/fetch-unknown-node-type=${encodeURIComponent(typename || 'null')}`;
+                        continue;
+                    }
+
+                    const product = node.product;
+
+                    // v4.11.0 - product=null: DON'T drop. Queue for recovery by ASIN (getProducts) after Phase 1.
+                    if (!product) {
+                        if (node.asin && !seenASINs.has(node.asin) && !nullProductAsins.has(node.asin)) {
+                            nullProductAsins.set(node.asin, {
+                                asin: node.asin,
+                                relationshipSubType: node.relationshipSubType,
+                                acquisitionDate
+                            });
+                        }
+                        continue;
+                    }
+
                     // Extract book data - using shared functions
                     const title = product.title?.displayString || 'Unknown Title';
                     const authors = extractAuthors(product);
@@ -1480,49 +1570,10 @@ async function fetchAmazonLibrary() {
                         continue;  // Skip this duplicate
                     }
 
-                    // Extract ownership type from relationshipSubType
+                    // Extract ownership type from relationshipSubType (shared helper — see resolveOwnershipType)
                     // Known values: Purchase, Sample, Sharing, Prime, KindleUnlimited, KOLL, Comixology, InsideAmazon
                     const rawOwnershipType = node.relationshipSubType?.[0] || 'Purchase';
-                    let ownershipType = 'purchased'; // default
-
-                    switch (rawOwnershipType) {
-                        case 'Purchase':
-                            ownershipType = 'purchased';
-                            stats.ownershipTypes.purchased++;
-                            break;
-                        case 'Sample':
-                            ownershipType = 'sample';
-                            stats.ownershipTypes.sample++;
-                            break;
-                        case 'Sharing':
-                            ownershipType = 'borrowed';
-                            stats.ownershipTypes.borrowed++;
-                            break;
-                        case 'Prime':
-                            ownershipType = 'prime';
-                            stats.ownershipTypes.prime++;
-                            break;
-                        case 'KindleUnlimited':
-                            ownershipType = 'kindleUnlimited';
-                            stats.ownershipTypes.kindleUnlimited++;
-                            break;
-                        case 'KOLL':
-                            ownershipType = 'koll';
-                            stats.ownershipTypes.koll++;
-                            break;
-                        case 'Comixology':
-                            ownershipType = 'comixology';
-                            stats.ownershipTypes.comixology++;
-                            break;
-                        case 'InsideAmazon':
-                            ownershipType = 'insideAmazon';
-                            stats.ownershipTypes.insideAmazon++;
-                            break;
-                        default:
-                            // Unknown type - track for bug report
-                            ownershipType = 'unknown';
-                            stats.ownershipTypes.unknown.push({ asin: product.asin, title, rawType: rawOwnershipType });
-                    }
+                    const ownershipType = resolveOwnershipType(rawOwnershipType, product.asin, title);
 
                     // Demo whitelist filter — skip books not in whitelist
                     if (whitelistASINs && !whitelistASINs.has(product.asin)) {
@@ -1579,6 +1630,171 @@ async function fetchAmazonLibrary() {
             console.log('✅ No new books to fetch - checking tags & prices...\n');
         } else {
             console.log(`\n✅ Phase 1 complete: Found ${newBooks.length} new books\n`);
+        }
+
+        // ============================================================================
+        // v4.11.0 - Completeness recovery. No book Amazon lists in Your Books gets silently dropped.
+        // The library query returns some owned books with product=null (a bad product sub-field nulls the
+        // whole product, or the list result omits it). Phase 1 queued those ASINs in nullProductAsins.
+        // On an INCREMENTAL fetch the loop stops at overlap, so OLD missing books were never even seen — so
+        // when we're short of Amazon's totalCount we sweep the full library (lean) for every ASIN we don't
+        // yet have. Then we recover them all by ASIN via getProducts. Whatever can't be resolved is flagged
+        // (delisted), never dropped. (Stage 2 will persist the reconciliation so the sweep is skipped once
+        // the library is fully accounted for — keeping incremental fetches fast.)
+        // ============================================================================
+        {
+            const recoveryTargets = new Map(nullProductAsins); // asin -> { asin, relationshipSubType, acquisitionDate }
+            const capturedCount = existingBooks.length + newBooks.length;
+            const shouldSweep = existingBooks.length > 0
+                && stats.libraryTotalCount != null
+                && capturedCount < stats.libraryTotalCount;
+
+            if (shouldSweep && !progressUI.isAborted()) {
+                console.log(`🩹 Recovery sweep: have ${capturedCount} but Amazon reports ${stats.libraryTotalCount} — scanning for missing books...`);
+                progressUI.updatePhase('Recovering', 'Scanning full library for books not yet captured...');
+                let sweepCursor = "", sweepPage = 0, sweepHasMore = true;
+                while (sweepHasMore && !progressUI.isAborted()) {
+                    sweepPage++;
+                    const sweepQuery = `query ccGetCustomerLibraryBooks {
+                        getCustomerLibrary {
+                            books(after: "${sweepCursor}", first: ${PAGE_SIZE}, sortBy: {sortField: ACQUISITION_DATE, sortOrder: DESCENDING}, selectionCriteria: {tags: [], query: "NOT (222711ade9d0f22714af93d1c8afec60 OR 858f501de8e2d7ece33f768936463ac8)"}, groupBySeries: false) {
+                                pageInfo { hasNextPage endCursor }
+                                edges { node { asin __typename relationshipSubType relationshipCreationDate } }
+                            }
+                        }
+                    }`;
+                    let sweepResult;
+                    try {
+                        sweepResult = await fetchWithRetry(async () => {
+                            const resp = await fetch('https://www.amazon.com/kindle-reader-api', {
+                                method: 'POST',
+                                headers: apiHeaders(),
+                                credentials: 'include',
+                                body: JSON.stringify({ query: sweepQuery, operationName: 'ccGetCustomerLibraryBooks' })
+                            });
+                            if (!resp.ok) return { httpError: true, httpStatus: resp.status };
+                            const d = await resp.json();
+                            const lib = d?.data?.getCustomerLibrary?.books;
+                            if (!lib) return { apiError: true, errorMessage: d.errors?.[0]?.message || 'sweep error' };
+                            return { lib };
+                        }, `Recovery sweep page ${sweepPage}`);
+                    } catch (e) {
+                        console.warn(`   ⚠️ Recovery sweep page ${sweepPage} failed: ${e.message} — stopping sweep`);
+                        break;
+                    }
+                    const lib = sweepResult.lib;
+                    for (const e of lib.edges) {
+                        const n = e.node;
+                        const tn = n.__typename;
+                        if (tn !== 'CustomerLibrarySingleBookNode' && tn !== 'CustomerLibraryBorrowedSingleBookNode') {
+                            if (!stats.unknownNodeTypes.some(u => u.asin === n.asin)) {
+                                stats.unknownNodeTypes.push({ asin: n.asin, typename: tn || null });
+                            }
+                            continue;
+                        }
+                        if (n.asin && !seenASINs.has(n.asin) && !recoveryTargets.has(n.asin)) {
+                            recoveryTargets.set(n.asin, { asin: n.asin, relationshipSubType: n.relationshipSubType, acquisitionDate: n.relationshipCreationDate || null });
+                        }
+                    }
+                    sweepHasMore = lib.pageInfo?.hasNextPage || false;
+                    sweepCursor = lib.pageInfo?.endCursor || "";
+                }
+                console.log(`   🩹 Sweep collected ${recoveryTargets.size} candidate(s) to recover`);
+            }
+
+            // Recover each target by ASIN via getProducts (identity fields), build records, add to newBooks.
+            const targetList = [...recoveryTargets.values()].filter(t => t.asin && !seenASINs.has(t.asin));
+            stats.recoveryCandidates = targetList.length;
+            if (targetList.length > 0 && !progressUI.isAborted()) {
+                console.log(`[Recovery] Fetching ${targetList.length} book(s) the library query returned without product data...`);
+                progressUI.updatePhase('Recovering', `Recovering ${targetList.length} book(s) missing from the list...`);
+                const recBatches = Math.ceil(targetList.length / RECOVERY_BATCH_SIZE);
+                for (let b = 0; b < recBatches && !progressUI.isAborted(); b++) {
+                    const batch = targetList.slice(b * RECOVERY_BATCH_SIZE, (b + 1) * RECOVERY_BATCH_SIZE);
+                    const inputStr = '[' + batch.map(t => `{asin: "${t.asin}"}`).join(', ') + ']';
+                    // Lean identity query — MUST stay minimal: getProducts OMITS a product entirely if ANY
+                    // requested field errors for it, and these books (already fragile — that's why the list
+                    // query nulled them) choke on deep/optional fields. This is exactly the field set proven
+                    // to return B0F9QNX9NL. No images{} (its non-nullable sub-fields null products lacking a
+                    // hi-res cover; cover falls back to the ASIN URL), no deep byLine, no reviews (enrichment
+                    // fills rating/description afterward anyway).
+                    const recQuery = `query recoverBook {
+                        getProducts(input: ${inputStr}) {
+                            asin
+                            title { displayString }
+                            byLine { contributors { name } }
+                            bindingInformation { binding { displayString } }
+                            bookSeries { singleBookView { series { title position } } }
+                        }
+                    }`;
+                    let recResult;
+                    try {
+                        recResult = await fetchWithRetry(async () => {
+                            const resp = await fetch('https://www.amazon.com/kindle-reader-api', {
+                                method: 'POST',
+                                headers: apiHeaders(),
+                                credentials: 'include',
+                                body: JSON.stringify({ query: recQuery, operationName: 'recoverBook' })
+                            });
+                            if (!resp.ok) return { httpError: true, httpStatus: resp.status };
+                            const d = await resp.json();
+                            const products = d?.data?.getProducts || [];
+                            if (d.errors && products.length === 0) return { apiError: true, errorMessage: d.errors?.[0]?.message || 'recovery error' };
+                            return { products };
+                        }, `Recovery batch ${b + 1}/${recBatches}`);
+                    } catch (e) {
+                        console.warn(`   ⚠️ Recovery batch ${b + 1} failed: ${e.message} — will retry on the next fetch's sweep`);
+                        continue;
+                    }
+                    const prodMap = new Map();
+                    for (const p of (recResult.products || [])) { if (p?.asin) prodMap.set(p.asin, p); }
+                    for (const t of batch) {
+                        const product = prodMap.get(t.asin);
+                        if (!product) {
+                            // getProducts omitted it entirely → no product data anywhere (delisted/unavailable).
+                            // Flag it, never silent. A present-but-sparse product still gets built below.
+                            stats.unrecoverableBooks.push({ asin: t.asin });
+                            new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/fetch-delisted';
+                            continue;
+                        }
+                        if (seenASINs.has(t.asin)) continue;
+                        const title = product.title?.displayString || 'Unknown Title';
+                        // v4.11.0 - NO binding filter here: these are items Amazon already lists in the owned
+                        // Kindle library, so they're legitimate. And getProducts' binding is unreliable for them
+                        // (it returned "Audio CD" for a Kindle-owned book — likely the same catalog inconsistency
+                        // that nulls them in the list query), so keep it only if it's a real book binding, else
+                        // leave it null rather than store a wrong Format.
+                        let binding = product.bindingInformation?.binding?.displayString || null;
+                        if (binding && !BOOK_BINDINGS.includes(binding)) binding = null;
+                        const authors = extractAuthors(product);
+                        const { coverUrl, coverUrlHiRes } = extractCoverUrls(product);
+                        const seriesData = product.bookSeries?.singleBookView?.series;
+                        const rawOwnershipType = t.relationshipSubType?.[0] || 'Purchase';
+                        const ownershipType = resolveOwnershipType(rawOwnershipType, t.asin, title);
+                        seenASINs.set(t.asin, newBooks.length);
+                        newBooks.push({
+                            asin: t.asin,
+                            onWishlist: false,
+                            ownershipType,
+                            title,
+                            authors,
+                            coverUrl,
+                            coverUrlHiRes,
+                            rating: product.customerReviewsSummary?.rating?.value || null,
+                            reviewCount: product.customerReviewsSummary?.count?.displayString || null,
+                            series: seriesData?.title || null,
+                            seriesPosition: seriesData?.position || null,
+                            acquisitionDate: t.acquisitionDate || null,
+                            binding,
+                            description: null,
+                            topReviews: [],
+                            recovered: true // v4.11.0 - recovered via getProducts (not in the flat list result)
+                        });
+                        stats.recoveredBooks.push({ asin: t.asin, title });
+                    }
+                }
+                console.log(`[Recovery] ✅ Recovered ${stats.recoveredBooks.length}, unrecoverable ${stats.unrecoverableBooks.length}`);
+            }
         }
 
         // Step 4: Enrich books (Phase 2) - BATCH MODE
@@ -1699,12 +1915,7 @@ async function fetchAmazonLibrary() {
 
                     const response = await fetch('https://www.amazon.com/kindle-reader-api', {
                         method: 'POST',
-                        headers: {
-                            'accept': 'application/json, text/plain, */*',
-                            'content-type': 'application/json',
-                            'anti-csrftoken-a2z': csrfToken,
-                            'x-client-id': 'your-books'
-                        },
+                        headers: apiHeaders(),
                         credentials: 'include',
                         body: JSON.stringify({
                             query: query,
@@ -1911,12 +2122,7 @@ async function fetchAmazonLibrary() {
                     const result = await fetchWithRetry(async () => {
                         const response = await fetch('https://www.amazon.com/kindle-reader-api', {
                             method: 'POST',
-                            headers: {
-                                'accept': 'application/json, text/plain, */*',
-                                'content-type': 'application/json',
-                                'anti-csrftoken-a2z': csrfToken,
-                                'x-client-id': 'your-books'
-                            },
+                            headers: apiHeaders(),
                             credentials: 'include',
                             body: JSON.stringify({
                                 query: tagsQuery,
@@ -2034,12 +2240,7 @@ async function fetchAmazonLibrary() {
                     const result = await fetchWithRetry(async () => {
                         const response = await fetch('https://www.amazon.com/kindle-reader-api', {
                             method: 'POST',
-                            headers: {
-                                'accept': 'application/json, text/plain, */*',
-                                'content-type': 'application/json',
-                                'anti-csrftoken-a2z': csrfToken,
-                                'x-client-id': 'your-books'
-                            },
+                            headers: apiHeaders(),
                             credentials: 'include',
                             body: JSON.stringify({
                                 query: priceQuery,
@@ -2256,6 +2457,42 @@ async function fetchAmazonLibrary() {
         }
         console.log(`   Books kept:                   ${newBooks.length}\n`);
 
+        // v4.11.0 - COMPLETENESS / reconciliation (no silent drops)
+        console.log('🧮 COMPLETENESS');
+        if (stats.recoveredBooks.length > 0) {
+            console.log(`   Recovered (were missing):     ${stats.recoveredBooks.length}`);
+            stats.recoveredBooks.slice(0, 5).forEach(b => console.log(`      • ${(b.title || b.asin).substring(0, 50)}`));
+            if (stats.recoveredBooks.length > 5) console.log(`      • ... and ${stats.recoveredBooks.length - 5} more`);
+        }
+        if (stats.unrecoverableBooks.length > 0) {
+            console.log(`   ⚠️ Unavailable/delisted:       ${stats.unrecoverableBooks.length} (in Amazon's count but no product data anywhere — cannot import)`);
+            console.log(`      ASINs: ${stats.unrecoverableBooks.slice(0, 10).map(b => b.asin).join(', ')}${stats.unrecoverableBooks.length > 10 ? ', ...' : ''}`);
+        }
+        if (stats.unknownNodeTypes.length > 0) {
+            const byType = {};
+            stats.unknownNodeTypes.forEach(u => { byType[u.typename] = (byType[u.typename] || 0) + 1; });
+            console.log(`   ⚠️ Unknown node types:         ${stats.unknownNodeTypes.length} ${JSON.stringify(byType)} (flagged to GoatCounter — investigate)`);
+        }
+        // Recovery integrity: every book the sweep flagged as missing must be recovered, flagged, or deferred.
+        const recoveryTouched = stats.recoveredBooks.length + stats.unrecoverableBooks.length;
+        const deferred = Math.max(0, stats.recoveryCandidates - recoveryTouched);
+        if (stats.recoveryCandidates > 0) {
+            console.log(`   Recovery integrity: ${stats.recoveryCandidates} missing = ${stats.recoveredBooks.length} recovered + ${stats.unrecoverableBooks.length} unavailable/delisted${deferred ? ` + ${deferred} deferred (batch error — retried next run)` : ''}`);
+            if (deferred === 0) {
+                console.log(`   ✅ No silent drops — every missing book was recovered or explicitly flagged.`);
+            }
+        }
+        // Library vs Amazon is intentionally NOT claimed as "reconciled" here: our library also holds
+        // returned/orphan books that Amazon no longer lists (see the orphan scan), so the two counts differ
+        // by design. Report them as info only.
+        if (stats.libraryTotalCount != null) {
+            console.log(`   Library now holds ${finalBooks.length}; Amazon lists ${stats.libraryTotalCount} (differences = orphans/returned + flagged delisted — see orphan scan).`);
+        }
+        console.log('');
+        if (stats.recoveredBooks.length > 0 || stats.unrecoverableBooks.length > 0) {
+            progressUI.showInfoBanner(`Completeness: recovered ${stats.recoveredBooks.length} previously-missing book(s)${stats.unrecoverableBooks.length ? `; ${stats.unrecoverableBooks.length} unavailable/delisted (see console)` : ''}.`);
+        }
+
         console.log('🔄 API RELIABILITY');
         console.log(`   Total API calls:              ${stats.apiCalls.total}`);
         const firstTryPct = ((stats.apiCalls.firstTry / stats.apiCalls.total) * 100).toFixed(1);
@@ -2430,12 +2667,7 @@ async function fetchAmazonLibrary() {
                 const result = await fetchWithRetry(async () => {
                     const response = await fetch('https://www.amazon.com/kindle-reader-api', {
                         method: 'POST',
-                        headers: {
-                            'accept': 'application/json, text/plain, */*',
-                            'content-type': 'application/json',
-                            'anti-csrftoken-a2z': csrfToken,
-                            'x-client-id': 'your-books'
-                        },
+                        headers: apiHeaders(),
                         credentials: 'include',
                         body: JSON.stringify({
                             query: orphanQuery,
@@ -2470,11 +2702,17 @@ async function fetchAmazonLibrary() {
                 }
 
                 for (const edge of library.edges) {
-                    const product = edge.node?.product;
-                    if (!product) continue;
-                    const binding = product.bindingInformation?.binding?.displayString || null;
-                    if (binding && !BOOK_BINDINGS.includes(binding)) continue; // Skip non-books
-                    amazonAsins.add(product.asin);
+                    const node = edge.node;
+                    if (!node?.asin) continue;
+                    const product = node.product;
+                    // v4.11.0 - A null-product node is STILL present in Amazon's library (just unresolved by the
+                    // list query), so it is NOT an orphan — count its ASIN so recovered books aren't false-flagged.
+                    // Only skip genuine non-books (product present with a non-book binding).
+                    if (product) {
+                        const binding = product.bindingInformation?.binding?.displayString || null;
+                        if (binding && !BOOK_BINDINGS.includes(binding)) continue; // Skip real non-books
+                    }
+                    amazonAsins.add(node.asin);
                 }
 
                 console.log(`   📖 Orphan scan page ${orphanPage}${orphanTotalPages ? '/' + orphanTotalPages : ''}: ${library.edges.length} items (${amazonAsins.size} book ASINs total)`);
