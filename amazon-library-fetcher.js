@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.7-alpha.2';
+    const FETCHER_VERSION = 'v4.11.7-alpha.3';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -1561,8 +1561,13 @@ async function fetchAmazonLibrary() {
                     const reviewCount = product.customerReviewsSummary?.count?.displayString || null;
 
                     const seriesData = product.bookSeries?.singleBookView?.series;
-                    const series = seriesData?.title || null;
-                    const seriesPosition = seriesData?.position || null;
+                    let series = seriesData?.title || null;
+                    let seriesPosition = seriesData?.position || null;
+                    if (!series) {
+                        // Dead editions resolve inline (via the ignorePSLD header) but carry bookSeries=null — parse from title.
+                        const parsed = parseSeriesFromTitle(title);
+                        if (parsed.series) { series = parsed.series; seriesPosition = parsed.seriesPosition; stats.seriesFromTitle++; }
+                    }
 
                     const binding = product.bindingInformation?.binding?.displayString || null;
 
@@ -2341,6 +2346,21 @@ async function fetchAmazonLibrary() {
         stats.timing.mergeStart = Date.now();
         console.log('[7/7] Merging with existing data and saving library...');
         progressUI.updatePhase('Saving Library', 'Merging and downloading library file');
+
+        // v4.11.7 - Retro-backfill series for EXISTING books that have none (dead editions recovered by earlier
+        // runs before this parser existed, e.g. the Gideon Sable novels). Title-only, precision-first; never
+        // overwrites an existing series. This is what repairs already-saved books without a full re-fetch.
+        let backfilled = 0;
+        for (const b of existingBooks) {
+            if (b && !b.series && b.title) {
+                const parsed = parseSeriesFromTitle(b.title);
+                if (parsed.series) { b.series = parsed.series; b.seriesPosition = parsed.seriesPosition; backfilled++; }
+            }
+        }
+        if (backfilled > 0) {
+            console.log(`   🏷️  Backfilled series from title for ${backfilled} existing book(s) that had none`);
+            stats.seriesFromTitle += backfilled;
+        }
 
         // Prepend new books (most recent first), keeping existing books with their updates
         const finalBooks = [...newBooks, ...existingBooks];
