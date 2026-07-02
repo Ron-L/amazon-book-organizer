@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.7-alpha.1';
+    const FETCHER_VERSION = 'v4.11.7-alpha.2';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -134,6 +134,7 @@ async function fetchAmazonLibrary() {
         unrecoverableBooks: [], // null-product nodes with no product data anywhere (delisted/unavailable)
         unknownNodeTypes: [],   // library node __typenames we don't handle (flagged + GoatCounter, never silent)
         recoveryCandidates: 0,  // how many missing books the recovery pass attempted (integrity: = recovered + unrecoverable + deferred)
+        seriesFromTitle: 0,     // recovered books whose series/# was parsed from the title (dead editions with bookSeries=null)
         libraryTotalCount: null, // Amazon's reported library total, for reconciliation
         errorCategories: {
             amazonTimeout: 0,      // 504.1 / Backend Future timed out
@@ -660,6 +661,27 @@ async function fetchAmazonLibrary() {
             coverUrl: lowResUrl || hiResUrl || fallbackUrl,
             coverUrlHiRes: hiResUrl
         };
+    };
+
+    // v4.11.7 - Last-resort series recovery from the TITLE. Dead/delisted editions (the null-product books
+    // we recover via getProducts) come back with bookSeries=null — Amazon has no series record for them.
+    // But the title almost always carries it, e.g. "Where is Anybody? (A Gideon Sable novel Book 5)".
+    // Precision-first (validated ~98% correct position on 800 real books): trust ONLY a clear number marker
+    // inside the LAST parenthetical; leave it null otherwise. "Wrong is worse than none." Never overrides
+    // real API series data — used only as a fallback when bookSeries is absent.
+    const parseSeriesFromTitle = (title) => {
+        if (!title) return { series: null, seriesPosition: null };
+        const parens = [...title.matchAll(/\(([^()]*)\)/g)];
+        if (!parens.length) return { series: null, seriesPosition: null };
+        const inner = parens[parens.length - 1][1].trim();
+        const pm = inner.match(/\bbook\s+(\d+)\b/i) || inner.match(/#\s*(\d+)\b/) || inner.match(/,\s*(\d+)\s*$/);
+        if (!pm) return { series: null, seriesPosition: null };
+        const pos = parseInt(pm[1], 10);
+        if (!(pos > 0) || pos > 400) return { series: null, seriesPosition: null }; // guard absurd publisher numbers
+        let name = inner.slice(0, pm.index).replace(/[\s,:–—-]+$/, '').trim();
+        name = name.replace(/^(a|an|the)\s+/i, '').replace(/\s+(novels?|series|saga|trilogy|books?)$/i, '').trim();
+        if (!name) return { series: null, seriesPosition: null };
+        return { series: name, seriesPosition: String(pos) };
     };
 
     // v4.11.0 - Map Amazon relationshipSubType → our ownershipType, with stats tracking. Shared by the
@@ -1769,6 +1791,13 @@ async function fetchAmazonLibrary() {
                         const authors = extractAuthors(product);
                         const { coverUrl, coverUrlHiRes } = extractCoverUrls(product);
                         const seriesData = product.bookSeries?.singleBookView?.series;
+                        let series = seriesData?.title || null;
+                        let seriesPosition = seriesData?.position || null;
+                        if (!series) {
+                            // Dead editions return bookSeries=null; recover series + # from the title. Never overrides API data.
+                            const parsed = parseSeriesFromTitle(title);
+                            if (parsed.series) { series = parsed.series; seriesPosition = parsed.seriesPosition; stats.seriesFromTitle++; }
+                        }
                         const rawOwnershipType = t.relationshipSubType?.[0] || 'Purchase';
                         const ownershipType = resolveOwnershipType(rawOwnershipType, t.asin, title);
                         seenASINs.set(t.asin, newBooks.length);
@@ -1782,8 +1811,8 @@ async function fetchAmazonLibrary() {
                             coverUrlHiRes,
                             rating: product.customerReviewsSummary?.rating?.value || null,
                             reviewCount: product.customerReviewsSummary?.count?.displayString || null,
-                            series: seriesData?.title || null,
-                            seriesPosition: seriesData?.position || null,
+                            series,
+                            seriesPosition,
                             acquisitionDate: t.acquisitionDate || null,
                             binding,
                             description: null,
@@ -2461,6 +2490,7 @@ async function fetchAmazonLibrary() {
         console.log('🧮 COMPLETENESS');
         if (stats.recoveredBooks.length > 0) {
             console.log(`   Recovered (were missing):     ${stats.recoveredBooks.length}`);
+            if (stats.seriesFromTitle > 0) console.log(`      ↳ series parsed from title:   ${stats.seriesFromTitle} (dead editions Amazon had no series record for)`);
             stats.recoveredBooks.slice(0, 5).forEach(b => console.log(`      • ${(b.title || b.asin).substring(0, 50)}`));
             if (stats.recoveredBooks.length > 5) console.log(`      • ... and ${stats.recoveredBooks.length - 5} more`);
         }
