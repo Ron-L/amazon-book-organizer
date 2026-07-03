@@ -99,7 +99,7 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
 _Agreed 2026-07-02 while organizing the live library. A coherent batch of series/book-list ergonomics + context-menu completeness to finish before launch. **Locked scope** — do this, then Phase 9._
 
 **1. 🖱️ Context-menu completeness** — bundle these two (same code area):
-   - **"Add to Book List →" context-menu target** (books). Supplemental/**copy** semantics, NOT move — a book can be on many lists. Submenu = existing lists + "New Book List…". Plus a "Remove from this list" item when viewing a list. Reaches parity with folder Move/Copy; drag stays as the fast path.
+   - ✅ **"Add to Book List →" context-menu target** (books) — DONE (alpha.53–54). Supplemental/**copy** semantics, NOT move. Submenu = existing lists + "New Book List…" + "Remove from this list" when viewing a list. (alpha.54 also fixed Book List create/delete undo across all sites, and cleaned the dead 0-book guard.)
    - **Right-click folder context menu in the right pane** (promoted from Priority 6.3). Match the left-pane folder menu (Rename, Delete, New Subfolder…); mixed book+folder selection shows the intersection of ops.
 
 **2. 🔢 Series numbering ergonomics**
@@ -116,6 +116,16 @@ _Agreed 2026-07-02 while organizing the live library. A coherent batch of series
    - Restore defaults to EXACT state. But if a restore would **delete** Book Lists or Searches that currently exist, stop and ask — never silent (extends "no silent drops" to org data).
    - Offer **per-category** (Book Lists / Searches): keep / discard / cancel. Additive-preserve, not field-merge — backup items restore as-is; your *extra* lists carry over.
    - If merging and the backup has different books, append them to the **end of the manual sort order** (predictable).
+
+**6. 🧪 Post-B testing follow-ups (2026-07-03) — do in order:**
+   0. 🧹 **Dedup folder `bookIds` (Inbox double-add)** — transient duplicate seen: same book id rendered twice in a filtered Inbox after a double relay-import (select-one-checks-both; cleared on reload). Root: one add path (import→Inbox merge) skipped the dedup that move/paste already do; folder membership IS a set. Fix at source (dedup the import→Inbox add) **plus** a load-time normalization guaranteeing every folder's `bookIds` is unique. Not masking — enforcing an existing invariant (this class bit before: the removed Inbox collector, ~L3271).
+   1. **A — hover popup also shows Book Lists** a book is on (currently shows only its folders).
+   2. **G — drag-reorder Book Lists** (they carry `position`; drag just isn't wired like folders).
+   3. **F — jump to end of the left panel** (a "scroll to bottom" affordance; list is long — Inbox top ↔ newest folder bottom).
+   4. **B — stronger "a filter is active" signal** — counts already flip N→N/N; make the `N/N` stand out (light canary/amber background), noticeable without an error-red alarm.
+   5. **E — "New Folder…" in Move/Copy** (parallels "New Book List"), via inline **"＋ New folder here…"** entries in the Move/Copy folder tree (root = new top-level, per-node = new subfolder) for discoverable nesting; optional `A/B` slash shortcut in the name prompt.
+   6. **D — folder "Move to Top / Move to Bottom"** context items, AND fix the bug where **"Move to: <folder>" then dragging back to top level restores a stale prior position** (only Move-to leaves the memory; direct drag works).
+   - (C — "get books out of Inbox → use a folder, not a Book List" — is manual/GPT content, captured on the Custom GPT item, not code.)
 
 ---
 
