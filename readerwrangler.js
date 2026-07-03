@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.54";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.55";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4104,7 +4104,12 @@
                         console.log(`📥 Adding ${newBookIds.length} new books to Inbox`);
                         setFolders(prev => prev.map(f => {
                             if (f.id !== '__inbox__') return f;
-                            return { ...f, bookIds: [...newBookIds.reverse(), ...(f.bookIds || [])] };
+                            // v6.12.0-alpha.55 - Dedup: never prepend an id already in Inbox. A re-import / double-import
+                            // could otherwise land the same book twice (folder membership is a set — same invariant the
+                            // move/paste paths already enforce). This was the transient "book shown twice" after a re-import.
+                            const existing = new Set(f.bookIds || []);
+                            const toAdd = newBookIds.filter(id => !existing.has(id));
+                            return { ...f, bookIds: [...toAdd.reverse(), ...(f.bookIds || [])] };
                         }));
                     }
 
