@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.7-alpha.3';
+    const FETCHER_VERSION = 'v4.11.7';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -2532,11 +2532,12 @@ async function fetchAmazonLibrary() {
                 console.log(`   ✅ No silent drops — every missing book was recovered or explicitly flagged.`);
             }
         }
-        // Library vs Amazon is intentionally NOT claimed as "reconciled" here: our library also holds
-        // returned/orphan books that Amazon no longer lists (see the orphan scan), so the two counts differ
-        // by design. Report them as info only.
+        // Library vs Amazon is intentionally NOT claimed as "reconciled": Amazon's totalCount is a FILTERED
+        // live count (excludes archived / hidden-tag books), while our library accumulates across fetches and
+        // keeps orphans/returned books Amazon no longer lists. Holding MORE than Amazon's count is expected and
+        // means nothing is missing — the gap is surplus, not loss (only a fraction are the flagged orphans).
         if (stats.libraryTotalCount != null) {
-            console.log(`   Library now holds ${finalBooks.length}; Amazon lists ${stats.libraryTotalCount} (differences = orphans/returned + flagged delisted — see orphan scan).`);
+            console.log(`   Library holds ${finalBooks.length}; Amazon's filtered live count is ${stats.libraryTotalCount}. Holding ≥ that means nothing's missing — the surplus is books RW keeps that Amazon's filters exclude or has since removed (see orphan scan).`);
         }
         console.log('');
         if (stats.recoveredBooks.length > 0 || stats.unrecoverableBooks.length > 0) {
