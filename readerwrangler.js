@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.52";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.53";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16212,6 +16212,51 @@
                             console.log(`📋 Copied ${selectedBookIds.length} book(s) to "${targetFolder?.name || 'Unknown'}"`);
                         };
 
+                        // v6.12.0-alpha.53 - Add to Book List (supplemental: add/copy — a book can be on many lists).
+                        // Books only (getSelectedBookIds ignores folders); the trigger is disabled when 0 books selected.
+                        const selectedBookCount = getSelectedBookIds().length;
+                        const currentBookListId = isBookListFolder(selectedFolderId)
+                            ? selectedFolderId.replace(/^__booklist_/, '').replace(/__$/, '') : null;
+                        const handleAddToExistingBookList = (bookListId) => {
+                            const ids = getSelectedBookIds();
+                            if (ids.length === 0) return;
+                            const added = addBooksToBookList(bookListId, ids);
+                            const bl = bookLists.find(b => b.id === bookListId);
+                            setExplorerSelectedItems(new Set());
+                            setExplorerBookContextMenu(null);
+                            setContextSubmenu(null);
+                            showToast(added > 0
+                                ? `Added ${added} book${added !== 1 ? 's' : ''} to '${bl?.name || 'Book List'}'${added < ids.length ? ` (${ids.length - added} already there)` : ''}`
+                                : `All ${ids.length} book${ids.length !== 1 ? 's' : ''} already in '${bl?.name || 'Book List'}'`);
+                        };
+                        const handleAddToNewBookList = async () => {
+                            const ids = getSelectedBookIds();
+                            if (ids.length === 0) return;
+                            const name = await showInputDialog('New Book List', `Add ${ids.length} book${ids.length !== 1 ? 's' : ''} to a new Book List.`, '', 'List name (optional)');
+                            if (name === null) return;
+                            const trimmed = (name || '').trim() || 'Saved results';
+                            const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
+                            if (existing) { handleAddToExistingBookList(existing.id); return; }
+                            const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
+                            const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...ids], position: maxPos + 1 };
+                            setBookLists(prev => [...prev, newBL]);
+                            setExplorerSelectedItems(new Set());
+                            setExplorerBookContextMenu(null);
+                            setContextSubmenu(null);
+                            showToast(`Added ${ids.length} book${ids.length !== 1 ? 's' : ''} to new list '${trimmed}'`);
+                        };
+                        const handleRemoveFromCurrentBookList = () => {
+                            const ids = getSelectedBookIds();
+                            if (!currentBookListId || ids.length === 0) return;
+                            setBookLists(prev => prev.map(bl => bl.id === currentBookListId ? { ...bl, bookIds: (bl.bookIds || []).filter(id => !ids.includes(id)) } : bl));
+                            recordAction({ type: 'BOOKLIST_REMOVE', bookListId: currentBookListId, bookIds: ids });
+                            const bl = bookLists.find(b => b.id === currentBookListId);
+                            setExplorerSelectedItems(new Set());
+                            setExplorerBookContextMenu(null);
+                            setContextSubmenu(null);
+                            showToast(`Removed ${ids.length} book${ids.length !== 1 ? 's' : ''} from '${bl?.name || 'Book List'}'`);
+                        };
+
                         // Build folder tree for submenu (reused for both Move to and Copy to)
                         const buildFolderTree = (parentId, depth = 0) => {
                             return folders
@@ -16363,6 +16408,49 @@
                                         </div>
                                     )}
                                 </div>
+
+                                {/* v6.12.0-alpha.53 - Add to Book List (supplemental; add/copy semantics, distinct from folder Move) */}
+                                <div
+                                    className={`submenu-trigger px-4 py-2 flex items-center gap-3 relative ${selectedBookCount > 0 ? 'hover:bg-gray-100 cursor-pointer' : 'text-gray-400 cursor-not-allowed'}`}
+                                    role="menuitem" aria-haspopup={selectedBookCount > 0} aria-disabled={selectedBookCount === 0}
+                                    title={selectedBookCount > 0 ? '' : 'Select at least one book'}
+                                    onMouseEnter={() => selectedBookCount > 0 && setContextSubmenu('add-to-booklist')}
+                                    onMouseLeave={() => { setTimeout(() => { const a = document.querySelector('.context-submenu:hover'); const t = document.querySelector('.submenu-trigger:hover'); if (!a && !t) setContextSubmenu(null); }, 600); }}>
+                                    <span>📗</span>
+                                    <span>Add to Book List</span>
+                                    <span className="ml-auto">▶</span>
+                                    {selectedBookCount > 0 && contextSubmenu === 'add-to-booklist' && (
+                                        <div
+                                            className="context-submenu absolute top-0 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[240px] max-h-[400px] overflow-y-auto z-[70]"
+                                            role="menu" aria-label="Add to Book List"
+                                            style={{ [submenuOnLeft ? 'right' : 'left']: '100%' }}
+                                            onMouseEnter={() => setContextSubmenu('add-to-booklist')}
+                                            onMouseLeave={() => setContextSubmenu(null)}
+                                            onClick={(e) => e.stopPropagation()}>
+                                            <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 font-medium text-blue-700"
+                                                role="menuitem" onClick={handleAddToNewBookList}>
+                                                <span>＋</span><span>New Book List…</span>
+                                            </div>
+                                            {bookLists.length > 0 && <div className="border-t border-gray-200 my-1" role="separator"></div>}
+                                            {[...bookLists].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)).map(bl => (
+                                                <div key={bl.id} className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                                                    role="menuitem" onClick={() => handleAddToExistingBookList(bl.id)}>
+                                                    <span>📗</span><span className="truncate max-w-[220px]">{bl.name}</span>
+                                                </div>
+                                            ))}
+                                            {bookLists.length === 0 && <div className="px-4 py-2 text-gray-400 text-sm">No Book Lists yet — use "New Book List…"</div>}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* v6.12.0-alpha.53 - Remove from this Book List (only while viewing one) */}
+                                {currentBookListId && selectedBookCount > 0 && (
+                                    <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                        role="menuitem" onClick={handleRemoveFromCurrentBookList}>
+                                        <span>➖</span>
+                                        <span>Remove from this list</span>
+                                    </div>
+                                )}
 
                                 {/* v5.0.0-alpha.168.4 - Cut/Copy/Paste right after Move to/Copy to */}
                                 <div className="border-t border-gray-200 my-1" role="separator"></div>
