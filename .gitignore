@@ -50,7 +50,10 @@ tutorials/work-products/demo-library/yourbooks-raw_files/
 tutorials/work-products/demo-library/amazon-yourbooks-demo.html
 tutorials/work-products/tutorial-*/narration/
 tutorials/work-products/tutorial-*/stills/
+tutorials/work-products/tutorial-*/clips/
 tutorials/work-products/tutorial-*/*.mp4
+tutorials/work-products/tutorial-*/*.dra/
+tutorials/work-products/tutorial-*/*.drp
 tutorials/*.mp4
 
 # Claude state files
