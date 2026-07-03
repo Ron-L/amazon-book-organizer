@@ -88,6 +88,31 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
 
 ---
 
+### 🗂️ Priority 4.5: Pre-Release Organization Polish (Series & Book Lists)
+
+_Agreed 2026-07-02 while organizing the live library. A coherent batch of series/book-list ergonomics + context-menu completeness to finish before launch. **Locked scope** — do this, then Phase 9._
+
+**1. 🖱️ Context-menu completeness** — bundle these two (same code area):
+   - **"Add to Book List →" context-menu target** (books). Supplemental/**copy** semantics, NOT move — a book can be on many lists. Submenu = existing lists + "New Book List…". Plus a "Remove from this list" item when viewing a list. Reaches parity with folder Move/Copy; drag stays as the fast path.
+   - **Right-click folder context menu in the right pane** (promoted from Priority 6.3). Match the left-pane folder menu (Rename, Delete, New Subfolder…); mixed book+folder selection shows the intersection of ops.
+
+**2. 🔢 Series numbering ergonomics**
+   - **Reorder a Book List by series position** — a one-shot reorder command, NOT a persistent sort (which would defeat manual ordering). Sets the sequence once; user hand-tweaks after.
+   - **Comma-separated series-position multi-edit** — the multi-select "edit series position" dialog accepts explicit values ("2, 4") mapped to the selected books in **display order**. Handles ownership gaps that "renumber by current order" can't (own 2 & 4, not 3 → want 2 and 4, not 2 and 3). Show the target order; reject a count mismatch.
+
+**3. 📚 Close out Series Manager (was Priority 7.7) via the multi-select toolkit**
+   - The needed actions already exist as multi-select ops: move-together (group), edit series name (rename/merge), + the two numbering tools above. No dedicated "Manage Series" dialog.
+   - Discovery substitute for the dropped overview table: **sort by series** surfaces fragmentation (e.g. `Destroyer`/`The Destroyer`).
+
+**4. 🖱️ Rectangle/Lasso selection** (promoted from Priority 6.4) — click-drag a selection rectangle in cover view; extends the existing unified selection model (`explorerSelectedItems`).
+
+**5. 🛟 Restore safeguard (data-loss prevention)** — agreed after Book Lists vanished on 2026-07-02.
+   - Restore defaults to EXACT state. But if a restore would **delete** Book Lists or Searches that currently exist, stop and ask — never silent (extends "no silent drops" to org data).
+   - Offer **per-category** (Book Lists / Searches): keep / discard / cancel. Additive-preserve, not field-merge — backup items restore as-is; your *extra* lists carry over.
+   - If merging and the backup has different books, append them to the **end of the manual sort order** (predictable).
+
+---
+
 ### 🚀 Priority 5: Launch
 
 **1. Launch**
@@ -111,7 +136,7 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - On confirm: clear `relay.channelId` and `relay.passphrase` from localStorage and app state
    - Normal users never need this, but the gap is real (currently requires DevTools to clear)
 
-**3. 📂 Right-Click Menu for Folders in Right Pane** - LOW/LOW (2-3 hours)
+**3. 📂 Right-Click Menu for Folders in Right Pane** - LOW/LOW (2-3 hours)  → **PROMOTED to Priority 4.5** (bundled with the "Add to Book List" context-menu work)
    - Right-clicking a folder in the right pane has no context menu (books do)
    - Should match left-pane folder context menu (Rename, Delete, New Subfolder, etc.)
    - Mixed selection (books + folders): show intersection of applicable operations (Windows Explorer pattern)
@@ -119,7 +144,7 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
      - Book-only ops (Tags, Share, Note) — hidden or apply only to books in selection
      - Folder-only ops (Rename) — only if single folder, no books selected
 
-**4. 🖱️ Rectangle/Lasso Selection** - LOW/MEDIUM (3-4 hours)
+**4. 🖱️ Rectangle/Lasso Selection** - LOW/MEDIUM (3-4 hours)  → **PROMOTED to Priority 4.5**
    - Click and drag in cover view to draw a selection rectangle around books/folders
    - Standard desktop behavior (Windows Explorer, macOS Finder)
    - Extends existing unified selection model (explorerSelectedItems)
@@ -129,10 +154,9 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - ~~Desktop Mode escape hatch~~ ✅ v6.0.0-alpha.18 — Interstitial in readerwrangler.html shows "Return to Mobile Mode" / "Continue in Desktop Mode" before loading any app code. Uses sessionStorage to lock mode per tab session.
    - Directional shadow consistency with mobile cover view
 
-**4b. 📱 Deferred Mobile Polish** - LOW/LOW — surfaced during Book Lists Phase 8 (2026-06)
-   - **Subfolder shown twice on Dashboard folder shelves**: a folder with a sub-folder (series) shows BOTH an openable folder tile AND that sub-folder's books inline (under the floating series label bar) in the same horizontal row. The books therefore appear at the top level and again inside the openable sub-folder — redundant/confusing on a fresh look. Revisit the folder/series display model (drop the inline duplication, or drop the tile, or make it a clearer "preview"). Book List shelves are unaffected (flat, no sub-folders).
-   - **Scroll slider on overflowing non-expanded shelves**: the custom horizontal scrollbar slider currently renders only for *expanded* shelves (after "Show All"). A shelf that overflows but isn't expanded has no visible scrub affordance (native scrollbars are CSS-hidden via `scrollbarWidth: none`). Consider showing the slider whenever a row overflows, so long series/title rows can be scrubbed without expanding first.
-     - Collision to fix: on series shelves the slider and the floating amber series-label bar both pin to the bottom and overlap (the slider edges poke out past the label-bar ends — confirmed on an expanded Jim Butcher shelf). Stack them (label bar, then a slim slider beneath) and reserve the room. Since an always-on slider is no longer toggled by Show All/Show Less, reserve the vertical space **statically at layout time** rather than dynamically on expand.
+**4b. ✅ Deferred Mobile Polish** — DONE in Phase 8b (verified 2026-07-02 against mobile.js)
+   - ~~Subfolder shown twice on Dashboard folder shelves~~ ✅ series no longer render a redundant folder tile — the tile and floating label bar were unified ([mobile.js](mobile.js#L1191) ~L1191).
+   - ~~Scroll slider on overflowing non-expanded shelves~~ ✅ slider now shows whenever a row overflows, not only when expanded ([mobile.js](mobile.js#L1125) ~L1125), and lives in its own zone below the row so it no longer collides with the amber series-label bar ([mobile.js](mobile.js#L1306) ~L1306).
 
 **3. Improve Load Time Experience** - MEDIUM/LOW-MEDIUM (2-4 hours)
    - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
@@ -217,7 +241,7 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Problem: Only works with Amazon
    - Impact: Support for other ebook platforms
 
-**7. 📚 Series Manager** - MEDIUM/MEDIUM (6-8 hours)
+**7. 📚 Series Manager** - MEDIUM/MEDIUM (6-8 hours)  → **DESCOPED 2026-07-02: closing via the multi-select toolkit in Priority 4.5** (move-together + edit series name + reorder/renumber-by-position + comma-separated position). No dedicated dialog; sort-by-series is the discovery substitute.
    - See [docs/design/EDITABLE-SERIES.md](docs/design/EDITABLE-SERIES.md) for full spec
    - Phase 1 (edit series/position in book modal) ✅ shipped v5.4.6
    - Phase 3 (remove "Group Series Books" button) ✅ removed in Explorer redesign
