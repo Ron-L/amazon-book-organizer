@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.53";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.54";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5536,6 +5536,16 @@
                             ? { ...bl, bookIds: [...(bl.bookIds || []), ...action.bookIds.filter(id => !(bl.bookIds || []).includes(id))] }
                             : bl));
                         break;
+                    // v6.12.0-alpha.54 - Book List create/delete (undo = reverse)
+                    case 'BOOKLIST_CREATE':
+                        setBookLists(prev => prev.filter(bl => bl.id !== action.bookList.id));
+                        if (selectedFolderId === `__booklist_${action.bookList.id}__`) navigateToFolder('__all__');
+                        showToast(`Undo: removed Book List '${action.bookList.name}'`);
+                        break;
+                    case 'BOOKLIST_DELETE':
+                        setBookLists(prev => { const next = [...prev]; next.splice(Math.min(action.index ?? next.length, next.length), 0, action.bookList); return next; });
+                        showToast(`Undo: restored Book List '${action.bookList.name}'`);
+                        break;
                     // v6.12.0 - Undo sequential numbering: restore each book's prior series & position
                     case 'SEQUENCE_SERIES':
                         setBooks(prevBooks => {
@@ -6025,6 +6035,14 @@
                         setBookLists(prev => prev.map(bl => bl.id === action.bookListId
                             ? { ...bl, bookIds: (bl.bookIds || []).filter(id => !action.bookIds.includes(id)) }
                             : bl));
+                        break;
+                    // v6.12.0-alpha.54 - Book List create/delete (redo = re-apply)
+                    case 'BOOKLIST_CREATE':
+                        setBookLists(prev => prev.some(bl => bl.id === action.bookList.id) ? prev : [...prev, action.bookList]);
+                        break;
+                    case 'BOOKLIST_DELETE':
+                        setBookLists(prev => prev.filter(bl => bl.id !== action.bookList.id));
+                        if (selectedFolderId === `__booklist_${action.bookList.id}__`) navigateToFolder('__all__');
                         break;
                     // v6.12.0 - Redo sequential numbering: re-apply 1..N + series name
                     case 'SEQUENCE_SERIES':
@@ -8577,6 +8595,7 @@
                                                                 const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
                                                                 const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...displayedIds], position: maxPos + 1 };
                                                                 setBookLists(prev => [...prev, newBL]);
+                                                                recordAction({ type: 'BOOKLIST_CREATE', bookList: newBL }); // v6.12.0-alpha.54 - undoable
                                                                 showToast(`Saved ${count} book${count !== 1 ? 's' : ''} to "${trimmed}"`);
                                                                 return;
                                                             }
@@ -11852,6 +11871,7 @@
                                                     const maxPos = bookLists.reduce((m, b) => Math.max(m, b.position ?? 0), -1);
                                                     const newBL = { id: `bl-${Date.now()}`, name: 'New List', bookIds: [], position: maxPos + 1 };
                                                     setBookLists(prev => [...prev, newBL]);
+                                                    recordAction({ type: 'BOOKLIST_CREATE', bookList: newBL }); // v6.12.0-alpha.54 - undoable
                                                     if (bookListsSectionCollapsed) setBookListsSectionCollapsed(false);
                                                     navigateToFolder(`__booklist_${newBL.id}__`);
                                                     setEditingBookListId(newBL.id);
@@ -11951,6 +11971,7 @@
                                                                 onClick={async (e) => {
                                                                     e.stopPropagation();
                                                                     if (await showConfirmDialog('Delete Book List', `Delete the book list "${bl.name}"? The books themselves are not deleted.`)) {
+                                                                        recordAction({ type: 'BOOKLIST_DELETE', bookList: bl, index: bookLists.findIndex(x => x.id === bl.id) }); // v6.12.0-alpha.54 - undoable
                                                                         setBookLists(prev => prev.filter(x => x.id !== bl.id));
                                                                         if (selectedFolderId === blFolderId) navigateToFolder('__all__');
                                                                     }
@@ -15331,6 +15352,7 @@
                                             onClick={async () => {
                                                 setFolderContextMenu(null);
                                                 if (await showConfirmDialog('Delete Book List', `Delete the book list "${bl?.name || 'list'}"? The books themselves are not deleted.`)) {
+                                                    recordAction({ type: 'BOOKLIST_DELETE', bookList: bookLists.find(x => x.id === blId), index: bookLists.findIndex(x => x.id === blId) }); // v6.12.0-alpha.54 - undoable
                                                     setBookLists(prev => prev.filter(x => x.id !== blId));
                                                     if (selectedFolderId === folderContextMenu.folderId) navigateToFolder('__all__');
                                                 }
@@ -16213,8 +16235,8 @@
                         };
 
                         // v6.12.0-alpha.53 - Add to Book List (supplemental: add/copy — a book can be on many lists).
-                        // Books only (getSelectedBookIds ignores folders); the trigger is disabled when 0 books selected.
-                        const selectedBookCount = getSelectedBookIds().length;
+                        // Books only (getSelectedBookIds ignores folders). The book menu always has >=1 book
+                        // (onContextMenu selects the right-clicked book), so no empty-selection guard is needed.
                         const currentBookListId = isBookListFolder(selectedFolderId)
                             ? selectedFolderId.replace(/^__booklist_/, '').replace(/__$/, '') : null;
                         const handleAddToExistingBookList = (bookListId) => {
@@ -16240,6 +16262,7 @@
                             const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
                             const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...ids], position: maxPos + 1 };
                             setBookLists(prev => [...prev, newBL]);
+                            recordAction({ type: 'BOOKLIST_CREATE', bookList: newBL }); // v6.12.0-alpha.54 - undoable
                             setExplorerSelectedItems(new Set());
                             setExplorerBookContextMenu(null);
                             setContextSubmenu(null);
@@ -16411,15 +16434,14 @@
 
                                 {/* v6.12.0-alpha.53 - Add to Book List (supplemental; add/copy semantics, distinct from folder Move) */}
                                 <div
-                                    className={`submenu-trigger px-4 py-2 flex items-center gap-3 relative ${selectedBookCount > 0 ? 'hover:bg-gray-100 cursor-pointer' : 'text-gray-400 cursor-not-allowed'}`}
-                                    role="menuitem" aria-haspopup={selectedBookCount > 0} aria-disabled={selectedBookCount === 0}
-                                    title={selectedBookCount > 0 ? '' : 'Select at least one book'}
-                                    onMouseEnter={() => selectedBookCount > 0 && setContextSubmenu('add-to-booklist')}
+                                    className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                    role="menuitem" aria-haspopup="true"
+                                    onMouseEnter={() => setContextSubmenu('add-to-booklist')}
                                     onMouseLeave={() => { setTimeout(() => { const a = document.querySelector('.context-submenu:hover'); const t = document.querySelector('.submenu-trigger:hover'); if (!a && !t) setContextSubmenu(null); }, 600); }}>
                                     <span>📗</span>
                                     <span>Add to Book List</span>
                                     <span className="ml-auto">▶</span>
-                                    {selectedBookCount > 0 && contextSubmenu === 'add-to-booklist' && (
+                                    {contextSubmenu === 'add-to-booklist' && (
                                         <div
                                             className="context-submenu absolute top-0 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[240px] max-h-[400px] overflow-y-auto z-[70]"
                                             role="menu" aria-label="Add to Book List"
@@ -16444,7 +16466,7 @@
                                 </div>
 
                                 {/* v6.12.0-alpha.53 - Remove from this Book List (only while viewing one) */}
-                                {currentBookListId && selectedBookCount > 0 && (
+                                {currentBookListId && (
                                     <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
                                         role="menuitem" onClick={handleRemoveFromCurrentBookList}>
                                         <span>➖</span>
