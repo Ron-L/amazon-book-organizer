@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.55";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.56";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1634,6 +1634,8 @@
             };
 
             // v5.0.0-alpha.98 - Get all folders containing a book (for All Books tooltip)
+            // v6.12.0-alpha.56 (A) - Book Lists a book is on (supplemental membership), for the All Books hover tooltip.
+            const getBookListsContainingBook = (bookId) => bookLists.filter(bl => (bl.bookIds || []).includes(bookId));
             const getFoldersContainingBook = (bookId) => {
                 const result = folders.filter(f => {
                     // Skip virtual folders
@@ -15279,7 +15281,8 @@
                     {/* v5.0.0-alpha.98 - Book folder tooltip (All Books view only) */}
                     {bookTooltip && selectedFolderId === '__all__' && (() => {
                         const containingFolders = getFoldersContainingBook(bookTooltip.bookId);
-                        if (containingFolders.length === 0) return null;
+                        const containingLists = getBookListsContainingBook(bookTooltip.bookId); // v6.12.0-alpha.56 (A)
+                        if (containingFolders.length === 0 && containingLists.length === 0) return null;
 
                         return (
                             <div
@@ -15304,6 +15307,7 @@
                                     }
                                     setBookTooltip(null);
                                 }}>
+                                {containingFolders.length > 0 && (<>
                                 <div className="font-semibold text-gray-700 mb-1">Found in:</div>
                                 <div className="flex flex-col gap-1">
                                     {containingFolders.map(folder => (
@@ -15318,6 +15322,24 @@
                                         </button>
                                     ))}
                                 </div>
+                                </>)}
+                                {/* v6.12.0-alpha.56 (A) - Book Lists this book is on */}
+                                {containingLists.length > 0 && (<>
+                                <div className={`font-semibold text-gray-700 mb-1 ${containingFolders.length > 0 ? 'mt-2' : ''}`}>On Book Lists:</div>
+                                <div className="flex flex-col gap-1">
+                                    {containingLists.map(bl => (
+                                        <button
+                                            key={bl.id}
+                                            onClick={() => {
+                                                navigateToFolder(`__booklist_${bl.id}__`);
+                                                setBookTooltip(null);
+                                            }}
+                                            className="text-left text-blue-600 hover:text-blue-800 hover:underline">
+                                            📗 {bl.name}
+                                        </button>
+                                    ))}
+                                </div>
+                                </>)}
                             </div>
                         );
                     })()}
