@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Video tutorials for ReaderWrangler - learn how to import, organize, and browse your Amazon Kindle library.">
+    <title>Tutorials - ReaderWrangler</title>
+
+    <link rel="canonical" href="https://readerwrangler.com/tutorials.html">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="icons/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+
+    <!-- Google Fonts - match index.html -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+    <!-- Theme detection (runs before paint to prevent flash) -->
+    <script>
+        (function() {
+            var stored = localStorage.getItem('readerwrangler-theme');
+            var theme = stored;
+            if (!stored || stored === 'auto') {
+                theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+            }
+            if (theme && theme !== 'light') {
+                document.documentElement.dataset.theme = theme;
+            }
+        })();
+    </script>
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Lato', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: #334155;
+            background: #ffffff;
+            line-height: 1.6;
+        }
+
+        /* ===== Nav Bar ===== */
+        .nav-bar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.97);
+            border-bottom: 1px solid #e2e8f0;
+            backdrop-filter: blur(8px);
+        }
+
+        .nav-bar-brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .nav-bar-brand img {
+            height: 24px;
+        }
+
+        .nav-bar-brand span {
+            font-weight: 700;
+            font-size: 1em;
+            color: #1e293b;
+        }
+
+        .nav-bar-buttons {
+            margin-left: auto;
+        }
+
+        .nav-btn {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .nav-btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .nav-btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .nav-bar-links {
+            display: flex;
+            gap: 20px;
+            margin-left: 24px;
+        }
+
+        .nav-bar-links a {
+            font-size: 0.85em;
+            color: #64748b;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .nav-bar-links a:hover {
+            color: #3b82f6;
+        }
+
+        .nav-bar-links a.active {
+            color: #3b82f6;
+            font-weight: 600;
+        }
+
+        /* ===== Page Header ===== */
+        .page-header {
+            text-align: center;
+            padding: 48px 20px 32px;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        }
+
+        .page-header h1 {
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-size: 2.2em;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            font-size: 1.1em;
+            color: #64748b;
+        }
+
+        /* ===== Sections ===== */
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .container h2 {
+            font-family: 'Libre Baskerville', Georgia, serif;
+            font-size: 1.6em;
+            color: #3b82f6;
+            margin-bottom: 24px;
+        }
+
+        /* ===== Sizzle Reel ===== */
+        .sizzle-section {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 20px 40px;
+        }
+
+        .video-embed-placeholder {
+            aspect-ratio: 16/9;
+            background: #f1f5f9;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 1.1em;
+            border: 2px dashed #cbd5e1;
+        }
+
+        /* ===== Featured Video (Video 1) ===== */
+        .featured-video {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            align-items: start;
+            margin-bottom: 40px;
+        }
+
+        .featured-video .video-embed-placeholder {
+            width: 100%;
+        }
+
+        .featured-video-summary h3 {
+            font-size: 1.2em;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .featured-video-summary .video-duration {
+            font-size: 0.85em;
+            color: #94a3b8;
+            margin-bottom: 12px;
+        }
+
+        .featured-video-summary p {
+            font-size: 0.95em;
+            color: #475569;
+            line-height: 1.7;
+        }
+
+        /* ===== Video Cards Grid ===== */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .video-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+
+        .video-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .video-card-thumb {
+            aspect-ratio: 16/9;
+            background: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 2em;
+        }
+
+        .video-card-body {
+            padding: 16px;
+        }
+
+        .video-card-body h4 {
+            font-size: 1em;
+            color: #1e293b;
+            margin-bottom: 2px;
+        }
+
+        .video-card-body .video-duration {
+            font-size: 0.8em;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        .video-card-body p {
+            font-size: 0.9em;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        /* ===== Quick Reference ===== */
+        .quick-ref {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 32px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .quick-ref h3 {
+            font-size: 1.1em;
+            color: #1e293b;
+            margin-bottom: 16px;
+        }
+
+        .quick-ref-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .quick-ref-step {
+            text-align: center;
+        }
+
+        .quick-ref-step .step-icon {
+            font-size: 2em;
+            margin-bottom: 8px;
+        }
+
+        .quick-ref-step h4 {
+            font-size: 0.95em;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .quick-ref-step p {
+            font-size: 0.85em;
+            color: #64748b;
+        }
+
+        .quick-ref-divider {
+            border: none;
+            border-top: 1px solid #e2e8f0;
+            margin: 24px 0;
+        }
+
+        .quick-ref-demo h3 {
+            font-size: 1em;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .quick-ref-demo p {
+            font-size: 0.9em;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+
+        .quick-ref-demo .demo-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .quick-ref-demo .demo-step {
+            text-align: center;
+        }
+
+        .quick-ref-demo .demo-step-label {
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #3b82f6;
+            border: 2px solid #3b82f6;
+        }
+
+        .btn-secondary:hover {
+            background: #eff6ff;
+        }
+
+        /* ===== Footer ===== */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 40px;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .footer-links a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 0.95em;
+        }
+
+        .footer-links a:hover {
+            text-decoration: underline;
+        }
+
+        .notice {
+            font-size: 0.85em;
+            color: #94a3b8;
+            line-height: 1.8;
+        }
+
+        /* ===== Dark Theme ===== */
+        [data-theme="dark"] body {
+            color: #e2e8f0;
+            background-color: #0f172a;
+        }
+
+        [data-theme="dark"] .page-header {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        }
+
+        [data-theme="dark"] .page-header h1 {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .page-header p {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .nav-bar {
+            background: rgba(15, 23, 42, 0.97);
+            border-bottom-color: #334155;
+        }
+
+        [data-theme="dark"] .nav-bar-brand span {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .nav-bar-brand img {
+            filter: invert(1) hue-rotate(180deg);
+        }
+
+        [data-theme="dark"] .nav-bar-links a {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .nav-bar-links a:hover,
+        [data-theme="dark"] .nav-bar-links a.active {
+            color: #60a5fa;
+        }
+
+        [data-theme="dark"] .container h2 {
+            color: #60a5fa;
+        }
+
+        [data-theme="dark"] .video-embed-placeholder {
+            background: #1e293b;
+            color: #64748b;
+            border-color: #334155;
+        }
+
+        [data-theme="dark"] .video-card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        [data-theme="dark"] .video-card-thumb {
+            background: #334155;
+            color: #64748b;
+        }
+
+        [data-theme="dark"] .video-card-body h4,
+        [data-theme="dark"] .featured-video-summary h3 {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .video-card-body p,
+        [data-theme="dark"] .featured-video-summary p {
+            color: #cbd5e1;
+        }
+
+        [data-theme="dark"] .quick-ref {
+            background: #1e293b;
+            border-color: #334155;
+        }
+
+        [data-theme="dark"] .quick-ref h3,
+        [data-theme="dark"] .quick-ref-step h4,
+        [data-theme="dark"] .quick-ref-demo h3 {
+            color: #f1f5f9;
+        }
+
+        [data-theme="dark"] .quick-ref-step p,
+        [data-theme="dark"] .quick-ref-demo p {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .quick-ref-divider {
+            border-top-color: #334155;
+        }
+
+        [data-theme="dark"] .quick-ref-demo .demo-step-label {
+            color: #94a3b8;
+        }
+
+        [data-theme="dark"] .btn-secondary {
+            background: #1e293b;
+            color: #60a5fa;
+            border-color: #60a5fa;
+        }
+
+        [data-theme="dark"] .btn-secondary:hover {
+            background: #334155;
+        }
+
+        [data-theme="dark"] footer {
+            background: #0f172a;
+            border-top-color: #334155;
+        }
+
+        [data-theme="dark"] footer a {
+            color: #60a5fa;
+        }
+
+        [data-theme="dark"] .notice {
+            color: #64748b;
+        }
+
+        /* ===== High Contrast Light Theme ===== */
+        [data-theme="hc-light"] .page-header h1 {
+            color: #000000;
+        }
+
+        [data-theme="hc-light"] .page-header p {
+            color: #333333;
+        }
+
+        [data-theme="hc-light"] .nav-bar {
+            border-bottom: 2px solid #999999;
+        }
+
+        [data-theme="hc-light"] .nav-bar-brand span {
+            color: #000000;
+        }
+
+        [data-theme="hc-light"] .nav-btn-primary,
+        [data-theme="hc-light"] .btn-primary {
+            background: #0044cc;
+        }
+
+        [data-theme="hc-light"] .nav-btn-primary:hover,
+        [data-theme="hc-light"] .btn-primary:hover {
+            background: #003399;
+        }
+
+        [data-theme="hc-light"] .container h2 {
+            color: #0044cc;
+        }
+
+        [data-theme="hc-light"] .video-card {
+            border: 1px solid #999999;
+        }
+
+        [data-theme="hc-light"] .video-card-body h4,
+        [data-theme="hc-light"] .featured-video-summary h3 {
+            color: #000000;
+        }
+
+        [data-theme="hc-light"] .video-card-body p,
+        [data-theme="hc-light"] .featured-video-summary p {
+            color: #333333;
+        }
+
+        [data-theme="hc-light"] .quick-ref {
+            border: 1px solid #999999;
+        }
+
+        [data-theme="hc-light"] .quick-ref-step h4 {
+            color: #000000;
+        }
+
+        [data-theme="hc-light"] .quick-ref-step p,
+        [data-theme="hc-light"] .quick-ref-demo p {
+            color: #333333;
+        }
+
+        [data-theme="hc-light"] .btn-secondary {
+            color: #0044cc;
+            border-color: #0044cc;
+        }
+
+        [data-theme="hc-light"] footer a {
+            color: #0044cc;
+        }
+
+        [data-theme="hc-light"] .notice {
+            color: #666666;
+        }
+
+        [data-theme="hc-light"] .nav-bar-links a.active {
+            color: #0044cc;
+        }
+
+        /* ===== High Contrast Dark Theme ===== */
+        [data-theme="hc-dark"] body {
+            color: #ffffff;
+            background-color: #000000;
+        }
+
+        [data-theme="hc-dark"] .page-header {
+            background: linear-gradient(180deg, #0a0a0a 0%, #000000 100%);
+        }
+
+        [data-theme="hc-dark"] .page-header h1 {
+            color: #ffffff;
+        }
+
+        [data-theme="hc-dark"] .page-header p {
+            color: #cccccc;
+        }
+
+        [data-theme="hc-dark"] .nav-bar {
+            background: rgba(0, 0, 0, 0.97);
+            border-bottom: 2px solid #666666;
+        }
+
+        [data-theme="hc-dark"] .nav-bar-brand span {
+            color: #ffffff;
+        }
+
+        [data-theme="hc-dark"] .nav-bar-brand img {
+            filter: invert(1) hue-rotate(180deg);
+        }
+
+        [data-theme="hc-dark"] .nav-btn-primary,
+        [data-theme="hc-dark"] .btn-primary {
+            background: #4da6ff;
+            color: #000000;
+        }
+
+        [data-theme="hc-dark"] .nav-btn-primary:hover,
+        [data-theme="hc-dark"] .btn-primary:hover {
+            background: #80c0ff;
+        }
+
+        [data-theme="hc-dark"] .nav-bar-links a {
+            color: #cccccc;
+        }
+
+        [data-theme="hc-dark"] .nav-bar-links a:hover,
+        [data-theme="hc-dark"] .nav-bar-links a.active {
+            color: #4da6ff;
+        }
+
+        [data-theme="hc-dark"] .container h2 {
+            color: #4da6ff;
+        }
+
+        [data-theme="hc-dark"] .video-embed-placeholder {
+            background: #1a1a1a;
+            color: #999999;
+            border-color: #666666;
+        }
+
+        [data-theme="hc-dark"] .video-card {
+            background: #1a1a1a;
+            border-color: #666666;
+        }
+
+        [data-theme="hc-dark"] .video-card-thumb {
+            background: #333333;
+            color: #999999;
+        }
+
+        [data-theme="hc-dark"] .video-card-body h4,
+        [data-theme="hc-dark"] .featured-video-summary h3 {
+            color: #ffffff;
+        }
+
+        [data-theme="hc-dark"] .video-card-body p,
+        [data-theme="hc-dark"] .featured-video-summary p {
+            color: #e0e0e0;
+        }
+
+        [data-theme="hc-dark"] .quick-ref {
+            background: #1a1a1a;
+            border-color: #666666;
+        }
+
+        [data-theme="hc-dark"] .quick-ref h3,
+        [data-theme="hc-dark"] .quick-ref-step h4,
+        [data-theme="hc-dark"] .quick-ref-demo h3 {
+            color: #ffffff;
+        }
+
+        [data-theme="hc-dark"] .quick-ref-step p,
+        [data-theme="hc-dark"] .quick-ref-demo p {
+            color: #cccccc;
+        }
+
+        [data-theme="hc-dark"] .quick-ref-divider {
+            border-top-color: #666666;
+        }
+
+        [data-theme="hc-dark"] .quick-ref-demo .demo-step-label {
+            color: #cccccc;
+        }
+
+        [data-theme="hc-dark"] .btn-secondary {
+            background: #1a1a1a;
+            color: #4da6ff;
+            border-color: #4da6ff;
+        }
+
+        [data-theme="hc-dark"] .btn-secondary:hover {
+            background: #333333;
+        }
+
+        [data-theme="hc-dark"] footer {
+            background: #0a0a0a;
+            border-top-color: #666666;
+        }
+
+        [data-theme="hc-dark"] footer a {
+            color: #4da6ff;
+        }
+
+        [data-theme="hc-dark"] .notice {
+            color: #999999;
+        }
+
+        /* ===== Mobile ===== */
+        @media (max-width: 768px) {
+            .nav-bar {
+                display: none;
+            }
+
+            .page-header {
+                padding: 32px 12px 24px;
+            }
+
+            .page-header h1 {
+                font-size: 1.6em;
+            }
+
+            .container {
+                padding: 24px 12px;
+            }
+
+            .featured-video {
+                grid-template-columns: 1fr;
+            }
+
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-ref {
+                padding: 20px;
+            }
+
+            .quick-ref-steps {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Nav Bar -->
+    <div class="nav-bar">
+        <a href="index.html" class="nav-bar-brand">
+            <img src="icons/logo-transparent-32.png" alt="">
+            <span>ReaderWrangler&#8482;</span>
+        </a>
+        <div class="nav-bar-buttons">
+            <a href="readerwrangler.html" class="nav-btn nav-btn-primary" title="The app walks you through setup &#8212; relay, bookmarklet, and first import">Launch ReaderWrangler</a>
+        </div>
+        <div class="nav-bar-links">
+            <a href="index.html">Home</a>
+            <a href="features.html">Features</a>
+            <a href="security.html">Security</a>
+        </div>
+    </div>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>Tutorials</h1>
+        <p>Learn how to get the most out of ReaderWrangler</p>
+    </div>
+
+    <!-- Sizzle Reel -->
+    <div class="sizzle-section">
+        <!-- TODO: Replace with YouTube embed when video is ready -->
+        <div class="video-embed-placeholder">
+            &#9654; Sizzle Reel &#8212; Coming Soon
+        </div>
+    </div>
+
+    <!-- Featured: Quick Start -->
+    <div class="container">
+        <h2>Quick Start</h2>
+        <div class="featured-video">
+            <!-- TODO: Replace with YouTube embed when video is ready -->
+            <div class="video-embed-placeholder">
+                &#9654; Video 1 &#8212; Coming Soon
+            </div>
+            <div class="featured-video-summary">
+                <h3>Getting Started with ReaderWrangler</h3>
+                <div class="video-duration">~3 min</div>
+                <p>
+                    Set up your secure relay connection, install the bookmarklet, and import your first books &#8212; or load the demo library to explore every feature instantly.
+                    This video walks through first launch to a fully loaded library.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- More Tutorials -->
+    <div class="container">
+        <h2>More Tutorials</h2>
+        <div class="video-grid">
+            <div class="video-card">
+                <div class="video-card-thumb">&#9654;</div>
+                <div class="video-card-body">
+                    <h4>Setting Up the Relay</h4>
+                    <div class="video-duration">~1&#8211;2 min</div>
+                    <p>Generate credentials, test the connection, and drag the bookmarklet to your bookmarks bar.</p>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-card-thumb">&#9654;</div>
+                <div class="video-card-body">
+                    <h4>Fetching Your Library</h4>
+                    <div class="video-duration">~2&#8211;3 min</div>
+                    <p>Watch the fetcher pull titles, descriptions, tags, and prices from your Amazon library in five phases.</p>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-card-thumb">&#9654;</div>
+                <div class="video-card-body">
+                    <h4>Organizing with Folders</h4>
+                    <div class="video-duration">~3&#8211;4 min</div>
+                    <p>Auto-Organize by author and series, then refine with drag-and-drop, nested folders, and book copies.</p>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-card-thumb">&#9654;</div>
+                <div class="video-card-body">
+                    <h4>Views &amp; Filters</h4>
+                    <div class="video-duration">~2&#8211;3 min</div>
+                    <p>Pin tag views, filter by ownership type, sort by multiple columns, and switch between list and cover views.</p>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-card-thumb">&#9654;</div>
+                <div class="video-card-body">
+                    <h4>Wishlist &amp; Discovery</h4>
+                    <div class="video-duration">~2&#8211;3 min</div>
+                    <p>Add books from Amazon product pages, series pages, and author bibliographies. Set price goals and find deals.</p>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-card-thumb">&#9654;</div>
+                <div class="video-card-body">
+                    <h4>Mobile Sync</h4>
+                    <div class="video-duration">~1&#8211;2 min</div>
+                    <p>Scan a QR code from the desktop app and browse your organized library on your phone.</p>
+                </div>
+            </div>
+            <div class="video-card">
+                <div class="video-card-thumb">&#9654;</div>
+                <div class="video-card-body">
+                    <h4>Power Features</h4>
+                    <div class="video-duration">~2&#8211;3 min</div>
+                    <p>Undo/redo, keyboard shortcuts, backups, the Auto-Organize wizard, and more.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Written Quick Reference -->
+    <div class="container">
+        <h2>Quick Reference</h2>
+        <div class="quick-ref">
+            <h3>How It Works</h3>
+            <div class="quick-ref-steps">
+                <div class="quick-ref-step">
+                    <div class="step-icon">&#128230;</div>
+                    <h4>1. Import</h4>
+                    <p>Click the bookmarklet on your Amazon library page. Your books transfer through an encrypted relay to your local browser.</p>
+                </div>
+                <div class="quick-ref-step">
+                    <div class="step-icon">&#128193;</div>
+                    <h4>2. Organize</h4>
+                    <p>In the app, drag books into folders, tag them, sort and filter. Auto-Organize handles the heavy lifting.</p>
+                </div>
+                <div class="quick-ref-step">
+                    <div class="step-icon">&#128241;</div>
+                    <h4>3. Browse Anywhere</h4>
+                    <p>Pair your phone with a QR code and browse your organized library on the go.</p>
+                </div>
+            </div>
+
+            <hr class="quick-ref-divider">
+
+            <div class="quick-ref-demo">
+                <h3>No Amazon account? Try the Demo Library</h3>
+                <p>Download a sample library of 100+ classic books and explore every feature.</p>
+                <div class="demo-buttons">
+                    <div class="demo-step">
+                        <div class="demo-step-label">Step 1</div>
+                        <a href="readerwrangler-demo-library.json" download="readerwrangler-demo-library.json" class="btn btn-primary" style="font-size: 0.9em;" title="Downloads a sample library file to your computer">Download Demo Library</a>
+                    </div>
+                    <div class="demo-step">
+                        <div class="demo-step-label">Step 2</div>
+                        <a href="readerwrangler.html" class="btn btn-secondary" style="font-size: 0.9em;" title="Choose File &#8594; Restore Backup, then select the downloaded file &#8212; 119 books load up">Open ReaderWrangler</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-links">
+            <a href="index.html">Home</a>
+            <a href="features.html">Features</a>
+            <a href="security.html">Security</a>
+            <a href="https://github.com/Ron-L/readerwrangler" target="_blank">GitHub</a>
+            <a href="https://github.com/Ron-L/ReaderWrangler/issues" target="_blank">Report an Issue</a>
+            <a href="CHANGELOG.md">Changelog</a>
+        </div>
+        <div class="notice">
+            <p>Amazon, Kindle, and Amazon Kindle are trademarks of Amazon.com, Inc.</p>
+            <p>ReaderWrangler&#8482; is not affiliated with, endorsed by, or sponsored by Amazon.</p>
+            <p style="margin-top: 15px;">As an Amazon Associate, I earn from qualifying purchases.</p>
+        </div>
+    </footer>
+
+    <script data-goatcounter="https://readerwrangler.goatcounter.com/count"
+            async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>

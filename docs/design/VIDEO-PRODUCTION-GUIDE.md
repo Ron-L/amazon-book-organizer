@@ -6,6 +6,33 @@
 
 ---
 
+## Production Status (current — updated 2026-06-07)
+
+The original guide specified **OBS Studio + CapCut Desktop**. In practice the workflow has shifted. Current reality:
+
+| Component | Originally planned | Actually used |
+|-----------|--------------------|---------------|
+| Screen capture (tutorials 1-N) | OBS Studio @ 1920×1080 @ 60fps | **Windows 11 Snipping Tool** (rectangle mode, ~1906×1074 @ 30fps) |
+| Screen capture (sizzle reel) | OBS Studio @ 1920×1080 @ 60fps | **TBD** — try OBS first, then decide based on output quality vs Snipping Tool |
+| Video editor | CapCut Desktop | **DaVinci Resolve** |
+| TTS narration | Google Cloud TTS | unchanged (Autonoe voice selected) |
+| Music | TBD on Uppbeat / Pixabay | unchanged — still TBD |
+
+**Plan from here:**
+1. **Finish Tutorial 1** (Scene 6 Tags & Views + Scene 7 Wrap Up) with **Snipping Tool** to match the visual style of Scenes 1-5 already shot.
+2. **Try OBS** for the Sizzle Reel — evaluate output against a Snipping-Tool-shot reference clip.
+3. **Decide** whether the sizzle reel uses OBS (smoother motion @ 60fps, more polished) or Snipping Tool (consistency with rest of library, simpler workflow). The shot list doesn't require slow-motion, so either tool can produce an acceptable result.
+4. After all 9 videos are shot, **update this guide to lock in the final tool stack** and remove the OBS/CapCut instructions that aren't being used.
+
+**Why the shift:**
+- Snipping Tool was already installed, "good enough" for tutorial pacing, and didn't require a fresh OBS configuration session.
+- DaVinci Resolve handles the post-production needs (cuts, transitions, audio sync) without CapCut's learning curve.
+- Trade-offs: Snipping Tool's 1906×1074 @ 30fps is scaled by DaVinci to 1920×1080 on export (minor quality loss, invisible to viewers). 30fps means no smooth slow-motion in post — but the script doesn't actually call for any.
+
+The original OBS and CapCut sections below are kept as reference in case the sizzle reel decision swings back to OBS.
+
+---
+
 ## Overview
 
 Nine videos total: one sizzle reel (hook) + eight tutorials (teach). All videos use the 119-book demo library as their starting state for controlled, reproducible recordings.
@@ -401,7 +428,7 @@ That's it. Setup done. You'll never need to do this again.
 - Credentials appear, green checkmark, bookmarklet button appears in Step 2
 - Open Step 2 (accordion expands)
 - If bookmarks bar not visible: show Ctrl+Alt+B keyboard shortcut (text overlay)
-- **Slow motion**: Drag bookmarklet onto browser bookmarks bar
+- **Slow drag (capture)** OR **slow-motion in post**: Drag bookmarklet onto browser bookmarks bar. Either approach reads well — performing the drag slowly during capture is acceptable and simpler. Post-production slow-mo only works if the capture was 60fps (Snipping Tool's 30fps stutters when slowed).
 - Show bookmarklet appearing in bar (highlight)
 - Close dialog
 
@@ -467,13 +494,13 @@ They land in your Inbox... ready to organize.
 
 The Inbox is your staging area. Everything new arrives here.
 
-Let's organize. Right-click a book... and choose Auto-Organize.
+Let's organize. Open the File menu... and choose Auto-Organize.
 
 It builds an Author... Series... Books structure automatically. One click... and your library has shape.
 
-But it's your library... not Amazon's. Auto-Organize grouped Jerry Pournelle and Larry Niven into five separate folders... because they collaborated with different co-authors. But you bought these books because of Pournelle and Niven. So let's fix that.
+But it's your library... not Amazon's. Auto-Organize grouped these authors into four separate folders... because they collaborated with different co-authors. But you know these books... and some of those folders make more sense combined.
 
-Create three folders: "Pournelle & Niven"... "Jerry Pournelle"... and "Larry Niven." Drag the books where they belong. Anything with both authors goes in the first folder. The rest sort into the other two.
+Drag the Steven Barnes collaborations into their parent author folders. "Larry Niven, Steven Barnes" merges into "Larry Niven." "Larry Niven, Jerry Pournelle, Steven Barnes" merges into "Larry Niven, Jerry Pournelle." Delete the empty folders.
 
 That's the idea. Auto-Organize gives you a starting point. You make it yours.
 
@@ -481,17 +508,19 @@ Now create a "Next to Read" folder... and drag in the books you're excited about
 
 **Screen Direction:**
 - Inbox selected, 119 books visible in right pane
-- Right-click a book → Auto-Organize (or use menu)
+- File menu → Auto-Organize
+- Auto-Organize dialog: deselect "Miscellaneous" option, click Preview to show what will be created, then click Organize Now
+- Summary dialog shows folders created — dismiss
 - Folder tree populates with Author / Series / Books hierarchy
 - Expand a few authors to show the structure
-- Scroll to show Pournelle/Niven fragmentation — 5+ separate author folders:
-  - "Jerry Pournelle & Larry Niven"
-  - "Larry Niven"
-  - "Larry Niven & Jerry Pournelle & Steven Barnes"
-  - etc.
-- Create 3 new folders: "Pournelle & Niven", "Jerry Pournelle", "Larry Niven"
-- Drag books between folders — anything with both authors → "Pournelle & Niven"
-- Delete the now-empty auto-organized folders
+- Scroll to show Niven/Pournelle fragmentation — 4 related folders:
+  - "Larry Niven" (solo)
+  - "Larry Niven, Steven Barnes"
+  - "Larry Niven, Jerry Pournelle"
+  - "Larry Niven, Jerry Pournelle, Steven Barnes"
+- Drag books from "Larry Niven, Steven Barnes" into "Larry Niven"
+- Drag books from "Larry Niven, Jerry Pournelle, Steven Barnes" into "Larry Niven, Jerry Pournelle"
+- Delete the now-empty folders
 - Create "Next to Read" folder
 - Drag 3-4 books into it
 
@@ -501,17 +530,17 @@ Now create a "Next to Read" folder... and drag in the books you're excited about
 
 **Script:**
 
-You can tag your books to see them across folders. Create a tag — like "Fantasy" — and assign it to a few books.
+You can tag your books to see them across folders. Create a tag — like "Action" — and assign it to a few books.
 
 Now set up a filter for that tag. See the drag handle on the filter banner? Drag it to the Views section... and it becomes a saved view in your sidebar.
 
-Click it anytime to see all your fantasy books instantly. Search for a title... and only views with a match stay visible. Click a view... and you see just the matching books inside it.
+Click it anytime to see all your Action books instantly. Search for a title... and only views with a match stay visible. Click a view... and you see just the matching books inside it.
 
 **Screen Direction:**
-- Create new tag "Fantasy", assign to 2-3 books via book dialog or right-click
-- Use Tags filter dropdown → select "Fantasy" — filter banner appears
+- Create new tag "Action", assign to 2-3 books via book dialog or right-click
+- Use Tags filter dropdown → select "Action" — filter banner appears
 - Drag handle (⠿) from filter banner to Views section in sidebar
-- New "Fantasy" view appears — click it → shows tagged books
+- New "Action" view appears — click it → shows tagged books
 - Type a search term — non-matching views disappear, remaining show filtered counts
 - Click a remaining view — shows intersection
 - Clear search — all views return
@@ -646,7 +675,7 @@ That's your import tool. One click on any Amazon page starts the fetch.
 **Screen Direction:**
 - Click Step 2 header — accordion expands (Step 1 collapses)
 - Show bookmarklet button with label "ReaderWrangler"
-- **Slow motion**: Drag bookmarklet to bookmarks bar
+- **Slow drag (capture)** OR **slow-motion in post**: Drag bookmarklet to bookmarks bar. See Tutorial 1 Scene 2 note above — performing the drag slowly during capture is fine.
 - Bookmarklet appears in bar — highlight
 
 ---
