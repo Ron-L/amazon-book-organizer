@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.56";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.57";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2195,6 +2195,20 @@
                     return { ...bl, bookIds: remaining };
                 }));
                 recordAction({ type: 'REORDER_BOOKS_BOOKLIST', bookListId, bookIds: bookIdsToMove, fromIndices, toIndex: targetIndex });
+            };
+
+            // v6.12.0-alpha.57 (G) - Reorder the Book Lists themselves: drop one list onto another → insert at the
+            // target's slot, then renumber positions 0..N (the sidebar sorts by position).
+            const reorderBookLists = (draggedId, targetId) => {
+                setBookLists(prev => {
+                    const sorted = [...prev].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+                    const from = sorted.findIndex(b => b.id === draggedId);
+                    const to = sorted.findIndex(b => b.id === targetId);
+                    if (from === -1 || to === -1 || from === to) return prev;
+                    const [moved] = sorted.splice(from, 1);
+                    sorted.splice(to, 0, moved);
+                    return sorted.map((b, i) => ({ ...b, position: i }));
+                });
             };
 
             // v6.12.0 - Sequentially number the given book ids (1,2,3…) in the order provided;
@@ -11927,8 +11941,16 @@
                                                         onClick={() => { if (editingBookListId !== bl.id) navigateToFolder(blFolderId); }}
                                                         onDoubleClick={() => { setEditingBookListId(bl.id); setEditingBookListName(bl.name); }}
                                                         onContextMenu={(e) => { e.preventDefault(); setFolderContextMenu({ folderId: blFolderId, x: e.clientX, y: e.clientY, source: 'left' }); }}
+                                                        draggable={editingBookListId !== bl.id}
+                                                        onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.setData('application/x-rw-booklist', bl.id); e.dataTransfer.effectAllowed = 'move'; }}
                                                         onDragOver={(e) => {
                                                             const types = Array.from(e.dataTransfer.types);
+                                                            if (types.includes('application/x-rw-booklist')) { // v6.12.0-alpha.57 (G) - reorder a Book List
+                                                                e.preventDefault();
+                                                                e.dataTransfer.dropEffect = 'move';
+                                                                setFolderDropHighlight(e.currentTarget);
+                                                                return;
+                                                            }
                                                             if (types.includes('application/x-readerwrangler') || types.includes('application/x-rw-items')) {
                                                                 e.preventDefault();
                                                                 e.dataTransfer.dropEffect = 'copy';
@@ -11939,6 +11961,8 @@
                                                         onDrop={(e) => {
                                                             e.preventDefault();
                                                             setFolderDropHighlight(null);
+                                                            const draggedListId = e.dataTransfer.getData('application/x-rw-booklist'); // v6.12.0-alpha.57 (G)
+                                                            if (draggedListId) { if (draggedListId !== bl.id) reorderBookLists(draggedListId, bl.id); return; }
                                                             const rwItems = e.dataTransfer.getData('application/x-rw-items');
                                                             const rw = e.dataTransfer.getData('application/x-readerwrangler');
                                                             let dropIds = [];
@@ -15279,6 +15303,18 @@
                     )}
 
                     {/* v5.0.0-alpha.98 - Book folder tooltip (All Books view only) */}
+                    {/* v6.12.0-alpha.57 (F) - Jump to top / bottom of the left folder panel (long lists) */}
+                    <div className="fixed left-2 bottom-8 z-40 flex flex-col gap-1">
+                        <button
+                            onClick={() => { const el = document.querySelector('.folder-scroll-container'); if (el) el.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                            title="Jump to top of the list"
+                            className="w-6 h-6 flex items-center justify-center rounded bg-white/90 border border-gray-300 shadow-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800 text-sm leading-none">⤒</button>
+                        <button
+                            onClick={() => { const el = document.querySelector('.folder-scroll-container'); if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); }}
+                            title="Jump to bottom (newest folder)"
+                            className="w-6 h-6 flex items-center justify-center rounded bg-white/90 border border-gray-300 shadow-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800 text-sm leading-none">⤓</button>
+                    </div>
+
                     {bookTooltip && selectedFolderId === '__all__' && (() => {
                         const containingFolders = getFoldersContainingBook(bookTooltip.bookId);
                         const containingLists = getBookListsContainingBook(bookTooltip.bookId); // v6.12.0-alpha.56 (A)
