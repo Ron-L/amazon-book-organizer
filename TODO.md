@@ -127,6 +127,12 @@ _Agreed 2026-07-02 while organizing the live library. A coherent batch of series
    6. **D — folder "Move to Top / Move to Bottom"** context items, AND fix the bug where **"Move to: <folder>" then dragging back to top level restores a stale prior position** (only Move-to leaves the memory; direct drag works).
    - (C — "get books out of Inbox → use a folder, not a Book List" — is manual/GPT content, captured on the Custom GPT item, not code.)
 
+**7. 💸 Relay write economics (Cloudflare free-tier) — before PUBLIC launch:**
+   - Real data 2026-07-03: one ~2.5h organizing session = **495 / 1,000 KV writes** — and that daily cap is **SHARED across ALL users** (one Cloudflare account), not per-user. Storage ~**40 MB/user** → ~25 users fills the 1 GB free tier. (My earlier "50–100 free users" was off ~20–50× for the onboarding-organizing burst.)
+   - **Root cause:** the device-state push (readerwrangler.js ~L3100) is debounced only **15s**, so active organizing (natural >15s pauses) fires `putDeviceState` ~3–4×/min → ~500 writes/session. Not per-action — per-pause.
+   - **Fix:** raise the debounce (e.g., 60s) AND flush on **tab blur / visibilitychange / beforeunload** instead of periodic ticking — cuts writes ~15–50×. Optional manual "Sync now." (Watch the tradeoff: longer debounce = staler cross-device sync + more to lose on crash; the flush-on-blur/close covers most of it, and the beforeunload warning already exists.)
+   - **Then** revisit the free-vs-paid launch plan with real numbers (Workers Paid ~$5/mo ≈ ~1M writes/month — *verify current limits*). Also consider trimming the device-state payload size if it carries full book data it doesn't need.
+
 ---
 
 ### 🚀 Priority 5: Launch
