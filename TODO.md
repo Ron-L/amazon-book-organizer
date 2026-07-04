@@ -117,7 +117,9 @@ _Agreed 2026-07-02 while organizing the live library. A coherent batch of series
    - Offer **per-category** (Book Lists / Searches): keep / discard / cancel. Additive-preserve, not field-merge — backup items restore as-is; your *extra* lists carry over.
    - If merging and the backup has different books, append them to the **end of the manual sort order** (predictable).
 
-**6. 🧪 Post-B testing follow-ups (2026-07-03) — do in order:**
+**6. 🧪 Post-B testing follow-ups (2026-07-03):**
+   **▶ CURRENT ORDER (2026-07-04):** ✅ done: 0 dedup (alpha.55), A (alpha.56), G+F (alpha.57).
+   NEXT: (a) **TEST alpha.57** (G+F) → (b) **item 7 debounce** → (c) **4 = B** → (d) **5 = E** → (e) **6 = D**.
    0. 🧹 **Dedup folder `bookIds` (Inbox double-add)** — transient duplicate seen: same book id rendered twice in a filtered Inbox after a double relay-import (select-one-checks-both; cleared on reload). Root: one add path (import→Inbox merge) skipped the dedup that move/paste already do; folder membership IS a set. Fix at source (dedup the import→Inbox add) **plus** a load-time normalization guaranteeing every folder's `bookIds` is unique. Not masking — enforcing an existing invariant (this class bit before: the removed Inbox collector, ~L3271).
    1. **A — hover popup also shows Book Lists** a book is on (currently shows only its folders).
    2. **G — drag-reorder Book Lists** (they carry `position`; drag just isn't wired like folders).
