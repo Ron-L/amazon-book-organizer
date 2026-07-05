@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.8-alpha.1';
+    const FETCHER_VERSION = 'v4.11.8-alpha.2';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -1673,12 +1673,17 @@ async function fetchAmazonLibrary() {
         {
             const recoveryTargets = new Map(nullProductAsins); // asin -> { asin, relationshipSubType, acquisitionDate }
             const capturedCount = existingBooks.length + newBooks.length;
+            // v4.11.8-alpha.2 - Trigger on ANY count mismatch, not just a shortfall. A SURPLUS (more local books
+            // than Amazon lists — accumulated orphans / old samples) HIDES individual missing books: e.g. 3028 local
+            // vs 2790 Amazon still had 11 owned books absent after a permanent-delete. So sweep whenever the counts
+            // disagree. (Proper Stage 2: reconcile the full ASIN sets — ideally folded into the orphan scan, which
+            // already does a full pass — so an exact-count-with-offsetting-errors case is covered too.)
             const shouldSweep = existingBooks.length > 0
                 && stats.libraryTotalCount != null
-                && capturedCount < stats.libraryTotalCount;
+                && capturedCount !== stats.libraryTotalCount;
 
             if (shouldSweep && !progressUI.isAborted()) {
-                console.log(`🩹 Recovery sweep: have ${capturedCount} but Amazon reports ${stats.libraryTotalCount} — scanning for missing books...`);
+                console.log(`🩹 Recovery sweep: local ${capturedCount} vs Amazon ${stats.libraryTotalCount} — scanning the full library for owned books not yet captured...`);
                 progressUI.updatePhase('Recovering', 'Scanning full library for books not yet captured...');
                 let sweepCursor = "", sweepPage = 0, sweepHasMore = true;
                 while (sweepHasMore && !progressUI.isAborted()) {
