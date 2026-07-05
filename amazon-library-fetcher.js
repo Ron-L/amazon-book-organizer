@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.7';
+    const FETCHER_VERSION = 'v4.11.8-alpha.1';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -135,6 +135,7 @@ async function fetchAmazonLibrary() {
         unknownNodeTypes: [],   // library node __typenames we don't handle (flagged + GoatCounter, never silent)
         recoveryCandidates: 0,  // how many missing books the recovery pass attempted (integrity: = recovered + unrecoverable + deferred)
         seriesFromTitle: 0,     // recovered books whose series/# was parsed from the title (dead editions with bookSeries=null)
+        ownershipUpgraded: [],  // v4.11.8 - books promoted sample/wishlist/borrowed → purchased via pastPurchase (Amazon leaves relationshipSubType stale)
         libraryTotalCount: null, // Amazon's reported library total, for reconciliation
         errorCategories: {
             amazonTimeout: 0,      // 504.1 / Backend Future timed out
@@ -2216,6 +2217,7 @@ async function fetchAmazonLibrary() {
         // Combine new books with existing to get all books
         const allBooksForPrices = [...newBooks, ...existingBooks];
         const PRICE_BATCH_SIZE = 30; // Same as enrichment batch size
+        const TEMP_OWNERSHIP = ['sample', 'borrowed', 'prime', 'kindleUnlimited', 'koll', 'wishlist', 'unknown']; // v4.11.8 - upgradeable
 
         if (allBooksForPrices.length === 0) {
             console.log('   ✅ No books to price\n');
@@ -2247,9 +2249,11 @@ async function fetchAmazonLibrary() {
                     const priceQuery = `query qvGetMediaMatrixProductsQuickView {
                         getProducts(input: ${inputStr}) {
                             asin
+                            pastPurchase { purchaseHistory { lastOrderDate lastOrderDateV2 } }
                             buyingOptions {
                                 options {
                                     type
+                                    callToAction { readNow { url } }
                                     price {
                                         basisPrice {
                                             moneyValueOrRange {
@@ -2325,6 +2329,21 @@ async function fetchAmazonLibrary() {
                                 book.priceFetchedAt = now;
                                 pricesSuccessCount++;
                             }
+
+                            // v4.11.8 - Ownership upgrade. Amazon leaves relationshipSubType as "Sample" (etc.) after you
+                            // BUY a sampled/wishlisted book; the real purchase shows only in pastPurchase + a "Read Now".
+                            // If both are present and the book is still a temporary type, promote to purchased and use the
+                            // order date as acquisitionDate (so it sorts as a recent purchase). Runs for EVERY book each
+                            // run, so it also fixes books the incremental scan already had.
+                            const orderDate = product.pastPurchase?.purchaseHistory?.lastOrderDateV2;
+                            const canReadNow = (product.buyingOptions?.options || []).some(o => o.callToAction?.readNow?.url);
+                            if (orderDate && canReadNow && (book.onWishlist || TEMP_OWNERSHIP.includes(book.ownershipType))) {
+                                stats.ownershipUpgraded.push({ asin: book.asin, title: book.title, from: book.onWishlist ? 'wishlist' : book.ownershipType });
+                                book.ownershipType = 'purchased';
+                                book.onWishlist = false;
+                                const ms = Date.parse(orderDate);
+                                if (!isNaN(ms)) book.acquisitionDate = String(ms);
+                            }
                         }
                     }
 
@@ -2338,6 +2357,11 @@ async function fetchAmazonLibrary() {
 
             progressUI.updateProgress(allBooksForPrices.length, allBooksForPrices.length);
             console.log(`\n✅ Phase 4 complete: ${pricesSuccessCount}/${allBooksForPrices.length} prices updated`);
+            if (stats.ownershipUpgraded.length > 0) {
+                console.log(`   ⬆️  Ownership upgraded to purchased: ${stats.ownershipUpgraded.length} (Amazon left them as sample/wishlist after purchase)`);
+                stats.ownershipUpgraded.slice(0, 10).forEach(b => console.log(`      • ${(b.title || b.asin).substring(0, 50)} (was ${b.from})`));
+                if (stats.ownershipUpgraded.length > 10) console.log(`      • ... and ${stats.ownershipUpgraded.length - 10} more`);
+            }
             console.log('');
         }
         stats.timing.phase4End = Date.now();
