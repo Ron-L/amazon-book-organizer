@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.58";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.59";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -11713,7 +11713,7 @@
                                         title="Every unique book in your library, organized or not. You can't move books out of here — use folders to arrange them.">
                                         <span className="pointer-events-none">{FOLDER_ALL_BOOKS.icon}</span>
                                         <span className="flex-1 pointer-events-none font-semibold">{FOLDER_ALL_BOOKS.name}</span>
-                                        <span className="text-xs text-gray-500 pointer-events-none">({hasActiveFilters ? `${books.filter(b => !b.isDeleted && filterBookForExplorer(b)).length}/${books.filter(b => !b.isDeleted).length}` : books.filter(b => !b.isDeleted).length})</span>
+                                        <span className={`text-xs pointer-events-none ${hasActiveFilters ? 'text-amber-800 bg-amber-100 px-1 rounded' : 'text-gray-500'}`}>({hasActiveFilters ? `${books.filter(b => !b.isDeleted && filterBookForExplorer(b)).length}/${books.filter(b => !b.isDeleted).length}` : books.filter(b => !b.isDeleted).length})</span>
                                     </div>
                                     {/* v6.12.0 - SEARCHES section header (was "Views"); Phase 7 removed the filter-view drop zone (use the visible "Save" control) */}
                                     <div
@@ -11865,7 +11865,7 @@
                                                     ) : (
                                                         <span className={`flex-1 pointer-events-none ${isNamed ? '' : 'italic text-gray-600'}`}>{viewLabel}</span>
                                                     )}
-                                                    <span className="text-xs text-gray-500 pointer-events-none group-hover:hidden">({hasActiveFilters ? `${bookCount}/${totalViewBooks}` : bookCount})</span>
+                                                    <span className={`text-xs pointer-events-none group-hover:hidden ${hasActiveFilters ? 'text-amber-800 bg-amber-100 px-1 rounded' : 'text-gray-500'}`}>({hasActiveFilters ? `${bookCount}/${totalViewBooks}` : bookCount})</span>
                                                     {/* v6.10.0-alpha.17 - Delete button on hover (overlays count, same as folders) */}
                                                     <div className="hidden group-hover:flex items-center gap-0.5">
                                                         <button
@@ -12010,7 +12010,7 @@
                                                         ) : (
                                                             <span className="flex-1 pointer-events-none">{bl.name}</span>
                                                         )}
-                                                        <span className="text-xs text-gray-500 pointer-events-none group-hover:hidden">({hasActiveFilters ? `${blMatching}/${blCount}` : blCount})</span>
+                                                        <span className={`text-xs pointer-events-none group-hover:hidden ${hasActiveFilters ? 'text-amber-800 bg-amber-100 px-1 rounded' : 'text-gray-500'}`}>({hasActiveFilters ? `${blMatching}/${blCount}` : blCount})</span>
                                                         <div className="hidden group-hover:flex items-center gap-0.5">
                                                             <button
                                                                 onClick={async (e) => {
@@ -12711,8 +12711,8 @@
                                                                         if (matching === 0) {
                                                                             return (
                                                                                 <span
-                                                                                    className="text-xs pointer-events-none text-gray-400"
-                                                                                    title={`${matching} matching • ${total} total`}>
+                                                                                    className="text-xs pointer-events-none text-amber-800 bg-amber-100 px-1 rounded"
+                                                                                    title={`${matching} matching • ${total} total — a filter is active`}>
                                                                                     ({matching}/{total})
                                                                                 </span>
                                                                             );
@@ -12721,7 +12721,7 @@
                                                                         if (folder.collapsed && directMatching === 0 && matching > 0) {
                                                                             return (
                                                                                 <span
-                                                                                    className="text-xs pointer-events-none text-blue-600"
+                                                                                    className="text-xs pointer-events-none text-blue-700 bg-amber-100 px-1 rounded"
                                                                                     title={`${matching} matching books in subfolders • expand to see`}>
                                                                                     ({matching} books inside)
                                                                                 </span>
@@ -12730,8 +12730,8 @@
                                                                         // Has direct matches or is expanded - green
                                                                         return (
                                                                             <span
-                                                                                className="text-xs pointer-events-none text-green-600"
-                                                                                title={`${matching} matching • ${total} total`}>
+                                                                                className="text-xs pointer-events-none text-green-700 bg-amber-100 px-1 rounded"
+                                                                                title={`${matching} matching • ${total} total — a filter is active`}>
                                                                                 ({matching}/{total})
                                                                             </span>
                                                                         );
