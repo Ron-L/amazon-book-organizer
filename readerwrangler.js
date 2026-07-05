@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.57";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.58";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -908,6 +908,7 @@
             });
             const deviceStatePushTimerRef = useRef(null); // v6.0.0 Phase 2 - debounce timer for device-state push
             const deviceStatePushingRef = useRef(false); // v6.0.0 Phase 2 - true while push is in flight
+            const deviceStatePendingRef = useRef(false); // v6.12.0-alpha.58 - unsynced changes awaiting a push (flush guard)
             const [deviceStateErrorType, setDeviceStateErrorType] = useState(() => { // v6.9.0 - 'revoked'|'error'|'unverified'|null
                 try {
                     const status = localStorage.getItem(RELAY_STATUS_KEY);
@@ -3097,44 +3098,57 @@
                 }
             }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches]);
 
-            // v6.0.0 Phase 2 - Debounced device-state push to relay (15s after last change)
-            // Watches same dependencies as auto-save org + books for cross-device sync
+            // v6.0.0 Phase 2 - Debounced device-state push to relay for cross-device sync.
+            // v6.12.0-alpha.58 - Debounce raised 15s → 60s AND flush-on-leave (blur / tab hidden / pagehide).
+            // A 15s timer fired on every natural organizing pause → ~500 KV writes in one 2.5h session (the
+            // shared Cloudflare free-tier daily cap is 1,000). Now we write on 60s idle OR when you leave the
+            // tab / switch devices — same "synced when I walk away" feel, ~15-50x fewer writes.
             useEffect(() => {
                 if (syncStatus === 'loading' || books.length === 0) return;
                 if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
 
-                // Mark as unsynced via relayOp
+                // A real change occurred → mark pending + show unsynced.
+                deviceStatePendingRef.current = true;
                 relayOp('markUnsynced');
 
-                // Clear any existing debounce timer
-                if (deviceStatePushTimerRef.current) {
-                    clearTimeout(deviceStatePushTimerRef.current);
-                }
-
-                // Set new 15-second debounce timer
-                deviceStatePushTimerRef.current = setTimeout(async () => {
-                    if (deviceStatePushingRef.current) return; // Already pushing
-                    if (dataOpInProgressRef.current) return; // v6.3.0 - Skip if import/restore in progress
+                // The actual push (guarded). Defined inside the effect so it closes over CURRENT state.
+                const pushNow = async () => {
+                    if (deviceStatePushTimerRef.current) { clearTimeout(deviceStatePushTimerRef.current); deviceStatePushTimerRef.current = null; }
+                    if (!deviceStatePendingRef.current) return; // nothing new to push
+                    if (deviceStatePushingRef.current) return;  // already pushing
+                    if (dataOpInProgressRef.current) return;    // skip during import/restore
                     deviceStatePushingRef.current = true;
+                    deviceStatePendingRef.current = false;      // optimistic: a change mid-push re-sets this true
                     try {
                         const payload = await buildDeviceStatePayload();
-                        const jsonString = JSON.stringify(payload);
-                        await window.RWRelay.putDeviceState(jsonString);
+                        await window.RWRelay.putDeviceState(JSON.stringify(payload));
                         await relayOp('pushOk');
                     } catch (err) {
                         console.error('❌ Device-state push failed:', err);
+                        deviceStatePendingRef.current = true;   // keep pending so the next change/flush retries
                         await relayOp('pushFail', { status: err.status });
                     } finally {
                         deviceStatePushingRef.current = false;
                     }
-                }, 15000);
+                };
+
+                // Debounce: push 60s after the last change.
+                deviceStatePushTimerRef.current = setTimeout(pushNow, 60000);
+
+                // Flush immediately when the user leaves the tab / switches devices (only if something's pending).
+                const onLeave = () => { if (deviceStatePendingRef.current) pushNow(); };
+                const onVisibility = () => { if (document.visibilityState === 'hidden') onLeave(); };
+                window.addEventListener('blur', onLeave);
+                window.addEventListener('pagehide', onLeave);
+                document.addEventListener('visibilitychange', onVisibility);
 
                 return () => {
-                    if (deviceStatePushTimerRef.current) {
-                        clearTimeout(deviceStatePushTimerRef.current);
-                    }
+                    window.removeEventListener('blur', onLeave);
+                    window.removeEventListener('pagehide', onLeave);
+                    document.removeEventListener('visibilitychange', onVisibility);
+                    if (deviceStatePushTimerRef.current) { clearTimeout(deviceStatePushTimerRef.current); deviceStatePushTimerRef.current = null; }
                 };
-            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches, bookLists, books]); // v6.12.0 Phase 8 - bookLists so list-only edits push to relay/mobile
+            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches, bookLists, books]); // v6.12.0 Phase 8 - bookLists so list-only edits push
 
             // v6.3.0 - Post-import/restore integrity check
             // Fires when integrityCheckPending is set by importFromRelay / importBackup.
