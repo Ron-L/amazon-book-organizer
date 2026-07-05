@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.59";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.60";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16357,6 +16357,34 @@
                             showToast(`Removed ${ids.length} book${ids.length !== 1 ? 's' : ''} from '${bl?.name || 'Book List'}'`);
                         };
 
+                        // v6.12.0-alpha.60 (E) - Create a new folder and move/copy the selected books into it.
+                        // Records a COMPOUND undo (folder-create + the move/copy) so one Ctrl+Z reverses the whole thing.
+                        const handleNewFolderThenPlace = async (parentId, isCopy) => {
+                            const ids = getSelectedBookIds();
+                            if (ids.length === 0) return;
+                            const name = await showInputDialog('New Folder', `Create a folder${parentId ? ' inside this one' : ''} and ${isCopy ? 'copy' : 'move'} ${ids.length} book${ids.length !== 1 ? 's' : ''} into it.`, '', 'Folder name');
+                            if (name === null) return;
+                            const trimmed = (name || '').trim() || 'New Folder';
+                            const newId = `folder-${Date.now()}`;
+                            const fromFolderId = selectedFolderId;
+                            const newFolder = { id: newId, name: trimmed, parentId: parentId || null, bookIds: [...ids], childFolderIds: [], collapsed: false };
+                            setFolders(prev => {
+                                let next = [...prev, newFolder];
+                                if (!isCopy) next = next.map(f => f.id === fromFolderId ? { ...f, bookIds: (f.bookIds || []).filter(id => !ids.includes(id)) } : f);
+                                return next;
+                            });
+                            recordAction({ type: 'COMPOUND', actions: [
+                                { type: 'CREATE_FOLDER', folderId: newId, parentId: parentId || null, folder: { ...newFolder, bookIds: [] } },
+                                isCopy
+                                    ? { type: 'COPY_BOOKS_TO_FOLDER', bookIds: ids, toFolderId: newId }
+                                    : { type: 'MOVE_BOOKS_TO_FOLDER', bookIds: ids, fromFolderId, toFolderId: newId }
+                            ] });
+                            setExplorerSelectedItems(new Set());
+                            setExplorerBookContextMenu(null);
+                            setContextSubmenu(null);
+                            showToast(`${isCopy ? 'Copied' : 'Moved'} ${ids.length} book${ids.length !== 1 ? 's' : ''} to new folder '${trimmed}'`);
+                        };
+
                         // Build folder tree for submenu (reused for both Move to and Copy to)
                         const buildFolderTree = (parentId, depth = 0) => {
                             return folders
@@ -16469,6 +16497,12 @@
                                                 onMouseEnter={() => setContextSubmenu('move-to')}
                                                 onMouseLeave={() => setContextSubmenu(null)}
                                                 onClick={(e) => e.stopPropagation()}>
+                                                {/* v6.12.0-alpha.60 (E) - New top-level folder, then move the books there */}
+                                                <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 font-medium text-blue-700"
+                                                    role="menuitem" onClick={() => handleNewFolderThenPlace(null, false)}>
+                                                    <span>＋</span><span>New folder here…</span>
+                                                </div>
+                                                <div className="border-t border-gray-200 my-1" role="separator"></div>
                                                 {/* Folder tree */}
                                                 {buildFolderTree(null)}
                                             </div>
@@ -16503,6 +16537,12 @@
                                             onMouseEnter={() => setContextSubmenu('copy-to')}
                                             onMouseLeave={() => setContextSubmenu(null)}
                                             onClick={(e) => e.stopPropagation()}>
+                                            {/* v6.12.0-alpha.60 (E) - New top-level folder, then copy the books there */}
+                                            <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 font-medium text-blue-700"
+                                                role="menuitem" onClick={() => handleNewFolderThenPlace(null, true)}>
+                                                <span>＋</span><span>New folder here…</span>
+                                            </div>
+                                            <div className="border-t border-gray-200 my-1" role="separator"></div>
                                             {/* Folder tree */}
                                             {buildFolderTree(null)}
                                         </div>
