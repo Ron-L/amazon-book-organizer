@@ -135,6 +135,13 @@ _Agreed 2026-07-02 while organizing the live library. A coherent batch of series
    - **Fix:** raise the debounce (e.g., 60s) AND flush on **tab blur / visibilitychange / beforeunload** instead of periodic ticking — cuts writes ~15–50×. Optional manual "Sync now." (Watch the tradeoff: longer debounce = staler cross-device sync + more to lose on crash; the flush-on-blur/close covers most of it, and the beforeunload warning already exists.)
    - **Then** revisit the free-vs-paid launch plan with real numbers (Workers Paid ~$5/mo ≈ ~1M writes/month — *verify current limits*). Also consider trimming the device-state payload size if it carries full book data it doesn't need.
 
+**8. 📦 Fetcher ownership/recovery follow-ups (2026-07-05):**
+   - ✅ **v4.11.8**: ownership now derived from `pastPurchase` + "Read Now" (sample/wishlist → purchased); recovery sweep fires on **any** count mismatch (a surplus was hiding 11 missing owned books). Restored a user's 11 permanently-deleted-then-repurchased books.
+   - ⚠️ The Phase-4 ownership-**upgrade** path is logically verified but **never fired positively** in testing (Amazon "caught up" — updated the library node to Purchase — so recovery captured them first). **Needs a live positive test**: catch a genuinely-still-Sample-but-purchased book at fetch time and confirm the `⬆️` log + the upgrade.
+   - The recovery **sweep now runs on every incremental fetch** (a standing surplus defeats the count-based skip). **Stage 2:** reconcile the full ASIN *sets* — ideally FOLD the sweep into the orphan scan (which already does one full Amazon pass), so it's a single scan and also covers the exact-count-with-offsetting-errors case.
+   - App **merge (storage.js)** edge fix, still worthwhile, low priority: when a fresh download upgrades a book to purchased, take the new ownership + date **and un-trash it** (for a book sitting in Trash, not permanent-deleted).
+   - Cosmetic: the run summary's "Successfully enriched: 85/11 (772%)" ratio is nonsense (enriched-count / new-count).
+
 ---
 
 ### 🚀 Priority 5: Launch
