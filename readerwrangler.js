@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.61";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.62";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1299,7 +1299,8 @@
                 if (filters.search) {
                     const term = filters.search.toLowerCase();
                     if (!book.title.toLowerCase().includes(term) &&
-                        !book.author.toLowerCase().includes(term)) return false;
+                        !book.author.toLowerCase().includes(term) &&
+                        !(book.series || '').toLowerCase().includes(term)) return false; // v6.12.0-alpha.62 - series too
                 }
 
                 // Read status
@@ -7887,7 +7888,8 @@
                                     const term = searchTerm.toLowerCase();
                                     filtered = filtered.filter(book =>
                                         book.title?.toLowerCase().includes(term) ||
-                                        book.author?.toLowerCase().includes(term)
+                                        book.author?.toLowerCase().includes(term) ||
+                                        book.series?.toLowerCase().includes(term) // v6.12.0-alpha.62 - search also matches series
                                     );
                                 }
 
@@ -12690,9 +12692,10 @@
                                                                     }
                                                                 }}
                                                                 onFocus={(e) => {
-                                                                    // v5.0.0-alpha.134 - Position cursor at start in placeholder mode
+                                                                    // v6.12.0-alpha.62 - Select the "New Folder" placeholder so it's
+                                                                    // visually obvious you can just type over it (was: cursor at start).
                                                                     if (isPlaceholderMode) {
-                                                                        e.target.setSelectionRange(0, 0);
+                                                                        e.target.select();
                                                                     }
                                                                 }}
                                                                 onClick={(e) => e.stopPropagation()}
@@ -13322,7 +13325,7 @@
                                             <div className="flex items-center gap-2 border-l pl-4">
                                                 <button
                                                     onClick={() => { setExplorerGroupOn(!explorerGroupOn); setCollapsedGroups(new Set()); }}
-                                                    title={explorerGroupOn ? 'Turn off grouping' : `Group by ${COLUMN_CONFIG[explorerSort[0].column]?.label || explorerSort[0].column}`}
+                                                    title={explorerGroupOn ? 'Turn off grouping (temporary view only — your folders are unchanged)' : `Group by ${COLUMN_CONFIG[explorerSort[0].column]?.label || explorerSort[0].column} — a temporary view grouping; it does not change your folders or hierarchy`}
                                                     style={{
                                                         height: '28px',
                                                         padding: '0 10px',
