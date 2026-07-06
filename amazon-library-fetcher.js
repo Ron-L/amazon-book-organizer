@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.9';
+    const FETCHER_VERSION = 'v4.11.10';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -2336,6 +2336,14 @@ async function fetchAmazonLibrary() {
                                 book.listPrice = kindleOption.price.basisPrice?.moneyValueOrRange?.value?.amount ?? null;
                                 book.priceFetchedAt = now;
                                 pricesSuccessCount++;
+                            } else {
+                                // Product resolved but has no Kindle buy option (Audible-only edition, Prime/borrow-only,
+                                // etc.). Clear any stale/false price so it reads "No Price" instead of a misleading $0.
+                                // Guarded by the enclosing `if (product)` — a transient missing product never lands here,
+                                // so we don't wipe good prices on a hiccup. v4.11.10
+                                book.currentPrice = null;
+                                book.listPrice = null;
+                                book.priceFetchedAt = now;
                             }
 
                             // v4.11.8 - Ownership upgrade. Amazon leaves relationshipSubType as "Sample" (etc.) after you
