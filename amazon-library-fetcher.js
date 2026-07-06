@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.9-alpha.3';
+    const FETCHER_VERSION = 'v4.11.9';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -2233,9 +2233,6 @@ async function fetchAmazonLibrary() {
             const priceBatches = Math.ceil(allBooksForPrices.length / PRICE_BATCH_SIZE);
             let pricesSuccessCount = 0;
             let pricesErrorCount = 0;
-            // v4.11.9 TEMP price-debug — dump the FULL product for the lone borrowed book that came back $0 but
-            // is $14.99 on Amazon (Into Thin Air, B0000544YG), to see how a borrowed title's buyingOptions differ. REMOVE after.
-            const PRICE_DEBUG_ASINS = new Set(['B0000544YG']);
 
             for (let batchNum = 0; batchNum < priceBatches; batchNum++) {
                 // Check for user abort
@@ -2325,19 +2322,20 @@ async function fetchAmazonLibrary() {
 
                     for (const book of batchBooks) {
                         const product = productMap.get(book.asin);
-                        let priceWasSet = false;
                         if (product) {
-                            // Find Kindle buying option
-                            const kindleOption = product.buyingOptions?.options?.find(
-                                opt => opt.type === 'KINDLE_ALC' || opt.type === 'KINDLE'
-                            ) || product.buyingOptions?.options?.[0];
+                            // Find a Kindle buy option — prefer a real purchase option (KINDLE_ALC/KINDLE), else any
+                            // other KINDLE* option that carries a price (e.g. a KU-only title). NEVER fall back to a
+                            // non-Kindle option: a wrong-edition ASIN can return only AUDIBLE_* options, and blindly
+                            // taking options[0] stamped a misleading $0. No Kindle price → leave it unset (blank). v4.11.9
+                            const options = product.buyingOptions?.options || [];
+                            const kindleOption = options.find(o => o.type === 'KINDLE_ALC' || o.type === 'KINDLE')
+                                || options.find(o => typeof o.type === 'string' && o.type.startsWith('KINDLE') && o.price);
 
                             if (kindleOption?.price) {
                                 book.currentPrice = kindleOption.price.priceToPay?.moneyValueOrRange?.value?.amount ?? null;
                                 book.listPrice = kindleOption.price.basisPrice?.moneyValueOrRange?.value?.amount ?? null;
                                 book.priceFetchedAt = now;
                                 pricesSuccessCount++;
-                                priceWasSet = true;
                             }
 
                             // v4.11.8 - Ownership upgrade. Amazon leaves relationshipSubType as "Sample" (etc.) after you
@@ -2354,13 +2352,6 @@ async function fetchAmazonLibrary() {
                                 const ms = Date.parse(orderDate);
                                 if (!isNaN(ms)) book.acquisitionDate = String(ms);
                             }
-                        }
-
-                        // v4.11.9 TEMP price-debug — dump the FULL product for the known-$3.99 wishlist books so we
-                        // can see where the price sits (or confirm Amazon returns nothing) for still-for-sale titles.
-                        if (PRICE_DEBUG_ASINS.has(book.asin)) {
-                            console.log(`   🔎 [price-debug FULL] ${book.asin} "${(book.title || '').slice(0, 50)}" priced=${priceWasSet} productReturned=${!!product}`);
-                            console.log('        FULL PRODUCT:', JSON.stringify(product, null, 2));
                         }
                     }
 
