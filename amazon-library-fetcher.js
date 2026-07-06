@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.9-alpha.1';
+    const FETCHER_VERSION = 'v4.11.9-alpha.2';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -2233,8 +2233,9 @@ async function fetchAmazonLibrary() {
             const priceBatches = Math.ceil(allBooksForPrices.length / PRICE_BATCH_SIZE);
             let pricesSuccessCount = 0;
             let pricesErrorCount = 0;
-            let unpricedDebugCount = 0; // v4.11.9 TEMP price-debug — remove after diagnosis
-            let wishlistDebugShown = false; // v4.11.9 TEMP — guarantee one unpriced-wishlist sample
+            // v4.11.9 TEMP price-debug — dump the FULL product object for known-$3.99 wishlist books
+            // (Jason Apsley series) to find where the price lives for still-for-sale titles. REMOVE after.
+            const PRICE_DEBUG_ASINS = new Set(['B095M218KG', 'B09WKKS21T', 'B0C7CTKFYN', 'B0CZXTVWJ8', 'B0DV5C2JFR', 'B0G4N6SW7W']);
 
             for (let batchNum = 0; batchNum < priceBatches; batchNum++) {
                 // Check for user abort
@@ -2355,17 +2356,11 @@ async function fetchAmazonLibrary() {
                             }
                         }
 
-                        // v4.11.9 TEMP price-debug — sample the books that come back with no usable price (the
-                        // ~520/run "$0.00" set). Dump the 1st + every 50th, with raw buyingOptions, to see whether
-                        // Amazon returns no price or we're mis-extracting. REMOVE after diagnosis.
-                        if (!priceWasSet) {
-                            const wishlistSample = !!book.onWishlist && !wishlistDebugShown;
-                            if (unpricedDebugCount % 50 === 0 || wishlistSample) {
-                                console.log(`   🔎 [price-debug #${unpricedDebugCount}${wishlistSample ? ' WISHLIST' : ''}] ${book.asin} "${(book.title || '').slice(0, 50)}" own=${book.ownershipType} wish=${!!book.onWishlist} productReturned=${!!product}`);
-                                if (product) console.log('        buyingOptions:', JSON.stringify(product.buyingOptions, null, 2));
-                                if (wishlistSample) wishlistDebugShown = true;
-                            }
-                            unpricedDebugCount++;
+                        // v4.11.9 TEMP price-debug — dump the FULL product for the known-$3.99 wishlist books so we
+                        // can see where the price sits (or confirm Amazon returns nothing) for still-for-sale titles.
+                        if (PRICE_DEBUG_ASINS.has(book.asin)) {
+                            console.log(`   🔎 [price-debug FULL] ${book.asin} "${(book.title || '').slice(0, 50)}" priced=${priceWasSet} productReturned=${!!product}`);
+                            console.log('        FULL PRODUCT:', JSON.stringify(product, null, 2));
                         }
                     }
 
