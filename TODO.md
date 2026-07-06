@@ -157,6 +157,7 @@ _Agreed 2026-07-02 while organizing the live library. A coherent batch of series
    **Fold into existing items:**
    - Right-click **blank space in the right pane** → New (Sub)folder → bundle with **6.3**.
    - **Sort left-panel folders** (e.g. by author) then bake into manual order — same "reorder-by-X → now manual" pattern as the series tools / **D**. (Also investigate: new folders insert alphabetical-ish into a non-alpha list.)
+   - 🐛 **Drag subfolder → root ignores drop position:** dragging a subfolder out to the root *just before its prior parent* correctly moves it to root, but drops it **near the bottom (alphabetical-ish)** instead of at the drop target. Same folder-positioning family as **D** (stale-position on move) and the alphabetical-ish insert above — likely a shared root cause in how root-level order/position is assigned on move. Fix together.
    - Drag **list→list = MOVE** (Ctrl = copy); folder→list stays copy. Needs the drag to carry its *source list*. → book-lists polish.
    - Auto-Organize: aggregate co-authors so all Backman land under Backman = already **Priority 7.8**.
 
