@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.62";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.63";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16391,8 +16391,19 @@
 
                         // Build folder tree for submenu (reused for both Move to and Copy to)
                         const buildFolderTree = (parentId, depth = 0) => {
-                            return folders
-                                .filter(f => f.parentId === parentId && !['__all__'].includes(f.id)) // Exclude special folders
+                            // v6.12.0-alpha.63 - Order siblings the same way the left pane does so the Move/Copy tree
+                            // matches the sidebar: custom = manual order, else alphabetical by name (honoring sort
+                            // direction); Inbox pinned first at the root level.
+                            const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
+                            let siblings = folders.filter(f => f.parentId === parentId && f.id !== '__all__'); // Exclude special folders
+                            if (explorerSort[0].column !== 'custom') {
+                                siblings = [...siblings].sort((a, b) => dir * a.name.localeCompare(b.name));
+                            }
+                            if (parentId === null) {
+                                const inbox = siblings.find(f => f.id === '__inbox__');
+                                if (inbox) siblings = [inbox, ...siblings.filter(f => f.id !== '__inbox__')];
+                            }
+                            return siblings
                                 .map(f => {
                                     const hasChildren = folders.some(child =>
                                         child.parentId === f.id &&
