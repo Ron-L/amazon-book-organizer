@@ -142,6 +142,33 @@ _Agreed 2026-07-02 while organizing the live library. A coherent batch of series
    - App **merge (storage.js)** edge fix, still worthwhile, low priority: when a fresh download upgrades a book to purchased, take the new ownership + date **and un-trash it** (for a book sitting in Trash, not permanent-deleted).
    - Cosmetic: the run summary's "Successfully enriched: 85/11 (772%)" ratio is nonsense (enriched-count / new-count).
 
+**9. 🗣️ Live-use feedback + robustness backlog (2026-07-05)** — from Ron's organizing sessions.
+
+   **Quick wins (Low effort — batch before D / E-part-2):**
+   - **Search also matches Series** (not just title/author). One-line change to the search predicate.
+   - New Folder / New Book List dialog: **pre-select the default name** so typing replaces it (`autoFocus` + `select()`).
+   - **"Group" button tooltip**: state the grouping is TEMPORARY (Ron feared it would undo his hierarchy).
+   - **Move/Copy folder tree**: order folders by **left-pane (manual) order**, not raw array order. (Fold into E.)
+   - **Add to Book List** submenu: verify it lists in left-pane order (already sorts by `position` — confirm after a drag-reorder).
+
+   **🐛 Bug (fix promptly — data integrity):**
+   - **Rating set on hover** — hovering the stars in the book dialog commits the rating. Must *preview* on hover, *commit* only on click.
+
+   **Fold into existing items:**
+   - Right-click **blank space in the right pane** → New (Sub)folder → bundle with **6.3**.
+   - **Sort left-panel folders** (e.g. by author) then bake into manual order — same "reorder-by-X → now manual" pattern as the series tools / **D**. (Also investigate: new folders insert alphabetical-ish into a non-alpha list.)
+   - Drag **list→list = MOVE** (Ctrl = copy); folder→list stays copy. Needs the drag to carry its *source list*. → book-lists polish.
+   - Auto-Organize: aggregate co-authors so all Backman land under Backman = already **Priority 7.8**.
+
+   **✨ Delete from All Books (spec'd, agreed 2026-07-05):**
+   - Enable delete in All Books = **soft-delete to Trash, removing from ALL folders + Book Lists at once** (reuse the existing membership snapshot for restore). Confirm dialog discloses the folder/list count.
+   - Confirm copy: *"Moved to Trash. Stays hidden across fetches; emptying Trash lets owned books reappear."* (The Trash `isDeleted` OR-merge in `storage.js` is what suppresses trashed books across re-fetches.)
+
+   **Backlog — bigger design items (agreed):**
+   - 🪦 **Tombstone delete (durable purge + smart resurrect):** "empty Trash" writes a **lean tombstone `{asin, emptiedAt}`** (not the full record) that suppresses the book everywhere. On import, resurrect only if the incoming **purchase/add date > emptiedAt** — use `pastPurchase.lastOrderDate` / `addedToWishlist`, NOT the stale node `relationshipCreationDate`. Add a **"Purged" management view** (restore / forget). Fixes empty-trash→re-appear at the root. **V:H / E:M.** Needs careful test cases (delete→refetch stays gone; delete→rebuy resurrects; wishlist re-add resurrects).
+   - 🧱 **Atomic relay write (copy-on-write commit pointer):** relay corruption = a torn **multi-key** write (chunks + manifest left inconsistent when a write is interrupted — e.g. window closed mid Add-to-Wishlist; CRC then fails on read). Fix: write new chunks under **versioned keys**, flip the **manifest LAST** as the single atomic commit (a single KV put IS atomic). Interrupted-before-commit → old data fully intact; **keep the prior generation for auto-rollback** if a new write verifies bad. Also: on a CRC read failure, surface *"relay corrupt — run Download Library to rebuild"* instead of a raw error. **V:H / E:M.**
+   - ⚠️ **App-owned data isn't re-fetchable:** the library fetcher regenerates only OWNED books — it does **not** re-fetch wishlists (Ron's 273 survived only via the local copy + orphan-wishlist preservation in `storage.js`). So "Download heals corruption" is **incomplete** for wishlists, folders, Book Lists, tags, notes, read-status — the relay is their only durable store besides local. Reinforces the atomic-write fix; consider giving app-owned data its own protected/versioned key separate from the re-fetchable library.
+
 ---
 
 ### 🚀 Priority 5: Launch
