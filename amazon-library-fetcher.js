@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.9-alpha.2';
+    const FETCHER_VERSION = 'v4.11.9-alpha.3';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -2233,9 +2233,9 @@ async function fetchAmazonLibrary() {
             const priceBatches = Math.ceil(allBooksForPrices.length / PRICE_BATCH_SIZE);
             let pricesSuccessCount = 0;
             let pricesErrorCount = 0;
-            // v4.11.9 TEMP price-debug — dump the FULL product object for known-$3.99 wishlist books
-            // (Jason Apsley series) to find where the price lives for still-for-sale titles. REMOVE after.
-            const PRICE_DEBUG_ASINS = new Set(['B095M218KG', 'B09WKKS21T', 'B0C7CTKFYN', 'B0CZXTVWJ8', 'B0DV5C2JFR', 'B0G4N6SW7W']);
+            // v4.11.9 TEMP price-debug — dump the FULL product for the lone borrowed book that came back $0 but
+            // is $14.99 on Amazon (Into Thin Air, B0000544YG), to see how a borrowed title's buyingOptions differ. REMOVE after.
+            const PRICE_DEBUG_ASINS = new Set(['B0000544YG']);
 
             for (let batchNum = 0; batchNum < priceBatches; batchNum++) {
                 // Check for user abort
