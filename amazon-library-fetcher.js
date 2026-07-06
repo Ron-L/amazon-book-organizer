@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.8';
+    const FETCHER_VERSION = 'v4.11.9-alpha.1';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -2233,6 +2233,8 @@ async function fetchAmazonLibrary() {
             const priceBatches = Math.ceil(allBooksForPrices.length / PRICE_BATCH_SIZE);
             let pricesSuccessCount = 0;
             let pricesErrorCount = 0;
+            let unpricedDebugCount = 0; // v4.11.9 TEMP price-debug — remove after diagnosis
+            let wishlistDebugShown = false; // v4.11.9 TEMP — guarantee one unpriced-wishlist sample
 
             for (let batchNum = 0; batchNum < priceBatches; batchNum++) {
                 // Check for user abort
@@ -2322,6 +2324,7 @@ async function fetchAmazonLibrary() {
 
                     for (const book of batchBooks) {
                         const product = productMap.get(book.asin);
+                        let priceWasSet = false;
                         if (product) {
                             // Find Kindle buying option
                             const kindleOption = product.buyingOptions?.options?.find(
@@ -2333,6 +2336,7 @@ async function fetchAmazonLibrary() {
                                 book.listPrice = kindleOption.price.basisPrice?.moneyValueOrRange?.value?.amount ?? null;
                                 book.priceFetchedAt = now;
                                 pricesSuccessCount++;
+                                priceWasSet = true;
                             }
 
                             // v4.11.8 - Ownership upgrade. Amazon leaves relationshipSubType as "Sample" (etc.) after you
@@ -2349,6 +2353,19 @@ async function fetchAmazonLibrary() {
                                 const ms = Date.parse(orderDate);
                                 if (!isNaN(ms)) book.acquisitionDate = String(ms);
                             }
+                        }
+
+                        // v4.11.9 TEMP price-debug — sample the books that come back with no usable price (the
+                        // ~520/run "$0.00" set). Dump the 1st + every 50th, with raw buyingOptions, to see whether
+                        // Amazon returns no price or we're mis-extracting. REMOVE after diagnosis.
+                        if (!priceWasSet) {
+                            const wishlistSample = !!book.onWishlist && !wishlistDebugShown;
+                            if (unpricedDebugCount % 50 === 0 || wishlistSample) {
+                                console.log(`   🔎 [price-debug #${unpricedDebugCount}${wishlistSample ? ' WISHLIST' : ''}] ${book.asin} "${(book.title || '').slice(0, 50)}" own=${book.ownershipType} wish=${!!book.onWishlist} productReturned=${!!product}`);
+                                if (product) console.log('        buyingOptions:', JSON.stringify(product.buyingOptions, null, 2));
+                                if (wishlistSample) wishlistDebugShown = true;
+                            }
+                            unpricedDebugCount++;
                         }
                     }
 
