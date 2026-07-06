@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.60";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.61";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -537,7 +537,6 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [searchHistory, setSearchHistory] = useState([]);
             const [modalBook, setModalBook] = useState(null);
-            const [hoverMyRating, setHoverMyRating] = useState(0); // hover state for interactive star picker
             const [dataSource, setDataSource] = useState('none');
             const [blankImageBooks, setBlankImageBooks] = useState(new Set());
             // v5.0.0-alpha.175.1 - Menu bar state
@@ -10974,9 +10973,12 @@
                                             {/* v5.0.0-alpha.175.31 - My Rating (personal rating) */}
                                             <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-200">
                                                 <span className="text-sm font-semibold text-gray-700">My Rating:</span>
-                                                <div className="flex items-center gap-1" onMouseLeave={() => setHoverMyRating(0)}>
+                                                <div className="flex items-center gap-1">
                                                     {[1, 2, 3, 4, 5].map(rating => {
-                                                        const active = hoverMyRating > 0 ? rating <= hoverMyRating : rating <= (modalBook.myRating || 0);
+                                                        // v6.12.0-alpha.61 - No hover-preview: render straight from the saved
+                                                        // rating. A hover-fill on a discrete, tooltip-labeled 5-star picker
+                                                        // added no value, lagged the cursor, and read as an accidental commit.
+                                                        const active = rating <= (modalBook.myRating || 0);
                                                         return (
                                                             <button
                                                                 key={rating}
@@ -10990,7 +10992,6 @@
                                                                     });
                                                                     setModalBook(prev => ({ ...prev, myRating: rating }));
                                                                 }}
-                                                                onMouseEnter={() => setHoverMyRating(rating)}
                                                                 style={{ cursor: 'pointer', background: 'none', border: 'none', padding: '0' }}
                                                                 title={`Rate ${rating} star${rating > 1 ? 's' : ''}`}
                                                             >
