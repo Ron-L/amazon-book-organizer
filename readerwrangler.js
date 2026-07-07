@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.63";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.64";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -430,7 +430,7 @@
                         type="text"
                         value={inputValue}
                         onChange={(e) => handleChange(e.target.value)}
-                        placeholder="Title or author..."
+                        placeholder="Title, author or series..."
                         title="Search by title or author (matches anywhere in the field)"
                         style={{
                             width: '100%', height: '28px', padding: '0 28px 0 28px',
