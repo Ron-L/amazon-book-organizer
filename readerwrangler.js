@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.67";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.68";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -15448,12 +15448,15 @@
                                     role="menu" aria-label="Create folder"
                                     style={{ left: `${rightPaneContextMenu.x}px`, top: `${rightPaneContextMenu.y}px` }}
                                     onClick={(e) => e.stopPropagation()}>
-                                    <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem" onClick={() => createHere(null)}>
-                                        <span>📁</span><span>New folder</span>
-                                    </div>
-                                    {inRealFolder && (
+                                    {/* v6.12.0-alpha.68 (#8) - Single context-appropriate action: subfolder inside a folder,
+                                        else a root folder (a new root folder wouldn't appear in the current folder view). */}
+                                    {inRealFolder ? (
                                         <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem" onClick={() => createHere(selectedFolderId)}>
                                             <span>📂</span><span>New subfolder in "{currentName}"</span>
+                                        </div>
+                                    ) : (
+                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem" onClick={() => createHere(null)}>
+                                            <span>📁</span><span>New folder</span>
                                         </div>
                                     )}
                                 </div>
