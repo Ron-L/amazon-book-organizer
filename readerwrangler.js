@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.69";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.70";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13404,11 +13404,10 @@
                                             return (
                                                 <button
                                                     onClick={() => createFolderHere(inRealFolder ? selectedFolderId : null)}
-                                                    className="text-gray-500 hover:text-gray-700 ml-4 flex items-center gap-1 whitespace-nowrap"
+                                                    className="text-gray-500 hover:text-gray-700 text-lg ml-4 leading-none"
                                                     title={inRealFolder ? 'New subfolder in this folder' : 'New folder'}
                                                     aria-label={inRealFolder ? 'New subfolder' : 'New folder'}>
-                                                    <span style={{ fontSize: '18px', lineHeight: 1 }}>＋</span>
-                                                    <span className="text-sm">{inRealFolder ? 'New subfolder' : 'New folder'}</span>
+                                                    ＋
                                                 </button>
                                             );
                                         })()}
