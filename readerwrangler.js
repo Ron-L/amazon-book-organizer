@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.68";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.69";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2035,6 +2035,18 @@
                 }
 
                 return children; // No custom order, return as-is (will be sorted alphabetically later)
+            };
+
+            // v6.12.0-alpha.69 (#8) - Shared: create a folder (root or subfolder), drop into it, enter rename mode.
+            // Used by both the right-pane blank-space menu and the always-visible header "+".
+            const createFolderHere = (parentId) => {
+                const nf = { id: `folder-${Date.now()}`, name: 'New Folder', parentId: parentId || null, bookIds: [], childFolderIds: [], collapsed: false };
+                recordAction({ type: 'CREATE_FOLDER', folderId: nf.id, parentId: parentId || null, folder: { ...nf } });
+                setFolders(prev => [...prev, nf]);
+                navigateToFolder(nf.id);
+                setEditingFolderId(nf.id);
+                setEditingFolderName('New Folder');
+                setIsPlaceholderMode(true);
             };
 
             // v5.0.0 - Get total book count for a folder including all subfolders recursively
@@ -13385,6 +13397,21 @@
                                                 )}
                                             </div>
                                         )}
+                                        {/* v6.12.0-alpha.69 (#8/2B) - Always-visible New folder/subfolder button, reachable when the list fills the pane */}
+                                        {(() => {
+                                            const inRealFolder = selectedFolderId && !selectedFolderId.startsWith('__');
+                                            if (!inRealFolder && !['__library__', '__all__', '__inbox__'].includes(selectedFolderId)) return null;
+                                            return (
+                                                <button
+                                                    onClick={() => createFolderHere(inRealFolder ? selectedFolderId : null)}
+                                                    className="text-gray-500 hover:text-gray-700 ml-4 flex items-center gap-1 whitespace-nowrap"
+                                                    title={inRealFolder ? 'New subfolder in this folder' : 'New folder'}
+                                                    aria-label={inRealFolder ? 'New subfolder' : 'New folder'}>
+                                                    <span style={{ fontSize: '18px', lineHeight: 1 }}>＋</span>
+                                                    <span className="text-sm">{inRealFolder ? 'New subfolder' : 'New folder'}</span>
+                                                </button>
+                                            );
+                                        })()}
                                         {/* v5.0.0-alpha.104 - Column chooser gear icon */}
                                         {explorerView === 'list' && (
                                             <div className="relative ml-4">
@@ -13475,10 +13502,13 @@
                                         )}
                                     </div>
                                 </div>
-                                <div ref={dragVirtScrollRef} className="flex-1 overflow-auto px-4 pb-4" style={{ contain: 'layout style paint' }}
+                                <div ref={dragVirtScrollRef} className="flex-1 overflow-auto px-4 pb-16" style={{ contain: 'layout style paint' }}
                                     onContextMenu={(e) => { // v6.12.0-alpha.67 (#8) - blank-space menu; rows call preventDefault, so defaultPrevented => a row handled it
                                         if (e.defaultPrevented) return;
                                         e.preventDefault();
+                                        // v6.12.0-alpha.69 (#8) - only offer folder creation where a new folder would actually appear (2A: pb-16 guarantees a strip)
+                                        const inRealFolder = selectedFolderId && !selectedFolderId.startsWith('__');
+                                        if (!inRealFolder && !['__library__', '__all__', '__inbox__'].includes(selectedFolderId)) return;
                                         const mw = 240, mh = 96;
                                         let x = e.clientX, y = e.clientY;
                                         if (x + mw > window.innerWidth) x = window.innerWidth - mw - 8;
@@ -15431,16 +15461,7 @@
                     {rightPaneContextMenu && (() => {
                         const inRealFolder = selectedFolderId && !selectedFolderId.startsWith('__');
                         const currentName = inRealFolder ? (folders.find(f => f.id === selectedFolderId)?.name || 'this folder') : null;
-                        const createHere = (parentId) => {
-                            const nf = { id: `folder-${Date.now()}`, name: 'New Folder', parentId, bookIds: [], childFolderIds: [], collapsed: false };
-                            recordAction({ type: 'CREATE_FOLDER', folderId: nf.id, parentId, folder: { ...nf } });
-                            setFolders(prev => [...prev, nf]);
-                            navigateToFolder(nf.id);
-                            setEditingFolderId(nf.id);
-                            setEditingFolderName('New Folder');
-                            setIsPlaceholderMode(true);
-                            setRightPaneContextMenu(null);
-                        };
+                        const createHere = (parentId) => { createFolderHere(parentId); setRightPaneContextMenu(null); };
                         return (
                             <>
                                 <div className="fixed inset-0 z-[59]" onClick={() => setRightPaneContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setRightPaneContextMenu(null); }} />
