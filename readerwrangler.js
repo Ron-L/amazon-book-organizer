@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.70";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.71";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -695,6 +695,8 @@
             const [explorerSort, setExplorerSort] = useState([{ column: 'dateAdded', direction: 'desc' }]);
             const [sortPickerOpen, setSortPickerOpen] = useState(false); // v5.5.0 - Cover view sort picker dropdown
             const [folderSortSettings, setFolderSortSettings] = useState({}); // v5.0.0-alpha.100 - Per-folder sort settings map {folderId: sort array}
+            const [folderListSort, setFolderListSort] = useState({ column: 'custom', direction: 'asc' }); // v6.12.0-alpha.71 - single source of truth for folder order (Manual/Name...)
+            const [folderSortMenuOpen, setFolderSortMenuOpen] = useState(false); // v6.12.0-alpha.71 - FOLDERS header sort dropdown
             const [explorerGroupOn, setExplorerGroupOn] = useState(false); // v5.4.5 - Group toggle (dividers between sort groups)
             const [collapsedGroups, setCollapsedGroups] = useState(new Set()); // v5.4.5 - Collapsed group names
             const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
@@ -2007,6 +2009,13 @@
             const getChildFolders = (parentId) => {
                 const children = folders.filter(f => f.parentId === parentId);
 
+                // v6.12.0-alpha.71 - Folder-ordering model: a non-custom sort wins over stored manual order.
+                // Every folder render (sidebar, Folders view, Move/Copy tree) goes through here, so ordering is unified.
+                if (folderListSort.column === 'title') {
+                    const dir = folderListSort.direction === 'desc' ? -1 : 1;
+                    return [...children].sort((a, b) => dir * a.name.localeCompare(b.name));
+                }
+
                 if (parentId === null) {
                     // Root level folders - use sortIndex property if available
                     const hasSortIndex = children.some(f => f.sortIndex !== undefined);
@@ -2260,6 +2269,12 @@
             // v5.0.0-alpha.90 - Changed to use targetFolderId + position instead of index
             // This fixes off-by-one issues when display order differs from getChildFolders order
             const reorderFoldersInParent = (parentId, folderIdsToMove, targetFolderId, position) => {
+                // v6.12.0-alpha.71 - Manual order only: when a sort (e.g. Name) is active, getChildFolders returns
+                // sorted (not stored) order, so a positional reorder would overwrite the real manual order. Block it.
+                if (folderListSort.column !== 'custom') {
+                    showToast('Switch folder sort to Manual (⇅ in the FOLDERS header) to rearrange by hand.');
+                    return;
+                }
                 // Get current child folders in their current order
                 const currentChildren = getChildFolders(parentId);
                 const currentOrder = currentChildren.map(f => f.id);
@@ -2923,6 +2938,7 @@
                             }
                             if (explorerData.leftPaneWidth) setLeftPaneWidth(explorerData.leftPaneWidth); // v5.0.0-alpha.91
                             if (explorerData.folderSortSettings) setFolderSortSettings(explorerData.folderSortSettings); // v5.0.0-alpha.100
+                            if (explorerData.folderListSort) setFolderListSort(explorerData.folderListSort); // v6.12.0-alpha.71
                             if (explorerData.visibleColumns) setVisibleColumns(explorerData.visibleColumns); // v5.0.0-alpha.104
                             // v5.0.0-alpha.109 - Restore column widths, filtering out null values
                             // v5.0.3-alpha.1 - Merge localStorage with defaults (handles new columns)
@@ -3346,13 +3362,14 @@
                     explorerCoverCols,
                     leftPaneWidth, // v5.0.0-alpha.91
                     folderSortSettings, // v5.0.0-alpha.100 - Per-folder sort settings
+                    folderListSort, // v6.12.0-alpha.71 - folder list order (Manual/Name)
                     visibleColumns, // v5.0.0-alpha.104 - Column visibility
                     columnWidths: sanitizedColumnWidths, // v5.0.0-alpha.109 - Column widths (sanitized)
                     columnOrder, // v5.0.0-alpha.172 - Column display order
                     explorerGroupOn // v5.4.5 - Group toggle
                 };
                 localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
-            }, [selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, visibleColumns, columnWidths, columnOrder, explorerGroupOn]);
+            }, [selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, folderListSort, visibleColumns, columnWidths, columnOrder, explorerGroupOn]);
 
             // v5.0.0 - Save folders to localStorage
             useEffect(() => {
@@ -12098,6 +12115,29 @@
                                             Folders
                                         </span>
                                         <div className="flex items-center gap-1">
+                                            {/* v6.12.0-alpha.71 - Folder sort control (Manual / Name); drives the whole folder list */}
+                                            <div className="relative">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setFolderSortMenuOpen(o => !o); }}
+                                                    className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
+                                                    title="Sort folders" aria-label="Sort folders">⇅</button>
+                                                {folderSortMenuOpen && (
+                                                    <>
+                                                        <div className="fixed inset-0 z-[59]" onClick={(e) => { e.stopPropagation(); setFolderSortMenuOpen(false); }} />
+                                                        <div className="absolute right-0 mt-1 bg-white border border-gray-300 shadow-lg rounded py-1 z-[60] min-w-[170px] normal-case tracking-normal font-normal" onClick={(e) => e.stopPropagation()}>
+                                                            {[{ label: 'Manual (drag to arrange)', col: 'custom', dir: 'asc' }, { label: 'Name A → Z', col: 'title', dir: 'asc' }, { label: 'Name Z → A', col: 'title', dir: 'desc' }].map(opt => {
+                                                                const active = folderListSort.column === opt.col && (opt.col === 'custom' || folderListSort.direction === opt.dir);
+                                                                return (
+                                                                    <div key={opt.label} className={`px-3 py-1.5 text-xs hover:bg-gray-100 cursor-pointer flex items-center gap-2 ${active ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
+                                                                        onClick={() => { setFolderListSort({ column: opt.col, direction: opt.dir }); setFolderSortMenuOpen(false); }}>
+                                                                        <span className="w-3">{active ? '✓' : ''}</span><span>{opt.label}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
                                             {/* Collapse all button */}
                                             {folders.some(f => !f.collapsed) && (
                                                 <button
