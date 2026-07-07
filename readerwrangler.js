@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.66";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.67";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -704,6 +704,7 @@
             const [editingBookListId, setEditingBookListId] = useState(null); // v6.12.0 - Book List being renamed
             const [editingBookListName, setEditingBookListName] = useState(''); // v6.12.0 - Book List rename input
             const [isPlaceholderMode, setIsPlaceholderMode] = useState(false); // v5.0.0-alpha.134 - Placeholder text mode for new folder rename (left panel)
+            const [rightPaneContextMenu, setRightPaneContextMenu] = useState(null); // v6.12.0-alpha.67 (#8) - right-pane blank-space menu {x,y}
             const [rightPanelEditingId, setRightPanelEditingId] = useState(null); // v5.0.0-alpha.156 - Folder being renamed (right panel)
             const [rightPanelEditingName, setRightPanelEditingName] = useState(''); // v5.0.0-alpha.156 - Folder rename input (right panel)
             const [rightPanelPlaceholderMode, setRightPanelPlaceholderMode] = useState(false); // v5.0.0-alpha.156 - Placeholder mode (right panel)
@@ -13474,7 +13475,16 @@
                                         )}
                                     </div>
                                 </div>
-                                <div ref={dragVirtScrollRef} className="flex-1 overflow-auto px-4 pb-4" style={{ contain: 'layout style paint' }}>
+                                <div ref={dragVirtScrollRef} className="flex-1 overflow-auto px-4 pb-4" style={{ contain: 'layout style paint' }}
+                                    onContextMenu={(e) => { // v6.12.0-alpha.67 (#8) - blank-space menu; rows call preventDefault, so defaultPrevented => a row handled it
+                                        if (e.defaultPrevented) return;
+                                        e.preventDefault();
+                                        const mw = 240, mh = 96;
+                                        let x = e.clientX, y = e.clientY;
+                                        if (x + mw > window.innerWidth) x = window.innerWidth - mw - 8;
+                                        if (y + mh > window.innerHeight) y = window.innerHeight - mh - 8;
+                                        setRightPaneContextMenu({ x, y });
+                                    }}>
                                     {explorerView === 'list' ? (
                                         (() => {
                                             // v5.0.0-alpha.172.1 - Drag handlers for column reordering (config moved to COLUMN_CONFIG)
@@ -15414,6 +15424,40 @@
                                 </div>
                                 </>)}
                             </div>
+                        );
+                    })()}
+
+                    {/* v6.12.0-alpha.67 (#8) - Right-pane blank-space context menu: create a folder / subfolder here */}
+                    {rightPaneContextMenu && (() => {
+                        const inRealFolder = selectedFolderId && !selectedFolderId.startsWith('__');
+                        const currentName = inRealFolder ? (folders.find(f => f.id === selectedFolderId)?.name || 'this folder') : null;
+                        const createHere = (parentId) => {
+                            const nf = { id: `folder-${Date.now()}`, name: 'New Folder', parentId, bookIds: [], childFolderIds: [], collapsed: false };
+                            recordAction({ type: 'CREATE_FOLDER', folderId: nf.id, parentId, folder: { ...nf } });
+                            setFolders(prev => [...prev, nf]);
+                            navigateToFolder(nf.id);
+                            setEditingFolderId(nf.id);
+                            setEditingFolderName('New Folder');
+                            setIsPlaceholderMode(true);
+                            setRightPaneContextMenu(null);
+                        };
+                        return (
+                            <>
+                                <div className="fixed inset-0 z-[59]" onClick={() => setRightPaneContextMenu(null)} onContextMenu={(e) => { e.preventDefault(); setRightPaneContextMenu(null); }} />
+                                <div className="fixed bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[220px] z-[60]"
+                                    role="menu" aria-label="Create folder"
+                                    style={{ left: `${rightPaneContextMenu.x}px`, top: `${rightPaneContextMenu.y}px` }}
+                                    onClick={(e) => e.stopPropagation()}>
+                                    <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem" onClick={() => createHere(null)}>
+                                        <span>📁</span><span>New folder</span>
+                                    </div>
+                                    {inRealFolder && (
+                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem" onClick={() => createHere(selectedFolderId)}>
+                                            <span>📂</span><span>New subfolder in "{currentName}"</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
                         );
                     })()}
 
