@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.65";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.66";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16469,6 +16469,14 @@
                                                     <span>{isCurrentFolder ? '✓' : '📁'}</span>
                                                     <span>{f.name}</span>
                                                 </div>
+                                                {/* v6.12.0-alpha.66 (E-2) - Create a nested subfolder here, then move/copy the selected books into it */}
+                                                <span
+                                                    className="w-5 text-center text-blue-600 font-bold cursor-pointer hover:bg-blue-100 rounded flex-shrink-0"
+                                                    title="New subfolder here"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleNewFolderThenPlace(f.id, contextSubmenu === 'copy-to');
+                                                    }}>＋</span>
                                             </div>
                                             {/* Children only if expanded */}
                                             {hasChildren && isExpanded && buildFolderTree(f.id, depth + 1)}
