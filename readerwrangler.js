@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.74";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.75";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13268,7 +13268,8 @@
                                             </div>
                                         )}
                                         {/* Sort status display with picker dropdown (v5.5.0) */}
-                                        <div className="flex items-center gap-1 border-l pl-4 text-sm" style={{ position: 'relative' }} data-sort-picker="">
+                                        {/* v6.12.0-alpha.75 - Hide the book-sort picker in the Folders view; folders sort via the ⇅ header control + Name column (folderListSort). The book picker's columns don't apply to folders and it desynced from those. */}
+                                        <div className={`flex items-center gap-1 border-l pl-4 text-sm ${selectedFolderId === '__library__' ? 'hidden' : ''}`} style={{ position: 'relative' }} data-sort-picker="">
                                             <button
                                                 onClick={() => setSortPickerOpen(!sortPickerOpen)}
                                                 className="flex items-center gap-1 hover:bg-gray-100 rounded px-1 py-0.5 -mx-1"
