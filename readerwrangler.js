@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.73";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.74";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -12116,8 +12116,9 @@
                                             <div className="relative">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setFolderSortMenuOpen(o => !o); }}
-                                                    className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
-                                                    title="Sort folders" aria-label="Sort folders">⇅</button>
+                                                    className={`text-xs px-1 hover:bg-gray-200 rounded whitespace-nowrap ${folderListSort.column === 'title' ? 'text-blue-600 font-medium' : 'text-gray-400 hover:text-gray-600'}`}
+                                                    title={`Sort folders (currently: ${folderListSort.column === 'title' ? (folderListSort.direction === 'asc' ? 'Name A→Z' : 'Name Z→A') : 'Manual'})`}
+                                                    aria-label="Sort folders">⇅{folderListSort.column === 'title' ? (folderListSort.direction === 'asc' ? ' A→Z' : ' Z→A') : ''}</button>
                                                 {folderSortMenuOpen && (
                                                     <>
                                                         <div className="fixed inset-0 z-[59]" onClick={(e) => { e.stopPropagation(); setFolderSortMenuOpen(false); }} />
