@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.72";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.73";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2120,17 +2120,14 @@
                     ? [getInboxFolder(), ...getChildFolders(null).filter(f => f.id !== '__inbox__')].filter(Boolean)
                     : getChildFolders(selectedFolderId);
                 if (childFolders.length === 0) return [];
-                const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
+                // v6.12.0-alpha.73 (1b) - childFolders already comes ordered from getChildFolders (folderListSort); just pin Inbox.
                 let sorted;
                 if (selectedFolderId === '__library__') {
                     const inbox = childFolders.find(f => f.id === '__inbox__');
                     const others = childFolders.filter(f => f.id !== '__inbox__');
-                    const sortedOthers = explorerSort[0].column === 'custom'
-                        ? others : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
-                    sorted = [inbox, ...sortedOthers].filter(Boolean);
+                    sorted = [inbox, ...others].filter(Boolean);
                 } else {
-                    sorted = explorerSort[0].column === 'custom'
-                        ? childFolders : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                    sorted = childFolders;
                 }
                 if (hasActiveFilters && !showAllFoldersOverride) {
                     return sorted.filter(folder => {
@@ -13627,8 +13624,8 @@
                                                         <th className="p-2" style={{ width: '24px' }}></th>
                                                         <th className="p-2 w-12"></th>
                                                         <th className="p-2 font-medium text-sm cursor-pointer hover:bg-gray-100 select-none"
-                                                            onClick={() => setExplorerSort(prev => [{ column: 'title', direction: prev[0]?.column === 'title' ? (prev[0].direction === 'asc' ? 'desc' : 'asc') : 'asc' }])}>
-                                                            Name {explorerSort[0]?.column === 'title' ? (explorerSort[0].direction === 'asc' ? '▲' : '▼') : ''}
+                                                            onClick={() => setFolderListSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                            Name {folderListSort.column === 'title' ? (folderListSort.direction === 'asc' ? '▲' : '▼') : ''}
                                                         </th>
                                                         <th className="p-2 text-right font-medium text-sm" style={{ width: '80px' }}>Books</th>
                                                         <th className="p-2"></th>
@@ -13807,26 +13804,19 @@
 
                                                     // v5.0.0-alpha.66 - In custom mode, use getChildFolders order (respects custom order)
                                                     // In sorted mode, sort alphabetically
-                                                    const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
+                                                    // v6.12.0-alpha.73 (1b) - childFolders already ordered by folderListSort via getChildFolders; just pin Inbox.
                                                     let sortedFolders;
                                                     if (selectedFolderId === '__library__') {
-                                                        // Folders section: Inbox first (pinned), then alphabetical or custom
                                                         const inbox = childFolders.find(f => f.id === '__inbox__');
                                                         const others = childFolders.filter(f => f.id !== '__inbox__');
-                                                        const sortedOthers = explorerSort[0].column === 'custom'
-                                                            ? others
-                                                            : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
-                                                        sortedFolders = [inbox, ...sortedOthers].filter(Boolean);
+                                                        sortedFolders = [inbox, ...others].filter(Boolean);
                                                     } else {
-                                                        // Regular folder view
-                                                        sortedFolders = explorerSort[0].column === 'custom'
-                                                            ? childFolders // Already in custom order from getChildFolders
-                                                            : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                        sortedFolders = childFolders;
                                                     }
 
                                                     // v5.0.0-alpha.88 - Allow folder reordering in Folders section (Inbox protected by isDraggable=false)
                                                     // v5.0.8 - Folders CAN be reordered in Folders section (unlike books), just not in All Books
-                                                    const canReorderFolders = explorerSort[0].column === 'custom' &&
+                                                    const canReorderFolders = folderListSort.column === 'custom' &&
                                                         selectedFolderId !== '__all__';
                                                     const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
 
@@ -14573,23 +14563,18 @@
                                                 if (childFolders.length === 0) return null;
 
                                                 // v5.0.0-alpha.66 - In custom mode, use getChildFolders order (respects custom order)
-                                                const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
+                                                // v6.12.0-alpha.73 (1b) - childFolders already ordered by folderListSort via getChildFolders; just pin Inbox.
                                                 let sortedFolders;
                                                 if (selectedFolderId === '__library__') {
                                                     const inbox = childFolders.find(f => f.id === '__inbox__');
                                                     const others = childFolders.filter(f => f.id !== '__inbox__');
-                                                    const sortedOthers = explorerSort[0].column === 'custom'
-                                                        ? others
-                                                        : [...others].sort((a, b) => dir * a.name.localeCompare(b.name));
-                                                    sortedFolders = [inbox, ...sortedOthers].filter(Boolean);
+                                                    sortedFolders = [inbox, ...others].filter(Boolean);
                                                 } else {
-                                                    sortedFolders = explorerSort[0].column === 'custom'
-                                                        ? childFolders
-                                                        : [...childFolders].sort((a, b) => dir * a.name.localeCompare(b.name));
+                                                    sortedFolders = childFolders;
                                                 }
 
                                                 // v5.0.0-alpha.88 - Allow folder reordering in Folders section (Inbox protected by isDraggable=false)
-                                                const canReorderFolders = explorerSort[0].column === 'custom' &&
+                                                const canReorderFolders = folderListSort.column === 'custom' &&
                                                     selectedFolderId !== '__all__';
                                                 const parentForReorder = selectedFolderId === '__library__' ? null : selectedFolderId;
 
