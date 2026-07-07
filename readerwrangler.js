@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.64";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.65";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -11982,16 +11982,35 @@
                                                             if (draggedListId) { if (draggedListId !== bl.id) reorderBookLists(draggedListId, bl.id); return; }
                                                             const rwItems = e.dataTransfer.getData('application/x-rw-items');
                                                             const rw = e.dataTransfer.getData('application/x-readerwrangler');
-                                                            let dropIds = [];
-                                                            if (rwItems) { const { itemIds } = JSON.parse(rwItems); dropIds = (itemIds || []).filter(id => bookMap.has(id)); }
-                                                            else if (rw) { const d = JSON.parse(rw); dropIds = (d.bookIds || []).filter(id => bookMap.has(id)); }
+                                                            let dropIds = [], srcFolder = null;
+                                                            if (rwItems) { const p = JSON.parse(rwItems); dropIds = (p.itemIds || []).filter(id => bookMap.has(id)); srcFolder = p.sourceFolder; }
+                                                            else if (rw) { const d = JSON.parse(rw); dropIds = (d.bookIds || []).filter(id => bookMap.has(id)); srcFolder = d.sourceFolder; }
                                                             if (dropIds.length === 0) return;
-                                                            const added = addBooksToBookList(bl.id, dropIds);
+                                                            // v6.12.0-alpha.65 (#9) - Dragging between Book Lists MOVES (remove from source);
+                                                            // hold Ctrl/Cmd to copy. Folder→list stays a copy (source isn't a Book List).
+                                                            const srcListId = isBookListFolder(srcFolder) ? srcFolder.replace(/^__booklist_/, '').replace(/__$/, '') : null;
+                                                            const isMove = srcListId && srcListId !== bl.id && !(e.ctrlKey || e.metaKey);
+                                                            if (isMove) {
+                                                                const existing = new Set((bookLists.find(b => b.id === bl.id)?.bookIds) || []);
+                                                                const toAdd = dropIds.filter(id => !existing.has(id));
+                                                                setBookLists(prev => prev.map(b =>
+                                                                    b.id === bl.id ? { ...b, bookIds: [...(b.bookIds || []), ...toAdd] }
+                                                                    : b.id === srcListId ? { ...b, bookIds: (b.bookIds || []).filter(id => !dropIds.includes(id)) }
+                                                                    : b
+                                                                ));
+                                                                recordAction({ type: 'COMPOUND', actions: [
+                                                                    { type: 'BOOKLIST_ADD', bookListId: bl.id, bookIds: toAdd },
+                                                                    { type: 'BOOKLIST_REMOVE', bookListId: srcListId, bookIds: dropIds }
+                                                                ] });
+                                                                showToast(`Moved ${dropIds.length} ${dropIds.length === 1 ? 'book' : 'books'} to "${bl.name}"`, e.clientX, e.clientY);
+                                                            } else {
+                                                                const added = addBooksToBookList(bl.id, dropIds);
+                                                                showToast(added > 0 ? `Added ${added} ${added === 1 ? 'book' : 'books'} to "${bl.name}"` : `Already in "${bl.name}"`, e.clientX, e.clientY);
+                                                            }
                                                             setExplorerSelectedItems(new Set());
                                                             stopDragVirtualization();
                                                             setExplorerDragBookId(null);
                                                             setExplorerDragData(null);
-                                                            showToast(added > 0 ? `Added ${added} ${added === 1 ? 'book' : 'books'} to "${bl.name}"` : `Already in "${bl.name}"`, e.clientX, e.clientY);
                                                         }}
                                                         title={`Book List: ${bl.name} (${blCount} ${blCount === 1 ? 'book' : 'books'})`}>
                                                         <span className="pointer-events-none" style={{ fontSize: '14px' }}>📑</span>
