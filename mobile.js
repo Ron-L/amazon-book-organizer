@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.3';
+const MOBILE_VERSION = '1.6.4';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -1583,7 +1583,8 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
     // v1.6.2 - icon per section (mirrors the drawer) = a color-independent identifier
     const SECTION_ICON = { search: '🔍', booklist: '📋', folder: '📁' };
     // v1.6.3 - solid accent per section = a pinned left "spine" so you know the section on every row
-    const SECTION_ACCENT = { search: '#3b82f6', booklist: '#10b981', folder: '#f59e0b' };
+    // v1.6.4 - softened (was fully saturated); coordinated with the tint hues
+    const SECTION_ACCENT = { search: '#6b9fe0', booklist: '#4dc49a', folder: '#e0ad55' };
     // v1.6.1 - Group consecutive shelves by section so each renders as ONE solid tinted band (no white
     // between rows), with breathing room between sections.
     const groups = [];
@@ -1598,8 +1599,8 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
         return (
             <div key={`grp-${group.section}-${gi}`} style={{
                 background: tint || 'transparent',
-                marginTop: gi === 0 ? 0 : '36px',
-                paddingBottom: tint ? '10px' : 0,
+                // v1.6.4 - no neutral gap between sections; each ends in a quarter-row of its OWN color, then abuts the next (gray heading marks the break).
+                paddingBottom: tint ? '44px' : '12px',
                 borderLeft: SECTION_ACCENT[group.section] ? `5px solid ${SECTION_ACCENT[group.section]}` : 'none'
             }}>
                 {label && (
