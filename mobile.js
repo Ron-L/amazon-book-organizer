@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.7';
+const MOBILE_VERSION = '1.6.8';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -586,23 +586,12 @@ function Backdrop({ onClick }) {
 
 // --- Folder Drawer ---
 
-function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists, savedSearches, onSelectFolder, onSelectSearch, onClose }) {
+function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists, savedSearches, onSelectFolder, onSelectSearch, onClose, collapsed, toggleSection }) {
     const inbox = folders.find(f => f.id === '__inbox__');
     const inboxCount = inbox ? (inbox.bookIds || []).length : 0;
     // User folders: top-level (parentId === null), excluding Inbox
     const topLevel = folders.filter(f => !f.parentId && f.id !== '__inbox__');
     const childrenOf = (parentId) => folders.filter(f => f.parentId === parentId);
-
-    // v1.5.0 - Collapsible drawer sections (persisted per-device)
-    const DRAWER_COLLAPSE_KEY = 'rw_mobile_drawer_collapsed';
-    const [collapsed, setCollapsed] = useState(() => {
-        try { return JSON.parse(localStorage.getItem(DRAWER_COLLAPSE_KEY)) || {}; } catch (e) { return {}; }
-    });
-    const toggleSection = (key) => setCollapsed(prev => {
-        const next = { ...prev, [key]: !prev[key] };
-        try { localStorage.setItem(DRAWER_COLLAPSE_KEY, JSON.stringify(next)); } catch (e) {}
-        return next;
-    });
 
     // v6.12.0 Phase 8 - section header to match desktop's Searches / Book Lists / Folders dividers
     // v1.5.0 - now a collapse toggle (leading chevron + label), matching all three sections
@@ -1373,7 +1362,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
 
 // --- Dashboard component ---
 
-function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves }) {
+function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves, collapsed, toggleSection }) {
     const filteredBooks = useMemo(() => {
         return filterBooks(books, { showDealsOnly, showHidden });
     }, [books, showDealsOnly, showHidden]);
@@ -1595,6 +1584,8 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
     // v1.6.3 - solid accent per section = a pinned left "spine" so you know the section on every row
     // v1.6.5 - theme-aware CSS vars (softened; coordinated with the tint per theme, esp. dark)
     const SECTION_ACCENT = { search: 'var(--section-accent-search)', booklist: 'var(--section-accent-booklist)', folder: 'var(--section-accent-folder)' };
+    // v1.6.8 - map Dashboard section ids to the shared collapse keys (drawer uses these), so collapse syncs both ways
+    const SECTION_KEY = { search: 'searches', booklist: 'bookLists', folder: 'folders' };
     // v1.6.1 - Group consecutive shelves by section so each renders as ONE solid tinted band (no white
     // between rows), with breathing room between sections.
     const groups = [];
@@ -1606,26 +1597,28 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
     const rows = groups.map((group, gi) => {
         const label = SECTION_LABELS[group.section];
         const tint = SECTION_TINT[group.section];
+        const secKey = SECTION_KEY[group.section];        // v1.6.8 - shared collapse key (matches the drawer)
+        const isCollapsed = secKey && collapsed[secKey];
         return (
             <div key={`grp-${group.section}-${gi}`} style={{
                 background: tint || 'transparent',
-                // v1.6.4 - no neutral gap between sections; each ends in a quarter-row of its OWN color, then abuts the next (gray heading marks the break).
-                paddingBottom: tint ? '44px' : '12px',
+                paddingBottom: isCollapsed ? '8px' : (tint ? '44px' : '12px'),
                 borderLeft: SECTION_ACCENT[group.section] ? `5px solid ${SECTION_ACCENT[group.section]}` : 'none'
             }}>
                 {label && (
-                    <div style={{
+                    <div onClick={() => toggleSection(secKey)} style={{
                         padding: '7px 16px', borderTop: '1px solid var(--border-default, #e2e8f0)',
                         background: 'var(--section-heading-bg)',
                         fontFamily: 'var(--font-heading)', fontSize: '13px', fontWeight: 700,
                         textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary, #475569)',
-                        display: 'flex', alignItems: 'center', gap: '8px'
-                    }}>
+                        display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer'
+                    }} role="button" aria-expanded={!isCollapsed}>
+                        <span style={{ fontSize: '11px', width: '10px' }}>{isCollapsed ? '▶' : '▼'}</span>
                         <span style={{ fontSize: '15px' }}>{SECTION_ICON[group.section]}</span>
                         <span>{label}</span>
                     </div>
                 )}
-                {group.shelves.map((shelf, si) => (
+                {!isCollapsed && group.shelves.map((shelf, si) => (
                     <Shelf
                         key={shelf.title + '-' + si}
                         title={shelf.title}
@@ -2255,6 +2248,15 @@ function MobileApp() {
         });
     }, []);
     const [expandedShelves, setExpandedShelvesRaw] = useState(() => new Set(savedPrefs.expandedShelves || []));
+    // v1.6.8 - collapsed sections lifted here so the drawer AND Dashboard stay in sync (persisted per-device)
+    const [drawerCollapsed, setDrawerCollapsed] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('rw_mobile_drawer_collapsed')) || {}; } catch (e) { return {}; }
+    });
+    const toggleSection = (key) => setDrawerCollapsed(prev => {
+        const next = { ...prev, [key]: !prev[key] };
+        try { localStorage.setItem('rw_mobile_drawer_collapsed', JSON.stringify(next)); } catch (e) {}
+        return next;
+    });
     const setExpandedShelves = useCallback((updater) => {
         setExpandedShelvesRaw(prev => {
             const next = typeof updater === 'function' ? updater(prev) : updater;
@@ -2748,6 +2750,8 @@ function MobileApp() {
             {/* Folder Drawer */}
             {activeOverlay === 'drawer' && (
                 <FolderDrawer
+                    collapsed={drawerCollapsed}
+                    toggleSection={toggleSection}
                     folders={folders}
                     books={books}
                     pinnedTagFolders={pinnedTagFolders}
@@ -2840,6 +2844,7 @@ function MobileApp() {
                     />
                 ) : (
                     <Dashboard
+                        collapsed={drawerCollapsed} toggleSection={toggleSection}
                         books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists} savedSearches={savedSearches}
                         showDealsOnly={showDealsOnly} showHidden={showHidden}
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
