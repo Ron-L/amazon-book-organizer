@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.6';
+const MOBILE_VERSION = '1.6.7';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -669,7 +669,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
 
             {/* Searches — saved filter presets, applied to All Books. v1.6.6 - left spine matches the Dashboard. */}
             {savedSearches && savedSearches.length > 0 && (
-            <div style={{ borderLeft: '4px solid var(--section-accent-search)' }}>
+            <div style={{ borderLeft: '4px solid var(--section-accent-search)', background: 'var(--section-tint-search)' }}>
             <SectionHeading label="Searches" sectionKey="searches" />
             {!collapsed.searches && (savedSearches || []).map(s => {
                 const label = (s.name && s.name.trim()) ? s.name : searchChipsLabel(s.filters, tagRegistry);
@@ -691,7 +691,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
 
             {/* Book Lists — curated, supplemental */}
             {bookLists && bookLists.length > 0 && (
-            <div style={{ borderLeft: '4px solid var(--section-accent-booklist)' }}>
+            <div style={{ borderLeft: '4px solid var(--section-accent-booklist)', background: 'var(--section-tint-booklist)' }}>
             <SectionHeading label="Book Lists" sectionKey="bookLists" />
             {!collapsed.bookLists && (bookLists || []).map(bl => (
                 <button key={`bl-${bl.id}`}
@@ -708,7 +708,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
             )}
 
             {/* Folders */}
-            <div style={{ borderLeft: '4px solid var(--section-accent-folder)' }}>
+            <div style={{ borderLeft: '4px solid var(--section-accent-folder)', background: 'var(--section-tint-folder)' }}>
             <SectionHeading label="Folders" sectionKey="folders" />
             {!collapsed.folders && <>
             {/* Inbox — unorganized books */}
