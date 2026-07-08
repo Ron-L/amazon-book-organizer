@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.5';
+const MOBILE_VERSION = '1.6.6';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -667,8 +667,10 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
                 <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({books.length})</span>
             </button>
 
-            {/* Searches — saved filter presets, applied to All Books */}
-            {savedSearches && savedSearches.length > 0 && <SectionHeading label="Searches" sectionKey="searches" />}
+            {/* Searches — saved filter presets, applied to All Books. v1.6.6 - left spine matches the Dashboard. */}
+            {savedSearches && savedSearches.length > 0 && (
+            <div style={{ borderLeft: '4px solid var(--section-accent-search)' }}>
+            <SectionHeading label="Searches" sectionKey="searches" />
             {!collapsed.searches && (savedSearches || []).map(s => {
                 const label = (s.name && s.name.trim()) ? s.name : searchChipsLabel(s.filters, tagRegistry);
                 const count = books.filter(b => bookMatchesFilters(b, s.filters)).length;
@@ -684,9 +686,13 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
                     </button>
                 );
             })}
+            </div>
+            )}
 
             {/* Book Lists — curated, supplemental */}
-            {bookLists && bookLists.length > 0 && <SectionHeading label="Book Lists" sectionKey="bookLists" />}
+            {bookLists && bookLists.length > 0 && (
+            <div style={{ borderLeft: '4px solid var(--section-accent-booklist)' }}>
+            <SectionHeading label="Book Lists" sectionKey="bookLists" />
             {!collapsed.bookLists && (bookLists || []).map(bl => (
                 <button key={`bl-${bl.id}`}
                     onClick={() => onSelectFolder(`__booklist_${bl.id}__`)}
@@ -698,8 +704,11 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
                     <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({(bl.bookIds || []).length})</span>
                 </button>
             ))}
+            </div>
+            )}
 
             {/* Folders */}
+            <div style={{ borderLeft: '4px solid var(--section-accent-folder)' }}>
             <SectionHeading label="Folders" sectionKey="folders" />
             {!collapsed.folders && <>
             {/* Inbox — unorganized books */}
@@ -744,6 +753,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
                 )}
             </div>
             </>}
+            </div>
         </div>
     );
 }
