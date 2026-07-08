@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.79";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.80";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13653,10 +13653,11 @@
                                                         <th className="p-2" style={{ width: '24px' }}></th>
                                                         <th className="p-2 w-12"></th>
                                                         <th className="p-2 font-medium text-sm cursor-pointer hover:bg-gray-100 select-none"
+                                                            title="Folder name — click to sort A→Z / Z→A"
                                                             onClick={() => setFolderListSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                             Name {folderListSort.column === 'title' ? (folderListSort.direction === 'asc' ? '▲' : '▼') : ''}
                                                         </th>
-                                                        <th className="p-2 text-right font-medium text-sm" style={{ width: '80px' }}>Books</th>
+                                                        <th className="p-2 text-right font-medium text-sm" style={{ width: '80px' }} title="Total books in this folder and all its subfolders">Books</th>
                                                         <th className="p-2"></th>
                                                     </tr>
                                                 </thead>
@@ -14201,7 +14202,12 @@
                                                                 {/* v6.4.0 - Container views show Books count instead of "—" columns */}
                                                                 {isContainerView ? (
                                                                     <>
-                                                                        <td className="p-2 text-right text-gray-500 text-sm" style={{ width: '80px' }}>{getFolderBookIds(folder.id).length}</td>
+                                                                        <td className="p-2 text-right text-gray-500 text-sm" style={{ width: '80px' }}>{(() => {
+                                                                            // v6.12.0-alpha.80 - Recursive total (this folder + all subfolders), matching the left pane; breakdown in tooltip.
+                                                                            const c = getFolderTotalCount(folder.id);
+                                                                            const tip = c.subfolder > 0 ? `${c.direct} direct • ${c.subfolder} in subfolders` : `${c.direct} books`;
+                                                                            return <span title={tip}>{c.total}</span>;
+                                                                        })()}</td>
                                                                         <td className="p-2"></td>
                                                                     </>
                                                                 ) : (
