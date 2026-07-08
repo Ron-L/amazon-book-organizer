@@ -7,6 +7,10 @@
     /* Backgrounds */
     --bg-page: #ffffff;
     --bg-surface: #ffffff;
+    /* v6.12.0 - mobile Dashboard per-section tints (theme-aware; tune here) */
+    --section-tint-search: rgba(59, 130, 246, 0.06);
+    --section-tint-booklist: rgba(16, 185, 129, 0.06);
+    --section-tint-folder: rgba(245, 158, 11, 0.07);
     --bg-surface-alt: #f8fafc;
     --bg-elevated: #ffffff;
     --bg-input: #ffffff;
@@ -66,6 +70,10 @@
 [data-theme="dark"] {
     --bg-page: #0f172a;
     --bg-surface: #1e293b;
+    /* v6.12.0 - stronger/lighter tints so they're visible on the dark bg */
+    --section-tint-search: rgba(96, 165, 250, 0.13);
+    --section-tint-booklist: rgba(52, 211, 153, 0.12);
+    --section-tint-folder: rgba(251, 191, 36, 0.13);
     --bg-surface-alt: #1e293b;
     --bg-elevated: #334155;
     --bg-input: #1e293b;

@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.0';
+const MOBILE_VERSION = '1.6.1';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -1579,40 +1579,49 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
     const SECTION_LABELS = { search: 'Searches', booklist: 'Book Lists', folder: 'Folders' };
     // v1.6.0 - subtle per-section hue so each group is identifiable at a glance on the long overview.
     // Translucent overlays (work on any theme bg): blue = Searches, green = Book Lists, amber = Folders.
-    const SECTION_TINT = { search: 'rgba(59, 130, 246, 0.06)', booklist: 'rgba(16, 185, 129, 0.06)', folder: 'rgba(245, 158, 11, 0.07)' };
-    let lastSection = null;
-    const rows = [];
-    shelves.forEach((shelf, i) => {
-        if (shelf.section !== lastSection && SECTION_LABELS[shelf.section]) {
-            rows.push(
-                <div key={`section-${shelf.section}`} style={{
-                    padding: '4px 16px 6px', marginTop: i === 0 ? 0 : '8px',
-                    borderTop: '1px solid var(--border-default, #e2e8f0)',
-                    background: SECTION_TINT[shelf.section] || 'transparent',
-                    fontFamily: 'var(--font-heading)', fontSize: '12px', fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.06em',
-                    color: 'var(--text-muted, #94a3b8)'
-                }}>{SECTION_LABELS[shelf.section]}</div>
-            );
-        }
-        lastSection = shelf.section;
-        rows.push(
-            <div key={shelf.title + '-' + i} style={{ background: SECTION_TINT[shelf.section] || 'transparent' }}>
-            <Shelf
-                title={shelf.title}
-                count={shelf.count}
-                sections={shelf.sections}
-                isCapped={shelf.isCapped}
-                isExpanded={shelf.folderId ? expandedShelves.has(shelf.folderId) : false}
-                coverUrlMap={coverUrlMap}
-                blankImageBooks={blankImageBooks}
-                setBlankImageBooks={setBlankImageBooks}
-                onTapTitle={shelf.folderId ? () => onTapFolderTitle(shelf.folderId) : null}
-                onTapBook={onTapBook}
-                onTapSeries={onTapSeries}
-                onTapShowAll={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.add(shelf.folderId); return next; }) : null}
-                onShowLess={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.delete(shelf.folderId); return next; }) : null}
-            />
+    const SECTION_TINT = { search: 'var(--section-tint-search)', booklist: 'var(--section-tint-booklist)', folder: 'var(--section-tint-folder)' };
+    // v1.6.1 - Group consecutive shelves by section so each renders as ONE solid tinted band (no white
+    // between rows), with breathing room between sections.
+    const groups = [];
+    shelves.forEach(shelf => {
+        const last = groups[groups.length - 1];
+        if (last && last.section === shelf.section) last.shelves.push(shelf);
+        else groups.push({ section: shelf.section, shelves: [shelf] });
+    });
+    const rows = groups.map((group, gi) => {
+        const label = SECTION_LABELS[group.section];
+        const tint = SECTION_TINT[group.section];
+        return (
+            <div key={`grp-${group.section}-${gi}`} style={{
+                background: tint || 'transparent',
+                marginTop: gi === 0 ? 0 : '36px',
+                paddingBottom: tint ? '10px' : 0
+            }}>
+                {label && (
+                    <div style={{
+                        padding: '6px 16px', borderTop: '1px solid var(--border-default, #e2e8f0)',
+                        fontFamily: 'var(--font-heading)', fontSize: '12px', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted, #94a3b8)'
+                    }}>{label}</div>
+                )}
+                {group.shelves.map((shelf, si) => (
+                    <Shelf
+                        key={shelf.title + '-' + si}
+                        title={shelf.title}
+                        count={shelf.count}
+                        sections={shelf.sections}
+                        isCapped={shelf.isCapped}
+                        isExpanded={shelf.folderId ? expandedShelves.has(shelf.folderId) : false}
+                        coverUrlMap={coverUrlMap}
+                        blankImageBooks={blankImageBooks}
+                        setBlankImageBooks={setBlankImageBooks}
+                        onTapTitle={shelf.folderId ? () => onTapFolderTitle(shelf.folderId) : null}
+                        onTapBook={onTapBook}
+                        onTapSeries={onTapSeries}
+                        onTapShowAll={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.add(shelf.folderId); return next; }) : null}
+                        onShowLess={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.delete(shelf.folderId); return next; }) : null}
+                    />
+                ))}
             </div>
         );
     });
