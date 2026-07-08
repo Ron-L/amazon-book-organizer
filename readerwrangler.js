@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.82";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.83";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2045,6 +2045,17 @@
                 }
 
                 return children; // No custom order, return as-is (will be sorted alphabetically later)
+            };
+
+            // v6.12.0-alpha.83 (1c) - Shared ordering for the Move/Copy folder trees: mirror the sidebar
+            // (folderListSort via getChildFolders), Inbox pinned first at root, special __all__ excluded.
+            const orderedChildFolders = (parentId) => {
+                let sibs = getChildFolders(parentId).filter(f => f.id !== '__all__');
+                if (parentId === null) {
+                    const inbox = sibs.find(f => f.id === '__inbox__');
+                    if (inbox) sibs = [inbox, ...sibs.filter(f => f.id !== '__inbox__')];
+                }
+                return sibs;
             };
 
             // v6.12.0-alpha.69 (#8) - Shared: create a folder (root or subfolder), drop into it, enter rename mode.
@@ -15948,8 +15959,9 @@
 
                                             // Build folder tree with collapse/expand
                                             const buildFolderTree = (parentId, depth = 0) => {
-                                                return folders
-                                                    .filter(f => f.parentId === parentId && f.id !== folder.id && !isDescendantOf(f.id, folder.id))
+                                                // v6.12.0-alpha.83 (1c) - Order via the shared helper (mirrors folderListSort); still exclude self + descendants.
+                                                return orderedChildFolders(parentId)
+                                                    .filter(f => f.id !== folder.id && !isDescendantOf(f.id, folder.id))
                                                     .map(f => {
                                                         const hasChildren = folders.some(child =>
                                                             child.parentId === f.id &&
@@ -16553,19 +16565,8 @@
 
                         // Build folder tree for submenu (reused for both Move to and Copy to)
                         const buildFolderTree = (parentId, depth = 0) => {
-                            // v6.12.0-alpha.63 - Order siblings the same way the left pane does so the Move/Copy tree
-                            // matches the sidebar: custom = manual order, else alphabetical by name (honoring sort
-                            // direction); Inbox pinned first at the root level.
-                            const dir = explorerSort[0].column === 'title' && explorerSort[0].direction === 'desc' ? -1 : 1;
-                            let siblings = folders.filter(f => f.parentId === parentId && f.id !== '__all__'); // Exclude special folders
-                            if (explorerSort[0].column !== 'custom') {
-                                siblings = [...siblings].sort((a, b) => dir * a.name.localeCompare(b.name));
-                            }
-                            if (parentId === null) {
-                                const inbox = siblings.find(f => f.id === '__inbox__');
-                                if (inbox) siblings = [inbox, ...siblings.filter(f => f.id !== '__inbox__')];
-                            }
-                            return siblings
+                            // v6.12.0-alpha.83 (1c) - Order via the shared helper so the Move/Copy tree mirrors folderListSort (same as the sidebar).
+                            return orderedChildFolders(parentId)
                                 .map(f => {
                                     const hasChildren = folders.some(child =>
                                         child.parentId === f.id &&
