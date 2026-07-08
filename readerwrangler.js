@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.80";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.81";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13653,7 +13653,7 @@
                                                         <th className="p-2" style={{ width: '24px' }}></th>
                                                         <th className="p-2 w-12"></th>
                                                         <th className="p-2 font-medium text-sm cursor-pointer hover:bg-gray-100 select-none"
-                                                            title="Folder name — click to sort A→Z / Z→A"
+                                                            title="Click to sort folders by name (A→Z / Z→A). To get back to Manual order, pick it from the Sort menu (▾) above or the ⇅ in the FOLDERS header."
                                                             onClick={() => setFolderListSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
                                                             Name {folderListSort.column === 'title' ? (folderListSort.direction === 'asc' ? '▲' : '▼') : ''}
                                                         </th>
