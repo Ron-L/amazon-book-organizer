@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.8';
+const MOBILE_VERSION = '1.6.9';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -593,6 +593,16 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
     const topLevel = folders.filter(f => !f.parentId && f.id !== '__inbox__');
     const childrenOf = (parentId) => folders.filter(f => f.parentId === parentId);
 
+    // v1.6.9 - per-folder collapse in the drawer tree (drawer-local, persisted)
+    const [collapsedFolders, setCollapsedFolders] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('rw_mobile_folders_collapsed')) || {}; } catch (e) { return {}; }
+    });
+    const toggleFolder = (id) => setCollapsedFolders(prev => {
+        const next = { ...prev, [id]: !prev[id] };
+        try { localStorage.setItem('rw_mobile_folders_collapsed', JSON.stringify(next)); } catch (e) {}
+        return next;
+    });
+
     // v6.12.0 Phase 8 - section header to match desktop's Searches / Book Lists / Folders dividers
     // v1.5.0 - now a collapse toggle (leading chevron + label), matching all three sections
     const SectionHeading = ({ label, sectionKey }) => (
@@ -610,22 +620,31 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
     const renderFolder = (folder, depth = 0) => {
         const count = (folder.bookIds || []).length;
         const children = childrenOf(folder.id);
+        const hasChildren = children.length > 0;
+        const isCollapsed = !!collapsedFolders[folder.id];
         return (
             <div key={folder.id}>
-                <button
-                    onClick={() => onSelectFolder(folder.id)}
-                    className="w-full text-left py-2 px-3 flex items-center gap-2 text-sm"
-                    style={{
-                        paddingLeft: `${12 + depth * 16}px`,
-                        color: 'var(--text-primary, #1e293b)',
-                        touchAction: 'manipulation'
-                    }}
-                >
-                    <IconFolder />
-                    <span className="flex-1 truncate">{folder.name}</span>
-                    <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({count})</span>
-                </button>
-                {children.map(child => renderFolder(child, depth + 1))}
+                <div className="w-full flex items-center" style={{ paddingLeft: `${12 + depth * 16}px` }}>
+                    {hasChildren ? (
+                        <span onClick={(e) => { e.stopPropagation(); toggleFolder(folder.id); }}
+                            role="button" aria-label={isCollapsed ? 'Expand subfolders' : 'Collapse subfolders'}
+                            style={{ width: '22px', flexShrink: 0, textAlign: 'center', fontSize: '11px', color: 'var(--text-muted, #64748b)', cursor: 'pointer', padding: '8px 0', touchAction: 'manipulation' }}>
+                            {isCollapsed ? '▸' : '▾'}
+                        </span>
+                    ) : (
+                        <span style={{ width: '22px', flexShrink: 0 }} />
+                    )}
+                    <button
+                        onClick={() => onSelectFolder(folder.id)}
+                        className="flex-1 text-left py-2 pr-3 flex items-center gap-2 text-sm"
+                        style={{ color: 'var(--text-primary, #1e293b)', touchAction: 'manipulation' }}
+                    >
+                        <IconFolder />
+                        <span className="flex-1 truncate">{folder.name}</span>
+                        <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({count})</span>
+                    </button>
+                </div>
+                {hasChildren && !isCollapsed && children.map(child => renderFolder(child, depth + 1))}
             </div>
         );
     };
