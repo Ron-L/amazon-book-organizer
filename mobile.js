@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.4';
+const MOBILE_VERSION = '1.6.5';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -1583,8 +1583,8 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
     // v1.6.2 - icon per section (mirrors the drawer) = a color-independent identifier
     const SECTION_ICON = { search: '🔍', booklist: '📋', folder: '📁' };
     // v1.6.3 - solid accent per section = a pinned left "spine" so you know the section on every row
-    // v1.6.4 - softened (was fully saturated); coordinated with the tint hues
-    const SECTION_ACCENT = { search: '#6b9fe0', booklist: '#4dc49a', folder: '#e0ad55' };
+    // v1.6.5 - theme-aware CSS vars (softened; coordinated with the tint per theme, esp. dark)
+    const SECTION_ACCENT = { search: 'var(--section-accent-search)', booklist: 'var(--section-accent-booklist)', folder: 'var(--section-accent-folder)' };
     // v1.6.1 - Group consecutive shelves by section so each renders as ONE solid tinted band (no white
     // between rows), with breathing room between sections.
     const groups = [];

@@ -12,6 +12,10 @@
     --section-tint-booklist: rgba(16, 185, 129, 0.06);
     --section-tint-folder: rgba(245, 158, 11, 0.07);
     --section-heading-bg: #eceff3;
+    /* softened left-spine accents (coordinated with the tints above) */
+    --section-accent-search: #8fb8ea;
+    --section-accent-booklist: #6fc7a2;
+    --section-accent-folder: #e6bd6e;
     --bg-surface-alt: #f8fafc;
     --bg-elevated: #ffffff;
     --bg-input: #ffffff;
@@ -76,6 +80,10 @@
     --section-tint-booklist: rgba(52, 211, 153, 0.20);
     --section-tint-folder: rgba(251, 191, 36, 0.22);
     --section-heading-bg: #334155;
+    /* muted accents that align with the dark tints (not the bold light-mode hues) */
+    --section-accent-search: #5a86bd;
+    --section-accent-booklist: #46a381;
+    --section-accent-folder: #c39a4a;
     --bg-surface-alt: #1e293b;
     --bg-elevated: #334155;
     --bg-input: #1e293b;
