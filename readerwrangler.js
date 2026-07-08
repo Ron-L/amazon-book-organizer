@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.81";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.82";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13653,8 +13653,13 @@
                                                         <th className="p-2" style={{ width: '24px' }}></th>
                                                         <th className="p-2 w-12"></th>
                                                         <th className="p-2 font-medium text-sm cursor-pointer hover:bg-gray-100 select-none"
-                                                            title="Click to sort folders by name (A→Z / Z→A). To get back to Manual order, pick it from the Sort menu (▾) above or the ⇅ in the FOLDERS header."
-                                                            onClick={() => setFolderListSort(prev => ({ column: 'title', direction: prev.column === 'title' && prev.direction === 'asc' ? 'desc' : 'asc' }))}>
+                                                            title="Click to cycle folder sort: Name A→Z → Name Z→A → Manual order."
+                                                            onClick={() => setFolderListSort(prev => {
+                                                                // v6.12.0-alpha.82 - Cycle Manual → A→Z → Z→A → Manual, so the header alone reaches all 3 states.
+                                                                if (prev.column !== 'title') return { column: 'title', direction: 'asc' };
+                                                                if (prev.direction === 'asc') return { column: 'title', direction: 'desc' };
+                                                                return { column: 'custom', direction: 'asc' }; // Z→A → back to Manual
+                                                            })}>
                                                             Name {folderListSort.column === 'title' ? (folderListSort.direction === 'asc' ? '▲' : '▼') : ''}
                                                         </th>
                                                         <th className="p-2 text-right font-medium text-sm" style={{ width: '80px' }} title="Total books in this folder and all its subfolders">Books</th>
