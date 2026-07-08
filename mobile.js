@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.5.1';
+const MOBILE_VERSION = '1.5.2';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -603,13 +603,10 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
         try { localStorage.setItem(DRAWER_COLLAPSE_KEY, JSON.stringify(next)); } catch (e) {}
         return next;
     });
-    console.log('[drawer-debug] FolderDrawer render — collapsed=', collapsed, '| searches=', savedSearches?.length, 'bookLists=', bookLists?.length); // v1.5.1 TEMP
 
     // v6.12.0 Phase 8 - section header to match desktop's Searches / Book Lists / Folders dividers
     // v1.5.0 - now a collapse toggle (leading chevron + label), matching all three sections
-    const SectionHeading = ({ label, sectionKey }) => {
-        console.log('[drawer-debug] SectionHeading render:', label, '| collapsed=', collapsed[sectionKey]); // v1.5.1 TEMP
-        return (
+    const SectionHeading = ({ label, sectionKey }) => (
         <div onClick={() => toggleSection(sectionKey)} style={{
             padding: '10px 12px 4px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em',
             textTransform: 'uppercase', color: 'var(--text-muted, #64748b)',
@@ -619,8 +616,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
             <span style={{ fontSize: '13px', width: '14px', color: 'var(--text-secondary, #475569)' }}>{collapsed[sectionKey] ? '▶' : '▼'}</span>
             <span>{label}</span>
         </div>
-        );
-    };
+    );
 
     const renderFolder = (folder, depth = 0) => {
         const count = (folder.bookIds || []).length;
