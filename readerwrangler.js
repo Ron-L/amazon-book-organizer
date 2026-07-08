@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.77";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.78";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -13980,8 +13980,10 @@
                                                                 onDrop={(e) => {
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
+                                                                    console.log('🔎 [reorder-debug] LIST folder-row onDrop FIRED — types=', [...e.dataTransfer.types], 'target=', explorerFolderDragTarget); // v6.12.0-alpha.78 TEMP
                                                                     const rwItemsStr = e.dataTransfer.getData('application/x-rw-items');
                                                                     if (rwItemsStr) {
+                                                                        console.log('🔎 [reorder-debug] EARLY-RETURN via rwItems path (not reorder)'); // TEMP
                                                                         const { sourceFolder, itemIds } = JSON.parse(rwItemsStr);
                                                                         const target = explorerFolderDragTarget;
                                                                         if (target?.type === 'reparent' || !target) {
