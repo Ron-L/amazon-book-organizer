@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.78";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.79";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2267,7 +2267,6 @@
             // v5.0.0-alpha.90 - Changed to use targetFolderId + position instead of index
             // This fixes off-by-one issues when display order differs from getChildFolders order
             const reorderFoldersInParent = (parentId, folderIdsToMove, targetFolderId, position) => {
-                console.log('🔎 [reorder-debug] reorderFoldersInParent()', { parentId, folderIdsToMove, targetFolderId, position, sortCol: folderListSort.column }); // v6.12.0-alpha.77 TEMP
                 // v6.12.0-alpha.71 - Manual order only: when a sort (e.g. Name) is active, getChildFolders returns
                 // sorted (not stored) order, so a positional reorder would overwrite the real manual order. Block it.
                 if (folderListSort.column !== 'custom') {
@@ -2280,8 +2279,7 @@
 
                 // Find target index based on folder ID (not visual index)
                 let targetIndex = currentOrder.indexOf(targetFolderId);
-                console.log('🔎 [reorder-debug] currentOrder=', currentOrder, 'targetFolderId=', targetFolderId, 'targetIndex=', targetIndex); // TEMP
-                if (targetIndex === -1) { console.log('🔎 [reorder-debug] RETURN: targetFolderId not in currentOrder'); return; } // Target not found
+                if (targetIndex === -1) return; // Target not found
                 if (position === 'after') targetIndex++;
 
                 // Capture fromIndices BEFORE modifying (for undo)
@@ -2300,7 +2298,6 @@
                 remaining.splice(adjustedIndex, 0, ...orderedToMove);
 
                 // Update parent's childFolderIds (or create virtual parent tracking for root level)
-                console.log('🔎 [reorder-debug] applying reorder — parentId=', parentId, 'newOrder=', remaining); // TEMP
                 if (parentId) {
                     setFolders(prev => prev.map(folder => {
                         if (folder.id !== parentId) return folder;
@@ -13980,10 +13977,10 @@
                                                                 onDrop={(e) => {
                                                                     e.preventDefault();
                                                                     e.stopPropagation();
-                                                                    console.log('🔎 [reorder-debug] LIST folder-row onDrop FIRED — types=', [...e.dataTransfer.types], 'target=', explorerFolderDragTarget); // v6.12.0-alpha.78 TEMP
                                                                     const rwItemsStr = e.dataTransfer.getData('application/x-rw-items');
-                                                                    if (rwItemsStr) {
-                                                                        console.log('🔎 [reorder-debug] EARLY-RETURN via rwItems path (not reorder)'); // TEMP
+                                                                    // v6.12.0-alpha.79 FIX - a folder drag sets BOTH folder-reorder AND rw-items; for a 'reorder' target,
+                                                                    // skip the rw-items move path (it unconditionally returns) and fall through to the reorder code below.
+                                                                    if (rwItemsStr && explorerFolderDragTarget?.type !== 'reorder') {
                                                                         const { sourceFolder, itemIds } = JSON.parse(rwItemsStr);
                                                                         const target = explorerFolderDragTarget;
                                                                         if (target?.type === 'reparent' || !target) {
@@ -14009,13 +14006,10 @@
                                                                             reparentFolder(dragData.folderIds, target.folderId);
                                                                         } else if (target?.type === 'reorder') {
                                                                             // Reorder within same parent
-                                                                            console.log('🔎 [reorder-debug] LIST drop reorder branch', { canReorderFolders, dragParentId: dragData.parentId, parentForReorder, match: dragData.parentId === parentForReorder, targetFolder: folder.id, position: target.position, sortCol: folderListSort.column }); // v6.12.0-alpha.77 TEMP
                                                                             if (canReorderFolders) {
                                                                                 if (dragData.parentId === parentForReorder) {
                                                                                     // v5.0.0-alpha.90 - Pass folder.id and position (not visual index)
                                                                                     reorderFoldersInParent(parentForReorder, dragData.folderIds, folder.id, target.position);
-                                                                                } else {
-                                                                                    console.log('🔎 [reorder-debug] SKIPPED: dragData.parentId !== parentForReorder'); // TEMP
                                                                                 }
                                                                             } else if (selectedFolderId === '__all__') {
                                                                                 showToast("Folder reordering not available in All Books", e.clientX, e.clientY);
@@ -14730,7 +14724,8 @@
                                                             e.preventDefault();
                                                             e.stopPropagation();
                                                             const rwItemsStr = e.dataTransfer.getData('application/x-rw-items');
-                                                            if (rwItemsStr) {
+                                                            // v6.12.0-alpha.79 FIX - skip the rw-items move path for a 'reorder' target so it falls through to the reorder code below.
+                                                            if (rwItemsStr && explorerFolderDragTarget?.type !== 'reorder') {
                                                                 const { sourceFolder, itemIds } = JSON.parse(rwItemsStr);
                                                                 const target = explorerFolderDragTarget;
                                                                 // Reparent zone OR pure book drag (no zone detection needed — target is this folder)
