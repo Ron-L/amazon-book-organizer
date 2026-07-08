@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.75";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.76";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -697,6 +697,7 @@
             const [folderSortSettings, setFolderSortSettings] = useState({}); // v5.0.0-alpha.100 - Per-folder sort settings map {folderId: sort array}
             const [folderListSort, setFolderListSort] = useState({ column: 'custom', direction: 'asc' }); // v6.12.0-alpha.71 - single source of truth for folder order (Manual/Name...)
             const [folderSortMenuOpen, setFolderSortMenuOpen] = useState(false); // v6.12.0-alpha.71 - FOLDERS header sort dropdown
+            const [folderSortPickerOpen, setFolderSortPickerOpen] = useState(false); // v6.12.0-alpha.76 - right-pane Folders-view sort picker
             const [explorerGroupOn, setExplorerGroupOn] = useState(false); // v5.4.5 - Group toggle (dividers between sort groups)
             const [collapsedGroups, setCollapsedGroups] = useState(new Set()); // v5.4.5 - Collapsed group names
             const [explorerView, setExplorerView] = useState('list'); // 'list' | 'covers'
@@ -13265,6 +13266,32 @@
                                                     className="w-24 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                                                     title={`Cover width: ${explorerCoverCols}px`}
                                                 />
+                                            </div>
+                                        )}
+                                        {/* v6.12.0-alpha.76 - Folder-sort picker for the Folders view (Manual/Name), replacing the hidden book picker so Manual is selectable from the right pane too. All three controls (this, the ⇅ header, the Name column) share folderListSort. */}
+                                        {selectedFolderId === '__library__' && (
+                                            <div className="flex items-center gap-1 border-l pl-4 text-sm relative" data-folder-sort-picker="">
+                                                <button onClick={() => setFolderSortPickerOpen(o => !o)} className="flex items-center gap-1 hover:bg-gray-100 rounded px-1 py-0.5" style={{ fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer' }} title="Change folder sort">
+                                                    <span className="text-gray-500">Sort:</span>
+                                                    <span className="text-gray-700">{folderListSort.column === 'title' ? `Name ${folderListSort.direction === 'asc' ? '▲' : '▼'}` : 'Manual Order'}</span>
+                                                    <span className="text-gray-400 text-xs">▾</span>
+                                                </button>
+                                                {folderSortPickerOpen && (
+                                                    <>
+                                                        <div className="fixed inset-0 z-[59]" onClick={() => setFolderSortPickerOpen(false)} />
+                                                        <div className="absolute left-0 bg-white border border-gray-300 shadow-lg rounded py-1 z-[60] min-w-[170px]" style={{ top: '28px' }}>
+                                                            {[{ label: 'Manual Order', col: 'custom', dir: 'asc' }, { label: 'Name A→Z', col: 'title', dir: 'asc' }, { label: 'Name Z→A', col: 'title', dir: 'desc' }].map(opt => {
+                                                                const active = folderListSort.column === opt.col && (opt.col === 'custom' || folderListSort.direction === opt.dir);
+                                                                return (
+                                                                    <div key={opt.label} className={`px-3 py-1.5 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2 ${active ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
+                                                                        onClick={() => { setFolderListSort({ column: opt.col, direction: opt.dir }); setFolderSortPickerOpen(false); }}>
+                                                                        <span className="w-3">{active ? '✓' : ''}</span><span>{opt.label}</span>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         )}
                                         {/* Sort status display with picker dropdown (v5.5.0) */}
