@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.2';
+const MOBILE_VERSION = '1.6.3';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -693,7 +693,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
                     className="w-full text-left py-2 px-3 flex items-center gap-2 text-sm"
                     style={{ paddingLeft: '12px', color: 'var(--text-primary, #1e293b)', touchAction: 'manipulation' }}
                 >
-                    <span style={{ fontSize: '16px' }}>📄</span>
+                    <span style={{ fontSize: '16px' }}>📋</span>
                     <span className="flex-1 truncate">{bl.name}</span>
                     <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({(bl.bookIds || []).length})</span>
                 </button>
@@ -1581,7 +1581,9 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
     // Translucent overlays (work on any theme bg): blue = Searches, green = Book Lists, amber = Folders.
     const SECTION_TINT = { search: 'var(--section-tint-search)', booklist: 'var(--section-tint-booklist)', folder: 'var(--section-tint-folder)' };
     // v1.6.2 - icon per section (mirrors the drawer) = a color-independent identifier
-    const SECTION_ICON = { search: '🔍', booklist: '📄', folder: '📁' };
+    const SECTION_ICON = { search: '🔍', booklist: '📋', folder: '📁' };
+    // v1.6.3 - solid accent per section = a pinned left "spine" so you know the section on every row
+    const SECTION_ACCENT = { search: '#3b82f6', booklist: '#10b981', folder: '#f59e0b' };
     // v1.6.1 - Group consecutive shelves by section so each renders as ONE solid tinted band (no white
     // between rows), with breathing room between sections.
     const groups = [];
@@ -1597,7 +1599,8 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
             <div key={`grp-${group.section}-${gi}`} style={{
                 background: tint || 'transparent',
                 marginTop: gi === 0 ? 0 : '36px',
-                paddingBottom: tint ? '10px' : 0
+                paddingBottom: tint ? '10px' : 0,
+                borderLeft: SECTION_ACCENT[group.section] ? `5px solid ${SECTION_ACCENT[group.section]}` : 'none'
             }}>
                 {label && (
                     <div style={{
