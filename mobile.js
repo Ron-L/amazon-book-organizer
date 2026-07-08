@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.4.1';
+const MOBILE_VERSION = '1.5.0';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -593,13 +593,29 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
     const topLevel = folders.filter(f => !f.parentId && f.id !== '__inbox__');
     const childrenOf = (parentId) => folders.filter(f => f.parentId === parentId);
 
+    // v1.5.0 - Collapsible drawer sections (persisted per-device)
+    const DRAWER_COLLAPSE_KEY = 'rw_mobile_drawer_collapsed';
+    const [collapsed, setCollapsed] = useState(() => {
+        try { return JSON.parse(localStorage.getItem(DRAWER_COLLAPSE_KEY)) || {}; } catch (e) { return {}; }
+    });
+    const toggleSection = (key) => setCollapsed(prev => {
+        const next = { ...prev, [key]: !prev[key] };
+        try { localStorage.setItem(DRAWER_COLLAPSE_KEY, JSON.stringify(next)); } catch (e) {}
+        return next;
+    });
+
     // v6.12.0 Phase 8 - section header to match desktop's Searches / Book Lists / Folders dividers
-    const SectionHeading = ({ label }) => (
-        <div style={{
+    // v1.5.0 - now a collapse toggle (leading chevron + label), matching all three sections
+    const SectionHeading = ({ label, sectionKey }) => (
+        <div onClick={() => toggleSection(sectionKey)} style={{
             padding: '10px 12px 4px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em',
             textTransform: 'uppercase', color: 'var(--text-muted, #64748b)',
-            borderTop: '1px solid var(--border-default, #e2e8f0)', marginTop: '4px'
-        }}>{label}</div>
+            borderTop: '1px solid var(--border-default, #e2e8f0)', marginTop: '4px',
+            display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', touchAction: 'manipulation'
+        }} role="button" aria-expanded={!collapsed[sectionKey]} aria-label={`${collapsed[sectionKey] ? 'Expand' : 'Collapse'} ${label}`}>
+            <span style={{ fontSize: '9px', width: '10px' }}>{collapsed[sectionKey] ? '▶' : '▼'}</span>
+            <span>{label}</span>
+        </div>
     );
 
     const renderFolder = (folder, depth = 0) => {
@@ -652,8 +668,8 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
             </button>
 
             {/* Searches — saved filter presets, applied to All Books */}
-            {savedSearches && savedSearches.length > 0 && <SectionHeading label="Searches" />}
-            {(savedSearches || []).map(s => {
+            {savedSearches && savedSearches.length > 0 && <SectionHeading label="Searches" sectionKey="searches" />}
+            {!collapsed.searches && (savedSearches || []).map(s => {
                 const label = (s.name && s.name.trim()) ? s.name : searchChipsLabel(s.filters, tagRegistry);
                 const count = books.filter(b => bookMatchesFilters(b, s.filters)).length;
                 return (
@@ -670,8 +686,8 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
             })}
 
             {/* Book Lists — curated, supplemental */}
-            {bookLists && bookLists.length > 0 && <SectionHeading label="Book Lists" />}
-            {(bookLists || []).map(bl => (
+            {bookLists && bookLists.length > 0 && <SectionHeading label="Book Lists" sectionKey="bookLists" />}
+            {!collapsed.bookLists && (bookLists || []).map(bl => (
                 <button key={`bl-${bl.id}`}
                     onClick={() => onSelectFolder(`__booklist_${bl.id}__`)}
                     className="w-full text-left py-2 px-3 flex items-center gap-2 text-sm"
@@ -684,7 +700,8 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
             ))}
 
             {/* Folders */}
-            <SectionHeading label="Folders" />
+            <SectionHeading label="Folders" sectionKey="folders" />
+            {!collapsed.folders && <>
             {/* Inbox — unorganized books */}
             <button
                 onClick={() => onSelectFolder('__inbox__')}
@@ -726,6 +743,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
                     </p>
                 )}
             </div>
+            </>}
         </div>
     );
 }
