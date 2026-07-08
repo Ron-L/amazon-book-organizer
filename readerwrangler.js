@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.76";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.77";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2267,6 +2267,7 @@
             // v5.0.0-alpha.90 - Changed to use targetFolderId + position instead of index
             // This fixes off-by-one issues when display order differs from getChildFolders order
             const reorderFoldersInParent = (parentId, folderIdsToMove, targetFolderId, position) => {
+                console.log('🔎 [reorder-debug] reorderFoldersInParent()', { parentId, folderIdsToMove, targetFolderId, position, sortCol: folderListSort.column }); // v6.12.0-alpha.77 TEMP
                 // v6.12.0-alpha.71 - Manual order only: when a sort (e.g. Name) is active, getChildFolders returns
                 // sorted (not stored) order, so a positional reorder would overwrite the real manual order. Block it.
                 if (folderListSort.column !== 'custom') {
@@ -2279,7 +2280,8 @@
 
                 // Find target index based on folder ID (not visual index)
                 let targetIndex = currentOrder.indexOf(targetFolderId);
-                if (targetIndex === -1) return; // Target not found
+                console.log('🔎 [reorder-debug] currentOrder=', currentOrder, 'targetFolderId=', targetFolderId, 'targetIndex=', targetIndex); // TEMP
+                if (targetIndex === -1) { console.log('🔎 [reorder-debug] RETURN: targetFolderId not in currentOrder'); return; } // Target not found
                 if (position === 'after') targetIndex++;
 
                 // Capture fromIndices BEFORE modifying (for undo)
@@ -2298,6 +2300,7 @@
                 remaining.splice(adjustedIndex, 0, ...orderedToMove);
 
                 // Update parent's childFolderIds (or create virtual parent tracking for root level)
+                console.log('🔎 [reorder-debug] applying reorder — parentId=', parentId, 'newOrder=', remaining); // TEMP
                 if (parentId) {
                     setFolders(prev => prev.map(folder => {
                         if (folder.id !== parentId) return folder;
@@ -14004,10 +14007,13 @@
                                                                             reparentFolder(dragData.folderIds, target.folderId);
                                                                         } else if (target?.type === 'reorder') {
                                                                             // Reorder within same parent
+                                                                            console.log('🔎 [reorder-debug] LIST drop reorder branch', { canReorderFolders, dragParentId: dragData.parentId, parentForReorder, match: dragData.parentId === parentForReorder, targetFolder: folder.id, position: target.position, sortCol: folderListSort.column }); // v6.12.0-alpha.77 TEMP
                                                                             if (canReorderFolders) {
                                                                                 if (dragData.parentId === parentForReorder) {
                                                                                     // v5.0.0-alpha.90 - Pass folder.id and position (not visual index)
                                                                                     reorderFoldersInParent(parentForReorder, dragData.folderIds, folder.id, target.position);
+                                                                                } else {
+                                                                                    console.log('🔎 [reorder-debug] SKIPPED: dragData.parentId !== parentForReorder'); // TEMP
                                                                                 }
                                                                             } else if (selectedFolderId === '__all__') {
                                                                                 showToast("Folder reordering not available in All Books", e.clientX, e.clientY);
