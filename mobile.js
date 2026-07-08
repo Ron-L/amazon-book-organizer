@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.1';
+const MOBILE_VERSION = '1.6.2';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -1580,6 +1580,8 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
     // v1.6.0 - subtle per-section hue so each group is identifiable at a glance on the long overview.
     // Translucent overlays (work on any theme bg): blue = Searches, green = Book Lists, amber = Folders.
     const SECTION_TINT = { search: 'var(--section-tint-search)', booklist: 'var(--section-tint-booklist)', folder: 'var(--section-tint-folder)' };
+    // v1.6.2 - icon per section (mirrors the drawer) = a color-independent identifier
+    const SECTION_ICON = { search: '🔍', booklist: '📄', folder: '📁' };
     // v1.6.1 - Group consecutive shelves by section so each renders as ONE solid tinted band (no white
     // between rows), with breathing room between sections.
     const groups = [];
@@ -1599,10 +1601,15 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
             }}>
                 {label && (
                     <div style={{
-                        padding: '6px 16px', borderTop: '1px solid var(--border-default, #e2e8f0)',
-                        fontFamily: 'var(--font-heading)', fontSize: '12px', fontWeight: 700,
-                        textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted, #94a3b8)'
-                    }}>{label}</div>
+                        padding: '7px 16px', borderTop: '1px solid var(--border-default, #e2e8f0)',
+                        background: 'var(--section-heading-bg)',
+                        fontFamily: 'var(--font-heading)', fontSize: '13px', fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-secondary, #475569)',
+                        display: 'flex', alignItems: 'center', gap: '8px'
+                    }}>
+                        <span style={{ fontSize: '15px' }}>{SECTION_ICON[group.section]}</span>
+                        <span>{label}</span>
+                    </div>
                 )}
                 {group.shelves.map((shelf, si) => (
                     <Shelf
