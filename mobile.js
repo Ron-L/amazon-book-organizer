@@ -1110,7 +1110,7 @@ function CoverCard({ book, coverUrlMap, blankImageBooks, setBlankImageBooks, onT
 
 // --- Shelf component ---
 
-function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapTitle, onTapBook, onTapSeries, onTapShowAll, onShowLess }) {
+function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapTitle, onTapBook, onTapSeries, onTapShowAll, onShowLess, isShelfCollapsed, onToggleShelf }) {
     const scrollRef = useRef(null);
     const [labelBars, setLabelBars] = useState([]);
     const [scrollMetrics, setScrollMetrics] = useState({ thumbWidth: 0, thumbLeft: 0, trackWidth: 0, visible: false });
@@ -1267,6 +1267,13 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                     fontSize: '15px', fontWeight: 700,
                     color: 'var(--text-primary, #1e293b)'
                 }}>
+                    {onToggleShelf && (
+                        <span onClick={(e) => { e.stopPropagation(); onToggleShelf(); }}
+                            role="button" aria-label={isShelfCollapsed ? 'Expand shelf' : 'Collapse shelf'}
+                            style={{ display: 'inline-block', width: '14px', marginRight: '4px', fontSize: '12px', color: 'var(--text-muted, #94a3b8)', cursor: 'pointer' }}>
+                            {isShelfCollapsed ? '▸' : '▾'}
+                        </span>
+                    )}
                     {title}
                     {onTapTitle && <span style={{ marginLeft: '6px', color: 'var(--text-secondary)', display: 'inline-flex', verticalAlign: 'middle' }}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
@@ -1292,6 +1299,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                     <span style={{ fontSize: '13px', color: 'var(--text-muted, #94a3b8)' }}>({count})</span>
                 </span>
             </div>
+            {!isShelfCollapsed && (
             <div>
               <div style={{ position: 'relative' }}>
                 <div ref={scrollRef} className="shelf-scroll" style={{
@@ -1394,6 +1402,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
                 </div>
               )}
             </div>
+            )}
         </div>
     );
 }
@@ -1401,6 +1410,16 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
 // --- Dashboard component ---
 
 function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves, collapsed, toggleSection }) {
+    // v1.6.10 - per-shelf collapse on the Dashboard (folder shelves), Dashboard-local + persisted
+    const [collapsedShelves, setCollapsedShelves] = useState(() => {
+        try { return JSON.parse(localStorage.getItem('rw_mobile_shelves_collapsed')) || {}; } catch (e) { return {}; }
+    });
+    const toggleShelf = (id) => setCollapsedShelves(prev => {
+        const next = { ...prev, [id]: !prev[id] };
+        try { localStorage.setItem('rw_mobile_shelves_collapsed', JSON.stringify(next)); } catch (e) {}
+        return next;
+    });
+
     const filteredBooks = useMemo(() => {
         return filterBooks(books, { showDealsOnly, showHidden });
     }, [books, showDealsOnly, showHidden]);
@@ -1672,6 +1691,8 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
                         onTapSeries={onTapSeries}
                         onTapShowAll={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.add(shelf.folderId); return next; }) : null}
                         onShowLess={shelf.folderId ? () => setExpandedShelves(prev => { const next = new Set(prev); next.delete(shelf.folderId); return next; }) : null}
+                        isShelfCollapsed={shelf.folderId ? !!collapsedShelves[shelf.folderId] : false}
+                        onToggleShelf={shelf.folderId ? () => toggleShelf(shelf.folderId) : null}
                     />
                 ))}
             </div>
