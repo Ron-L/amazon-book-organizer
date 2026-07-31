@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.9';
+const MOBILE_VERSION = '1.6.10';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // Clear emergency reset timer — app code loaded successfully
@@ -602,10 +602,19 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
         try { localStorage.setItem('rw_mobile_folders_collapsed', JSON.stringify(next)); } catch (e) {}
         return next;
     });
+    // v1.6.10 - collapse/expand ALL subfolders at once (matches the desktop left pane's collapse-all)
+    const foldersWithChildren = folders.filter(f => childrenOf(f.id).length > 0).map(f => f.id);
+    const anyFolderExpanded = foldersWithChildren.some(id => !collapsedFolders[id]);
+    const collapseAllFolders = () => {
+        const next = {};
+        foldersWithChildren.forEach(id => { next[id] = anyFolderExpanded; });
+        setCollapsedFolders(next);
+        try { localStorage.setItem('rw_mobile_folders_collapsed', JSON.stringify(next)); } catch (e) {}
+    };
 
     // v6.12.0 Phase 8 - section header to match desktop's Searches / Book Lists / Folders dividers
     // v1.5.0 - now a collapse toggle (leading chevron + label), matching all three sections
-    const SectionHeading = ({ label, sectionKey }) => (
+    const SectionHeading = ({ label, sectionKey, extra }) => (
         <div onClick={() => toggleSection(sectionKey)} style={{
             padding: '10px 12px 4px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em',
             textTransform: 'uppercase', color: 'var(--text-muted, #64748b)',
@@ -614,6 +623,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
         }} role="button" aria-expanded={!collapsed[sectionKey]} aria-label={`${collapsed[sectionKey] ? 'Expand' : 'Collapse'} ${label}`}>
             <span style={{ fontSize: '13px', width: '14px', color: 'var(--text-secondary, #475569)' }}>{collapsed[sectionKey] ? '▶' : '▼'}</span>
             <span>{label}</span>
+            {extra && <span style={{ marginLeft: 'auto' }} onClick={(e) => e.stopPropagation()}>{extra}</span>}
         </div>
     );
 
@@ -717,7 +727,16 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
 
             {/* Folders */}
             <div style={{ borderLeft: '4px solid var(--section-accent-folder)', background: 'var(--section-tint-folder)' }}>
-            <SectionHeading label="Folders" sectionKey="folders" />
+            <SectionHeading label="Folders" sectionKey="folders" extra={
+                !collapsed.folders && foldersWithChildren.length > 0 ? (
+                    <span onClick={collapseAllFolders} role="button"
+                        aria-label={anyFolderExpanded ? 'Collapse all subfolders' : 'Expand all subfolders'}
+                        title={anyFolderExpanded ? 'Collapse all subfolders' : 'Expand all subfolders'}
+                        style={{ fontSize: '15px', lineHeight: 1, color: 'var(--text-muted, #64748b)', cursor: 'pointer', padding: '0 4px' }}>
+                        {anyFolderExpanded ? '⊟' : '⊞'}
+                    </span>
+                ) : null
+            } />
             {!collapsed.folders && <>
             {/* Inbox — unorganized books */}
             <button
