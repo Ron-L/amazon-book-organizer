@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.87";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.88";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2981,8 +2981,11 @@
                         const savedFolders = localStorage.getItem(FOLDERS_KEY);
                         let loadedFolders = savedFolders ? JSON.parse(savedFolders) : [];
 
-                        // v6.12.0 - Load Book Lists (read before first await, mirroring folders, so the
-                        // save-effect's initial empty write can't clobber persisted data)
+                        // v6.12.0-alpha.88 - Book Lists now persist INSIDE the guarded organization blob (with
+                        // folders/searches). This standalone-key read is the ONE-TIME MIGRATION source for installs
+                        // that predate the move: it seeds bookLists, then the blob restore below overrides it once
+                        // the blob actually carries them. (Kept as a read only — the unguarded writer was removed,
+                        // it was stamping [] on mount and permanently erasing all lists on a cold-boot race.)
                         const savedBookLists = localStorage.getItem(BOOKLISTS_KEY);
                         const loadedBookLists = savedBookLists ? JSON.parse(savedBookLists) : [];
 
@@ -3069,6 +3072,12 @@
                                     }
                                     setSavedSearches(loadedViews);
                                     setFolders(loadedFolders); // v5.0.0
+                                    // v6.12.0-alpha.88 - Book Lists now live in the blob (like folders/searches).
+                                    // Override the early BOOKLISTS_KEY migration read ONLY when the blob actually
+                                    // carries them; absent = an install not yet migrated, so the early read stands.
+                                    if (Array.isArray(state.organization.bookLists)) {
+                                        setBookLists(state.organization.bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] })));
+                                    }
                                     setDataSource(state.organization.dataSource || 'enriched');
                                     effectiveLastSync = state.lastSyncTime || Date.now();
                                     setLastSyncTime(effectiveLastSync);
@@ -3124,7 +3133,8 @@
                                 blankImageBooks: Array.from(blankImageBooks),
                                 hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
                                 tagRegistry,  // v4.27.0 - Tag registry
-                                savedSearches  // v6.10.0-alpha.16 - Saved filter views
+                                savedSearches,  // v6.10.0-alpha.16 - Saved filter views
+                                bookLists: bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }))  // v6.12.0-alpha.88 - Book Lists now share the guarded blob (single resilient source; retired the fragile standalone key)
                             },
                             lastSyncTime: lastSyncTime || Date.now(),
                             savedAt: Date.now()
@@ -3134,7 +3144,7 @@
                         console.warn('Could not auto-save organization:', e);
                     }
                 }
-            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches]);
+            }, [syncStatus, folders, blankImageBooks, dataSource, lastSyncTime, hiddenInstances, tagRegistry, savedSearches, bookLists]);
 
             // v6.0.0 Phase 2 - Debounced device-state push to relay for cross-device sync.
             // v6.12.0-alpha.58 - Debounce raised 15s → 60s AND flush-on-leave (blur / tab hidden / pagehide).
@@ -3385,10 +3395,13 @@
                 localStorage.setItem(FOLDERS_KEY, JSON.stringify(folders));
             }, [folders]);
 
-            // v6.12.0 - Save Book Lists to localStorage (mirrors folder persistence)
-            useEffect(() => {
-                localStorage.setItem(BOOKLISTS_KEY, JSON.stringify(bookLists));
-            }, [bookLists]);
+            // v6.12.0-alpha.88 - Book Lists are persisted via the GUARDED organization blob above (alongside
+            // folders/searches), NOT a standalone key. The old unguarded BOOKLISTS_KEY save-effect wrote [] on
+            // mount — before the async load populated state — and on a cold boot where IndexedDB returned no
+            // books the restore was skipped, so that [] stuck: every Book List erased with no fallback (folders
+            // survived only because they were ALSO in the blob). The blob's syncStatus/books guard prevents any
+            // pre-load write, and the blob is a resilient second source. BOOKLISTS_KEY is now read-once on load
+            // as a one-time migration source (see the load effect); its writer is intentionally gone.
 
             // v5.0.0-alpha.175.2 - Close menus on outside click, close dialogs on ESC
             // v5.0.0-alpha.175.4 - Extended to close filter dropdowns
