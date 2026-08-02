@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.88";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.89";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1585,11 +1585,13 @@
             // v6.6.0 - Track Ctrl key state globally for reliable Ctrl+Drag detection
             // e.ctrlKey in drag/drop events is unreliable on Windows/Chrome
             useEffect(() => {
-                const onKeyDown = (e) => { if (e.key === 'Control') ctrlKeyRef.current = true; };
-                const onKeyUp   = (e) => { if (e.key === 'Control') ctrlKeyRef.current = false; };
+                const onKeyDown = (e) => { if (e.key === 'Control') { ctrlKeyRef.current = true; console.log('🐛[drag-debug] Ctrl DOWN → ctrlKeyRef=true'); } };
+                const onKeyUp   = (e) => { if (e.key === 'Control') { ctrlKeyRef.current = false; console.log('🐛[drag-debug] Ctrl UP → ctrlKeyRef=false'); } };
+                const onBlur    = () => { if (ctrlKeyRef.current) console.log('🐛[drag-debug] window BLUR while ctrlKeyRef=true (keyup may be missed → stuck)'); };
+                window.addEventListener('blur', onBlur);
                 window.addEventListener('keydown', onKeyDown);
                 window.addEventListener('keyup', onKeyUp);
-                return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); };
+                return () => { window.removeEventListener('keydown', onKeyDown); window.removeEventListener('keyup', onKeyUp); window.removeEventListener('blur', onBlur); };
             }, []);
 
             // Get folder by ID (handles All Books and My Library virtual folders)
@@ -5595,6 +5597,7 @@
             }, [isEditingBook]);
 
             const recordAction = (action) => {
+                console.log('🐛[drag-debug] recordAction:', action?.type, '| action.isCopy=', action?.isCopy, '| ctrlKeyRef=', ctrlKeyRef.current, '| explorerIsCopyDragRef=', explorerIsCopyDragRef.current);
                 setUndoStack(prev => {
                     const newStack = [...prev, { ...action, timestamp: Date.now() }];
                     if (newStack.length > MAX_UNDO) newStack.shift();
