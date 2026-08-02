@@ -24,7 +24,7 @@ The bug class is: a field is added, but one of these sites isn't updated.
 |---|------|---------------|-----------|
 | S1 | Live auto-save (organization) | readerwrangler.js `useEffect` ~L2900, `STORAGE_KEY` | state → localStorage |
 | S2 | Live folder save | readerwrangler.js ~L3151, `FOLDERS_KEY` | state → localStorage |
-| S3 | Live book-list save | readerwrangler.js effect, `BOOKLISTS_KEY` | state → localStorage |
+| S3 | ~~Live book-list save~~ **RETIRED (alpha.88)** — now persisted via S1 (blob); `BOOKLISTS_KEY` read-once as migration source | readerwrangler.js | state → localStorage |
 | S4 | Book write/merge | storage.js `saveBooksToIndexedDB` ~L38 | state/import → IndexedDB |
 | S5 | Backup export | readerwrangler.js `exportData` builder ~L4283 | state → file |
 | S6 | Device-state payload | readerwrangler.js `buildDeviceStatePayload` ~L4234 | state → relay device-state |
@@ -129,7 +129,7 @@ Stored folder objects carry only persistent fields; counts are computed
 | Field | Live store | In backup (S5)? | In STORAGE_KEY (S1)? | Restore (S9) behavior |
 |-------|-----------|-----------------|----------------------|-----------------------|
 | `folders` | FOLDERS_KEY **and** STORAGE_KEY | ✅ | ✅ (double-stored) | restore-if-present; relay import reads STORAGE_KEY copy |
-| `bookLists` | BOOKLISTS_KEY only | ✅ | ❌ (not in STORAGE_KEY) | restore-if-present |
+| `bookLists` | **STORAGE_KEY** (alpha.88; BOOKLISTS_KEY read-once for migration) | ✅ | ✅ | restore-if-present |
 | `savedSearches` | STORAGE_KEY | ✅ | ✅ | restore-if-present (+ position offset) |
 | `tagRegistry` | STORAGE_KEY | ✅ | ✅ | restore-if-present |
 | `blankImageBooks` | STORAGE_KEY | ✅ | ✅ | restore-if-present |
@@ -145,10 +145,16 @@ Stored folder objects carry only persistent fields; counts are computed
   Relay import restores from the STORAGE_KEY copy; normal load reads FOLDERS_KEY.
   This split is exactly what made #3 subtle (one copy kept `sortIndex`, one
   dropped it). Candidate: single source of truth.
-- **F2 — bookLists is NOT in STORAGE_KEY.organization** (only its own key + the
-  backup). If a future relay-import path ever rebuilds from STORAGE_KEY org,
-  book lists would be invisible to it. Today it's saved by its own effect, so OK,
-  but the asymmetry with folders is a trap.
+- **F2 — bookLists was NOT in STORAGE_KEY.organization.** ✅ **RESOLVED (alpha.88).**
+  This trap sprung (2026-08-02 reboot data loss): the standalone `BOOKLISTS_KEY`
+  writer was *unguarded* and wrote `[]` on mount before the async load populated
+  state; on a cold boot where IndexedDB returned no books the restore (gated behind
+  `books.length>0`) was skipped, so the empty write stuck and **every Book List was
+  erased with no fallback** — folders survived only because they were double-stored.
+  Fixed by making `bookLists` a first-class member of the guarded STORAGE_KEY blob
+  (like `savedSearches`), restored on load only when the blob carries them, and
+  retiring the unguarded writer. `BOOKLISTS_KEY` is now read-once as a one-time
+  migration source. The folder double-store (F1) remains the last asymmetry.
 - **F3 — The book rename map is triplicated** (S5/S6/S7 forward, S8 inverse).
   Four hand-kept copies of the same internal↔external mapping. Prime Tier-2 target.
 - **F4 — `hidden` vs `isHidden` mismatch in the merge.** ✅ **RESOLVED (alpha.30).**
