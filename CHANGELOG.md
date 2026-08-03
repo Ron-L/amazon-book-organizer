@@ -42,6 +42,11 @@ The largest release yet: a ground-up rework of how you organize your library —
 ### Library refresh (bookmarklet)
 - More complete refreshes: blank books Amazon returns are recovered, series name and number are recovered from the title for dead editions, and true ownership is detected from purchase history. Prices now come only from a book's Kindle edition (never a hardcover/paperback fallback), and a stale "$0" is cleared when a book has no Kindle option.
 
+## [6.11.10] - 2026-06-16
+
+### Fixed
+- **Production outage from Babel 8 (CDN dependency)** — The app loads `@babel/standalone` unpinned from unpkg, which began serving the newly-released Babel 8.0.0. Babel 8's React preset defaults to the automatic JSX runtime, emitting `import {jsx} from "react/jsx-runtime"` into the transformed output — an ES import in a non-module script, which threw "Cannot use import statement outside a module" and prevented the app from loading. Pinned Babel to `@7.29.7` (classic JSX runtime). No application code changed.
+
 ## [6.11.9] - 2026-06-08
 
 ### Added

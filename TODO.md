@@ -90,6 +90,27 @@ See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for ful
    - Add `title` + `aria-label` per established voice (concise, no jargon, what + why)
    - Impact: Discoverability of the collections-to-tags workflow — currently a hidden gem
 
+   **6f. Demo-whitelist footgun guard** - MEDIUM/LOW (~1-2 hours) — added 2026-06-15
+   - The demo whitelist (`readerwrangler-demo-whitelist-enabled` on amazon.com localStorage) is DESTRUCTIVE: it filters existing books down to the whitelist AND re-uploads only those to the relay, silently shrinking the real library. Cost a real scare (2624 → 119) when leftover demo state stayed enabled.
+   - Guard: fetcher should warn loudly / require confirmation before uploading a library dramatically smaller than what's on the relay (e.g., "About to replace 2624 books on relay with 119 — continue?")
+   - Make the active-whitelist banner unmissable (currently just a console line `🔒 Demo whitelist active`)
+   - Pre-launch: ensure no demo-whitelist state can ship; document the off-switch prominently (DEMO-LIBRARY-PLAN.md:100)
+
+   **6g. User-facing "Force full re-fetch" / clear relay library** - MEDIUM/LOW (~2 hours) — added 2026-06-15
+   - Incremental fetch is anchored to the relay's existing library and stops at first overlap; if the relay holds a partial/wrong set, there is NO user-facing way to force a complete re-fetch (currently requires `window.RWRelay.cleanup()` in DevTools).
+   - Add an app/Relay-Setup affordance: "Rebuild library from Amazon (full re-fetch)" that clears the relay library so the next fetch pulls ALL books.
+   - Pairs with 6f — together they prevent and recover from the shrink-to-demo trap.
+   - Related: Priority 6 "Relay Disconnect / Reset" (credentials reset is a separate gap).
+
+   **6h. Pin ALL CDN dependencies to exact versions** - LOW/LOW (~1 hour) — added 2026-06-16
+   - Caused a PROD OUTAGE 2026-06-16: `@babel/standalone` was unpinned; unpkg's latest flipped to Babel 8.0.0, whose react preset defaults to the automatic JSX runtime (emits `import {jsx} ...`) → "Cannot use import statement outside a module" → app wouldn't load. Hotfixed in 6.11.10 by pinning Babel to `@7.29.7`.
+   - Remaining unpinned/floating CDN deps in readerwrangler.html:
+     - React / ReactDOM: `@18` (floats within 18.x — pin to an exact 18.x)
+     - Tailwind: `https://cdn.tailwindcss.com` (evergreen Play CDN, currently v3; can't be version-pinned the normal way — Tailwind explicitly says Play CDN is dev-only). Real fix = precompile CSS (see Priority 6 "Improve Load Time Experience").
+     - qrcodejs: already pinned `@1.0.0` ✓
+   - **The durable fix is the precompile build step** (Priority 6) — it removes the in-browser Babel AND Tailwind CDN entirely. Pinning is the interim safety net.
+   - Audit other HTML entry points too (index.html, reset.html, etc.) for unpinned CDN tags.
+
    See post-mortems/ for the full thread on each. Automated test suite (also a recurring recommendation) is parked in Priority 6 — too large for pre-launch.
 
 ---
@@ -190,12 +211,17 @@ _Agreed 2026-07-02 while organizing the live library. A coherent batch of series
 
 ### 🚀 Priority 6: Post-Launch Internal Improvements
 
-**1. 🔔 Credential Mismatch Detection** - LOW/LOW (1-2 hours)
-   - Restoring a backup with different relay credentials leaves the bookmarklet out of sync (it still has the old channelId/passphrase in amazon.com localStorage)
-   - The app and bookmarklet can't communicate cross-domain to detect this
-   - **Fix**: After backup restore, compare relay credentials before/after. If changed, show toast: "Your relay credentials changed. Reinstall the bookmarklet from File → Relay Setup."
-   - The app knows credentials changed; it can't fix the bookmarklet but can tell the user
-   - Future: bookmarklet could ping `/status/{channelId}` before fetching and warn on 403/404
+**1. 🔔 Relay Credential Mismatch — safe restore** - MEDIUM/LOW (2-3 hours) — refined 2026-06-15
+   - **Problem:** a backup includes relay credentials (channelId + passphrase). Restore silently OVERWRITES the app's current creds. If the app was paired to a different channel than the backup, the installed bookmarklet no longer matches the app → fetches go to one channel, app reads another (books appear to vanish). Real scare 2026-06-15 (compounded by the demo whitelist).
+   - **Why creds are in the backup (keep them):** device migration — restoring on a new computer/browser adopts the channel so the EXISTING bookmarklet keeps working without re-pairing. This is the legitimate use case, so don't remove creds from backups.
+   - **Why cross-detection can't work:** app and bookmarklet are different origins (can't read each other's localStorage), and relay channels are isolated (a mismatched pair can't see each other through the relay). The ONLY reliable detection point is the restore operation, where the app momentarily holds both current creds and the backup's creds.
+   - **Fix — compare on restore:**
+     - App has no creds (fresh / migration) → adopt backup's silently (bookmarklet already matches)
+     - Backup creds == current → adopt silently (no-op)
+     - Backup creds ≠ current → **PROMPT: Keep current** (default, recommended — matches your installed bookmarklet) vs **Use backup's**
+   - **"Use backup's" branch:** adopt the backup's creds AND render the matching bookmarklet inline (reuse the Relay Setup generator). Wording: *"Delete the existing bookmark and then drag this bookmarklet to your bar."* — delete FIRST (avoids two-bookmarklet confusion); say "existing" not "old" (a restore can go newer→older, making "old" ambiguous). The existing bookmarklet can be right-clicked → delete while the dialog is open (confirmed 2026-06-15).
+   - **Note:** channel ID only decides which relay bucket app+bookmarklet share — not the book set. Keeping current creds never costs books; a re-fetch tops up recent books on the current channel.
+   - Future: bookmarklet could ping `/status/{channelId}` before fetching and warn on 403/404 (separate revoked-channel case, not mismatch).
 
 **2. 🔌 Relay Disconnect / Reset** - LOW/LOW (1 hour)
    - Relay Setup has no way to intentionally disconnect or reset credentials
@@ -251,6 +277,30 @@ _Agreed 2026-07-02 while organizing the live library. A coherent batch of series
    - Its point (folder organization vs. Amazon's wall of covers) still lands, so this is cosmetic only — no rush
    - Recapture the "after" screenshot once the Book Lists/Searches redesign has shipped
    - Files: index.html before/after slider images
+
+**6. 🏷️ Wishlist fetcher — capture real book format (binding)** - LOW/MEDIUM (~2 hours) — added 2026-06-16
+   - `amazon-wishlist-fetcher.js` extracts NO binding (a series card doesn't expose format), so non-Kindle wishlist adds arrive with no format.
+   - App side already fixed in v6.12.0: suppress the false `'Kindle eBook'` default for wishlist books (shows the real format if enrichment provides it, else nothing) — so paperbacks no longer *claim* Kindle.
+   - Remaining enhancement: in the fetcher, fetch the product page for the added ASIN and extract `bindingInformation` (Paperback/Hardcover/Kindle) so the format is correct immediately, not only after enrichment. Cost: one extra product-page request per wishlist add.
+   - Also: existing mis-bound books keep `'Kindle eBook'` until re-enriched — a one-time re-fetch corrects them.
+
+**7. ⚡ (OPTIONAL) Relay delta-append for cheap incremental sync** - MEDIUM/HIGH — added 2026-06-16
+   - Today any relay-library change (e.g. the add-to-wishlist bookmarklet) does a full client-side read-modify-write: download + decrypt the ENTIRE encrypted library, append, re-encrypt + upload. ~7s for a ~2,600-book library; cost ∝ library size per change.
+   - Server-side append is IMPOSSIBLE by design: the relay is end-to-end encrypted (`relay-crypto.js`); the Cloudflare worker only sees ciphertext and can't decrypt to append.
+   - Delta model (E2E-compatible): upload each change as its own small encrypted item; clients (app + mobile) read base + deltas and merge by ASIN (last-write-wins). Cost ∝ 1 book per change.
+   - Costs/complexity: relay worker must store/list multiple items per channel; merge logic in BOTH app and mobile; periodic compaction (fold deltas back into base = an occasional full upload) so deltas don't grow unbounded; the library fetcher must understand/compact deltas too.
+   - OPTIONAL: 7s is bearable today. Revisit when libraries get large, or alongside the precompile/perf work.
+
+**8. 💬 Book detail dialog — add tooltips** - LOW/LOW (~1 hour) — added 2026-06-16
+   - The book detail dialog's fields/controls have no tooltips. Especially **Collections**: explain that collections come from Amazon and are set on a Kindle device (read-only here), mirroring the filter-bar Collections tooltip and File › Tag from Collections.
+   - Audit all dialog controls (edit fields, ownership toggle, price-goal chips, series dropdown, share, etc.) in the established tooltip voice. Pairs with the broader tooltip audits (Priority 4 #6d/#6e).
+
+**9. 📥 Metadata import (paste-list / CSV) + matching** - MEDIUM/HIGH — added 2026-06-16
+   - Full design: [docs/design/Metadata-Import.md](docs/design/Metadata-Import.md)
+   - Tier 1: paste an ordered title list → auto-number by line → set series position. Tier 2: CSV (Title/ASIN, Series, SeriesNum, Tags, MyRating, ReadStatus, Note) → match → apply.
+   - Match by title (normalized) or ASIN, with a review step (matched/ambiguous/unmatched). Unmatched = a "missing books" report the user copies and adds via the wishlist bookmarklet (app can't auto-add — wrong domain).
+   - Tier 2 is the engine for Goodreads/StoryGraph import (Priority 11 third-party integrations).
+   - NOTE: the no-matching common case already shipped — the "Number in reading order" wizard (v6.12.0).
 
 ---
 
