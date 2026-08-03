@@ -1,5 +1,12 @@
 # Editable Series and Series Position
 
+> **SUPERSEDED / ARCHIVED (2026-08-03).** The dedicated **Series Manager** dialog (Phase 2 below) was
+> descoped as redundant. Series editing is fully covered today by: Edit Series/Position in the book dialog
+> (Phase 1, shipped v5.4.6); multi-select "edit series name" for bulk rename + merge-duplicates
+> ("Destroyer" + "The Destroyer" → one); "Number by current order" and "Order by series position" (planned);
+> sort-by-series for discovering fragmentation; and the Auto-Organize wizard. The one thing the proposed
+> table view offered — a series overview — is substituted by sort-by-series. Kept for history.
+
 ## Overview
 
 Allow users to edit series metadata (name and position) for individual books, and manage series library-wide through a dedicated Series Manager. Includes removal of redundant "Group Series Books" button.
