@@ -1,496 +1,95 @@
 # TODO
 
-## Prioritized Roadmap (By Priority & Complexity)
-
-_Based on user requirements + Claude.ai independent review (CLAUDE-AI-REVIEW.md)_
-
----
-
-### 📖 Priority 4: Launch Documentation & Onboarding
-
-See [docs/design/DEMO-LIBRARY-PLAN.md](docs/design/DEMO-LIBRARY-PLAN.md) for full checklist.
-
-**1. 📚 Book Lists / Searches / Folders Redesign** - HIGH/HIGH — design complete 2026-06-15
-   - Full spec: [docs/design/BookLists-Searches-Redesign.md](docs/design/BookLists-Searches-Redesign.md)
-   - Replaces the overloaded "Views" concept with three honest sidebar categories: All Books (standalone), Searches (saved live queries), Book Lists (curated static), Folders (unchanged)
-   - "Collections" stays reserved for Amazon Kindle Collections; the new curated concept is "Book Lists"
-   - Hidden grab handles removed → one visible "Save these results…" control (save as Search, save as Book List, or add to existing)
-   - Load-bearing: custodial-vs-supplemental invariant; snapshot-before-delete so Trash/Undo rebuild the full placement set
-   - **Pre-launch blocker** — invalidates Tutorial 1 (Scene 6 Tags & Views); user cannot re-record
-   - On implementation, align: features.html, README.md (+ index.html mirror), USER-GUIDE.md, sizzle reel + tutorial scripts (docs/design/VIDEO-PRODUCTION-GUIDE.md), in-app help/tooltips, CHANGELOG
-   - Build dev-first per workflow
-   - Note: landing-page before/after screenshot refresh is tracked separately as a post-launch item (Priority 6)
-
-**2. 🎬 Training Videos, Site Restructure & Docs** - HIGH/HIGH (40-60 hours) — **IN PROGRESS**
-   - ⚠️ DECISION (2026-06-15): Tutorial 1 will NOT be re-recorded. Instructional weight moves to the Custom GPT (item 4), which now replaces Tutorials 1–8. Only the sizzle reel remains as video — after its script is updated for Book Lists/Searches.
-   - Delete 3 obsolete design docs (ENHANCED-GETTING-STARTED-UX, VIDEO-PRODUCTION-PLAN, BOOK-EXPLORER-VIDEO-SCENARIOS)
-   - Create VIDEO-PRODUCTION-GUIDE.md — sizzle reel + 8 tutorial video scripts, scene prep, production setup
-   - Restructure index.html → slim landing page (hook → convert)
-   - Create tutorials.html — video tutorial hub (sizzle reel + 8 videos embedded)
-   - Create features.html — feature deep-dive, version history, competitive positioning
-   - Add "Watch Tutorials" to app Help menu
-   - Capture updated before/after screenshots
-   - Record and produce sizzle reel only (Tutorials 1–8 → Custom GPT, item 4); update sizzle script for Book Lists/Searches first
-   - README.md diverges from index.html (GitHub audience only)
-
-**3. 📋 FAQ Page** - LOW/LOW (2-3 hours)
-   - Create faq.html — answers to common questions
-   - Link from: Help menu, README, features.html footer, tutorials.html footer
-   - Sections: Security/Privacy, Data/Backup, Troubleshooting, Library, General
-   - Include: relay revocation, encryption explanation, moving to new computer, bookmarklet troubleshooting (including blank-tab limitation), stale data, physical books, multi-browser, pricing
-
-**4. AI-Powered User Support via Custom GPT — Create a shareable Custom GPT as an interactive help resource, replacing tutorial videos 2–8
-   - Pre-load with ReaderWrangler documentation (README, user guide, etc.) as knowledge files
-   - Set system instructions to scope it as a ReaderWrangler support assistant
-   - Add link to Help menu in the app so users land directly in a ready-to-go ChatGPT session
-   - Works with free tier ChatGPT accounts — no setup required from users
-   - Evaluate Claude Projects equivalent if/when shareable project links become available
-
-   **Build notes + manual set (2026-07-03 discussion):**
-   - **Cost model:** a Custom GPT hosted on ChatGPT bills *you* ~$0/user — users chat on their own ChatGPT quota; your only cost is a ~$20/mo authoring seat (to create/edit, not per user). Alternative = embed a chat widget via the AI API with our own key → we pay per use, but support Q&A is cheap (~$0.001–0.02/question; ~$0.02–0.40 to onboard a new user; pennies/mo steady). Verify current pricing + free-tier terms at build time — they shift.
-   - **Framing (honest):** the model is rented and identical whether we host it or a user DIYs (pastes our docs into any chatbot). Our value is convenience / scoping / freshness / consistency — NOT a differentiator. The **real asset is the docs**; they serve humans, the assistant, and DIY users equally. Write the manual for humans first; the GPT is a cheap hat bolted on later.
-   - **Knowledge-file format:** retrieval (RAG) works on chunks, so favor **self-contained, well-headed sections** and **question-shaped FAQ entries** (best match for user questions). Plain language, define terms, include the alternate phrasings users actually type.
-   - **Manual set** (mostly repurposed Phase 9 docs): (1) Getting Started / first-run; (2) Fetching — bookmarklet + relay, *highest support volume*; (3) organizing mental model — Folders / Book Lists / Searches / Collections, "when to use which" (the USER-GUIDE lead); (4) how-to recipes (FAQ-shaped); (5) Backup & Restore; (6) Sync & devices; (7) Troubleshooting; (8) Privacy & Security. **New high-leverage additions:** (9) **Glossary**; (10) **"What ReaderWrangler is NOT / current limits"** — the single best hallucination-killer (explicit not-yet-features list). Plus **system instructions** (persona/scope: cite the docs, admit uncertainty, never invent features).
-
-**5. 📋 Disaster Recovery Documentation** - LOW/LOW (1-2 hours)
-   - Document relay credential recovery paths
-   - Document backup files include relay credentials
-   - Problem: Users have no guidance for recovering from data loss
-   - Impact: Confidence that data is recoverable
-
-**6. 🔧 Pre-Launch Follow-Ups from PM Synthesis (2026-06-07)** - MIXED (sized below)
-   - Items flagged across multiple post-mortems but never addressed during normal release work. Audit found "Recommendations for Future" tends to recur unaddressed unless given a dedicated session.
-
-   **6a. `integrity-homeless` investigation** - MEDIUM/MEDIUM (2-4 hours)
-   - Real user fired `integrity-homeless` GoatCounter event in v6.11.5 (carried forward in v6.11.6 PM)
-   - DATA-INTEGRITY.md: homeless = books in IndexedDB no folder references; should NOT happen on a fresh import
-   - Three candidate causes per v6.11.5 PM: (a) import bug writing to IndexedDB without updating Inbox bookIds, (b) race between integrity check and import completion, (c) user action between fetch and import
-   - Impact: Bug affecting at least one real user; affects launch confidence
-
-   **6b. v4 → v5 feature parity audit** - MEDIUM/MEDIUM (3-5 hours)
-   - Flagged in v5.0.6, v5.0.7, v5.0.8 PMs — never executed; 4-time recommendation that didn't happen during normal release work
-   - 6 v5.0.x patch releases were cleanup bugs from v5.0.0's BookExplorer rewrite; suggests more may still be hiding
-   - Method: walk v4 features, verify each exists in v6 with parity (or document why intentionally dropped)
-   - Impact: Find missing features before users do
-
-   **6c. `console.log` audit** - LOW/LOW (1-2 hours)
-   - ~70 statements remain (per v6.10.0 PM)
-   - Decide which to keep (real diagnostics), gate behind a `DEBUG` flag, or remove
-   - Impact: Cleaner DevTools console for users who open it
-
-   **6d. ✅ Tooltip inventory & audit** — shipped v6.11.9 (2026-06-08)
-   - Systematic audit of 155 interactive UI elements
-   - 19 new tooltips added (7 mobile + 12 desktop)
-   - aria-label added to mobile icon buttons for touch accessibility (title doesn't render on touch in modern Chrome)
-   - Did NOT audit Tag from Collections wizard — see 6e below
-
-   **6e. Tooltip audit — Tag from Collections wizard** - LOW/LOW (~1 hour) — added 2026-06-08
-   - Inventory agent (v6.11.9 audit) deferred this area as a separate pass
-   - Walk the entire Tag from Collections wizard (all steps): collection list, checkboxes, "New books only" filter, "Removed from Kindle" handling, action buttons
-   - Add `title` + `aria-label` per established voice (concise, no jargon, what + why)
-   - Impact: Discoverability of the collections-to-tags workflow — currently a hidden gem
-
-   **6f. Demo-whitelist footgun guard** - MEDIUM/LOW (~1-2 hours) — added 2026-06-15
-   - The demo whitelist (`readerwrangler-demo-whitelist-enabled` on amazon.com localStorage) is DESTRUCTIVE: it filters existing books down to the whitelist AND re-uploads only those to the relay, silently shrinking the real library. Cost a real scare (2624 → 119) when leftover demo state stayed enabled.
-   - Guard: fetcher should warn loudly / require confirmation before uploading a library dramatically smaller than what's on the relay (e.g., "About to replace 2624 books on relay with 119 — continue?")
-   - Make the active-whitelist banner unmissable (currently just a console line `🔒 Demo whitelist active`)
-   - Pre-launch: ensure no demo-whitelist state can ship; document the off-switch prominently (DEMO-LIBRARY-PLAN.md:100)
-
-   **6g. User-facing "Force full re-fetch" / clear relay library** - MEDIUM/LOW (~2 hours) — added 2026-06-15
-   - Incremental fetch is anchored to the relay's existing library and stops at first overlap; if the relay holds a partial/wrong set, there is NO user-facing way to force a complete re-fetch (currently requires `window.RWRelay.cleanup()` in DevTools).
-   - Add an app/Relay-Setup affordance: "Rebuild library from Amazon (full re-fetch)" that clears the relay library so the next fetch pulls ALL books.
-   - Pairs with 6f — together they prevent and recover from the shrink-to-demo trap.
-   - Related: Priority 6 "Relay Disconnect / Reset" (credentials reset is a separate gap).
-
-   **6h. Pin ALL CDN dependencies to exact versions** - LOW/LOW (~1 hour) — added 2026-06-16
-   - Caused a PROD OUTAGE 2026-06-16: `@babel/standalone` was unpinned; unpkg's latest flipped to Babel 8.0.0, whose react preset defaults to the automatic JSX runtime (emits `import {jsx} ...`) → "Cannot use import statement outside a module" → app wouldn't load. Hotfixed in 6.11.10 by pinning Babel to `@7.29.7`.
-   - Remaining unpinned/floating CDN deps in readerwrangler.html:
-     - React / ReactDOM: `@18` (floats within 18.x — pin to an exact 18.x)
-     - Tailwind: `https://cdn.tailwindcss.com` (evergreen Play CDN, currently v3; can't be version-pinned the normal way — Tailwind explicitly says Play CDN is dev-only). Real fix = precompile CSS (see Priority 6 "Improve Load Time Experience").
-     - qrcodejs: already pinned `@1.0.0` ✓
-   - **The durable fix is the precompile build step** (Priority 6) — it removes the in-browser Babel AND Tailwind CDN entirely. Pinning is the interim safety net.
-   - Audit other HTML entry points too (index.html, reset.html, etc.) for unpinned CDN tags.
-
-   See post-mortems/ for the full thread on each. Automated test suite (also a recurring recommendation) is parked in Priority 6 — too large for pre-launch.
+> **This file is FUTURE work only.** Check items `- [x]` as you finish them; **delete all checked
+> items at each release** (the release checklist does the CHANGELOG sweep first). The past lives in
+> **CHANGELOG.md**, design rationale in **docs/design/**, retrospectives in **post-mortems/**.
+>
+> When you promote/descope an item, **move** it — never leave a stub. When you agree a bug/task
+> mid-session, file a one-line `- [ ]` before moving on.
 
 ---
 
-### 🗂️ Priority 4.5: Pre-Release Organization Polish (Series & Book Lists)
-
-_Agreed 2026-07-02 while organizing the live library. A coherent batch of series/book-list ergonomics + context-menu completeness to finish before launch. **Locked scope** — do this, then Phase 9._
-
-**1. 🖱️ Context-menu completeness** — bundle these two (same code area):
-   - ✅ **"Add to Book List →" context-menu target** (books) — DONE (alpha.53–54). Supplemental/**copy** semantics, NOT move. Submenu = existing lists + "New Book List…" + "Remove from this list" when viewing a list. (alpha.54 also fixed Book List create/delete undo across all sites, and cleaned the dead 0-book guard.)
-   - **Right-click folder context menu in the right pane** (promoted from Priority 6.3). Match the left-pane folder menu (Rename, Delete, New Subfolder…); mixed book+folder selection shows the intersection of ops.
-
-**2. 🔢 Series numbering ergonomics**
-   - **Reorder a Book List by series position** — a one-shot reorder command, NOT a persistent sort (which would defeat manual ordering). Sets the sequence once; user hand-tweaks after.
-   - **Comma-separated series-position multi-edit** — the multi-select "edit series position" dialog accepts explicit values ("2, 4") mapped to the selected books in **display order**. Handles ownership gaps that "renumber by current order" can't (own 2 & 4, not 3 → want 2 and 4, not 2 and 3). Show the target order; reject a count mismatch.
-
-**3. 📚 Close out Series Manager (was Priority 7.7) via the multi-select toolkit**
-   - The needed actions already exist as multi-select ops: move-together (group), edit series name (rename/merge), + the two numbering tools above. No dedicated "Manage Series" dialog.
-   - Discovery substitute for the dropped overview table: **sort by series** surfaces fragmentation (e.g. `Destroyer`/`The Destroyer`).
-
-**4. 🖱️ Rectangle/Lasso selection** (promoted from Priority 6.4) — click-drag a selection rectangle in cover view; extends the existing unified selection model (`explorerSelectedItems`).
-
-**5. 🛟 Restore safeguard (data-loss prevention)** — agreed after Book Lists vanished on 2026-07-02.
-   - Restore defaults to EXACT state. But if a restore would **delete** Book Lists or Searches that currently exist, stop and ask — never silent (extends "no silent drops" to org data).
-   - Offer **per-category** (Book Lists / Searches): keep / discard / cancel. Additive-preserve, not field-merge — backup items restore as-is; your *extra* lists carry over.
-   - If merging and the backup has different books, append them to the **end of the manual sort order** (predictable).
-
-**6. 🧪 Post-B testing follow-ups (2026-07-03):**
-   **▶ CURRENT ORDER (2026-07-04):** ✅ done: 0 dedup (alpha.55), A (alpha.56), G+F (alpha.57).
-   NEXT: (a) **TEST alpha.57** (G+F) → (b) **item 7 debounce** → (c) **4 = B** → (d) **5 = E** → (e) **6 = D**.
-   0. 🧹 **Dedup folder `bookIds` (Inbox double-add)** — transient duplicate seen: same book id rendered twice in a filtered Inbox after a double relay-import (select-one-checks-both; cleared on reload). Root: one add path (import→Inbox merge) skipped the dedup that move/paste already do; folder membership IS a set. Fix at source (dedup the import→Inbox add) **plus** a load-time normalization guaranteeing every folder's `bookIds` is unique. Not masking — enforcing an existing invariant (this class bit before: the removed Inbox collector, ~L3271).
-   1. **A — hover popup also shows Book Lists** a book is on (currently shows only its folders).
-   2. **G — drag-reorder Book Lists** (they carry `position`; drag just isn't wired like folders).
-   3. **F — jump to end of the left panel** (a "scroll to bottom" affordance; list is long — Inbox top ↔ newest folder bottom).
-   4. **B — stronger "a filter is active" signal** — counts already flip N→N/N; make the `N/N` stand out (light canary/amber background), noticeable without an error-red alarm.
-   5. **E — "New Folder…" in Move/Copy** (parallels "New Book List"), via inline **"＋ New folder here…"** entries in the Move/Copy folder tree (root = new top-level, per-node = new subfolder) for discoverable nesting; optional `A/B` slash shortcut in the name prompt.
-   6. **D — folder "Move to Top / Move to Bottom"** context items, AND fix the bug where **"Move to: <folder>" then dragging back to top level restores a stale prior position** (only Move-to leaves the memory; direct drag works).
-   - (C — "get books out of Inbox → use a folder, not a Book List" — is manual/GPT content, captured on the Custom GPT item, not code.)
-
-**7. 💸 Relay write economics (Cloudflare free-tier) — before PUBLIC launch:**
-   - Real data 2026-07-03: one ~2.5h organizing session = **495 / 1,000 KV writes** — and that daily cap is **SHARED across ALL users** (one Cloudflare account), not per-user. Storage ~**40 MB/user** → ~25 users fills the 1 GB free tier. (My earlier "50–100 free users" was off ~20–50× for the onboarding-organizing burst.)
-   - **Root cause:** the device-state push (readerwrangler.js ~L3100) is debounced only **15s**, so active organizing (natural >15s pauses) fires `putDeviceState` ~3–4×/min → ~500 writes/session. Not per-action — per-pause.
-   - **Fix:** raise the debounce (e.g., 60s) AND flush on **tab blur / visibilitychange / beforeunload** instead of periodic ticking — cuts writes ~15–50×. Optional manual "Sync now." (Watch the tradeoff: longer debounce = staler cross-device sync + more to lose on crash; the flush-on-blur/close covers most of it, and the beforeunload warning already exists.)
-   - **Then** revisit the free-vs-paid launch plan with real numbers (Workers Paid ~$5/mo ≈ ~1M writes/month — *verify current limits*). Also consider trimming the device-state payload size if it carries full book data it doesn't need.
-
-**8. 📦 Fetcher ownership/recovery follow-ups (2026-07-05):**
-   - ✅ **v4.11.8**: ownership now derived from `pastPurchase` + "Read Now" (sample/wishlist → purchased); recovery sweep fires on **any** count mismatch (a surplus was hiding 11 missing owned books). Restored a user's 11 permanently-deleted-then-repurchased books.
-   - ⚠️ The Phase-4 ownership-**upgrade** path is logically verified but **never fired positively** in testing (Amazon "caught up" — updated the library node to Purchase — so recovery captured them first). **Needs a live positive test**: catch a genuinely-still-Sample-but-purchased book at fetch time and confirm the `⬆️` log + the upgrade.
-   - The recovery **sweep now runs on every incremental fetch** (a standing surplus defeats the count-based skip). **Stage 2:** reconcile the full ASIN *sets* — ideally FOLD the sweep into the orphan scan (which already does one full Amazon pass), so it's a single scan and also covers the exact-count-with-offsetting-errors case.
-   - App **merge (storage.js)** edge fix, still worthwhile, low priority: when a fresh download upgrades a book to purchased, take the new ownership + date **and un-trash it** (for a book sitting in Trash, not permanent-deleted).
-   - Cosmetic: the run summary's "Successfully enriched: 85/11 (772%)" ratio is nonsense (enriched-count / new-count).
-
-**9. 🗣️ Live-use feedback + robustness backlog (2026-07-05)** — from Ron's organizing sessions.
-
-   **Quick wins (Low effort — batch before D / E-part-2):**
-   - **Search also matches Series** (not just title/author). One-line change to the search predicate.
-   - New Folder / New Book List dialog: **pre-select the default name** so typing replaces it (`autoFocus` + `select()`).
-   - **"Group" button tooltip**: state the grouping is TEMPORARY (Ron feared it would undo his hierarchy).
-   - **Move/Copy folder tree**: order folders by **left-pane (manual) order**, not raw array order. (Fold into E.)
-   - **Add to Book List** submenu: verify it lists in left-pane order (already sorts by `position` — confirm after a drag-reorder).
-
-   **🐛 Bug (fix promptly — data integrity):**
-   - **Rating set on hover** — hovering the stars in the book dialog commits the rating. Must *preview* on hover, *commit* only on click.
-
-   **Fold into existing items:**
-   - Right-click **blank space in the right pane** → New (Sub)folder → bundle with **6.3**.
-   - **Sort left-panel folders** (e.g. by author) then bake into manual order — same "reorder-by-X → now manual" pattern as the series tools / **D**. (Also investigate: new folders insert alphabetical-ish into a non-alpha list.)
-   - 🐛 **Drag subfolder → root ignores drop position:** dragging a subfolder out to the root *just before its prior parent* correctly moves it to root, but drops it **near the bottom (alphabetical-ish)** instead of at the drop target. Same folder-positioning family as **D** (stale-position on move) and the alphabetical-ish insert above — likely a shared root cause in how root-level order/position is assigned on move. Fix together.
-   - 🎯 **DECIDED — Folder-ordering model (2026-07-07):** unify folder order as "**one list, one order**" shared by the left pane, the right-pane Folders view, and the Move/Copy tree. **Full-mirror**: the sidebar reflects whatever sort the folder list is in (Manual, Name, Size/count, Date…), NOT the current view's `explorerSort` (today the sidebar order bleeds from whatever view you're in — an existing inconsistency this fixes). Requirements: (a) add a **sort control on the left-pane `FOLDERS` header** exposing the **full** set of folder sorts, so no order is right-pane-only and the right-pane view is undiscoverable-without-loss; (b) **drag-reorder only in Manual**, else a toast (same rule as dragging books in a sorted view); (c) **Manual order preserved** across sort excursions (data model already stores it — `sortIndex` on root folders, `childFolderIds` on parents), enabling "**sort by name → bake to Manual**"; (d) **Move/Copy tree mirrors** the same order (proper #6 fix — supersedes the partial alpha.63 change, which used raw `folders` order and is a no-op in Manual mode); (e) **fix the Folders tooltip** (currently claims unconditionally you can reorder). This is **the** folder-ordering piece — folds in **#5** (alphabetize + bake), **#6** (Move/Copy order), and **D** (Move to Top/Bottom + stale-position + drag-to-root bugs). Build as one coherent effort, not piecemeal.
-     - 🔗 **Generalize to all left-pane sections (DECIDED 2026-07-07):** Folders is currently the odd case only in that its order bleeds from `explorerSort`; but the *management-view + ordering* pattern should be **uniform across Folders, Views (`__views__`), and Book Lists (`__booklists__`)**. Today Folders & Views have navigable right-pane management views; **Book Lists is just a sidebar section header with no view**. So: (1) build the ordering as a generic "**orderable left-pane section**" (one list, one order, header sort control, drag-in-Manual-only) and apply it to all three; (2) **add a Book Lists management view** (right pane shows all Book Lists as rows — name, count — reorderable/sortable), reached by clicking "Book Lists", mirroring Folders/Views; (3) the Book Lists sort mirrors to that view **and** the "Add to Book List" submenu order. Book Lists are flat (no nesting) so they're simpler; Views already reorders by `position` (mostly done). Main new build = the Book Lists management view. Solve ordering once, apply everywhere.
-   - Drag **list→list = MOVE** (Ctrl = copy); folder→list stays copy. Needs the drag to carry its *source list*. → book-lists polish.
-   - Auto-Organize: aggregate co-authors so all Backman land under Backman = already **Priority 7.8**.
-   - 📱 **Collapsible left-pane sections — uniform across all 3, both platforms (2026-07-08):** Ron wished he could collapse the Searches group on **mobile**. Today desktop collapses **Searches** (`viewsSectionCollapsed`) and **Book Lists** (`bookListsSectionCollapsed`) via ▶/▼, but **Folders has no whole-section collapse** (only ▲ "collapse all folders" = tree depth), and **mobile lacks section-collapse**. So: **(1)** add a whole-section collapse for **Folders** (the odd one out); **(2)** bring section-collapse to the **mobile** drawer for all three. **DESIGN DECIDED:** the Folders section-collapse is a **separate control from ▲ Collapse-All-Folders — NOT a cycle** (they're orthogonal: section *visibility* vs tree *depth*; cycling conflates them and breaks cross-section uniformity). Put the section **▼/▶ chevron in the same leading position/style** as Searches/Book Lists so "collapse section" is recognizably the same control everywhere; keep ▲/⇅/+ as trailing Folders-specific tools; **hide ▲ when the section is collapsed**. Persist collapse state (likely per-device). **V:H (mobile especially — scarce vertical space; real-use friction) / E:L-M.**
-   - 🏷️ **FINAL — Terminology: "shortcuts" + "Linked Copies" (2026-07-07):** Book List items = **"shortcuts"** (deletable pointers; the book stays). Folder items = **"Linked Copies"** — explain ONCE in the manual, then just **"Copies"** (edits propagate across all, co-equal, no primary). Rejected "shortcut for folders" (implies a primary + soft-links) and "Magic Copies" (gimmicky); "Linked" chosen over "Synchronized" (no sync-*process* connotation). **Scope (Ron confirmed): the folder "Copy"/"Copy to" UI is already correct — leave it.** The actual work: **(1)** introduce **"shortcut"** language in **Book List toasts + menus** (e.g. delete-from-list → "remove shortcut", add → "add shortcut"); **(2)** explain **"Linked Copies"** once in the manual/GPT. **Anchor model for the manual:** *All Books is where the book truly lives; Folders hold Linked Copies of it; Book Lists hold shortcuts to it. Delete a copy → out of that folder; delete a shortcut → off that list; the book survives in All Books until trashed.* Do in Phase 9 / a focused copy pass.
-   - 📖 **Doc note — Book List ↔ Folder workflow pattern (for user guide / support GPT):** Ron's real usage: author/series *structure* lives in **Folders** (with hierarchy, e.g. `New To Read/Old Free Stuff` for dubious early-Kindle freebies); reading-order/"to-read" *queues* live in **Book Lists** (`<Series> — To Read`; delete the shortcut as each is finished). Two equivalent flows: (a) file in a folder now + put a shortcut on a "New To Read" list up-front, or (b) keep in a staging folder and move to `Various Authors` once read. Folders give sub-category hierarchy that Book Lists can't. Teach this as the canonical organizing pattern.
-
-   **✨ Delete from All Books (spec'd, agreed 2026-07-05):**
-   - Enable delete in All Books = **soft-delete to Trash, removing from ALL folders + Book Lists at once** (reuse the existing membership snapshot for restore). Confirm dialog discloses the folder/list count.
-   - Confirm copy: *"Moved to Trash. Stays hidden across fetches; emptying Trash lets owned books reappear."* (The Trash `isDeleted` OR-merge in `storage.js` is what suppresses trashed books across re-fetches.)
-
-   **Backlog — bigger design items (agreed):**
-   - 🪦 **Tombstone delete (durable purge + smart resurrect):** "empty Trash" writes a **lean tombstone `{asin, emptiedAt}`** (not the full record) that suppresses the book everywhere. On import, resurrect only if the incoming **purchase/add date > emptiedAt** — use `pastPurchase.lastOrderDate` / `addedToWishlist`, NOT the stale node `relationshipCreationDate`. Add a **"Purged" management view** (restore / forget). Fixes empty-trash→re-appear at the root. **V:H / E:M.** Needs careful test cases (delete→refetch stays gone; delete→rebuy resurrects; wishlist re-add resurrects).
-   - 🧱 **Relay write redesign** (unifies atomic-write + app-owned-key + wishlist-delta — build once, coherently). Root problem: relay corruption is a torn **multi-key** write (chunks + manifest left inconsistent when a write is interrupted — e.g. window closed mid Add-to-Wishlist; CRC then fails on read). Three composing layers:
-     1. **Wishlist adds → append-only delta, not full-library RMW.** The bookmarklet writes a tiny `wishlist-pending` key (`[{asin,title,addedAt}]`): a single **atomic** KV put (no torn chunks), cheap (1 write vs a full multi-chunk rewrite), and it never touches the library key (kills the bookmarklet-vs-app clobber race). The **app folds the delta into the library on Import**, then clears it.
-     2. **App's library write → copy-on-write commit pointer.** New chunks under **versioned keys**, flip the **manifest LAST** as the single atomic commit (a single KV put IS atomic). Interrupted-before-commit → last-good generation fully intact; **keep the prior generation for auto-rollback** if a write verifies bad. This makes the remaining heavy write (now only in the app) crash-safe if WR is closed mid-fold.
-     3. **Lossless ordering:** fold → write library (atomic commit) → verify → **only then clear the delta.** If WR closes mid-fold, the delta survives and **re-applies next import** (idempotent) — no lost adds, library untouched. Net: **no corruption window at any layer.**
-     Also: on a CRC read failure, surface *"relay corrupt — run Download Library to rebuild"* instead of a raw error. Debounce on the bookmarklet (localStorage queue, flush on click/`pagehide`) is a cheap, now-safe add-on once writes are tiny/atomic. **Why app-owned data forces this:** the fetcher regenerates only OWNED books — it does **not** re-fetch wishlists (Ron's 273 survived only via local copy + orphan-preservation in `storage.js`); folders, Book Lists, tags, notes, read-status are likewise the relay's sole durable copy besides local, so they especially warrant the versioned/atomic treatment. **V:H / E:M.** (Tombstone delete above is a separate concern.)
-   - 🗂️ **Edit Kindle collections from WR** — add/remove books to/from existing collections via an intent-queue on the relay + a MYCD editor bookmarklet that resolves collection IDs live and POSTs to `/hz/mycd/ajax`. Add/Remove API payloads captured; collection IDs already in WR's data (`amazon-collections-fetcher.js` stores `{id,name}`). Builds on the relay write redesign (same journal→bookmarklet-applies pattern). Full design: [docs/design/COLLECTION-EDITING.md](docs/design/COLLECTION-EDITING.md). MVP = add/remove existing collections; defer create/delete. **V:H / E:M-L.**
-
----
-
-### 🚀 Priority 5: Launch
-
-**1. Launch**
-   - COMMUNITY-SHARING-PLAN.md
-
----
-
-### 🚀 Priority 6: Post-Launch Internal Improvements
-
-**1. 🔔 Relay Credential Mismatch — safe restore** - MEDIUM/LOW (2-3 hours) — refined 2026-06-15
-   - **Problem:** a backup includes relay credentials (channelId + passphrase). Restore silently OVERWRITES the app's current creds. If the app was paired to a different channel than the backup, the installed bookmarklet no longer matches the app → fetches go to one channel, app reads another (books appear to vanish). Real scare 2026-06-15 (compounded by the demo whitelist).
-   - **Why creds are in the backup (keep them):** device migration — restoring on a new computer/browser adopts the channel so the EXISTING bookmarklet keeps working without re-pairing. This is the legitimate use case, so don't remove creds from backups.
-   - **Why cross-detection can't work:** app and bookmarklet are different origins (can't read each other's localStorage), and relay channels are isolated (a mismatched pair can't see each other through the relay). The ONLY reliable detection point is the restore operation, where the app momentarily holds both current creds and the backup's creds.
-   - **Fix — compare on restore:**
-     - App has no creds (fresh / migration) → adopt backup's silently (bookmarklet already matches)
-     - Backup creds == current → adopt silently (no-op)
-     - Backup creds ≠ current → **PROMPT: Keep current** (default, recommended — matches your installed bookmarklet) vs **Use backup's**
-   - **"Use backup's" branch:** adopt the backup's creds AND render the matching bookmarklet inline (reuse the Relay Setup generator). Wording: *"Delete the existing bookmark and then drag this bookmarklet to your bar."* — delete FIRST (avoids two-bookmarklet confusion); say "existing" not "old" (a restore can go newer→older, making "old" ambiguous). The existing bookmarklet can be right-clicked → delete while the dialog is open (confirmed 2026-06-15).
-   - **Note:** channel ID only decides which relay bucket app+bookmarklet share — not the book set. Keeping current creds never costs books; a re-fetch tops up recent books on the current channel.
-   - Future: bookmarklet could ping `/status/{channelId}` before fetching and warn on 403/404 (separate revoked-channel case, not mismatch).
-
-**2. 🔌 Relay Disconnect / Reset** - LOW/LOW (1 hour)
-   - Relay Setup has no way to intentionally disconnect or reset credentials
-   - Add a "Disconnect Relay" or "Reset Credentials" option in the Relay Setup dialog
-   - Use case: re-pair after a passphrase exposure, switch relay channels, or intentionally go offline
-   - On confirm: clear `relay.channelId` and `relay.passphrase` from localStorage and app state
-   - Normal users never need this, but the gap is real (currently requires DevTools to clear)
-
-**3. 📂 Right-Click Menu for Folders in Right Pane** - LOW/LOW (2-3 hours)  → **PROMOTED to Priority 4.5** (bundled with the "Add to Book List" context-menu work)
-   - Right-clicking a folder in the right pane has no context menu (books do)
-   - Should match left-pane folder context menu (Rename, Delete, New Subfolder, etc.)
-   - Mixed selection (books + folders): show intersection of applicable operations (Windows Explorer pattern)
-     - Common ops (Move to, Copy to, Delete, Cut, Copy) — apply to all
-     - Book-only ops (Tags, Share, Note) — hidden or apply only to books in selection
-     - Folder-only ops (Rename) — only if single folder, no books selected
-
-**4. 🖱️ Rectangle/Lasso Selection** - LOW/MEDIUM (3-4 hours)  → **PROMOTED to Priority 4.5**
-   - Click and drag in cover view to draw a selection rectangle around books/folders
-   - Standard desktop behavior (Windows Explorer, macOS Finder)
-   - Extends existing unified selection model (explorerSelectedItems)
-
-**4. 🏷️ Deferred Desktop Polish** - LOW/LOW (2-3 hours)
-   - Left pane keyboard navigation: Up/Down arrow, Left/Right collapse/expand, Home/End
-   - ~~Desktop Mode escape hatch~~ ✅ v6.0.0-alpha.18 — Interstitial in readerwrangler.html shows "Return to Mobile Mode" / "Continue in Desktop Mode" before loading any app code. Uses sessionStorage to lock mode per tab session.
-   - Directional shadow consistency with mobile cover view
-
-**4b. ✅ Deferred Mobile Polish** — DONE in Phase 8b (verified 2026-07-02 against mobile.js)
-   - ~~Subfolder shown twice on Dashboard folder shelves~~ ✅ series no longer render a redundant folder tile — the tile and floating label bar were unified ([mobile.js](mobile.js#L1191) ~L1191).
-   - ~~Scroll slider on overflowing non-expanded shelves~~ ✅ slider now shows whenever a row overflows, not only when expanded ([mobile.js](mobile.js#L1125) ~L1125), and lives in its own zone below the row so it no longer collides with the amber series-label bar ([mobile.js](mobile.js#L1306) ~L1306).
-
-**3. Improve Load Time Experience** - MEDIUM/LOW-MEDIUM (2-4 hours)
-   - Current: ~14s app load. Babel in-browser JSX compilation (~3-8s) and Tailwind JIT scan (~1-3s) account for most of it. React render + IndexedDB load is only ~1-3s.
-   - Console warnings (dev-only, users don't see): Tailwind CDN "not for production", Babel "precompile your scripts", Babel "deoptimised styling" (skips formatting for files >500KB — cosmetic, no functional impact)
-   - **Option A: Pre-compile (eliminates warnings, fastest load)**
-     - Step 1 (Babel): `npx babel readerwrangler.js --presets=@babel/preset-react -o dist/readerwrangler.js`. Load `dist/readerwrangler.js` as regular `<script>` instead of `type="text/babel"`. Remove Babel CDN.
-     - Step 2 (Tailwind): `npx tailwindcss -i input.css -o dist/styles.css --content "readerwrangler.js,readerwrangler.html"`. Swap Tailwind CDN for `<link>` to generated CSS.
-     - Prerequisite: Node.js (already installed for scripts/)
-     - **Trade-off: Introduces a build step.** Every JS/CSS edit requires re-running the build before deploy. Options: local `build.bat` (manual, risk of forgetting), GitHub Actions (auto on push, adds CI complexity), or pre-commit hook (auto on commit, slows commits).
-     - **Trade-off: Transparency.** Source files are no longer what's served. Pre-compiled output is readable (not minified) but shows `React.createElement()` instead of JSX. Mitigate with "View Source on GitHub" link.
-     - Estimated load time: ~5-8s (Step 1 only) or ~3-5s (both steps)
-   - **Option B: Splash screen with personality (no build step, same load time)**
-     - Add a themed loading screen in `readerwrangler.html` with rotating messages while Babel/Tailwind/React load
-     - Examples: "Shelving your library...", "Alphabetizing the chaos...", "Dusting off the spines..."
-     - Pure HTML/CSS, zero build step, hides when app mounts
-     - Turns the 14s wait into a branded experience instead of a blank page
-     - Can be combined with Option A for even better UX
-   - Note: User loads the page once per session, so this is a one-time cost per use
-   - Problem: 14s initial load is noticeable, especially for first-time users
-   - Impact: Option A reduces load time; Option B makes the wait enjoyable; both improve first impression
-
-**5. 🖼️ Refresh Landing-Page Before/After Screenshot** - LOW/LOW (~30 min) — added 2026-06-15
-   - The landing-page before/after slider shows the old left-panel style (pre Book Lists/Searches redesign)
-   - Its point (folder organization vs. Amazon's wall of covers) still lands, so this is cosmetic only — no rush
-   - Recapture the "after" screenshot once the Book Lists/Searches redesign has shipped
-   - Files: index.html before/after slider images
-
-**6. 🏷️ Wishlist fetcher — capture real book format (binding)** - LOW/MEDIUM (~2 hours) — added 2026-06-16
-   - `amazon-wishlist-fetcher.js` extracts NO binding (a series card doesn't expose format), so non-Kindle wishlist adds arrive with no format.
-   - App side already fixed in v6.12.0: suppress the false `'Kindle eBook'` default for wishlist books (shows the real format if enrichment provides it, else nothing) — so paperbacks no longer *claim* Kindle.
-   - Remaining enhancement: in the fetcher, fetch the product page for the added ASIN and extract `bindingInformation` (Paperback/Hardcover/Kindle) so the format is correct immediately, not only after enrichment. Cost: one extra product-page request per wishlist add.
-   - Also: existing mis-bound books keep `'Kindle eBook'` until re-enriched — a one-time re-fetch corrects them.
-
-**7. ⚡ (OPTIONAL) Relay delta-append for cheap incremental sync** - MEDIUM/HIGH — added 2026-06-16
-   - Today any relay-library change (e.g. the add-to-wishlist bookmarklet) does a full client-side read-modify-write: download + decrypt the ENTIRE encrypted library, append, re-encrypt + upload. ~7s for a ~2,600-book library; cost ∝ library size per change.
-   - Server-side append is IMPOSSIBLE by design: the relay is end-to-end encrypted (`relay-crypto.js`); the Cloudflare worker only sees ciphertext and can't decrypt to append.
-   - Delta model (E2E-compatible): upload each change as its own small encrypted item; clients (app + mobile) read base + deltas and merge by ASIN (last-write-wins). Cost ∝ 1 book per change.
-   - Costs/complexity: relay worker must store/list multiple items per channel; merge logic in BOTH app and mobile; periodic compaction (fold deltas back into base = an occasional full upload) so deltas don't grow unbounded; the library fetcher must understand/compact deltas too.
-   - OPTIONAL: 7s is bearable today. Revisit when libraries get large, or alongside the precompile/perf work.
-
-**8. 💬 Book detail dialog — add tooltips** - LOW/LOW (~1 hour) — added 2026-06-16
-   - The book detail dialog's fields/controls have no tooltips. Especially **Collections**: explain that collections come from Amazon and are set on a Kindle device (read-only here), mirroring the filter-bar Collections tooltip and File › Tag from Collections.
-   - Audit all dialog controls (edit fields, ownership toggle, price-goal chips, series dropdown, share, etc.) in the established tooltip voice. Pairs with the broader tooltip audits (Priority 4 #6d/#6e).
-
-**9. 📥 Metadata import (paste-list / CSV) + matching** - MEDIUM/HIGH — added 2026-06-16
-   - Full design: [docs/design/Metadata-Import.md](docs/design/Metadata-Import.md)
-   - Tier 1: paste an ordered title list → auto-number by line → set series position. Tier 2: CSV (Title/ASIN, Series, SeriesNum, Tags, MyRating, ReadStatus, Note) → match → apply.
-   - Match by title (normalized) or ASIN, with a review step (matched/ambiguous/unmatched). Unmatched = a "missing books" report the user copies and adds via the wishlist bookmarklet (app can't auto-add — wrong domain).
-   - Tier 2 is the engine for Goodreads/StoryGraph import (Priority 11 third-party integrations).
-   - NOTE: the no-matching common case already shipped — the "Number in reading order" wizard (v6.12.0).
-
----
-
-### 🚀 Priority 7: Post-Launch Enhancements
-
-**1. ♿ Keyboard Accessibility Completion** - MEDIUM/MEDIUM (8-12 hours)
-   - Builds on v6.1.0 ARIA foundation (screen readers can identify elements)
-   - Focus trapping in modals (Tab cycles within modal, not behind it)
-   - `:focus-visible` styling (visible focus rings for keyboard users)
-   - Keyboard navigation in context menus (Arrow Up/Down, Enter to activate, Escape to close)
-   - Submenu keyboard activation (Arrow Right to open, Arrow Left to close)
-   - Consider converting `role="menuitem"` divs to `<button>` for native keyboard support
-   - Drag-and-drop ARIA descriptions deferred (complex, keyboard users can use context menu Move/Copy)
-   - Problem: Screen readers can identify UI elements but keyboard-only users can't operate them
-   - Impact: Full keyboard/screen-reader operability for visually impaired bibliophiles
-
-**2. 📖 Reading Progress Visualization** - MEDIUM/HIGH (6-10 hours)
-   - Show reading progress percentage/position for each book in dialog and a column in explorer
-   - Implementation guidance: [Amazon Organizer Reading Progress conversation](https://claude.ai/chat/6e6f23c8-b84e-4900-8c64-fecb6a6e0bd1)
-   - Note: Collections data already merged (line 452 LOG.md), this adds progress visualization
-   - Problem: Users can't see reading progress in organizer
-   - Impact: Better tracking of currently-reading books; transforms app from "organizer" to "reading companion"
-
-**3. 📚 Book Recommendations** - LOW/LOW (2-3 hours)
-   - See [docs/design/BOOK-RECOMMENDATIONS.md](docs/design/BOOK-RECOMMENDATIONS.md) for full spec
-   - Display "Similar Books" in book detail modal (collapsible, hidden by default)
-   - Data already fetched in Phase 3 (tags API) but currently discarded
-   - Store: `recommendations: [{asin, title, coverUrl}]` per book (~1KB/book)
-   - Click opens Amazon product page; "Owned" badge if book is in library
-   - Future: "You own these similar books you haven't read yet" cross-reference
-   - Future: Highlight forgotten purchases based on high ratings
-   - Problem: No discovery of related books from within the app
-   - Impact: Book discovery without leaving ReaderWrangler
-
-**4. 👨‍👩‍👧 Family Sharing Info** - LOW/LOW (2-4 hours)
-   - See [docs/design/FAMILY-SHARING.md](docs/design/FAMILY-SHARING.md) for full spec
-   - Fetch which books user has shared with family members
-   - Display "Shared with: Name" in book detail modal
-   - API tested: supports batch of 1000+ ASINs in single call (~200ms)
-   - Implementation: Add to collections fetcher, display in organizer
-   - Problem: No visibility into which books are shared with family
-   - Impact: Better awareness of Family Library sharing status
-
-**5. 🖼️ V2 Dual-Pane Split** - MEDIUM/MEDIUM (8-12 hours)
-   - See [docs/design/DUAL-PANE-SPLIT.md](docs/design/DUAL-PANE-SPLIT.md) for full analysis
-   - Two folder views side by side for power users
-   - Option A: Built-in split pane (8-12 hours, native drag works)
-   - Option B: BroadcastChannel sync for two browser tabs (4-6 hours, copy/paste only)
-   - Problem: Precise cross-folder positioning requires navigation
-   - Impact: 10% power-user case; 90% covered by drag-to-folder-tree
-
-**6. Multi-Store Architecture** #Architecture - LOW/VERY HIGH (60-80 hours)
-   - See [docs/design/MULTI-STORE-ARCHITECTURE.md](docs/design/MULTI-STORE-ARCHITECTURE.md) for full spec
-   - Status: Future enhancement (Amazon first, other stores later)
-   - Covers: File naming, bookmarklet detection, data structure, migration path
-   - Problem: Only works with Amazon
-   - Impact: Support for other ebook platforms
-
-**7. 📚 Series Manager** - MEDIUM/MEDIUM (6-8 hours)  → **DESCOPED 2026-07-02: closing via the multi-select toolkit in Priority 4.5** (move-together + edit series name + reorder/renumber-by-position + comma-separated position). No dedicated dialog; sort-by-series is the discovery substitute.
-   - See [docs/design/EDITABLE-SERIES.md](docs/design/EDITABLE-SERIES.md) for full spec
-   - Phase 1 (edit series/position in book modal) ✅ shipped v5.4.6
-   - Phase 3 (remove "Group Series Books" button) ✅ removed in Explorer redesign
-   - **Remaining: Phase 2 — Series Manager dialog**
-     - "Manage Series" menu item (like Manage Tags)
-     - Table view: series name, book count, rename/merge actions
-     - Bulk rename across all books in a series
-     - Merge duplicate series ("Destroyer" + "The Destroyer" → one)
-     - Delete orphaned series entries
-   - Problem: Inconsistent series names from Amazon create fragmentation
-   - Impact: Clean series organization, especially for large libraries
-
-**8. 👥 Auto-Organize: aggregate co-authored books under each author** - MEDIUM/MEDIUM-HIGH — design 2026-06-22
-   - Problem: Auto-Organize by Author groups by the FULL author string (`normalizeAuthor` = trim+lowercase of `book.author`, ~L3144), so a collaboration ("Larry Niven, Jerry Pournelle") is a separate group from solo "Larry Niven". An author who mostly co-writes (e.g. Niven) never reaches the threshold even with 20+ books, because the count is split across collaboration strings. Real hit: 22 "niven" books, 0 authors shown at 17+.
-   - Goal: a co-authored book counts toward — and files under — EACH of its authors, working correctly with the incremental-threshold workflow (lowering the slider over multiple passes).
-   - **Chosen design — track filed authors per book (NOT a raw counter):**
-     - `authorsOf(book)` = distinct authors parsed from `book.author` (split on `,` `&` `and` `;`); solo → 1.
-     - New persisted book field `filedAuthors: string[]` — normalized authors this book has been auto-filed under (empty initially).
-     - Wizard count for author X = Inbox books where `X ∈ authorsOf(book)` AND `X ∉ filedAuthors`.
-     - Organize author X: add book to X's folder, add X to `filedAuthors`; if `filedAuthors ⊇ authorsOf(book)` → remove from Inbox.
-   - **Why filedAuthors, not a decrement counter:** a raw count double-spends on re-runs. After organizing Niven, the Niven&X collabs stay in Inbox (still owe X); a lower-threshold pass shows Niven again (those collabs) and re-filing would decrement them to 0 and drop them from Inbox before X ever got them. Tracking the SET of filed authors is idempotent (skip authors already filed) and yields the count for free — and needs no folder-name semantics (it's author state on the book, which the book already carries).
-   - **Decisions captured (2026-06-22 design session):**
-     1. Manual move out of Inbox = "I've filed this" → remove from Inbox fully (today's behavior). Don't keep multi-author books in Inbox after a manual move — that's the more confusing outcome. `filedAuthors` stays a pure auto-organize concern.
-     2. An author that never meets the threshold leaves its collabs lingering in Inbox (filed under the other author, still owing this one). Needs an escape hatch: deleting/moving from Inbox, or a "clear from Inbox, keep current folders" action, marks it done.
-     3. Stale `filedAuthors` (user later deletes an author folder or pulls the book out of it) is accepted — reconciliation is over-engineering.
-   - **Cheaper alternative** if the above is too much: group by FIRST/primary author only (Niven-led collabs → Niven; Pournelle-led → Pournelle). One folder per book, normal Inbox removal, zero new state. Cost: a "Pournelle, Niven" book lands under Pournelle, so not every "Niven book" ends up together.
-   - Touch points: wizard grouping (~L3168-3202), the organize → move-to-folder + Inbox-removal path, a new persisted book field (storage merge + backup/restore serialization).
-   - Impact: "all my Niven books together" works even for prolific collaborators; auto-organize stops silently undercounting co-authors.
-
----
-
-### 📚 Priority 8: Nice-to-Have Features
-
-**1. 🤖 Smart Collections (Rule-Based)** #Optional - LOW/HIGH (12-16 hours)
-   - "All unread books rated 4.5+"
-   - Requires complex rule engine
-   - Problem: Manual organization is tedious
-   - Impact: Automation for power users
-
-**2. 🎯 Wishlist Integration - Series Gap Detection** #Optional - MEDIUM/VERY HIGH (20-30 hours)
-   - Automatic series detection for owned books (requires series metadata)
-   - Identify missing books in series (e.g., own books 1, 2, 4 but not 3)
-   - Fetch metadata for missing books via Amazon API or series page scraping
-   - Auto-populate wishlist with series gaps
-   - Series column UI: Show gaps visually (grayed placeholder covers?)
-   - **Blockers**:
-     - Requires Speed Up Enrichment (completed v3.7.1) to avoid API throttling
-     - Amazon's inconsistent series tagging may limit effectiveness
-   - Problem: Series readers often have incomplete sets, no easy way to identify gaps
-   - Impact: Automatic discovery of missing series books, targeted purchasing
-
-**3. 📚 Collections Filtering Enhancements** - LOW/LOW (1-2 hours each)
-   - **Filter by read status** - Filter by READ/UNREAD/UNKNOWN
-   - **Filter by collection name** - Dropdown to filter by specific Amazon collection
-   - **"Uncollected" pseudo-collection** - Filter for books with no collections
-
----
-
-### 📊 Priority 9: Analytics & Export
-
-**1. 📈 Reading Stats Dashboard** - MEDIUM/MEDIUM (8-12 hours)
-   - Books acquired by month/year
-   - ~~Genre distribution pie chart~~ ❌ (NOT AVAILABLE: Amazon API doesn't provide genre/category metadata)
-   - Average rating of collection
-   - "Time to read" estimates based on page counts
-   - Problem: No insights into library composition
-   - Impact: Interesting for users, helps rediscover forgotten books
-
-**2. 💾 Enhanced Export Options** - MEDIUM/LOW (2-4 hours)
-   - Export organization to CSV (already has JSON)
-   - Print-friendly reading list
-   - Privacy-respecting share feature
-   - Problem: Limited backup/sharing options
-   - Impact: Portability and sharing
-
----
-
-### 🔧 Priority 10: Technical Improvements
-
-**1. Phase 3: UI Error Handling** #FetcherImprovements - MEDIUM/LOW (2-3 hours)
-   - Warning banners for missing descriptions
-   - "View Missing Descriptions" feature
-   - Problem: Users unaware of missing enrichment data
-   - Impact: Transparency about data quality
-
-**2. 🔧 Refactor readerwrangler.js into Modules** - LOW/MEDIUM (4-6 hours)
-   - Current state: 3,862-line monolithic file with 50+ state variables, 80+ functions
-   - **Recommended: Minimal Split (4 modules)**
-
-   | Module | ~Lines | Contents |
-   |--------|--------|----------|
-   | `storage.js` | 150 | IndexedDB, localStorage operations |
-   | `dataProcessing.js` | 400 | Import, merge, filter logic |
-   | `dragDrop.js` | 500 | Drag handlers, binary search optimization |
-   | `uiHelpers.js` | 200 | Formatters, display helpers, constants |
-   | `readerwrangler.js` | 1,500 | State, hooks, orchestration, JSX |
-
-   - Problem: Large monolithic file hard to navigate and maintain
-   - Impact: Better code organization, easier future maintenance, testability
-
----
-
-### 🌐 Priority 11: Integrations & Advanced Features
-
-**1. 🔗 Third-Party Integrations** - LOW/HIGH (20-30 hours)
-   - Goodreads sync (import ratings, mark as read)
-   - StoryGraph integration
-   - Export recommendations to Amazon wishlist
-   - Problem: Complex API work, authentication, rate limits
-   - Impact: Niche feature for users of these services
-
-**2. Live reflow drag-and-drop animation** #Optional - LOW/MEDIUM (4-6 hours)
-   - Smooth visual feedback during drag operations
-   - Problem: Current drag-and-drop feels abrupt
-   - Impact: Polish and visual appeal
-
-**3. Multi-User Support** #Architecture - LOW/VERY HIGH (40-60 hours)
-   - Not really needed with Export and Import
-   - See [docs/design/MULTI-USER-DESIGN.md](docs/design/MULTI-USER-DESIGN.md) for full spec
-   - Status: Low priority - workaround sufficient for most users
-   - Covers: AccountId identification, storage architecture, mismatch handling
-   - Problem: Multiple Amazon accounts on same device
-   - Impact: Household/family sharing
-   - **Workaround Available**: See [USER-GUIDE.md FAQ](USER-GUIDE.md#faq) "Can I maintain separate organizational states?" for Backup/Restore method to swap between different organizational states (demo vs. actual collection, testing vs. production, etc.)
-
----
-
-### 🧊 Icebox (No Timeline)
-
-**1. Safari Browser Testing**
-   - Desktop Safari + iOS Safari untested (no access to macOS/iOS devices)
-   - Requires volunteer with Safari or access to a Mac
-   - Key risk areas: IndexedDB behavior, PWA manifest handling, CSS rendering differences
-   - If issues found, may need Safari-specific fixes or a "Safari unsupported" notice
+## 🚦 Pre-Launch (must-do before public launch)
+
+**Docs & onboarding**
+- [ ] USER-GUIDE.md + GPT manual — rewrite around the new mental model (All Books / Searches / Book Lists / Folders; custodial vs supplemental; "when to use which"), **including the Book List ↔ Folder workflow pattern** (structure lives in Folders; to-read queues live in Book Lists) and "get books out of Inbox → use a folder, not a Book List"
+- [ ] Sizzle reel — update the script for Book Lists/Searches, then record + produce
+- [ ] Delete 3 obsolete design docs (ENHANCED-GETTING-STARTED-UX, VIDEO-PRODUCTION-PLAN, BOOK-EXPLORER-VIDEO-SCENARIOS)
+- [ ] Add "Watch Tutorials" to the app Help menu
+- [ ] Refresh the landing-page before/after screenshot (post-redesign "after")
+- [ ] FAQ page — faq.html (Security/Privacy, Data/Backup, Troubleshooting, Library, General); link from Help, README, features/tutorials footers
+- [ ] Custom GPT support assistant — build + link from Help menu → see docs/design/SUPPORT-GPT.md (spec)
+- [ ] Disaster Recovery documentation (relay credential recovery paths; backups include creds)
+
+**Safety / data-integrity guards**
+- [ ] Restore safeguard — never silently drop Book Lists/Searches on restore; per-category keep/discard/cancel, additive-preserve → see docs/design/RESTORE-SAFEGUARD.md (spec)
+- [ ] Demo-whitelist footgun guard (6f) — warn/confirm before uploading a library dramatically smaller than the relay's; make the active-whitelist banner unmissable; ensure no demo state can ship
+- [ ] "Rebuild library from Amazon (full re-fetch)" affordance (6g) — clear the relay library without DevTools; pairs with the demo-whitelist guard
+- [ ] Pin remaining CDN deps (6h) — React/ReactDOM to an exact 18.x; audit all HTML entry points (Tailwind's durable fix is the precompile step below)
+- [ ] `integrity-homeless` investigation — real user event in v6.11.5; books in IndexedDB with no folder refs
+
+**Launch economics**
+- [ ] Revisit free-vs-paid launch plan with real relay-write numbers (Cloudflare cap is shared across all users) → see docs/design/RELAY-ECONOMICS.md (spec/data)
+
+## 🔜 Next (6.12.x follow-ups)
+
+**Auto-Organize ergonomics (HIGH — real friction while actively organizing):** _(decision: wizard default stays **All** — first-run value; the right-click flow below is the incremental-case fix, so don't flip the default unless it proves insufficient)_
+- [ ] Right-click a book in Inbox / All Books → **"Auto-Organize by Author / by Series"** — files that book's author's (or series') books into Author/Series folders directly, skipping the jump-to-wizard → scroll-for-name → deselect dance, and subsuming "create an Author/Series folder as a move target." **Show a confirm/preview with the actual book covers** (not just a count) so you can see what's affected — the core gap in the wizard. (Stretch: hierarchical cover preview when organizing by Author.)
+- [ ] Auto-Organize wizard: add a **filter/search field** to the author list (scrolling to find a name is painful)
+
+- [ ] **Terminology copy pass** (6.12.1) — "shortcut" language in Book List toasts/menus; explain "Linked Copies" once in manual/GPT → see docs/design/TERMINOLOGY.md (spec)
+- [ ] **Fetcher `ee6d83c` re-apply** on v4.11.10 — `LIBRARY_EXCLUDE_TAGS` named-constant/doc + delisted-book (`product=null`) count+notice adapted to coexist with null-product recovery (count only when recovery also fails)
+- [ ] **Folder double-store (audit F1)** — folders live in both FOLDERS_KEY and the blob; consolidate to the single guarded source (needs a load reorder). Same class as the 6.12.0 Book-List data-loss.
+- [ ] **Folder-ordering Phase 2/3** — Count/Date sorts + "bake to Manual" → see docs/design/FOLDER-ORDERING.md (spec)
+- [ ] **Book Lists management view** + generic orderable-left-pane-section ordering (Folders/Views/Book Lists uniform) → see docs/design/FOLDER-ORDERING.md (spec)
+- [ ] Mobile nested collapsible sub-shelves (Dashboard) — deferred pending real-world use of per-shelf collapse
+- [ ] Delete from All Books — soft-delete to Trash, removing from ALL folders + Book Lists at once (reuse membership snapshot; confirm dialog discloses count)
+- [ ] Rectangle/Lasso selection in cover view (extends `explorerSelectedItems`)
+- [ ] Fetcher follow-ups: ownership-**upgrade** live positive test; recovery-sweep Stage 2 (fold into orphan scan); un-trash on ownership upgrade (storage.js); fix the "772%" enriched ratio
+- [ ] Book detail dialog tooltips (esp. Collections = read-only-from-Amazon)
+- [ ] Wishlist fetcher — capture real binding on add (product-page `bindingInformation`), not only after enrichment
+- [ ] Metadata import (paste-list / CSV) + matching → see docs/design/Metadata-Import.md
+
+- [ ] Comma-separated series-position multi-edit ("2, 4" mapped to selected books in display order) — **needed for David Drake / Raj Whitehall** (ownership gaps that "renumber by current order" can't handle)
+- [ ] Folder "Move to Top / Move to Bottom" context items (D)
+- [ ] Fix drag-subfolder→root drop-position (**confirmed still broken 2026-08-03**, annoying) — dropping a subfolder at root lands it alphabetical-ish near the bottom instead of at the drop target; shares a root cause with new-folder alphabetical insert + Move-to stale position
+- [ ] Book Lists: **"Arrange by series #"** — in Manual mode, bake the series-number order into the list's manual order (persistent, then hand-tweak). The Book-List analog of folder sort-then-bake; a one-time rearrange, not a live sort mode. (Distinct from the existing "Number by current order," which sets each book's *position value*, not the list's order.)
+
+## 🗄️ Backlog (post-launch)
+
+**Relay / data robustness**
+- [ ] Relay write redesign (atomic commit-pointer + app-owned key + wishlist-delta) → see docs/design/RELAY-WRITE-REDESIGN.md (spec)
+- [ ] Tombstone delete (durable purge + smart resurrect) → see docs/design/TOMBSTONE-DELETE.md (spec)
+- [ ] Edit Kindle collections from WR → see docs/design/COLLECTION-EDITING.md
+- [ ] Relay delta-append for cheap incremental sync (OPTIONAL) → see docs/design/RELAY-DELTA.md (spec)
+- [ ] Relay Disconnect / Reset credentials in Relay Setup
+- [ ] Relay credential mismatch — safe restore (prompt on cred mismatch) → see docs/design/RELAY-CRED-MISMATCH.md (spec)
+
+**Features**
+- [ ] Keyboard accessibility completion (focus trapping, `:focus-visible`, context-menu keys)
+- [ ] Reading progress visualization (dialog + column)
+- [ ] Book recommendations → see docs/design/BOOK-RECOMMENDATIONS.md
+- [ ] Family sharing info (shared-with in book dialog)
+- [ ] Auto-Organize: aggregate co-authored books under each author → see docs/design/AUTO-ORGANIZE-COAUTHORS.md (spec)
+- [ ] V2 dual-pane split → see docs/design/archive/DUAL-PANE-SPLIT.md
+- [ ] Multi-store architecture → see docs/reference/MULTI-STORE-ARCHITECTURE.md
+- [ ] Multi-user support (low priority; Backup/Restore workaround exists) → see docs/design/archive/MULTI-USER-DESIGN.md
+- [ ] Smart Collections (rule-based)
+- [ ] Wishlist series gap detection
+- [ ] Collections filtering enhancements (read status / collection name / uncollected)
+- [ ] Reading stats dashboard
+- [ ] Enhanced export options (CSV, print-friendly list)
+- [ ] Third-party integrations (Goodreads / StoryGraph)
+- [ ] Live reflow drag-and-drop animation
+
+**Tech / performance**
+- [ ] Precompile build step (Babel + Tailwind → static) — removes in-browser Babel/Tailwind; the durable load-time + CDN-pin fix → see docs/design/PRECOMPILE.md (spec)
+- [ ] Refactor readerwrangler.js into modules (re-assess — uiHelpers/storage/integrity already split) → see docs/design/MODULE-SPLIT.md (spec)
+- [ ] Phase 3 UI error handling (missing-description banners)
+- [ ] Tooltip audit — Tag from Collections wizard (6e)
+- [ ] console.log audit (~70 statements — keep/gate/remove)
+- [ ] v4 → v5 feature-parity audit
+- [ ] Deferred desktop polish (left-pane keyboard nav; directional shadow consistency)
+
+## 🧊 Icebox (no timeline)
+- [ ] Safari browser testing (desktop + iOS; IndexedDB / PWA / CSS risk)
