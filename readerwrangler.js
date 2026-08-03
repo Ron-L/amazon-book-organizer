@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.91";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.92";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -648,8 +648,6 @@
             const backdropMouseDownRef = useRef(null); // v5.2.0-alpha.15 - Track mousedown origin for backdrop close (prevents swipe-past-edge closing modals)
             const [contextMenu, setContextMenu] = useState(null); // {x, y, bookId, columnId}
             const [contextSubmenu, setContextSubmenu] = useState(null); // v4.16.0.ba - 'move' | 'copyTo' | 'priceGoal' | null for submenu hover
-            // TEMP alpha.91 - trace the shared submenu-hover state (diagnosing intermittent move→copy)
-            useEffect(() => { console.log(`🐛[menu] contextSubmenu → ${contextSubmenu} @ ${new Date().toISOString().slice(11,23)}`); }, [contextSubmenu]);
             const [readStatusFilter, setReadStatusFilter] = useState(''); // Filter by READ/UNREAD/UNKNOWN
             const [ratingFilter, setRatingFilter] = useState(''); // Filter by minimum rating (NEW v3.8.0)
             const [dealsFilterActive, setDealsFilterActive] = useState(false); // v4.17.0.j - Deals filter toggle
@@ -16633,7 +16631,6 @@
                                                     className="flex items-center gap-2 flex-1"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        console.log(`🐛[menu] folder CLICK "${f.name}" — contextSubmenu=${contextSubmenu} → ${contextSubmenu === 'copy-to' ? 'COPY' : contextSubmenu === 'move-to' ? 'MOVE' : 'NOOP'} @ ${new Date().toISOString().slice(11,23)}`);
                                                         if (contextSubmenu === 'move-to') {
                                                             handleMoveToFolder(f.id);
                                                         } else if (contextSubmenu === 'copy-to') {
