@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.12.0-alpha.92";  // Build version for this file
+        const ORGANIZER_VERSION = "6.12.0-alpha.93";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1471,6 +1471,10 @@
             const trashCount = useMemo(() => books.filter(b => b.isDeleted).length, [books]);
 
             const explorerDisplayItems = useMemo(() => {
+                // v6.12.0-alpha.93 - When an explicit '#' (seriesNum) level is present in the sort, the Series sort
+                // defers within-series ordering to it (honoring its direction) instead of its built-in position
+                // tie-break. Series alone still defaults to reading-position ascending within each series.
+                const hasSeriesNumLevel = explorerSort.some(s => s.column === 'seriesNum');
                 const sortedBooks = getFolderBookIds(selectedFolderId)
                     .map(id => bookMap.get(id))
                     .filter(book => book && filterBookForExplorer(book))
@@ -1487,7 +1491,8 @@
                             } else if (sort.column === 'series') {
                                 // v6.12.0 - Sort by series name, then by reading position within the series
                                 comparison = (a.series || '').localeCompare(b.series || '');
-                                if (comparison === 0) {
+                                // v6.12.0-alpha.93 - defer within-series order to an explicit '#' (seriesNum) level when present
+                                if (comparison === 0 && !hasSeriesNumLevel) {
                                     const posA = parseFloat(a.seriesPosition) || Infinity;
                                     const posB = parseFloat(b.seriesPosition) || Infinity;
                                     comparison = posA - posB;
@@ -13339,7 +13344,7 @@
                                                 onClick={() => setSortPickerOpen(!sortPickerOpen)}
                                                 className="flex items-center gap-1 hover:bg-gray-100 rounded px-1 py-0.5 -mx-1"
                                                 style={{ cursor: 'pointer', background: 'none', border: 'none', fontSize: '13px' }}
-                                                title="Click to change sort"
+                                                title="Click to change sort • Shift+Click a column for a secondary sort key"
                                             >
                                                 <span className="text-gray-500">Sort:</span>
                                                 <span className="text-gray-700">
