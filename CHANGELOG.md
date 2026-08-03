@@ -5,25 +5,42 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [6.12.0] - 2026-08-02
 
-> Running notes for the next release (6.12.0). The Book Lists / Searches redesign is
-> still in progress; this section is finalized at release (with a `git log` sweep of the
-> branch as a backstop, and README/features.html synced per the release checklist).
+The largest release yet: a ground-up rework of how you organize your library — **Searches**, **Book Lists**, and a unified **folder-ordering** model — plus a full mobile visual refresh and a batch of data-integrity fixes.
 
 ### Added
-- **Book Lists** *(in progress)* — A new sidebar category for curated reading lists: hand-picked sets of books kept separate from your folders. Adding or removing a book from a list never tags, moves, or deletes the book itself. The sidebar now separates **All Books**, **Searches** (saved live filters), **Book Lists**, and **Folders**. *(Still to come: a "save these results" control, mobile support, and polish.)*
-- **Ownership at a glance** — A new sortable **Ownership** column (hidden by default — turn it on via Show Columns) and an **Ownership** line in the book details dialog show whether a book is a Sample, Borrowed, Prime, Kindle Unlimited, and so on. Previously this was only visible on book covers or by filtering.
+- **Searches — saved live filters** — Save any combination of filters (search text, ratings, ownership, tags, dates, deals) as a named Search. Recalling one restores that filter state *in place* on your current view — a saved lens, not a library-wide smart folder. Searches get their own sidebar section, and the sidebar now separates **All Books**, **Searches**, **Book Lists**, and **Folders**.
+- **Book Lists — curated reading lists** — A new sidebar category for hand-picked sets of books, kept entirely separate from your folders — a simple flat list (no sub-lists, unlike folders and their subfolders). Adding or removing a book from a list never tags, moves, hides, or deletes the book itself. Create one from the "Save these results" control or right-click → "Add to Book List"; reorder by drag; delete and restore with undo. Book Lists also appear on mobile and on the book hover popup, which now lists every list a book is on.
+- **Unified folder ordering** — Folder order is now one setting shared everywhere: the sidebar, the right-pane Folders view, and the Move/Copy trees all follow the same order (Manual, Name A→Z, or Z→A). Drag-to-reorder works in Manual mode, and Folders-view book counts are now recursive.
+- **Ownership at a glance** — A new sortable **Ownership** column (hidden by default — turn it on via Show Columns) and an **Ownership** line in the book details dialog show whether a book is Purchased, a Sample, Borrowed, Prime, Kindle Unlimited, and so on. Previously this was only visible on book covers or by filtering.
+- **Format and ASIN columns** — Two more optional columns in the table view.
+- **Mobile visual refresh** — The mobile drawer and Dashboard color-code the three sections (Searches, Book Lists, Folders) with matching icons, spines, and subtle tints (light and dark themes). Sections and folders collapse, with the state kept in sync between the drawer and the Dashboard; the Dashboard also collapses individual shelves.
+- **Faster folder creation** — An always-visible "+" New-folder button in the right pane, New folder/subfolder from a blank-space right-click, and the option to create a destination folder on the spot inside the Move/Copy submenus.
+
+### Changed
+- **Library sync writes far less often** — Changes are now batched (saved after a pause, or when you leave) instead of every few seconds, cutting write volume sharply while keeping the "synced when I walk away" feel.
+- **Search matches series names** — The search box now reads "Title, author or series" and matches series as well.
 
 ### Fixed
+- **Drag copying instead of moving** — After a Ctrl-drag (copy), a following plain drag could still copy, because releasing Ctrl mid-drag left it "stuck." Fixed.
+- **Sort by Series** — Sorting by Series orders books by their reading position within each series; adding **#** as a secondary sort now controls the within-series direction as expected.
 - **Hidden books reappearing** — Books you'd hidden could quietly un-hide after refreshing your library from Amazon. Hidden now stays hidden — including books hidden in earlier versions.
 - **Folder order resetting on import** — Your custom top-level folder order no longer reverts to alphabetical after importing from the relay or restoring a backup.
+- **Folder reorder in the right pane** — Dragging to reorder folders in Manual mode no longer silently fails.
 - **Edited series names reverting** — Series names you changed or cleared (for example, removing a publisher's marketing "series" such as "CAEZIK Notables") no longer reappear the next time you import from Amazon.
 - **Series numbering being overwritten** — Numbers you apply with "Number by current order" are now preserved across imports.
-- **Sort by series** — Sorting by series now respects the chosen direction and orders books by their position within the series.
+- **Column layout on unhide** — Unhiding a newly added column no longer breaks the table's column widths.
+- **A book briefly showing twice** — Fixed a transient duplicate right after a sync.
 - **Wishlist book format** — Wishlist items whose format Amazon doesn't report are no longer mislabeled as "Kindle eBook".
-- **Redo shortcut** — Ctrl+Shift+Z now redoes (previously only Ctrl+Y worked).
+- **Redo shortcut** — Ctrl+Shift+Z now *also* redoes (previously only Ctrl+Y worked).
 - **"Show hidden" filter** — The toggle now actually filters hidden books (it had no effect before).
+
+### Removed
+- Legacy "drag to save a view" and tag-view machinery, superseded by Searches and Book Lists.
+
+### Library refresh (bookmarklet)
+- More complete refreshes: blank books Amazon returns are recovered, series name and number are recovered from the title for dead editions, and true ownership is detected from purchase history. Prices now come only from a book's Kindle edition (never a hardcover/paperback fallback), and a stale "$0" is cleared when a book has no Kindle option.
 
 ## [6.11.9] - 2026-06-08
 

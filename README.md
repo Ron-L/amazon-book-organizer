@@ -126,16 +126,17 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 <!-- SYNC: Keep "Recent Features" in sync with features.html -->
 ## Recent Features
 
-- **Saved Filter Views** — Save any filter combination as a named View in the sidebar. Single tag, multi-tag, or complex filters — save it and access it with one click. Views work like folders: when you search or filter, only matching views appear with filtered counts. Click a view to drill into the intersection.
+- **Searches** — Save any filter combination (search, ratings, ownership, tags, dates, deals) as a named Search in the sidebar. Recall one to restore that filtered view in place — a saved lens over your library.
+- **Book Lists** — Hand-pick sets of books into simple, flat lists kept separate from your folders. Adding or removing a book from a list never tags, moves, or deletes the book itself.
+- **Unified folder ordering** — One shared order — Manual, A→Z, or Z→A — across the sidebar, the Folders view, and the Move/Copy trees. Drag to reorder in Manual mode.
+- **Ownership at a glance** — A sortable Ownership column (and a line in the book details dialog) shows whether each book is Purchased, a Sample, Borrowed, Prime, Kindle Unlimited, and so on.
 - **Share Book** — Share book recommendations with friends via link, email, or native share.
 - **Tag from Collections** — One-click wizard converts your Kindle Collections into editable tags. "New books only" filter for painless repeat imports. Detects when books leave a Kindle Collection.
 - **Video Tutorials** — Quick-start guides and feature walkthroughs to get you up and running.
 - **Demo Library** — Download 100+ classic books and explore every feature without connecting your Amazon account.
-- **Folder & Tag Descriptions** — Add a description to any folder or tag view; shown as a tooltip on hover.
-- **Views / Folders Split** — Two ways to see your books: by folder structure or by saved filter views. All Books, saved views, and folders in one sidebar.
+- **Folder & Tag Descriptions** — Add a description to any folder or tag; shown as a tooltip on hover.
 - **Encrypted Cloud Relay + Trash Bin** — End-to-end encrypted sync between the bookmarklet and the app. Trash Bin gives you a safety net before permanently deleting books. Orphan detection flags books removed from Amazon.
-- **Mobile Viewer** — Pair your phone with a QR code and browse your organized library anywhere — shelves, folders, tag views, search & sort.
-- **Tags & Views** — Create tags, pin them as sidebar views, drag books to tag them. Save any filter combination as a reusable view.
+- **Mobile Viewer** — Pair your phone with a QR code and browse your organized library anywhere — now with color-coded, collapsible Searches, Book Lists, and Folders, plus search & sort.
 - **Dark Mode + High Contrast Themes** — Four themes (light, dark, high-contrast light, high-contrast dark) with automatic OS detection.
 - **Auto-Organize Wizard** — One click to build an Author / Series / Books folder hierarchy, with preview and undo.
 - **Book Explorer** — Two-pane Windows Explorer-style interface with folder tree, list and cover grid views, drag-and-drop, and Cut/Copy/Paste.
