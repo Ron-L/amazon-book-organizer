@@ -34,7 +34,7 @@
 ## 🔜 Next (6.12.x follow-ups)
 
 **Auto-Organize ergonomics (HIGH — real friction while actively organizing):** _(decision: wizard default stays **All** — first-run value; the right-click flow below is the incremental-case fix, so don't flip the default unless it proves insufficient)_
-- [ ] Right-click a book in Inbox / All Books → **"Auto-Organize by Author / by Series"** — files that book's author's (or series') books into Author/Series folders directly, skipping the jump-to-wizard → scroll-for-name → deselect dance, and subsuming "create an Author/Series folder as a move target." **Show a confirm/preview with the actual book covers** (not just a count) so you can see what's affected — the core gap in the wizard. (Stretch: hierarchical cover preview when organizing by Author.)
+- [ ] Right-click a book → **Auto-Organize by Author / by Series** (book-anchored, bottom-up; cover-preview confirm; reuses the wizard engine; subsumes "create an Author/Series folder as a move target") → see docs/design/AUTO-ORGANIZE-RIGHTCLICK.md (spec)
 - [ ] Auto-Organize wizard: add a **filter/search field** to the author list (scrolling to find a name is painful)
 
 - [ ] **Terminology copy pass** (6.12.1) — "shortcut" language in Book List toasts/menus; explain "Linked Copies" once in manual/GPT → see docs/design/TERMINOLOGY.md (spec)
@@ -54,6 +54,7 @@
 - [ ] Folder "Move to Top / Move to Bottom" context items (D)
 - [ ] Fix drag-subfolder→root drop-position (**confirmed still broken 2026-08-03**, annoying) — dropping a subfolder at root lands it alphabetical-ish near the bottom instead of at the drop target; shares a root cause with new-folder alphabetical insert + Move-to stale position
 - [ ] Book Lists: **"Arrange by series #"** — in Manual mode, bake the series-number order into the list's manual order (persistent, then hand-tweak). The Book-List analog of folder sort-then-bake; a one-time rearrange, not a live sort mode. (Distinct from the existing "Number by current order," which sets each book's *position value*, not the list's order.)
+- [ ] Left-pane **jump-to-top** chevron (complement to the shipped jump-to-bottom "F"); place both as chevrons at the two ends of the scrollbar
 
 ## 🗄️ Backlog (post-launch)
 

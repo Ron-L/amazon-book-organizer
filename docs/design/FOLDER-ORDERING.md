@@ -28,3 +28,17 @@ Folders is currently the odd case only in that its order bleeds from `explorerSo
 3. the Book Lists sort mirrors to that view **and** the "Add to Book List" submenu order.
 
 Book Lists are flat (no nesting) so they're simpler; Views already reorders by `position` (mostly done). **Main new build = the Book Lists management view.** Solve ordering once, apply everywhere.
+
+---
+
+## Decisions — placement, pins, direction (2026-08-04)
+
+Refinements agreed while organizing a growing library:
+
+- **List mode governs ALL placement.** The section's active sort mode (Manual / Name / Count / Date) determines where *anything* lands — new folders, Auto-Organize, Move, Copy, Add-to-Book-List. **Actions never carry ordering options** (no "At Top / At Bottom / In Sorted Order" per-action submenus; no held-key modifier). Set the mode once; placement is automatic. This also *is* the fix for the "new folder inserts alphabetical-ish near the bottom" bug — that bug exists precisely because insertion doesn't yet honor the active sort (Phase 2).
+- **Pins-to-top.** A folder can be **pinned**; pinned folders float to the **top** in their own small manual zone, and the sort flows beneath them. This reconciles "alphabetical for findability" with "Various Authors / Ignore / New To Read on top." **v1: pins go to the top only** — no arbitrary-position pins (the semantics of a pin scattered mid-list are murky and unneeded). Small library → Manual (popularity order); large library → Name + a few pins.
+- **Keys uniform across surfaces; direction lives in the right-panel columns.** Every sort *key* (Name, Count, Date) must be available on **both** the left FOLDERS-header picker and the right-panel view — no key is right-pane-only (requirement (a)). The *affordance* differs by surface and that's fine (progressive disclosure): the right panel is a spreadsheet (click a column header to cycle, incl. Z→A); the left is a compact tree with a picker that is **ascending-first per key**, showing the current direction via the ⇅ indicator. Direction is toggled from the right-panel columns and mirrors everywhere.
+- **No descending controls; no multi-select-to-sort.** Descending already exists (right-panel column cycle + full-mirror); don't add it as a separate control/action. Sorting is a *list mode*, not a per-selection operation — no "select folders → sort just those." (Left-column multi-select may be worth adding later for Move/Delete-several — a separate feature.)
+- **Reaching the far end** is served by **jump-to-top / jump-to-bottom** chevrons at the two ends of the scrollbar (jump-to-bottom shipped as "F", alpha.57; jump-to-top is a TODO), not by flipping to descending.
+
+These sharpen the **Auto-Organize right-click** design: placement is *free* (inherited from the list mode), so its menu stays just **By Author / By Series** — no ordering sub-levels.
