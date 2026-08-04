@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6882,8 +6882,10 @@
             };
 
             // v5.1.0-alpha.29c - Phase 3.3: Extract organize logic to eliminate ~250 lines of duplication
-            // v6.13.0-alpha.1 - Thin wrapper over the pure computeOrganizePlan (organizeEngine.js). The wizard
-            // and the right-click Auto-Organize share that one engine; behavior identical to the pre-refactor code.
+            // v6.13.0-alpha.3 - Thin wrapper over the pure computeOrganizePlan (organizeEngine.js). Compute the
+            // plan SYNCHRONOUSLY from the current folders, then apply it. (The alpha.1 refactor computed inside the
+            // setFolders updater, which React runs deferred — so recordAction saw a null plan and the wizard's Undo
+            // was silently dropped. Computing up front fixes it.) Shared engine with the right-click Auto-Organize.
             const executeWizardOrganize = () => {
                 const selectedAuthors = wizardAuthors.filter(a => wizardSelectedAuthors.has(a.normalizedName));
 
@@ -6899,26 +6901,22 @@
                     seriesFolderMinBooks: wizardSeriesFolderMin
                 };
 
-                let plan = null;
-                setFolders(prevFolders => {
-                    plan = computeOrganizePlan(selectedAuthors, prevFolders, opts);
-                    const subfoldersCreated = plan.subActions.filter(a => a.type === 'CREATE_FOLDER' && a.parentId !== null).length;
-                    setWizardResultsData({
-                        foldersCreated: plan.createdFolders.length,
-                        foldersMerged: plan.mergedFolders.length,
-                        subfoldersCreated: subfoldersCreated,
-                        totalBooks: plan.totalBooksOrganized
-                    });
-                    return plan.newFolders;
+                const plan = computeOrganizePlan(selectedAuthors, folders, opts);
+                setFolders(plan.newFolders);
+
+                const subfoldersCreated = plan.subActions.filter(a => a.type === 'CREATE_FOLDER' && a.parentId !== null).length;
+                setWizardResultsData({
+                    foldersCreated: plan.createdFolders.length,
+                    foldersMerged: plan.mergedFolders.length,
+                    subfoldersCreated: subfoldersCreated,
+                    totalBooks: plan.totalBooksOrganized
                 });
 
-                if (plan) {
-                    recordAction({
-                        type: 'WIZARD_ORGANIZE',
-                        description: `Organized ${selectedAuthors.length} authors (${plan.totalBooksOrganized} books)`,
-                        subActions: plan.subActions
-                    });
-                }
+                recordAction({
+                    type: 'WIZARD_ORGANIZE',
+                    description: `Organized ${selectedAuthors.length} authors (${plan.totalBooksOrganized} books)`,
+                    subActions: plan.subActions
+                });
 
                 setWizardModalOpen(false);
                 setWizardResultsOpen(true);
