@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6898,10 +6898,11 @@
                 return plan;
             };
 
-            // v6.13.0-alpha.5 - Right-click Auto-Organize (book-anchored), on the selected books' UNFILED (Inbox)
-            // books. By Author = FLAT: all of the author's books directly under the Author folder, NO series
-            // subfolders. By Series = the book's series into an Author/Series subfolder (seriesFolderMinBooks:1 —
-            // always make the folder, even for a single owned book). Two deliberately different structure choices.
+            // v6.13.0-alpha.6 - Right-click Auto-Organize (book-anchored). BOTH options act on the whole AUTHOR of
+            // each selected book (all that author's UNFILED / Inbox books — click one Dresden Files book, get every
+            // Jim Butcher in Inbox). They differ only in structure: By Author = FLAT (everything under the Author
+            // folder); By Series = series subfolders (each series → Author/Series, non-series books at the author
+            // root). Right-click intent → seriesFolderMinBooks:1 (a single owned series book still gets its folder).
             const inboxSourceBooks = () => {
                 const inFolders = new Set();
                 folders.forEach(f => { if (f.id !== '__inbox__' && f.id !== '__all__') (f.bookIds || []).forEach(id => inFolders.add(id)); });
@@ -6910,19 +6911,31 @@
             const normAuthorKey = (a) => (a || '').trim().toLowerCase();
             const displayAuthorName = (a) => (a && a.trim()) ? a.trim() : 'Unknown Author';
 
-            const autoOrganizeByAuthor = (selBooks) => {
-                setExplorerBookContextMenu(null); setContextSubmenu(null);
+            // Group ALL of the selected books' authors' Inbox books (not just the clicked books) by author.
+            const buildAuthorGroupsFromSelection = (selBooks) => {
                 const inbox = inboxSourceBooks();
                 const wantAuthors = new Map(); // normKey -> original author string (first seen)
-                selBooks.forEach(b => { const k = normAuthorKey(b.author); if (!wantAuthors.has(k)) wantAuthors.set(k, b.author); });
+                (selBooks || []).forEach(b => { const k = normAuthorKey(b.author); if (!wantAuthors.has(k)) wantAuthors.set(k, b.author); });
                 const authorGroups = [];
                 wantAuthors.forEach((orig, key) => {
                     const bks = inbox.filter(b => normAuthorKey(b.author) === key);
                     if (bks.length > 0) authorGroups.push({ displayName: displayAuthorName(orig), books: bks });
                 });
+                return authorGroups;
+            };
+            // Menu gating: do the selected books' authors have ANY series book in the Inbox? (So By Series shows
+            // even when you right-clicked a standalone by an author who also has a series in the Inbox.)
+            const selectionAuthorsHaveSeries = (selBooks) => {
+                const keys = new Set((selBooks || []).map(b => normAuthorKey(b.author)));
+                return inboxSourceBooks().some(b => keys.has(normAuthorKey(b.author)) && b.series && b.series.trim());
+            };
+
+            const autoOrganizeByAuthor = (selBooks) => {
+                setExplorerBookContextMenu(null); setContextSubmenu(null);
+                const authorGroups = buildAuthorGroupsFromSelection(selBooks);
                 if (authorGroups.length === 0) { showToast('Nothing to organize — those authors have no unfiled books'); return; }
                 const label = authorGroups.length === 1 ? `Auto-Organized ${authorGroups[0].displayName}` : `Auto-Organized ${authorGroups.length} authors`;
-                const plan = applyOrganizePlan(authorGroups, { createSeriesFolders: false }, label); // By Author = flat, no series subfolders
+                const plan = applyOrganizePlan(authorGroups, { createSeriesFolders: false }, label); // FLAT — no series subfolders
                 const folderCount = plan.createdFolders.length + plan.mergedFolders.length;
                 showToast(plan.totalBooksOrganized > 0
                     ? `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} into ${folderCount} author folder${folderCount !== 1 ? 's' : ''}`
@@ -6931,20 +6944,12 @@
 
             const autoOrganizeBySeries = (selBooks) => {
                 setExplorerBookContextMenu(null); setContextSubmenu(null);
-                const inbox = inboxSourceBooks();
-                const wantSeries = new Map(); // normSeriesKey -> anchor book (for its author)
-                selBooks.forEach(b => { if (b.series && b.series.trim()) { const k = b.series.trim().toLowerCase(); if (!wantSeries.has(k)) wantSeries.set(k, b); } });
-                if (wantSeries.size === 0) { showToast('None of the selected books are in a series'); return; }
-                const authorGroups = [];
-                wantSeries.forEach((anchor, key) => {
-                    const bks = inbox.filter(b => b.series && b.series.trim().toLowerCase() === key);
-                    if (bks.length > 0) authorGroups.push({ displayName: displayAuthorName(anchor.author), books: bks });
-                });
-                if (authorGroups.length === 0) { showToast('Nothing to organize — those series have no unfiled books'); return; }
-                const label = wantSeries.size === 1 ? `Auto-Organized ${[...wantSeries.values()][0].series.trim()}` : `Auto-Organized ${wantSeries.size} series`;
-                const plan = applyOrganizePlan(authorGroups, { seriesFolderMinBooks: 1, createMiscellaneous: false }, label);
+                const authorGroups = buildAuthorGroupsFromSelection(selBooks);
+                if (authorGroups.length === 0) { showToast('Nothing to organize — those authors have no unfiled books'); return; }
+                const label = authorGroups.length === 1 ? `Auto-Organized ${authorGroups[0].displayName} by series` : `Auto-Organized ${authorGroups.length} authors by series`;
+                const plan = applyOrganizePlan(authorGroups, { createSeriesFolders: true, seriesFolderMinBooks: 1, createMiscellaneous: false }, label); // series subfolders; non-series at author root
                 showToast(plan.totalBooksOrganized > 0
-                    ? `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} by series`
+                    ? `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} with series subfolders`
                     : 'Nothing to organize — already filed');
             };
 
@@ -16848,7 +16853,7 @@
                                                             onClick={() => autoOrganizeByAuthor(selectedBooksArray)}>
                                                             <span>📁</span><span>By Author</span>
                                                         </div>
-                                                        {selectedBooksArray.some(b => b.series && b.series.trim()) && (
+                                                        {selectionAuthorsHaveSeries(selectedBooksArray) && (
                                                             <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
                                                                 onClick={() => autoOrganizeBySeries(selectedBooksArray)}>
                                                                 <span>📚</span><span>By Series</span>

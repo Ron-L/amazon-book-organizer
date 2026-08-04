@@ -14,16 +14,18 @@ Today the only way to auto-organize is the **wizard** (top-down): open it, filte
 
 Right-click a book (in **Inbox** or **All Books**) — or a **multi-selection** of books — → **Auto-Organize ▸ By Author / By Series**. The menu is **identical regardless of how many books are selected**; it operates **per book**, filing each under its own author (or series) — exactly as if you'd right-clicked each one in turn and chosen the same option.
 
-- **By Author** — each selected book files into its author's `Author/Series/…` hierarchy.
-- **By Series** — each selected book files into just its own series (`Author/Series/…`, the narrower slice). Hidden/disabled when no selected book has a series.
+Both options act on the **whole author** of each selected book (all that author's Inbox books — click one Dresden Files book, get every Jim Butcher in the Inbox). They differ only in **structure**:
 
-Both produce the same `Author/Series/Books` shape the wizard builds; By Series just limits each book to its series. **Co-authored books** (one book, multiple authors) follow whatever grouping the wizard engine uses — full-author-string today, per-author once `filedAuthors` lands (below). **No special menu for them** — true multi-author organizing is the wizard's job.
+- **By Author** — files the author's books **flat** under the Author folder — no series subfolders.
+- **By Series** — files the author's books **with series subfolders** (each series → `Author/Series`, non-series books at the author root). Shown when the author has a series book in the Inbox; right-click intent → even a single owned series book gets its folder (`seriesFolderMinBooks:1`).
+
+**Co-authored books** (one book, multiple authors) follow whatever grouping the wizard engine uses — full-author-string today, per-author once `filedAuthors` lands (below). **No special menu for them** — true multi-author organizing is the wizard's job.
 
 ## Scope — which books get pulled in
 
 **Inbox / unfiled books only.** A book already filed somewhere stays put — it's there for a reason (e.g. a story by author X inside an anthology in author Y's universe). This is the **custodial model**: a folder is a book's *chosen home*, and Auto-Organize only files books that have *no home yet* (Inbox); it never disturbs deliberate placements. (To see where a filed book already lives, use its "In" popup from All Books.)
 
-The clicked book *identifies* the target — it doesn't limit the action to itself: **By Author** pulls **all of that author's unfiled books** (that's the point — spot one, file them all); **By Series** pulls all of that series' unfiled books. For a multi-selection, it's the union across the selected books' authors/series.
+The clicked book *identifies the author* — it doesn't limit the action to itself: **both** By Author and By Series pull **all of that author's unfiled books** (spot one, file them all). They differ only in the folder *structure* they build (flat vs series-nested), not in which books they gather. For a multi-selection, it's the union across the selected books' authors.
 
 ## The confirm/preview dialog — the core value
 
