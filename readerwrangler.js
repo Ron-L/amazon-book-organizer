@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -623,6 +623,7 @@
             const [wizardCreateSeriesFolders, setWizardCreateSeriesFolders] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Create series subfolders
             const [wizardSortByPosition, setWizardSortByPosition] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Sort books by series position
             const [wizardCreateMiscellaneous, setWizardCreateMiscellaneous] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Create Miscellaneous folder
+            const [wizardSeriesFolderMin, setWizardSeriesFolderMin] = useState(2); // v6.13.0-alpha.2 - min books before a series earns its own subfolder
             const [wizardPreviewMode, setWizardPreviewMode] = useState(false); // v5.1.0-alpha.28 - Phase 3.1: Preview mode
             const [wizardPreviewData, setWizardPreviewData] = useState(null); // v5.1.0-alpha.28 - Phase 3.1: Preview structure data
             const [wizardResultsOpen, setWizardResultsOpen] = useState(false); // v5.1.0-alpha.29 - Phase 3.3: Results dialog visibility
@@ -2817,6 +2818,7 @@
                         if (wizard.createSeriesFolders !== undefined) setWizardCreateSeriesFolders(wizard.createSeriesFolders);
                         if (wizard.sortByPosition !== undefined) setWizardSortByPosition(wizard.sortByPosition);
                         if (wizard.createMiscellaneous !== undefined) setWizardCreateMiscellaneous(wizard.createMiscellaneous);
+                        if (wizard.seriesFolderMin !== undefined) setWizardSeriesFolderMin(wizard.seriesFolderMin);
                     }
                 } catch (e) {
                     console.error('Failed to load wizard settings from localStorage:', e);
@@ -2838,13 +2840,14 @@
                         sortBy: wizardSortBy,
                         createSeriesFolders: wizardCreateSeriesFolders,
                         sortByPosition: wizardSortByPosition,
-                        createMiscellaneous: wizardCreateMiscellaneous
+                        createMiscellaneous: wizardCreateMiscellaneous,
+                        seriesFolderMin: wizardSeriesFolderMin
                     };
                     localStorage.setItem(WIZARD_KEY, JSON.stringify(wizard));
                 } catch (e) {
                     console.error('Failed to save wizard settings to localStorage:', e);
                 }
-            }, [wizardMinBooksSlider, wizardMinBooks, wizardSortBy, wizardCreateSeriesFolders, wizardSortByPosition, wizardCreateMiscellaneous]);
+            }, [wizardMinBooksSlider, wizardMinBooks, wizardSortBy, wizardCreateSeriesFolders, wizardSortByPosition, wizardCreateMiscellaneous, wizardSeriesFolderMin]);
 
             // Compute dateFrom/dateTo from datePreset selection (v4.15.6)
             React.useEffect(() => {
@@ -6831,9 +6834,9 @@
                     totalBooks += author.books.length;
 
                     if (wizardCreateSeriesFolders) {
-                        // Count series subfolders (2+ books only)
+                        // Count series subfolders (>= threshold books only)
                         seriesGroups.forEach((seriesData, normalizedName) => {
-                            if (seriesData.books.length >= 2) {
+                            if (seriesData.books.length >= wizardSeriesFolderMin) {
                                 authorStructure.series.push({
                                     name: seriesData.originalName,
                                     bookCount: seriesData.books.length
@@ -6843,11 +6846,11 @@
                             }
                         });
 
-                        // Count standalone books + single-book series
+                        // Count standalone books + below-threshold series (they fall to the author root)
                         let standaloneCount = standaloneBooks.length;
                         seriesGroups.forEach((seriesData, normalizedName) => {
-                            if (seriesData.books.length === 1) {
-                                standaloneCount++;
+                            if (seriesData.books.length < wizardSeriesFolderMin) {
+                                standaloneCount += seriesData.books.length;
                             }
                         });
 
@@ -6892,7 +6895,8 @@
                 const opts = {
                     createSeriesFolders: wizardCreateSeriesFolders,
                     sortByPosition: wizardSortByPosition,
-                    createMiscellaneous: wizardCreateMiscellaneous
+                    createMiscellaneous: wizardCreateMiscellaneous,
+                    seriesFolderMinBooks: wizardSeriesFolderMin
                 };
 
                 let plan = null;
@@ -9453,6 +9457,23 @@
                                             />
                                             <span>Create subfolders for each series</span>
                                         </label>
+                                        {/* v6.13.0-alpha.2 - how many books a series needs before it earns its own folder */}
+                                        <div className={`flex items-center flex-wrap gap-x-2 gap-y-1 text-sm pl-8 pr-2 ${wizardCreateSeriesFolders ? 'text-gray-700' : 'text-gray-400'}`}>
+                                            <span>Create a series folder once I own at least</span>
+                                            <span className="inline-flex items-center border border-gray-300 rounded overflow-hidden">
+                                                <button type="button" aria-label="Fewer books required" disabled={!wizardCreateSeriesFolders || wizardSeriesFolderMin <= 1}
+                                                    onClick={() => setWizardSeriesFolderMin(n => Math.max(1, n - 1))}
+                                                    className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-40">−</button>
+                                                <input type="number" min="1" value={wizardSeriesFolderMin} disabled={!wizardCreateSeriesFolders}
+                                                    onChange={(e) => { const v = parseInt(e.target.value, 10); setWizardSeriesFolderMin(Number.isFinite(v) && v >= 1 ? v : 1); }}
+                                                    className="w-10 text-center py-0.5 border-x border-gray-300 focus:outline-none" />
+                                                <button type="button" aria-label="More books required" disabled={!wizardCreateSeriesFolders}
+                                                    onClick={() => setWizardSeriesFolderMin(n => n + 1)}
+                                                    className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-40">+</button>
+                                            </span>
+                                            <span>book{wizardSeriesFolderMin !== 1 ? 's' : ''} of it</span>
+                                            <span className="w-full text-xs text-gray-400">1 = every series gets its own folder; higher = fewer, tidier folders.</span>
+                                        </div>
                                         <label className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-2 rounded cursor-pointer">
                                             <input
                                                 type="checkbox"

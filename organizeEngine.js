@@ -54,6 +54,9 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
     const createSeriesFolders = opts.createSeriesFolders !== false; // default true
     const sortByPosition      = opts.sortByPosition !== false;      // default true
     const createMiscellaneous = opts.createMiscellaneous === true;  // default false
+    // Minimum books of a series before it earns its own subfolder. Wizard default 2 (avoid singleton-series
+    // clutter in bulk runs); right-click "By Series" passes 1 (explicit intent → always make the folder).
+    const seriesFolderMinBooks = opts.seriesFolderMinBooks != null ? opts.seriesFolderMinBooks : 2;
     idGen = idGen || defaultOrganizeIdGen;
 
     // Copy-on-write: never mutate the caller's folder objects.
@@ -84,7 +87,7 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
             const booksToAuthorRoot = [];
 
             seriesGroups.forEach((seriesData) => {
-                if (seriesData.books.length >= 2) {
+                if (seriesData.books.length >= seriesFolderMinBooks) {
                     const seriesFolderName = seriesData.originalName;
                     let seriesFolder = findFolder(seriesFolderName, targetFolder.id);
                     if (!seriesFolder) {

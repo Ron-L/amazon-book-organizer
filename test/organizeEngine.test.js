@@ -72,6 +72,23 @@ test('merge: re-organizing into an existing author/series folder dedups, does no
     assert.deepStrictEqual(plan.mergedFolders, ['Brandon Sanderson'], 'author folder merged, not recreated');
 });
 
+test('seriesFolderMinBooks:1 gives a single-book series its own folder', () => {
+    const plan = computeOrganizePlan([herbert], [inbox], { seriesFolderMinBooks: 1 }, counterIdGen());
+    const author = plan.newFolders.find(f => f.name === 'Frank Herbert');
+    const dune = plan.newFolders.find(f => f.name === 'Dune');
+    assert.ok(dune && dune.parentId === author.id, 'Dune subfolder created under Frank Herbert');
+    assert.deepStrictEqual(dune.bookIds, ['b4']);
+    assert.deepStrictEqual(author.bookIds, [], 'no books left at author root');
+});
+
+test('seriesFolderMinBooks:1 still routes true standalones (no series) to author root', () => {
+    const plan = computeOrganizePlan([sanderson], [inbox], { seriesFolderMinBooks: 1 }, counterIdGen());
+    const author = plan.newFolders.find(f => f.name === 'Brandon Sanderson');
+    const mistborn = plan.newFolders.find(f => f.name === 'Mistborn');
+    assert.deepStrictEqual(mistborn.bookIds, ['b1', 'b2'], 'series still folds');
+    assert.deepStrictEqual(author.bookIds, ['b3'], 'b3 (no series) stays at author root');
+});
+
 test('createSeriesFolders:false files everything flat at author root', () => {
     const plan = computeOrganizePlan([sanderson], [inbox], { createSeriesFolders: false }, counterIdGen());
     assert.ok(!plan.newFolders.some(f => f.name === 'Mistborn'), 'no series subfolder');
