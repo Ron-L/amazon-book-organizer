@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16930,12 +16930,12 @@
                                                         onClick={(e) => e.stopPropagation()}>
                                                         <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
                                                             onClick={() => autoOrganizeByAuthor(selectedBooksArray)}>
-                                                            <span>📁</span><span>By Author</span>
+                                                            <span>📁</span><span>By Author…</span>
                                                         </div>
                                                         {selectionAuthorsHaveSeries(selectedBooksArray) && (
                                                             <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
                                                                 onClick={() => autoOrganizeBySeries(selectedBooksArray)}>
-                                                                <span>📚</span><span>By Series</span>
+                                                                <span>📚</span><span>By Series…</span>
                                                             </div>
                                                         )}
                                                     </div>
