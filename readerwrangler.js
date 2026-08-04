@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.0-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -628,6 +628,9 @@
             const [wizardPreviewData, setWizardPreviewData] = useState(null); // v5.1.0-alpha.28 - Phase 3.1: Preview structure data
             const [wizardResultsOpen, setWizardResultsOpen] = useState(false); // v5.1.0-alpha.29 - Phase 3.3: Results dialog visibility
             const [autoOrgPreview, setAutoOrgPreview] = useState(null); // v6.13.0-alpha.7 - Right-click Auto-Organize confirm/preview: { mode, authorGroups, opts, label, dryPlan } or null
+            const [autoOrgSel, setAutoOrgSel] = useState(new Set());    // v6.13.0-alpha.9 (D2) - selected cover ids within the preview
+            const [autoOrgMenu, setAutoOrgMenu] = useState(null);       // v6.13.0-alpha.9 (D2) - preview cover right-click menu: { x, y, bookIds } or null
+            const [autoOrgHover, setAutoOrgHover] = useState(null);     // v6.13.0-alpha.9 (D2) - preview cover hover "In" popup: { bookId, x, y } or null
             const [wizardResultsData, setWizardResultsData] = useState(null); // v5.1.0-alpha.29 - Phase 3.3: Results summary data
             const [wizardSourceBooksCount, setWizardSourceBooksCount] = useState(0); // v5.1.0-alpha.30 - Phase 3.4: Track Inbox book count for validation
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -5574,8 +5577,9 @@
             useEffect(() => {
                 const handleModalEsc = (e) => {
                     if (e.key !== 'Escape') return;
-                    // v6.13.0-alpha.7 - Auto-Organize confirm/preview (standalone, innermost when open)
-                    if (autoOrgPreview) { setAutoOrgPreview(null); return; }
+                    // v6.13.0-alpha.7/9 - Auto-Organize preview stack: the cover right-click menu, then the preview itself
+                    if (autoOrgMenu) { setAutoOrgMenu(null); return; }
+                    if (autoOrgPreview) { setAutoOrgPreview(null); setAutoOrgSel(new Set()); setAutoOrgHover(null); return; }
                     // Wizard sub-dialogs (innermost)
                     if (wizardResultsOpen) { setWizardResultsOpen(false); return; }
                     if (wizardPreviewMode) { setWizardPreviewMode(false); return; }
@@ -5604,7 +5608,7 @@
                 };
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
-            }, [autoOrgPreview, modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, relaySetupOpen, relayManualCreds, relayHelpOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+            }, [autoOrgPreview, autoOrgMenu, modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, relaySetupOpen, relayManualCreds, relayHelpOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             // v5.4.6 - ENTER saves edit mode when no input is focused
             useEffect(() => {
@@ -6942,6 +6946,7 @@
                 if (authorGroups.length === 0) { showToast('Nothing to organize — those authors have no unfiled books'); return; }
                 const dryPlan = computeOrganizePlan(authorGroups, folders, opts);
                 if (dryPlan.totalBooksOrganized === 0) { showToast('Nothing to organize — already filed'); return; }
+                setAutoOrgSel(new Set()); setAutoOrgMenu(null); setAutoOrgHover(null);
                 setAutoOrgPreview({ mode, authorGroups, opts, label: labelFor(authorGroups), dryPlan });
             };
             const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
@@ -6950,6 +6955,35 @@
             const autoOrganizeBySeries = (selBooks) => openAutoOrgPreview('series', selBooks,
                 { createSeriesFolders: true, seriesFolderMinBooks: 1, createMiscellaneous: false }, // series subfolders; non-series at author root
                 (ags) => ags.length === 1 ? `Auto-Organized ${ags[0].displayName} by series` : `Auto-Organized ${ags.length} authors by series`);
+
+            const closeAutoOrgPreview = () => { setAutoOrgPreview(null); setAutoOrgSel(new Set()); setAutoOrgMenu(null); setAutoOrgHover(null); };
+
+            // v6.13.0-alpha.9 (D2) - Add the preview's selected covers to a Book List (the New To Read queue workflow:
+            // books file into their series folder on Confirm AND stay on the list as shortcuts). Reuses addBooksToBookList
+            // (undoable) with the PREVIEW selection — distinct from the explorer's getSelectedBookIds()-based handlers.
+            const addPreviewSelToBookList = (bookListId, ids) => {
+                setAutoOrgMenu(null);
+                if (!ids || ids.length === 0) return;
+                const added = addBooksToBookList(bookListId, ids);
+                const bl = bookLists.find(b => b.id === bookListId);
+                showToast(added > 0
+                    ? `Added ${added} book${added !== 1 ? 's' : ''} to '${bl?.name || 'Book List'}'${added < ids.length ? ` (${ids.length - added} already there)` : ''}`
+                    : `All ${ids.length} book${ids.length !== 1 ? 's' : ''} already in '${bl?.name || 'Book List'}'`);
+            };
+            const addPreviewSelToNewBookList = async (ids) => {
+                setAutoOrgMenu(null);
+                if (!ids || ids.length === 0) return;
+                const name = await showInputDialog('New Book List', `Add ${ids.length} book${ids.length !== 1 ? 's' : ''} to a new Book List.`, '', 'List name (e.g. New To Read)');
+                if (name === null) return;
+                const trimmed = (name || '').trim() || 'New To Read';
+                const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
+                if (existing) { addPreviewSelToBookList(existing.id, ids); return; }
+                const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
+                const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...ids], position: maxPos + 1 };
+                setBookLists(prev => [...prev, newBL]);
+                recordAction({ type: 'BOOKLIST_CREATE', bookList: newBL });
+                showToast(`Created '${trimmed}' with ${ids.length} book${ids.length !== 1 ? 's' : ''}`);
+            };
 
             const confirmAutoOrgPreview = () => {
                 if (!autoOrgPreview) return;
@@ -6961,7 +6995,7 @@
                 } else {
                     showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} with series subfolders`);
                 }
-                setAutoOrgPreview(null);
+                closeAutoOrgPreview();
             };
 
             // v6.13.0-alpha.4 - Wizard organize is now a thin caller of the shared applyOrganizePlan.
@@ -9938,23 +9972,39 @@
                     {/* v6.13.0-alpha.7 (D1) - Auto-Organize confirm/preview: hierarchical Author→Series→covers before commit */}
                     {autoOrgPreview && (() => {
                         const { mode, authorGroups, dryPlan } = autoOrgPreview;
-                        const cover = (b) => (
-                            <div key={b.id} title={`${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`} style={{ width: '46px', flex: '0 0 auto' }}>
+                        const cover = (b) => {
+                            const sel = autoOrgSel.has(b.id);
+                            return (
+                            <div key={b.id}
+                                title={`${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`}
+                                style={{ width: '46px', flex: '0 0 auto', position: 'relative', cursor: 'pointer', borderRadius: '4px', outline: sel ? '2px solid #4f46e5' : '2px solid transparent', outlineOffset: '1px' }}
+                                onClick={(e) => { e.stopPropagation(); setAutoOrgSel(prev => { const n = new Set(prev); n.has(b.id) ? n.delete(b.id) : n.add(b.id); return n; }); }}
+                                onContextMenu={(e) => {
+                                    e.preventDefault(); e.stopPropagation();
+                                    const ids = (autoOrgSel.has(b.id) && autoOrgSel.size > 0) ? [...autoOrgSel] : [b.id];
+                                    if (!autoOrgSel.has(b.id)) setAutoOrgSel(new Set([b.id]));
+                                    setAutoOrgHover(null);
+                                    setAutoOrgMenu({ x: e.clientX, y: e.clientY, bookIds: ids });
+                                }}
+                                onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setAutoOrgHover({ bookId: b.id, x: r.right + 8, y: r.top }); }}
+                                onMouseLeave={() => setAutoOrgHover(cur => (cur && cur.bookId === b.id) ? null : cur)}>
                                 {b.coverUrl
                                     ? <img src={b.coverUrl} alt="" style={{ width: '46px', height: '69px', objectFit: 'cover', borderRadius: '3px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
                                     : <div style={{ width: '46px', height: '69px', borderRadius: '3px', background: 'var(--bg-hover, #e5e7eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', lineHeight: 1.1, textAlign: 'center', padding: '3px', overflow: 'hidden', color: 'var(--text-secondary, #6b7280)' }}>{b.title || 'Untitled'}</div>}
+                                {sel && <div style={{ position: 'absolute', top: '-6px', right: '-6px', width: '16px', height: '16px', borderRadius: '50%', background: '#4f46e5', color: 'white', fontSize: '10px', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>✓</div>}
                             </div>
-                        );
+                            );
+                        };
                         const coverRow = (bks) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{bks.map(cover)}</div>;
                         const folderCount = dryPlan.createdFolders.length + dryPlan.mergedFolders.length;
                         const subCount = dryPlan.subActions.filter(a => a.type === 'CREATE_FOLDER' && a.parentId !== null).length;
                         return (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setAutoOrgPreview(null); backdropMouseDownRef.current = null; }}>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeAutoOrgPreview(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-autoorg-preview" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
                                 {/* Header */}
                                 <div className="flex justify-between items-center p-4 bg-indigo-100 rounded-t-lg border-b border-indigo-300">
                                     <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">✨ Auto-Organize — {mode === 'series' ? 'By Series' : 'By Author'}</h2>
-                                    <button onClick={() => setAutoOrgPreview(null)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
+                                    <button onClick={closeAutoOrgPreview} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
                                 {/* Summary */}
                                 <div className="px-4 pt-3 text-sm text-gray-700">
@@ -9994,12 +10044,61 @@
                                     })}
                                 </div>
                                 {/* Footer */}
-                                <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
-                                    <button onClick={() => setAutoOrgPreview(null)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Cancel</button>
-                                    <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>
+                                <div className="p-4 border-t border-gray-200 flex justify-between items-center gap-3">
+                                    <div className="text-xs text-gray-500 flex-1">
+                                        {autoOrgSel.size > 0
+                                            ? `${autoOrgSel.size} selected — right-click to add to a Book List`
+                                            : 'Tip: click covers to select, then right-click → add them to a Book List (e.g. New To Read)'}
+                                    </div>
+                                    <div className="flex gap-2 flex-shrink-0">
+                                        <button onClick={closeAutoOrgPreview} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Cancel</button>
+                                        <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        );
+                    })()}
+
+                    {/* v6.13.0-alpha.9 (D2) - Preview cover right-click: add the selection to a Book List (flat menu; the only action here) */}
+                    {autoOrgMenu && (
+                        <div className="fixed inset-0 z-[75]" onClick={() => setAutoOrgMenu(null)} onContextMenu={(e) => { e.preventDefault(); setAutoOrgMenu(null); }}>
+                            <div className="absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[220px] max-h-[360px] overflow-y-auto"
+                                style={{ left: `${Math.min(autoOrgMenu.x, (typeof window !== 'undefined' ? window.innerWidth : 9999) - 250)}px`, top: `${autoOrgMenu.y}px` }}
+                                onClick={(e) => e.stopPropagation()}>
+                                <div className="px-4 py-1.5 text-xs text-gray-500 border-b border-gray-100">Add {autoOrgMenu.bookIds.length} book{autoOrgMenu.bookIds.length !== 1 ? 's' : ''} to a Book List</div>
+                                <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 font-medium text-blue-700"
+                                    role="menuitem" onClick={() => addPreviewSelToNewBookList(autoOrgMenu.bookIds)}>
+                                    <span>＋</span><span>New Book List…</span>
+                                </div>
+                                {bookLists.length > 0 && <div className="border-t border-gray-200 my-1" role="separator"></div>}
+                                {[...bookLists].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)).map(bl => (
+                                    <div key={bl.id} className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+                                        role="menuitem" onClick={() => addPreviewSelToBookList(bl.id, autoOrgMenu.bookIds)}>
+                                        <span>📗</span><span className="truncate max-w-[200px]">{bl.name}</span>
+                                    </div>
+                                ))}
+                                {bookLists.length === 0 && <div className="px-4 py-2 text-gray-400 text-sm">No Book Lists yet — use "New Book List…"</div>}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* v6.13.0-alpha.9 (D2) - Preview cover hover: where this book already lives (folders + Book Lists) */}
+                    {autoOrgHover && !autoOrgMenu && (() => {
+                        const flds = getFoldersContainingBook(autoOrgHover.bookId).filter(f => f.id !== '__inbox__' && f.id !== '__all__' && f.id !== '__library__');
+                        const lists = getBookListsContainingBook(autoOrgHover.bookId);
+                        return (
+                            <div className="fixed bg-white border border-gray-300 shadow-lg rounded px-3 py-2 text-xs z-[76]"
+                                style={{ left: `${autoOrgHover.x}px`, top: `${autoOrgHover.y}px`, maxWidth: '260px', pointerEvents: 'none' }}>
+                                {(flds.length === 0 && lists.length === 0)
+                                    ? <div className="text-gray-400 italic">Only in Inbox — not filed or listed yet</div>
+                                    : <>
+                                        {flds.length > 0 && <div className="text-gray-500 mb-0.5">In folders:</div>}
+                                        {flds.map(f => <div key={f.id} className="text-gray-700 truncate">📁 {f.name}</div>)}
+                                        {lists.length > 0 && <div className={`text-gray-500 mb-0.5 ${flds.length > 0 ? 'mt-1' : ''}`}>On Book Lists:</div>}
+                                        {lists.map(bl => <div key={bl.id} className="text-gray-700 truncate">📗 {bl.name}</div>)}
+                                      </>}
+                            </div>
                         );
                     })()}
 
