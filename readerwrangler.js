@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6898,9 +6898,10 @@
                 return plan;
             };
 
-            // v6.13.0-alpha.4 - Right-click Auto-Organize (book-anchored). Files the selected books' author(s) /
-            // series' UNFILED (Inbox) books into an Author/Series hierarchy via the shared engine. Targeted intent →
-            // seriesFolderMinBooks:1 (always make the series folder); standalones sit at the author root (no Misc).
+            // v6.13.0-alpha.5 - Right-click Auto-Organize (book-anchored), on the selected books' UNFILED (Inbox)
+            // books. By Author = FLAT: all of the author's books directly under the Author folder, NO series
+            // subfolders. By Series = the book's series into an Author/Series subfolder (seriesFolderMinBooks:1 —
+            // always make the folder, even for a single owned book). Two deliberately different structure choices.
             const inboxSourceBooks = () => {
                 const inFolders = new Set();
                 folders.forEach(f => { if (f.id !== '__inbox__' && f.id !== '__all__') (f.bookIds || []).forEach(id => inFolders.add(id)); });
@@ -6921,7 +6922,7 @@
                 });
                 if (authorGroups.length === 0) { showToast('Nothing to organize — those authors have no unfiled books'); return; }
                 const label = authorGroups.length === 1 ? `Auto-Organized ${authorGroups[0].displayName}` : `Auto-Organized ${authorGroups.length} authors`;
-                const plan = applyOrganizePlan(authorGroups, { seriesFolderMinBooks: 1, createMiscellaneous: false }, label);
+                const plan = applyOrganizePlan(authorGroups, { createSeriesFolders: false }, label); // By Author = flat, no series subfolders
                 const folderCount = plan.createdFolders.length + plan.mergedFolders.length;
                 showToast(plan.totalBooksOrganized > 0
                     ? `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} into ${folderCount} author folder${folderCount !== 1 ? 's' : ''}`
