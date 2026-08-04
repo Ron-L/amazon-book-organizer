@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.0-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6958,6 +6958,21 @@
 
             const closeAutoOrgPreview = () => { setAutoOrgPreview(null); setAutoOrgSel(new Set()); setAutoOrgMenu(null); setAutoOrgHover(null); };
 
+            // v6.13.0-alpha.10 (D3) - After the book detail modal closes over the preview, re-map the preview's books to
+            // fresh objects (so in-modal edits show) and drop any now-filed/deleted, then recompute the dry-run so the
+            // preview isn't stale. Pure recompute via the functional setter — safe to run even when nothing changed.
+            const refreshAutoOrgPreview = () => {
+                setAutoOrgPreview(prev => {
+                    if (!prev) return prev;
+                    const authorGroups = prev.authorGroups
+                        .map(ag => ({ ...ag, books: ag.books.map(b => bookMap.get(b.id)).filter(Boolean) }))
+                        .filter(ag => ag.books.length > 0);
+                    if (authorGroups.length === 0) return null; // everything got filed/deleted from the detail modal
+                    const dryPlan = computeOrganizePlan(authorGroups, folders, prev.opts);
+                    return { ...prev, authorGroups, dryPlan };
+                });
+            };
+
             // v6.13.0-alpha.9 (D2) - Add the preview's selected covers to a Book List (the New To Read queue workflow:
             // books file into their series folder on Confirm AND stay on the list as shortcuts). Reuses addBooksToBookList
             // (undoable) with the PREVIEW selection — distinct from the explorer's getSelectedBookIds()-based handlers.
@@ -6997,6 +7012,12 @@
                 }
                 closeAutoOrgPreview();
             };
+
+            // v6.13.0-alpha.10 (D3) - When a double-click-opened book detail modal closes over the preview, refresh it.
+            // Keyed ONLY on modalBook so it can't loop (refresh sets autoOrgPreview, not modalBook); no-op when no preview.
+            useEffect(() => {
+                if (!modalBook && autoOrgPreview) refreshAutoOrgPreview();
+            }, [modalBook]); // eslint-disable-line react-hooks/exhaustive-deps
 
             // v6.13.0-alpha.4 - Wizard organize is now a thin caller of the shared applyOrganizePlan.
             const executeWizardOrganize = () => {
@@ -9979,6 +10000,7 @@
                                 title={`${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`}
                                 style={{ width: '46px', flex: '0 0 auto', position: 'relative', cursor: 'pointer', borderRadius: '4px', outline: sel ? '2px solid #4f46e5' : '2px solid transparent', outlineOffset: '1px' }}
                                 onClick={(e) => { e.stopPropagation(); setAutoOrgSel(prev => { const n = new Set(prev); n.has(b.id) ? n.delete(b.id) : n.add(b.id); return n; }); }}
+                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null); }}
                                 onContextMenu={(e) => {
                                     e.preventDefault(); e.stopPropagation();
                                     const ids = (autoOrgSel.has(b.id) && autoOrgSel.size > 0) ? [...autoOrgSel] : [b.id];
