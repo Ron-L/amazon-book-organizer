@@ -37,6 +37,7 @@
 - [ ] Right-click a book → **Auto-Organize by Author / by Series** (book-anchored, bottom-up; cover-preview confirm; reuses the wizard engine; subsumes "create an Author/Series folder as a move target") → see docs/design/AUTO-ORGANIZE-RIGHTCLICK.md (spec)
 - [ ] Auto-Organize wizard: add a **filter/search field** to the author list (scrolling to find a name is painful)
 
+- [ ] **See where a book lives (HIGH)** — hover a cover in a Folder or Book List → the same "In" popup (all Folders + Book Lists it's in) that All Books already shows. Hover is unbound there today, so no conflict. Kills the "did I also put this elsewhere?" pain while organizing. (The auto-organize preview inherits this via the shared cover component.)
 - [ ] **Terminology copy pass** (6.12.1) — "shortcut" language in Book List toasts/menus; explain "Linked Copies" once in manual/GPT → see docs/design/TERMINOLOGY.md (spec)
 - [ ] **Fetcher `ee6d83c` re-apply** on v4.11.10 — `LIBRARY_EXCLUDE_TAGS` named-constant/doc + delisted-book (`product=null`) count+notice adapted to coexist with null-product recovery (count only when recovery also fails)
 - [ ] **Folder double-store (audit F1)** — folders live in both FOLDERS_KEY and the blob; consolidate to the single guarded source (needs a load reorder). Same class as the 6.12.0 Book-List data-loss.

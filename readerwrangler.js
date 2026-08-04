@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6882,10 +6882,72 @@
             };
 
             // v5.1.0-alpha.29c - Phase 3.3: Extract organize logic to eliminate ~250 lines of duplication
-            // v6.13.0-alpha.3 - Thin wrapper over the pure computeOrganizePlan (organizeEngine.js). Compute the
-            // plan SYNCHRONOUSLY from the current folders, then apply it. (The alpha.1 refactor computed inside the
-            // setFolders updater, which React runs deferred — so recordAction saw a null plan and the wizard's Undo
-            // was silently dropped. Computing up front fixes it.) Shared engine with the right-click Auto-Organize.
+            // v6.13.0-alpha.4 - Shared apply step for BOTH the wizard and the right-click Auto-Organize: compute
+            // the plan SYNCHRONOUSLY from current folders, apply it, and record ONE undo. (Computing inside the
+            // setFolders updater ran deferred and dropped the undo — see alpha.3. Compute up front.) Returns the plan.
+            const applyOrganizePlan = (authorGroups, opts, label) => {
+                const plan = computeOrganizePlan(authorGroups, folders, opts);
+                if (plan.totalBooksOrganized > 0) {
+                    setFolders(plan.newFolders);
+                    recordAction({
+                        type: 'WIZARD_ORGANIZE',
+                        description: `${label} (${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''})`,
+                        subActions: plan.subActions
+                    });
+                }
+                return plan;
+            };
+
+            // v6.13.0-alpha.4 - Right-click Auto-Organize (book-anchored). Files the selected books' author(s) /
+            // series' UNFILED (Inbox) books into an Author/Series hierarchy via the shared engine. Targeted intent →
+            // seriesFolderMinBooks:1 (always make the series folder); standalones sit at the author root (no Misc).
+            const inboxSourceBooks = () => {
+                const inFolders = new Set();
+                folders.forEach(f => { if (f.id !== '__inbox__' && f.id !== '__all__') (f.bookIds || []).forEach(id => inFolders.add(id)); });
+                return books.filter(b => !inFolders.has(b.id));
+            };
+            const normAuthorKey = (a) => (a || '').trim().toLowerCase();
+            const displayAuthorName = (a) => (a && a.trim()) ? a.trim() : 'Unknown Author';
+
+            const autoOrganizeByAuthor = (selBooks) => {
+                setExplorerBookContextMenu(null); setContextSubmenu(null);
+                const inbox = inboxSourceBooks();
+                const wantAuthors = new Map(); // normKey -> original author string (first seen)
+                selBooks.forEach(b => { const k = normAuthorKey(b.author); if (!wantAuthors.has(k)) wantAuthors.set(k, b.author); });
+                const authorGroups = [];
+                wantAuthors.forEach((orig, key) => {
+                    const bks = inbox.filter(b => normAuthorKey(b.author) === key);
+                    if (bks.length > 0) authorGroups.push({ displayName: displayAuthorName(orig), books: bks });
+                });
+                if (authorGroups.length === 0) { showToast('Nothing to organize — those authors have no unfiled books'); return; }
+                const label = authorGroups.length === 1 ? `Auto-Organized ${authorGroups[0].displayName}` : `Auto-Organized ${authorGroups.length} authors`;
+                const plan = applyOrganizePlan(authorGroups, { seriesFolderMinBooks: 1, createMiscellaneous: false }, label);
+                const folderCount = plan.createdFolders.length + plan.mergedFolders.length;
+                showToast(plan.totalBooksOrganized > 0
+                    ? `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} into ${folderCount} author folder${folderCount !== 1 ? 's' : ''}`
+                    : 'Nothing to organize — already filed');
+            };
+
+            const autoOrganizeBySeries = (selBooks) => {
+                setExplorerBookContextMenu(null); setContextSubmenu(null);
+                const inbox = inboxSourceBooks();
+                const wantSeries = new Map(); // normSeriesKey -> anchor book (for its author)
+                selBooks.forEach(b => { if (b.series && b.series.trim()) { const k = b.series.trim().toLowerCase(); if (!wantSeries.has(k)) wantSeries.set(k, b); } });
+                if (wantSeries.size === 0) { showToast('None of the selected books are in a series'); return; }
+                const authorGroups = [];
+                wantSeries.forEach((anchor, key) => {
+                    const bks = inbox.filter(b => b.series && b.series.trim().toLowerCase() === key);
+                    if (bks.length > 0) authorGroups.push({ displayName: displayAuthorName(anchor.author), books: bks });
+                });
+                if (authorGroups.length === 0) { showToast('Nothing to organize — those series have no unfiled books'); return; }
+                const label = wantSeries.size === 1 ? `Auto-Organized ${[...wantSeries.values()][0].series.trim()}` : `Auto-Organized ${wantSeries.size} series`;
+                const plan = applyOrganizePlan(authorGroups, { seriesFolderMinBooks: 1, createMiscellaneous: false }, label);
+                showToast(plan.totalBooksOrganized > 0
+                    ? `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} by series`
+                    : 'Nothing to organize — already filed');
+            };
+
+            // v6.13.0-alpha.4 - Wizard organize is now a thin caller of the shared applyOrganizePlan.
             const executeWizardOrganize = () => {
                 const selectedAuthors = wizardAuthors.filter(a => wizardSelectedAuthors.has(a.normalizedName));
 
@@ -6901,8 +6963,7 @@
                     seriesFolderMinBooks: wizardSeriesFolderMin
                 };
 
-                const plan = computeOrganizePlan(selectedAuthors, folders, opts);
-                setFolders(plan.newFolders);
+                const plan = applyOrganizePlan(selectedAuthors, opts, `Organized ${selectedAuthors.length} author${selectedAuthors.length !== 1 ? 's' : ''}`);
 
                 const subfoldersCreated = plan.subActions.filter(a => a.type === 'CREATE_FOLDER' && a.parentId !== null).length;
                 setWizardResultsData({
@@ -6910,12 +6971,6 @@
                     foldersMerged: plan.mergedFolders.length,
                     subfoldersCreated: subfoldersCreated,
                     totalBooks: plan.totalBooksOrganized
-                });
-
-                recordAction({
-                    type: 'WIZARD_ORGANIZE',
-                    description: `Organized ${selectedAuthors.length} authors (${plan.totalBooksOrganized} books)`,
-                    subActions: plan.subActions
                 });
 
                 setWizardModalOpen(false);
@@ -16764,6 +16819,43 @@
                                                     <span>Open in Amazon</span>
                                                 </div>
                                             )}
+
+                                            {/* v6.13.0-alpha.4 - Auto-Organize submenu (book-anchored; files the author's/series' Inbox books) */}
+                                            <div
+                                                className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                                role="menuitem" aria-haspopup="true"
+                                                onMouseEnter={() => setContextSubmenu('auto-organize')}
+                                                onMouseLeave={(e) => {
+                                                    setTimeout(() => {
+                                                        const activeSubmenu = document.querySelector('.context-submenu:hover');
+                                                        const activeTrigger = document.querySelector('.submenu-trigger:hover');
+                                                        if (!activeSubmenu && !activeTrigger) setContextSubmenu(null);
+                                                    }, 600);
+                                                }}>
+                                                <span>✨</span>
+                                                <span>Auto-Organize</span>
+                                                <span className="ml-auto">▶</span>
+                                                {contextSubmenu === 'auto-organize' && (
+                                                    <div
+                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[190px] z-[70]"
+                                                        role="menu" aria-label="Auto-Organize"
+                                                        style={{ [submenuOnLeft ? 'right' : 'left']: '100%', top: '0' }}
+                                                        onMouseEnter={() => setContextSubmenu('auto-organize')}
+                                                        onMouseLeave={() => setContextSubmenu(null)}
+                                                        onClick={(e) => e.stopPropagation()}>
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
+                                                            onClick={() => autoOrganizeByAuthor(selectedBooksArray)}>
+                                                            <span>📁</span><span>By Author</span>
+                                                        </div>
+                                                        {selectedBooksArray.some(b => b.series && b.series.trim()) && (
+                                                            <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
+                                                                onClick={() => autoOrganizeBySeries(selectedBooksArray)}>
+                                                                <span>📚</span><span>By Series</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
 
                                             {/* v6.10.0-alpha.9 - Share submenu */}
                                             <div

@@ -62,6 +62,14 @@ One undo entry reverses the whole operation (reuse the wizard's organize undo �
 - **Book has no author** → "By Author" disabled.
 - **Nothing eligible** (all of the author's books already filed) → dialog says "Nothing to organize — all of {author}'s books are already filed."
 
+## Preview interactions — reuse the explorer's cover component (2026-08-04)
+
+Build the preview's covers by **reusing the existing explorer / All-Books cover component**, not a bespoke grid. Then the preview inherits — for free and fully consistent with the rest of the app — **multi-select** (Ctrl/Shift-click), **right-click → Add to Book List**, **click → book detail**, and **hover → the "In" popup**.
+
+**Caveat:** how much comes free depends on how cleanly that cover extracts. Assess at build time (it also serves the module-split goal). If extraction is messy, **stop and reassess** rather than forcing it.
+
+**Motivating workflow (the New To Read queue):** while auto-organizing a series, select the *unread* covers in the preview and right-click → **New To Read** (a Book List = deletable shortcuts). Confirm the organize → the books file into their **series folder** *and* stay on **New To Read**. Finish one → delete it off the list; the book stays put. Custodial home (folder) + supplemental queue (list). This is why the preview needs select + Add-to-Book-List — and why the companion feature, the **"In" popup everywhere** (TODO/Next, high), matters: you need to *see* both memberships at a glance.
+
 ## Decisions (2026-08-04)
 1. **Scope:** Inbox/unfiled only — already-filed books stay put (custodial; e.g. a story deliberately parked in another author's universe). ✓
 2. **Preview:** full **hierarchical** Author→Series→covers, clickable covers → detail. No flat MVP. ✓
