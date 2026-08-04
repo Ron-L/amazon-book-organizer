@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.0-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -627,6 +627,7 @@
             const [wizardPreviewMode, setWizardPreviewMode] = useState(false); // v5.1.0-alpha.28 - Phase 3.1: Preview mode
             const [wizardPreviewData, setWizardPreviewData] = useState(null); // v5.1.0-alpha.28 - Phase 3.1: Preview structure data
             const [wizardResultsOpen, setWizardResultsOpen] = useState(false); // v5.1.0-alpha.29 - Phase 3.3: Results dialog visibility
+            const [autoOrgPreview, setAutoOrgPreview] = useState(null); // v6.13.0-alpha.7 - Right-click Auto-Organize confirm/preview: { mode, authorGroups, opts, label, dryPlan } or null
             const [wizardResultsData, setWizardResultsData] = useState(null); // v5.1.0-alpha.29 - Phase 3.3: Results summary data
             const [wizardSourceBooksCount, setWizardSourceBooksCount] = useState(0); // v5.1.0-alpha.30 - Phase 3.4: Track Inbox book count for validation
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -5565,14 +5566,16 @@
             }, [modalBook]);
             // v5.2.0-alpha.18 - Track whether any modal/dialog overlay is open
             useEffect(() => {
-                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || showBulkEditModal || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || relayHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData);
-            }, [modalBook, showBulkPriceModal, showBulkEditModal, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, relayHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+                anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || showBulkEditModal || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || relayHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData || autoOrgPreview);
+            }, [modalBook, showBulkPriceModal, showBulkEditModal, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, relayHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData, autoOrgPreview]);
 
             // v5.4.2 - ESC closes innermost modal (layered dismissal)
             // aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen handled separately in handleEscKey
             useEffect(() => {
                 const handleModalEsc = (e) => {
                     if (e.key !== 'Escape') return;
+                    // v6.13.0-alpha.7 - Auto-Organize confirm/preview (standalone, innermost when open)
+                    if (autoOrgPreview) { setAutoOrgPreview(null); return; }
                     // Wizard sub-dialogs (innermost)
                     if (wizardResultsOpen) { setWizardResultsOpen(false); return; }
                     if (wizardPreviewMode) { setWizardPreviewMode(false); return; }
@@ -5601,7 +5604,7 @@
                 };
                 window.addEventListener('keydown', handleModalEsc);
                 return () => window.removeEventListener('keydown', handleModalEsc);
-            }, [modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, relaySetupOpen, relayManualCreds, relayHelpOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
+            }, [autoOrgPreview, modalBook, showBulkPriceModal, showBulkEditModal, bulkEditSeriesDropdownOpen, isEditingBook, editBookSeriesDropdownOpen, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, relaySetupOpen, relayManualCreds, relayHelpOpen, wizardHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData]);
 
             // v5.4.6 - ENTER saves edit mode when no input is focused
             useEffect(() => {
@@ -6930,27 +6933,35 @@
                 return inboxSourceBooks().some(b => keys.has(normAuthorKey(b.author)) && b.series && b.series.trim());
             };
 
-            const autoOrganizeByAuthor = (selBooks) => {
+            // v6.13.0-alpha.7 (D1) - Right-click no longer commits immediately: it opens the confirm/preview.
+            // computeOrganizePlan is PURE, so the dry-run plan drives the preview counts without touching state;
+            // Confirm re-applies via applyOrganizePlan (which recomputes against the then-current folders + records undo).
+            const openAutoOrgPreview = (mode, selBooks, opts, labelFor) => {
                 setExplorerBookContextMenu(null); setContextSubmenu(null);
                 const authorGroups = buildAuthorGroupsFromSelection(selBooks);
                 if (authorGroups.length === 0) { showToast('Nothing to organize — those authors have no unfiled books'); return; }
-                const label = authorGroups.length === 1 ? `Auto-Organized ${authorGroups[0].displayName}` : `Auto-Organized ${authorGroups.length} authors`;
-                const plan = applyOrganizePlan(authorGroups, { createSeriesFolders: false }, label); // FLAT — no series subfolders
-                const folderCount = plan.createdFolders.length + plan.mergedFolders.length;
-                showToast(plan.totalBooksOrganized > 0
-                    ? `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} into ${folderCount} author folder${folderCount !== 1 ? 's' : ''}`
-                    : 'Nothing to organize — already filed');
+                const dryPlan = computeOrganizePlan(authorGroups, folders, opts);
+                if (dryPlan.totalBooksOrganized === 0) { showToast('Nothing to organize — already filed'); return; }
+                setAutoOrgPreview({ mode, authorGroups, opts, label: labelFor(authorGroups), dryPlan });
             };
+            const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
+                { createSeriesFolders: false }, // FLAT — no series subfolders
+                (ags) => ags.length === 1 ? `Auto-Organized ${ags[0].displayName}` : `Auto-Organized ${ags.length} authors`);
+            const autoOrganizeBySeries = (selBooks) => openAutoOrgPreview('series', selBooks,
+                { createSeriesFolders: true, seriesFolderMinBooks: 1, createMiscellaneous: false }, // series subfolders; non-series at author root
+                (ags) => ags.length === 1 ? `Auto-Organized ${ags[0].displayName} by series` : `Auto-Organized ${ags.length} authors by series`);
 
-            const autoOrganizeBySeries = (selBooks) => {
-                setExplorerBookContextMenu(null); setContextSubmenu(null);
-                const authorGroups = buildAuthorGroupsFromSelection(selBooks);
-                if (authorGroups.length === 0) { showToast('Nothing to organize — those authors have no unfiled books'); return; }
-                const label = authorGroups.length === 1 ? `Auto-Organized ${authorGroups[0].displayName} by series` : `Auto-Organized ${authorGroups.length} authors by series`;
-                const plan = applyOrganizePlan(authorGroups, { createSeriesFolders: true, seriesFolderMinBooks: 1, createMiscellaneous: false }, label); // series subfolders; non-series at author root
-                showToast(plan.totalBooksOrganized > 0
-                    ? `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} with series subfolders`
-                    : 'Nothing to organize — already filed');
+            const confirmAutoOrgPreview = () => {
+                if (!autoOrgPreview) return;
+                const { authorGroups, opts, label, mode } = autoOrgPreview;
+                const plan = applyOrganizePlan(authorGroups, opts, label);
+                if (mode === 'author') {
+                    const folderCount = plan.createdFolders.length + plan.mergedFolders.length;
+                    showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} into ${folderCount} author folder${folderCount !== 1 ? 's' : ''}`);
+                } else {
+                    showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} with series subfolders`);
+                }
+                setAutoOrgPreview(null);
             };
 
             // v6.13.0-alpha.4 - Wizard organize is now a thin caller of the shared applyOrganizePlan.
@@ -9923,6 +9934,74 @@
                             </div>
                         </div>
                     )}
+
+                    {/* v6.13.0-alpha.7 (D1) - Auto-Organize confirm/preview: hierarchical Author→Series→covers before commit */}
+                    {autoOrgPreview && (() => {
+                        const { mode, authorGroups, dryPlan } = autoOrgPreview;
+                        const cover = (b) => (
+                            <div key={b.id} title={`${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`} style={{ width: '46px', flex: '0 0 auto' }}>
+                                {b.coverUrl
+                                    ? <img src={b.coverUrl} alt="" style={{ width: '46px', height: '69px', objectFit: 'cover', borderRadius: '3px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                                    : <div style={{ width: '46px', height: '69px', borderRadius: '3px', background: 'var(--bg-hover, #e5e7eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', lineHeight: 1.1, textAlign: 'center', padding: '3px', overflow: 'hidden', color: 'var(--text-secondary, #6b7280)' }}>{b.title || 'Untitled'}</div>}
+                            </div>
+                        );
+                        const coverRow = (bks) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{bks.map(cover)}</div>;
+                        const folderCount = dryPlan.createdFolders.length + dryPlan.mergedFolders.length;
+                        const subCount = dryPlan.subActions.filter(a => a.type === 'CREATE_FOLDER' && a.parentId !== null).length;
+                        return (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setAutoOrgPreview(null); backdropMouseDownRef.current = null; }}>
+                            <div className="bg-white rounded-lg shadow-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-autoorg-preview" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+                                {/* Header */}
+                                <div className="flex justify-between items-center p-4 bg-indigo-100 rounded-t-lg border-b border-indigo-300">
+                                    <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">✨ Auto-Organize — {mode === 'series' ? 'By Series' : 'By Author'}</h2>
+                                    <button onClick={() => setAutoOrgPreview(null)} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
+                                </div>
+                                {/* Summary */}
+                                <div className="px-4 pt-3 text-sm text-gray-700">
+                                    Move <strong>{dryPlan.totalBooksOrganized}</strong> book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''} into <strong>{folderCount}</strong> author folder{folderCount !== 1 ? 's' : ''}{subCount > 0 ? <> and <strong>{subCount}</strong> series subfolder{subCount !== 1 ? 's' : ''}</> : null}. These leave the Inbox.
+                                </div>
+                                {/* Scrollable hierarchy */}
+                                <div className="p-4 overflow-y-auto" style={{ flex: 1 }}>
+                                    {authorGroups.map(ag => {
+                                        if (mode === 'series') {
+                                            const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
+                                            return (
+                                                <div key={ag.displayName} className="mb-4">
+                                                    <div className="font-semibold text-gray-900 flex items-center gap-2">📁 {ag.displayName}</div>
+                                                    <div className="ml-4 mt-1">
+                                                        {[...seriesGroups.values()].map(s => (
+                                                            <div key={s.originalName} className="mb-2">
+                                                                <div className="text-sm text-gray-700 flex items-center gap-2">📚 {s.originalName} <span className="text-gray-400">({s.books.length})</span></div>
+                                                                {coverRow(s.books)}
+                                                            </div>
+                                                        ))}
+                                                        {standaloneBooks.length > 0 && (
+                                                            <div className="mb-2">
+                                                                <div className="text-sm text-gray-500 italic">Directly under {ag.displayName} <span className="text-gray-400">({standaloneBooks.length})</span></div>
+                                                                {coverRow(standaloneBooks)}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return (
+                                            <div key={ag.displayName} className="mb-4">
+                                                <div className="font-semibold text-gray-900 flex items-center gap-2">📁 {ag.displayName} <span className="text-gray-400 font-normal">({ag.books.length})</span></div>
+                                                <div className="ml-4">{coverRow(ag.books)}</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {/* Footer */}
+                                <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+                                    <button onClick={() => setAutoOrgPreview(null)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Cancel</button>
+                                    <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>
+                                </div>
+                            </div>
+                        </div>
+                        );
+                    })()}
 
                     {/* v6.10.0-alpha.14 - Tag from Collections Wizard (v6.10.0-alpha.15 - collectionTags + removal) */}
                     {tagFromCollectionsOpen && (() => {
