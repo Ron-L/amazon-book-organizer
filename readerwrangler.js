@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1152,6 +1152,29 @@
                 setBookLists(prev => prev.map(b => b.id === bookListId ? { ...b, bookIds: [...(b.bookIds || []), ...toAdd] } : b));
                 recordAction({ type: 'BOOKLIST_ADD', bookListId, bookIds: toAdd }); // v6.12.0 - undoable
                 return toAdd.length;
+            };
+
+            // v6.13.1-alpha.9 (ops refactor #3) - Single source of truth for creating / deleting a Book List (both
+            // undoable). Callers keep their own name-prompt / existing-name handling, then call these. createBookList
+            // returns the new list (callers use its id to navigate / rename). deleteBookList confirms + navigates away
+            // if you're viewing it + toasts.
+            const createBookList = (name, bookIds = []) => {
+                const trimmed = (name || '').trim() || 'New List';
+                const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
+                const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...bookIds], position: maxPos + 1 };
+                setBookLists(prev => [...prev, newBL]);
+                recordAction({ type: 'BOOKLIST_CREATE', bookList: newBL, label: `Create Book List '${trimmed}'` });
+                return newBL;
+            };
+            const deleteBookList = async (bl) => {
+                if (!bl) return false;
+                if (!(await showConfirmDialog('Delete Book List', `Delete the book list "${bl.name}"? The books themselves are not deleted.`))) return false;
+                const index = bookLists.findIndex(x => x.id === bl.id);
+                recordAction({ type: 'BOOKLIST_DELETE', bookList: bl, index, label: `Delete Book List '${bl.name}'` });
+                setBookLists(prev => prev.filter(x => x.id !== bl.id));
+                if (selectedFolderId === `__booklist_${bl.id}__`) navigateToFolder('__all__');
+                showToast(`Deleted Book List '${bl.name}'`);
+                return true;
             };
 
             // v6.10.0-alpha.17 - Build filter object from current active filters
@@ -6972,10 +6995,7 @@
                 const trimmed = (name || '').trim() || 'New To Read';
                 const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
                 if (existing) { addPreviewSelToBookList(existing.id, ids); return; }
-                const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
-                const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...ids], position: maxPos + 1 };
-                setBookLists(prev => [...prev, newBL]);
-                recordAction({ type: 'BOOKLIST_CREATE', bookList: newBL });
+                createBookList(trimmed, ids);
                 showToast(`Created '${trimmed}' with ${ids.length} book${ids.length !== 1 ? 's' : ''}`);
             };
 
@@ -8571,10 +8591,7 @@
                                                                     }
                                                                     return; // cancel / backdrop / add → done
                                                                 }
-                                                                const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
-                                                                const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...displayedIds], position: maxPos + 1 };
-                                                                setBookLists(prev => [...prev, newBL]);
-                                                                recordAction({ type: 'BOOKLIST_CREATE', bookList: newBL }); // v6.12.0-alpha.54 - undoable
+                                                                createBookList(trimmed, displayedIds);
                                                                 showToast(`Saved ${count} book${count !== 1 ? 's' : ''} to "${trimmed}"`);
                                                                 return;
                                                             }
@@ -12000,10 +12017,7 @@
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    const maxPos = bookLists.reduce((m, b) => Math.max(m, b.position ?? 0), -1);
-                                                    const newBL = { id: `bl-${Date.now()}`, name: 'New List', bookIds: [], position: maxPos + 1 };
-                                                    setBookLists(prev => [...prev, newBL]);
-                                                    recordAction({ type: 'BOOKLIST_CREATE', bookList: newBL }); // v6.12.0-alpha.54 - undoable
+                                                    const newBL = createBookList('New List', []);
                                                     if (bookListsSectionCollapsed) setBookListsSectionCollapsed(false);
                                                     navigateToFolder(`__booklist_${newBL.id}__`);
                                                     setEditingBookListId(newBL.id);
@@ -12131,11 +12145,7 @@
                                                             <button
                                                                 onClick={async (e) => {
                                                                     e.stopPropagation();
-                                                                    if (await showConfirmDialog('Delete Book List', `Delete the book list "${bl.name}"? The books themselves are not deleted.`)) {
-                                                                        recordAction({ type: 'BOOKLIST_DELETE', bookList: bl, index: bookLists.findIndex(x => x.id === bl.id) }); // v6.12.0-alpha.54 - undoable
-                                                                        setBookLists(prev => prev.filter(x => x.id !== bl.id));
-                                                                        if (selectedFolderId === blFolderId) navigateToFolder('__all__');
-                                                                    }
+                                                                    await deleteBookList(bl);
                                                                 }}
                                                                 className="text-gray-400 hover:text-red-500 p-0.5 rounded hover:bg-red-50"
                                                                 title="Delete book list">
@@ -15462,11 +15472,7 @@
                                             role="menuitem"
                                             onClick={async () => {
                                                 setFolderContextMenu(null);
-                                                if (await showConfirmDialog('Delete Book List', `Delete the book list "${bl?.name || 'list'}"? The books themselves are not deleted.`)) {
-                                                    recordAction({ type: 'BOOKLIST_DELETE', bookList: bookLists.find(x => x.id === blId), index: bookLists.findIndex(x => x.id === blId) }); // v6.12.0-alpha.54 - undoable
-                                                    setBookLists(prev => prev.filter(x => x.id !== blId));
-                                                    if (selectedFolderId === folderContextMenu.folderId) navigateToFolder('__all__');
-                                                }
+                                                await deleteBookList(bookLists.find(x => x.id === blId));
                                             }}>
                                             <span>🗑️</span>
                                             <span>Delete</span>
@@ -16256,10 +16262,7 @@
                             const trimmed = (name || '').trim() || 'Saved results';
                             const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
                             if (existing) { handleAddToExistingBookList(existing.id); return; }
-                            const maxPos = bookLists.length > 0 ? Math.max(...bookLists.map(b => b.position ?? 0)) : -1;
-                            const newBL = { id: `bl-${Date.now()}`, name: trimmed, bookIds: [...ids], position: maxPos + 1 };
-                            setBookLists(prev => [...prev, newBL]);
-                            recordAction({ type: 'BOOKLIST_CREATE', bookList: newBL }); // v6.12.0-alpha.54 - undoable
+                            createBookList(trimmed, ids);
                             setExplorerSelectedItems(new Set());
                             setExplorerBookContextMenu(null);
                             setContextSubmenu(null);
