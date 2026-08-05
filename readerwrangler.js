@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.13";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1175,6 +1175,25 @@
                 if (selectedFolderId === `__booklist_${bl.id}__`) navigateToFolder('__all__');
                 showToast(`Deleted Book List '${bl.name}'`);
                 return true;
+            };
+            // v6.13.1-alpha.13 - The '+' button creates a list THEN lets you name it inline. Finalize the "Created"
+            // toast + undo label once the name resolves (Enter/blur → typed name, Escape → default). The ref fires it
+            // exactly once even if blur + unmount both signal (undoStackRef lags a tick, so it can't guard). A rename
+            // of an EXISTING list returns early (last undo entry isn't its create) and stays silent, as before.
+            const blFinalizedRef = useRef(null);
+            const finalizeCreatedBookList = (bl, finalName) => {
+                if (!bl || blFinalizedRef.current === bl.id) return;
+                const stack = undoStackRef.current || [];
+                const last = stack[stack.length - 1];
+                if (!last || last.type !== 'BOOKLIST_CREATE' || last.bookList?.id !== bl.id) return;
+                blFinalizedRef.current = bl.id;
+                setUndoStack(prev => {
+                    const l = prev[prev.length - 1];
+                    return (l && l.type === 'BOOKLIST_CREATE' && l.bookList?.id === bl.id)
+                        ? [...prev.slice(0, -1), { ...l, label: `Create Book List '${finalName}'`, bookList: { ...l.bookList, name: finalName } }]
+                        : prev;
+                });
+                showToast(`Created Book List '${finalName}'`);
             };
 
             // v6.10.0-alpha.17 - Build filter object from current active filters
@@ -12131,26 +12150,12 @@
                                                                 onBlur={() => {
                                                                     const nm = editingBookListName.trim();
                                                                     if (nm) {
-                                                                        // v6.13.1-alpha.12 - Was this the list we just created via '+'? (last undo entry is its create.)
-                                                                        // Only then do we toast "Created …" (with the real name) + fix that entry's label — a plain
-                                                                        // rename of an existing list stays silent, as before.
-                                                                        const stack = undoStackRef.current || [];
-                                                                        const lastAct = stack[stack.length - 1];
-                                                                        const justCreated = lastAct && lastAct.type === 'BOOKLIST_CREATE' && lastAct.bookList?.id === bl.id;
                                                                         setBookLists(prev => prev.map(x => x.id === bl.id ? { ...x, name: nm } : x));
-                                                                        if (justCreated) {
-                                                                            setUndoStack(prev => {
-                                                                                const last = prev[prev.length - 1];
-                                                                                return (last && last.type === 'BOOKLIST_CREATE' && last.bookList?.id === bl.id)
-                                                                                    ? [...prev.slice(0, -1), { ...last, label: `Create Book List '${nm}'`, bookList: { ...last.bookList, name: nm } }]
-                                                                                    : prev;
-                                                                            });
-                                                                            showToast(`Created Book List '${nm}'`);
-                                                                        }
+                                                                        finalizeCreatedBookList(bl, nm);
                                                                     }
                                                                     setEditingBookListId(null); setEditingBookListName('');
                                                                 }}
-                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); else if (e.key === 'Escape') { setEditingBookListId(null); setEditingBookListName(''); } }}
+                                                                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); else if (e.key === 'Escape') { finalizeCreatedBookList(bl, bl.name); setEditingBookListId(null); setEditingBookListName(''); } }}
                                                                 autoFocus
                                                                 onClick={(e) => e.stopPropagation()}
                                                             />
