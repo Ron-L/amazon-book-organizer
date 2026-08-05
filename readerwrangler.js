@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -12018,6 +12018,7 @@
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     const newBL = createBookList('New List', []);
+                                                    showToast('New Book List created — name it');
                                                     if (bookListsSectionCollapsed) setBookListsSectionCollapsed(false);
                                                     navigateToFolder(`__booklist_${newBL.id}__`);
                                                     setEditingBookListId(newBL.id);
