@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -12018,7 +12018,6 @@
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     const newBL = createBookList('New List', []);
-                                                    showToast('New Book List created — name it');
                                                     if (bookListsSectionCollapsed) setBookListsSectionCollapsed(false);
                                                     navigateToFolder(`__booklist_${newBL.id}__`);
                                                     setEditingBookListId(newBL.id);
@@ -12132,14 +12131,22 @@
                                                                 onBlur={() => {
                                                                     const nm = editingBookListName.trim();
                                                                     if (nm) {
+                                                                        // v6.13.1-alpha.12 - Was this the list we just created via '+'? (last undo entry is its create.)
+                                                                        // Only then do we toast "Created …" (with the real name) + fix that entry's label — a plain
+                                                                        // rename of an existing list stays silent, as before.
+                                                                        const stack = undoStackRef.current || [];
+                                                                        const lastAct = stack[stack.length - 1];
+                                                                        const justCreated = lastAct && lastAct.type === 'BOOKLIST_CREATE' && lastAct.bookList?.id === bl.id;
                                                                         setBookLists(prev => prev.map(x => x.id === bl.id ? { ...x, name: nm } : x));
-                                                                        // v6.13.1-alpha.11 - reflect the final name in the create's undo entry (if this list was just created)
-                                                                        setUndoStack(prev => {
-                                                                            const last = prev[prev.length - 1];
-                                                                            return (last && last.type === 'BOOKLIST_CREATE' && last.bookList?.id === bl.id)
-                                                                                ? [...prev.slice(0, -1), { ...last, label: `Create Book List '${nm}'`, bookList: { ...last.bookList, name: nm } }]
-                                                                                : prev;
-                                                                        });
+                                                                        if (justCreated) {
+                                                                            setUndoStack(prev => {
+                                                                                const last = prev[prev.length - 1];
+                                                                                return (last && last.type === 'BOOKLIST_CREATE' && last.bookList?.id === bl.id)
+                                                                                    ? [...prev.slice(0, -1), { ...last, label: `Create Book List '${nm}'`, bookList: { ...last.bookList, name: nm } }]
+                                                                                    : prev;
+                                                                            });
+                                                                            showToast(`Created Book List '${nm}'`);
+                                                                        }
                                                                     }
                                                                     setEditingBookListId(null); setEditingBookListName('');
                                                                 }}
