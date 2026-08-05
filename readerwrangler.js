@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2423,6 +2423,79 @@
                 return true;
             };
 
+            // v6.13.1-alpha.1 (operations refactor #1) - Single source of truth for deleting a folder + its subfolders.
+            // Replaces THREE drifted paths: keyboard 'DELETE_FOLDER' (no undo; and a homeless-book bug — a top-level
+            // folder's books went nowhere), the right-pane × button, and the left-pane menu (which recorded two
+            // different DELETE_FOLDERS payloads — the left one's `movedBooks` was ignored by the undo reducer, so undo
+            // duplicated the book refs). One confirm, one undo (the reducer's orphanedBooks/orphanDestination shape),
+            // one toast. Books return to the parent folder, or the Inbox for a top-level folder. Returns true if deleted.
+            const deleteFolder = async (folder) => {
+                if (!folder || ['__inbox__', '__all__', '__library__', '__views__', '__trash__'].includes(folder.id)) return false;
+
+                const getDescendants = (folderId) => {
+                    const children = folders.filter(f => f.parentId === folderId);
+                    return children.reduce((acc, c) => [...acc, c, ...getDescendants(c.id)], []);
+                };
+                const descendants = getDescendants(folder.id);
+                const foldersToDelete = [folder, ...descendants];
+                const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
+                const folderIndices = foldersToDelete.map(f => folders.findIndex(x => x.id === f.id));
+
+                const destinationId = folder.parentId || '__inbox__';
+                const destinationName = folders.find(f => f.id === destinationId)?.name || 'Inbox';
+                const destLabel = destinationId === '__inbox__' ? 'the Inbox' : `"${destinationName}"`;
+
+                const orphanedBookIds = [...new Set(foldersToDelete.flatMap(f => f.bookIds || []))];
+                const bookCount = orphanedBookIds.length;
+                const subCount = descendants.length;
+
+                let confirmMsg = `Delete folder "${folder.name}"?`;
+                if (bookCount > 0 && subCount > 0) {
+                    confirmMsg = `Delete "${folder.name}", its ${bookCount} book${bookCount !== 1 ? 's' : ''}, and ${subCount} subfolder${subCount !== 1 ? 's' : ''}? The book${bookCount !== 1 ? 's' : ''} return to ${destLabel}.`;
+                } else if (bookCount > 0) {
+                    confirmMsg = `Delete "${folder.name}" and its ${bookCount} book${bookCount !== 1 ? 's' : ''}? The book${bookCount !== 1 ? 's' : ''} return to ${destLabel}.`;
+                } else if (subCount > 0) {
+                    confirmMsg = `Delete "${folder.name}" and its ${subCount} subfolder${subCount !== 1 ? 's' : ''}?`;
+                }
+                if (!(await showConfirmDialog('Delete Folder', confirmMsg))) return false;
+
+                const savedSortSettings = {};
+                foldersToDelete.forEach(f => { if (folderSortSettings[f.id]) savedSortSettings[f.id] = folderSortSettings[f.id]; });
+                recordAction({
+                    type: 'DELETE_FOLDERS',
+                    deletedFolders: foldersToDelete.map(f => ({ ...f })),
+                    folderIndices,
+                    orphanedBooks: orphanedBookIds,
+                    orphanDestination: destinationId,
+                    savedSortSettings
+                });
+                if (Object.keys(savedSortSettings).length > 0) {
+                    setFolderSortSettings(prev => { const next = { ...prev }; foldersToDelete.forEach(f => delete next[f.id]); return next; });
+                }
+
+                setFolders(prev => {
+                    const withOrphans = prev.map(f => {
+                        if (f.id === destinationId && bookCount > 0) {
+                            const existing = new Set(f.bookIds || []);
+                            const toAdd = orphanedBookIds.filter(id => !existing.has(id));
+                            return { ...f, bookIds: [...toAdd, ...(f.bookIds || [])] };
+                        }
+                        return f;
+                    });
+                    return withOrphans.filter(f => !folderIdsToDelete.has(f.id));
+                });
+
+                if (selectedFolderId === folder.id || folderIdsToDelete.has(selectedFolderId)) {
+                    navigateToFolder(destinationId);
+                }
+
+                showToast(bookCount > 0
+                    ? `Deleted "${folder.name}" — ${bookCount} book${bookCount !== 1 ? 's' : ''} moved to ${destinationId === '__inbox__' ? 'Inbox' : `"${destinationName}"`}`
+                    : `Deleted "${folder.name}"`);
+                console.log(`🗑️ Deleted folder "${folder.name}"${subCount > 0 ? ` + ${subCount} subfolder(s)` : ''}${bookCount > 0 ? `, ${bookCount} book(s) → ${destinationName}` : ''}`);
+                return true;
+            };
+
             // v6.11.2 - Unified move: handles books + folders in one atomic operation
             const moveItems = (itemIds, targetFolderId, sourceFolderId, { isCopy = false } = {}) => {
                 const bookIds = itemIds.filter(id => bookMap.has(id));
@@ -4085,76 +4158,7 @@
                     if (e.key === 'Delete' && !isSpecialFolder && getSelectedBookIds().length === 0) {
                         e.preventDefault();
 
-                        const hasChildren = folders.some(f => f.parentId === currentFolder.id);
-                        const hasBooks = currentFolder.bookIds && currentFolder.bookIds.length > 0;
-
-                        let confirmMsg = `Delete folder "${currentFolder.name}"?`;
-                        if (hasBooks && hasChildren) {
-                            confirmMsg = `Delete folder "${currentFolder.name}" and its ${currentFolder.bookIds.length} book(s) and subfolders? Books will move to parent folder.`;
-                        } else if (hasBooks) {
-                            confirmMsg = `Delete folder "${currentFolder.name}" and its ${currentFolder.bookIds.length} book(s)? Books will move to parent folder.`;
-                        } else if (hasChildren) {
-                            confirmMsg = `Delete folder "${currentFolder.name}" and all its subfolders?`;
-                        }
-
-                        if (!(await showConfirmDialog('Delete Folder', confirmMsg))) return;
-
-                        // Collect all folders to delete (folder + descendants)
-                        const getAllDescendantIds = (folderId) => {
-                            const children = folders.filter(f => f.parentId === folderId);
-                            let allIds = children.map(c => c.id);
-                            children.forEach(child => {
-                                allIds = [...allIds, ...getAllDescendantIds(child.id)];
-                            });
-                            return allIds;
-                        };
-
-                        const descendantIds = getAllDescendantIds(currentFolder.id);
-                        const foldersToDelete = [currentFolder, ...folders.filter(f => descendantIds.includes(f.id))];
-
-                        // Move orphaned books to parent
-                        const orphanedBookIds = [];
-                        foldersToDelete.forEach(folder => {
-                            if (folder.bookIds) orphanedBookIds.push(...folder.bookIds);
-                        });
-
-                        recordAction({
-                            type: 'DELETE_FOLDER',
-                            folderId: currentFolder.id,
-                            deletedFolders: foldersToDelete,
-                            orphanedBookIds: orphanedBookIds,
-                            newParentId: currentFolder.parentId
-                        });
-
-                        const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
-
-                        // Move orphaned books to parent folder
-                        if (orphanedBookIds.length > 0) {
-                            setFolders(prev => {
-                                const updated = prev.filter(f => !folderIdsToDelete.has(f.id));
-                                const parentFolder = updated.find(f => f.id === currentFolder.parentId);
-                                if (parentFolder) {
-                                    return updated.map(f =>
-                                        f.id === parentFolder.id
-                                            ? { ...f, bookIds: [...new Set([...(f.bookIds || []), ...orphanedBookIds])] }
-                                            : f
-                                    );
-                                }
-                                return updated;
-                            });
-                        } else {
-                            setFolders(prev => prev.filter(f => !folderIdsToDelete.has(f.id)));
-                        }
-
-                        // Remove sort settings for deleted folders (no undo handler for DELETE_FOLDER keyboard path)
-                        setFolderSortSettings(prev => { const next = { ...prev }; foldersToDelete.forEach(f => delete next[f.id]); return next; });
-
-                        // Navigate to parent or All Books
-                        if (selectedFolderId === currentFolder.id || folderIdsToDelete.has(selectedFolderId)) {
-                            navigateToFolder(currentFolder.parentId || '__all__');
-                        }
-
-                        console.log(`🗑️ Deleted folder "${currentFolder.name}" and ${foldersToDelete.length - 1} descendants`);
+                        await deleteFolder(currentFolder);
                     }
 
                     // Enter - Open/navigate to folder (if not already viewing it)
@@ -12957,72 +12961,7 @@
                                                                 <button
                                                                     onClick={async (e) => {
                                                                         e.stopPropagation();
-                                                                        if (await showConfirmDialog('Delete Folder', `Delete folder "${folder.name}"?`)) {
-                                                                            // v5.0.0-alpha.55 - Move orphaned books up one level before deleting
-                                                                            const getAllDescendants = (folderId, allFolders) => {
-                                                                                const children = allFolders.filter(f => f.parentId === folderId);
-                                                                                let descendants = [...children];
-                                                                                children.forEach(child => {
-                                                                                    descendants = [...descendants, ...getAllDescendants(child.id, allFolders)];
-                                                                                });
-                                                                                return descendants;
-                                                                            };
-                                                                            const descendants = getAllDescendants(folder.id, folders);
-                                                                            const foldersToDelete = [folder, ...descendants];
-                                                                            const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
-                                                                            const folderIndices = foldersToDelete.map(f => folders.findIndex(x => x.id === f.id));
-
-                                                                            // Determine destination for orphaned books: parent folder or Inbox
-                                                                            const destinationId = folder.parentId || '__inbox__';
-                                                                            const destinationFolder = folders.find(f => f.id === destinationId);
-                                                                            const destinationName = destinationFolder?.name || 'Inbox';
-
-                                                                            // Collect all books from folders being deleted
-                                                                            const allOrphanedBookIds = foldersToDelete.flatMap(f => f.bookIds || []);
-                                                                            const uniqueOrphanedBookIds = [...new Set(allOrphanedBookIds)];
-
-                                                                            // Record action for undo (includes orphan relocation info)
-                                                                            const savedSortSettings = {};
-                                                                            foldersToDelete.forEach(f => { if (folderSortSettings[f.id]) savedSortSettings[f.id] = folderSortSettings[f.id]; });
-                                                                            recordAction({
-                                                                                type: 'DELETE_FOLDERS',
-                                                                                deletedFolders: foldersToDelete.map(f => ({ ...f })),
-                                                                                folderIndices: folderIndices,
-                                                                                orphanedBooks: uniqueOrphanedBookIds,
-                                                                                orphanDestination: destinationId,
-                                                                                savedSortSettings
-                                                                            });
-                                                                            if (Object.keys(savedSortSettings).length > 0) {
-                                                                                setFolderSortSettings(prev => { const next = { ...prev }; foldersToDelete.forEach(f => delete next[f.id]); return next; });
-                                                                            }
-
-                                                                            // Move orphaned books to destination, then delete folders
-                                                                            setFolders(prev => {
-                                                                                let updated = prev.map(f => {
-                                                                                    if (f.id === destinationId && uniqueOrphanedBookIds.length > 0) {
-                                                                                        const existingIds = new Set(f.bookIds || []);
-                                                                                        const newBookIds = uniqueOrphanedBookIds.filter(id => !existingIds.has(id));
-                                                                                        return { ...f, bookIds: [...newBookIds, ...(f.bookIds || [])] };
-                                                                                    }
-                                                                                    return f;
-                                                                                });
-                                                                                return updated.filter(f => !folderIdsToDelete.has(f.id));
-                                                                            });
-
-                                                                            // v5.0.0-alpha.58 - Navigate to parent folder instead of All Books
-                                                                            if (selectedFolderId === folder.id || folderIdsToDelete.has(selectedFolderId)) {
-                                                                                setSelectedFolderId(destinationId);
-                                                                            }
-
-                                                                            // Show toast with result
-                                                                            if (uniqueOrphanedBookIds.length > 0) {
-                                                                                const bookWord = uniqueOrphanedBookIds.length === 1 ? 'book' : 'books';
-                                                                                showToast(`Deleted "${folder.name}" — ${uniqueOrphanedBookIds.length} ${bookWord} moved to ${destinationName}`, window.innerWidth / 2, 100);
-                                                                            } else {
-                                                                                showToast(`Deleted "${folder.name}"`, window.innerWidth / 2, 100);
-                                                                            }
-                                                                            console.log(`🗑️ Deleted folder "${folder.name}"${descendants.length > 0 ? ` and ${descendants.length} subfolder(s)` : ''}${uniqueOrphanedBookIds.length > 0 ? `, moved ${uniqueOrphanedBookIds.length} books to ${destinationName}` : ''}`);
-                                                                        }
+                                                                        await deleteFolder(folder);
                                                                     }}
                                                                     className="text-red-500 hover:text-red-700 px-1"
                                                                     title="Delete folder">
@@ -16281,63 +16220,7 @@
                                         role="menuitem"
                                         onClick={async () => {
                                             setFolderContextMenu(null);
-                                            if (await showConfirmDialog('Delete Folder', `Delete folder "${folder.name}"?`)) {
-                                                const getAllDescendants = (folderId, allFolders) => {
-                                                    const children = allFolders.filter(f => f.parentId === folderId);
-                                                    let descendants = [...children];
-                                                    children.forEach(child => {
-                                                        descendants = [...descendants, ...getAllDescendants(child.id, allFolders)];
-                                                    });
-                                                    return descendants;
-                                                };
-                                                const descendants = getAllDescendants(folder.id, folders);
-                                                const foldersToDelete = [folder, ...descendants];
-                                                const folderIdsToDelete = new Set(foldersToDelete.map(f => f.id));
-                                                const folderIndices = foldersToDelete.map(f => folders.findIndex(x => x.id === f.id));
-
-                                                const destinationId = folder.parentId || '__inbox__';
-                                                const destinationFolder = folders.find(f => f.id === destinationId);
-                                                const destinationName = destinationFolder?.name || 'Inbox';
-
-                                                const allOrphanedBookIds = foldersToDelete.flatMap(f => f.bookIds || []);
-                                                const uniqueOrphanedBookIds = [...new Set(allOrphanedBookIds)];
-
-                                                const savedSortSettings = {};
-                                                foldersToDelete.forEach(f => { if (folderSortSettings[f.id]) savedSortSettings[f.id] = folderSortSettings[f.id]; });
-                                                recordAction({
-                                                    type: 'DELETE_FOLDERS',
-                                                    deletedFolders: foldersToDelete.map(f => ({ ...f })),
-                                                    folderIndices: folderIndices,
-                                                    movedBooks: uniqueOrphanedBookIds.map(bookId => ({
-                                                        bookId,
-                                                        fromFolderId: foldersToDelete.find(f => f.bookIds?.includes(bookId))?.id,
-                                                        toFolderId: destinationId
-                                                    })),
-                                                    savedSortSettings
-                                                });
-                                                if (Object.keys(savedSortSettings).length > 0) {
-                                                    setFolderSortSettings(prev => { const next = { ...prev }; foldersToDelete.forEach(f => delete next[f.id]); return next; });
-                                                }
-
-                                                setFolders(prev => prev
-                                                    .filter(f => !folderIdsToDelete.has(f.id))
-                                                    .map(f => {
-                                                        if (f.id === destinationId) {
-                                                            return {
-                                                                ...f,
-                                                                bookIds: [...(f.bookIds || []), ...uniqueOrphanedBookIds]
-                                                            };
-                                                        }
-                                                        return f;
-                                                    })
-                                                );
-
-                                                if (selectedFolderId && folderIdsToDelete.has(selectedFolderId)) {
-                                                    navigateToFolder(destinationId);
-                                                }
-
-                                                console.log(`🗑️ Deleted "${folder.name}" and ${descendants.length} descendant(s), moved ${uniqueOrphanedBookIds.length} book(s) to "${destinationName}"`);
-                                            }
+                                            await deleteFolder(folder);
                                         }}>
                                         <span>🗑️</span>
                                         <span>Delete Folder</span>
