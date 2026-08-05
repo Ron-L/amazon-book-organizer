@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.14";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2422,20 +2422,28 @@
                 return children.some(child => isDescendantFolder(child.id, targetId));
             };
 
-            const reparentFolder = (folderIds, newParentId) => {
+            // v6.13.1-alpha.14 (ops refactor #4) - THE single source of truth for reparenting folder(s) — moving them
+            // to a new parent (or root, newParentId=null). Used by drag, the folder menu "Move to" (via moveFolder),
+            // and cut→paste-move. `opts.confirmLarge` folds in the retired moveFolder's >20-subfolder prompt (menu
+            // asks; drag doesn't). Async, but drag callers don't await — with confirmLarge falsy there's no await, so
+            // the mutation runs synchronously exactly as before. Reorder-within-a-parent and paste-COPY stay separate.
+            const reparentFolder = async (folderIds, newParentId, opts = {}) => {
                 for (const folderId of folderIds) {
                     if (folderId === newParentId || isDescendantFolder(folderId, newParentId)) {
                         showToast("Can't move folder into itself or its subfolder", null, null, { level: 'error' });
                         return false;
                     }
-                    // Can't reparent Inbox
                     if (folderId === '__inbox__') {
                         showToast("Inbox cannot be moved", null, null, { level: 'error' });
                         return false;
                     }
                 }
 
-                // v6.11.2 - Removed Inbox reparent restriction. Inbox is a standard folder.
+                if (opts.confirmLarge) {
+                    const countDesc = (fid) => folders.filter(f => f.parentId === fid).reduce((n, k) => n + 1 + countDesc(k.id), 0);
+                    const descCount = folderIds.reduce((n, id) => n + countDesc(id), 0);
+                    if (descCount > 20 && !(await showConfirmDialog('Move Folder', `Move folder with ${descCount} subfolders?`))) return false;
+                }
 
                 // Save old parentIds for undo
                 const oldParentIds = folderIds.map(id => {
@@ -2451,15 +2459,15 @@
                 }));
 
                 const folderNames = folderIds.map(id => folders.find(f => f.id === id)?.name || id).join(', ');
-                const targetName = newParentId ? folders.find(f => f.id === newParentId)?.name : 'root';
-                const action = {
+                const targetName = newParentId ? (folders.find(f => f.id === newParentId)?.name || 'folder') : 'root';
+                recordAction({
                     type: 'REPARENT_FOLDER',
                     folderIds,
                     oldParentIds,
                     newParentId,
+                    label: `Move "${folderNames}" into "${targetName}"`,
                     description: `Move "${folderNames}" into "${targetName}"`
-                };
-                recordAction(action);
+                });
                 showToast(`Moved "${folderNames}" into "${targetName}"`);
                 console.log(`📁 Moved ${folderIds.length} folder(s) into ${newParentId || 'root'}`);
                 return true;
@@ -5971,15 +5979,6 @@
                             return folder;
                         }));
                         break;
-                    case 'MOVE_FOLDER':
-                        // v5.0.0-alpha.135 - Undo single folder move: restore old parent
-                        setFolders(prev => prev.map(folder => {
-                            if (folder.id === action.folderId) {
-                                return { ...folder, parentId: action.oldParentId };
-                            }
-                            return folder;
-                        }));
-                        break;
                     case 'CUT_PASTE_FOLDER':
                         // v5.0.0-alpha.141 - Undo cut/paste: restore old parent
                         setFolders(prev => prev.map(folder => {
@@ -6406,15 +6405,6 @@
                         // v5.0.0-alpha.78 - Redo reparent: apply the new parentId again
                         setFolders(prev => prev.map(folder => {
                             if (action.folderIds.includes(folder.id)) {
-                                return { ...folder, parentId: action.newParentId };
-                            }
-                            return folder;
-                        }));
-                        break;
-                    case 'MOVE_FOLDER':
-                        // v5.0.0-alpha.135 - Redo single folder move: apply new parent
-                        setFolders(prev => prev.map(folder => {
-                            if (folder.id === action.folderId) {
                                 return { ...folder, parentId: action.newParentId };
                             }
                             return folder;
@@ -15675,54 +15665,12 @@
                             return false;
                         };
 
-                        // v5.0.0-alpha.135 - Helper: Move folder to new parent
+                        // v6.13.1-alpha.14 (ops refactor #4) - Folder menu "Move to": thin wrapper over reparentFolder
+                        // (the single reparent source), with the large-move confirm. Retires the MOVE_FOLDER type.
                         const moveFolder = async (folderId, targetParentId) => {
-                            const folderToMove = folders.find(f => f.id === folderId);
-                            if (!folderToMove) return;
-
-                            // Prevent circular reference
-                            if (targetParentId && (targetParentId === folderId || isDescendantOf(targetParentId, folderId))) {
-                                showInfoDialog('Cannot Move', 'Cannot move folder into itself or its descendants.');
-                                return;
-                            }
-
-                            // Check for large moves
-                            const getAllDescendants = (fid) => {
-                                const children = folders.filter(f => f.parentId === fid);
-                                let descendants = [...children];
-                                children.forEach(child => {
-                                    descendants = [...descendants, ...getAllDescendants(child.id)];
-                                });
-                                return descendants;
-                            };
-                            const descendants = getAllDescendants(folderId);
-                            if (descendants.length > 20) {
-                                if (!(await showConfirmDialog('Move Folder', `Move folder with ${descendants.length} subfolders?`))) {
-                                    return;
-                                }
-                            }
-
-                            const oldParentId = folderToMove.parentId;
-
-                            // Record undo
-                            recordAction({
-                                type: 'MOVE_FOLDER',
-                                folderId: folderId,
-                                oldParentId: oldParentId,
-                                newParentId: targetParentId
-                            });
-
-                            // Update folder's parent
-                            setFolders(prev => prev.map(f =>
-                                f.id === folderId ? { ...f, parentId: targetParentId } : f
-                            ));
-
-                            setFolderContextMenu(null);
-                            setContextSubmenu(null);
-
-                            const targetFolder = folders.find(f => f.id === targetParentId);
-                            const targetName = targetFolder?.name || 'Root';
-                            console.log(`📁 Moved "${folderToMove.name}" to "${targetName}"`);
+                            const ok = await reparentFolder([folderId], targetParentId, { confirmLarge: true });
+                            if (ok) { setFolderContextMenu(null); setContextSubmenu(null); }
+                            return ok;
                         };
 
                         // v5.0.0-alpha.144 - Viewport-aware positioning
