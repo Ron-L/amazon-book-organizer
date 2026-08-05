@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2521,6 +2521,26 @@
                 recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId, toFolderId, bookIds, fromIndices, toIndex: 0, label: `Move ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to '${name}'` });
 
                 showToast(`Moved ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to '${name}'`, opts.toastAt?.x, opts.toastAt?.y);
+            };
+
+            // v6.13.1-alpha.4 (ops refactor #2b) - Single source of truth for COPYING books into another folder (the
+            // book stays in its source too — a linked copy). Replaces the drag paths' inline COPY_BOOKS_FOLDER logic
+            // and the menu's separate COPY_BOOKS_TO_FOLDER type (now retired). Dedups against the target and records
+            // COPY_BOOKS_FOLDER with only the newly-added ids, so undo removes exactly what was added.
+            const copyBooksToFolder = (bookIds, toFolderId, opts = {}) => {
+                if (!bookIds || bookIds.length === 0 || !toFolderId) return;
+                const targetFolder = folders.find(f => f.id === toFolderId);
+                const existing = new Set(targetFolder?.bookIds || []);
+                const toAdd = bookIds.filter(id => !existing.has(id));
+                if (toAdd.length === 0) {
+                    showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder', opts.toastAt?.x, opts.toastAt?.y);
+                    return;
+                }
+                setFolders(prev => prev.map(f => f.id === toFolderId ? { ...f, bookIds: [...toAdd, ...(f.bookIds || [])] } : f));
+
+                const name = targetFolder?.name || (toFolderId === '__inbox__' ? 'Inbox' : 'folder');
+                recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId, bookIds: toAdd, toIndex: 0, label: `Copy ${toAdd.length} book${toAdd.length !== 1 ? 's' : ''} to '${name}'` });
+                showToast(`Copied to '${name}' — same book, two folders. Your ratings, notes, and edits apply to both.`, opts.toastAt?.x, opts.toastAt?.y);
             };
 
             // v6.11.2 - Unified move: handles books + folders in one atomic operation
@@ -5659,7 +5679,7 @@
             // per-reducer-case showToasts left to drift. An op passes a rich `label` when it records (e.g. "Move 3
             // books to 'Sci-Fi'"); anything without one falls back to this friendly name (and warns), forcing coverage.
             const FRIENDLY_ACTION = {
-                MOVE_BOOKS_FOLDER: 'Move books', COPY_BOOKS_FOLDER: 'Copy books', COPY_BOOKS_TO_FOLDER: 'Copy books',
+                MOVE_BOOKS_FOLDER: 'Move books', COPY_BOOKS_FOLDER: 'Copy books',
                 REMOVE_BOOKS_FOLDER: 'Remove books from folder', REORDER_BOOKS_FOLDER: 'Reorder books',
                 REORDER_BOOKS_BOOKLIST: 'Reorder Book List', PASTE_BOOKS_CUT: 'Paste books', PASTE_BOOKS_COPY: 'Paste books',
                 MOVE_ITEMS: 'Move items', CREATE_FOLDER: 'Create folder', DELETE_FOLDERS: 'Delete folder',
@@ -5968,16 +5988,6 @@
                     case 'COPY_PASTE_FOLDER':
                         // v5.0.0-alpha.141 - Undo copy/paste: delete copied folders
                         setFolders(prev => prev.filter(folder => !action.newFolderIds.includes(folder.id)));
-                        break;
-                    case 'COPY_BOOKS_TO_FOLDER':
-                        // v5.0.0-alpha.166 - Undo book copy: remove books from target folder
-                        setFolders(prev => prev.map(folder => {
-                            if (folder.id === action.toFolderId) {
-                                // Remove books from target folder
-                                return { ...folder, bookIds: folder.bookIds.filter(id => !action.bookIds.includes(id)) };
-                            }
-                            return folder;
-                        }));
                         break;
                     case 'PASTE_BOOKS_CUT':
                         // v5.0.0-alpha.168 - Undo cut-paste: restore books to source folders, remove from target
@@ -6421,18 +6431,6 @@
                         // For now, this is a limitation - we can't redo copy operations
                         // TODO: Store copied folder data in action for proper redo
                         showToast('Cannot redo copy operation', null, null, { level: 'error' });
-                        break;
-                    case 'COPY_BOOKS_TO_FOLDER':
-                        // v5.0.0-alpha.166 - Redo book copy: add books to target folder again
-                        setFolders(prev => prev.map(folder => {
-                            if (folder.id === action.toFolderId) {
-                                // Add books to target folder (filter out duplicates first)
-                                const existingIds = new Set(folder.bookIds);
-                                const newBooks = action.bookIds.filter(id => !existingIds.has(id));
-                                return { ...folder, bookIds: [...newBooks, ...folder.bookIds] };
-                            }
-                            return folder;
-                        }));
                         break;
                     case 'PASTE_BOOKS_CUT':
                         // v5.0.0-alpha.168 - Redo cut-paste: remove from source folders, add to target
@@ -16398,37 +16396,10 @@
 
                         // Copy books to target folder
                         const handleCopyToFolder = (targetFolderId) => {
-                            const selectedBookIds = getSelectedBookIds();
-
-                            // Add books to target folder (keep in source)
-                            setFolders(prev => prev.map(f => {
-                                if (f.id === targetFolderId) {
-                                    // Filter out duplicates, then add new books at top
-                                    const existingIds = new Set(f.bookIds);
-                                    const newBooks = selectedBookIds.filter(id => !existingIds.has(id));
-                                    return {
-                                        ...f,
-                                        bookIds: [...newBooks, ...f.bookIds]
-                                    };
-                                }
-                                return f;
-                            }));
-
-                            // Record undo
-                            recordAction({
-                                type: 'COPY_BOOKS_TO_FOLDER',
-                                bookIds: selectedBookIds,
-                                toFolderId: targetFolderId
-                            });
-
-                            // Clear selection and close menu
+                            copyBooksToFolder(getSelectedBookIds(), targetFolderId);
                             setExplorerSelectedItems(new Set());
                             setExplorerBookContextMenu(null);
                             setContextSubmenu(null);
-
-                            const targetFolder = folders.find(f => f.id === targetFolderId);
-                            showToast(`Copied to '${targetFolder?.name || 'folder'}' — same book, two folders. Your ratings, notes, and edits apply to both.`);
-                            console.log(`📋 Copied ${selectedBookIds.length} book(s) to "${targetFolder?.name || 'Unknown'}"`);
                         };
 
                         // v6.12.0-alpha.53 - Add to Book List (supplemental: add/copy — a book can be on many lists).
@@ -16497,7 +16468,7 @@
                             recordAction({ type: 'COMPOUND', label: `${isCopy ? 'Copy' : 'Move'} ${ids.length} book${ids.length !== 1 ? 's' : ''} to new folder '${trimmed}'`, actions: [
                                 { type: 'CREATE_FOLDER', folderId: newId, parentId: parentId || null, folder: { ...newFolder, bookIds: [] } },
                                 isCopy
-                                    ? { type: 'COPY_BOOKS_TO_FOLDER', bookIds: ids, toFolderId: newId }
+                                    ? { type: 'COPY_BOOKS_FOLDER', bookIds: ids, toFolderId: newId, toIndex: 0 }
                                     : { type: 'MOVE_BOOKS_FOLDER', bookIds: ids, fromFolderId, toFolderId: newId, fromIndices, toIndex: 0 }
                             ] });
                             setExplorerSelectedItems(new Set());
