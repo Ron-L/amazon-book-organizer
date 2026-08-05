@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.15";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4137,18 +4137,8 @@
                         }
 
                         if (folderClipboard.operation === 'cut') {
-                            // Move folder
-                            recordAction({
-                                type: 'CUT_PASTE_FOLDER',
-                                folderId: folderId,
-                                oldParentId: folderToPaste.parentId,
-                                newParentId: currentFolder.id
-                            });
-                            setFolders(prev => prev.map(f =>
-                                f.id === folderId ? { ...f, parentId: currentFolder.id } : f
-                            ));
+                            reparentFolder([folderId], currentFolder.id); // paste-move = reparent (single source)
                             setFolderClipboard({ items: [], operation: null });
-                            console.log(`📌 Pasted (moved) "${folderToPaste.name}" into "${currentFolder.name}"`);
                         } else if (folderClipboard.operation === 'copy') {
                             // Deep copy folder
                             const copyFolderRecursive = (sourceFolderId, newParentId) => {
@@ -5695,8 +5685,8 @@
                 REMOVE_BOOKS_FOLDER: 'Remove books from folder', REORDER_BOOKS_FOLDER: 'Reorder books',
                 REORDER_BOOKS_BOOKLIST: 'Reorder Book List', PASTE_BOOKS_CUT: 'Paste books', PASTE_BOOKS_COPY: 'Paste books',
                 MOVE_ITEMS: 'Move items', CREATE_FOLDER: 'Create folder', DELETE_FOLDERS: 'Delete folder',
-                REORDER_FOLDER: 'Reorder folders', REPARENT_FOLDER: 'Move folder', MOVE_FOLDER: 'Move folder',
-                CUT_PASTE_FOLDER: 'Move folder', COPY_PASTE_FOLDER: 'Copy folder', BOOKLIST_ADD: 'Add to Book List',
+                REORDER_FOLDER: 'Reorder folders', REPARENT_FOLDER: 'Move folder',
+                COPY_PASTE_FOLDER: 'Copy folder', BOOKLIST_ADD: 'Add to Book List',
                 BOOKLIST_REMOVE: 'Remove from Book List', BOOKLIST_CREATE: 'Create Book List', BOOKLIST_DELETE: 'Delete Book List',
                 EDIT_BOOK: 'Edit book', BULK_EDIT_BOOKS: 'Edit books', TOGGLE_HIDE: 'Hide / unhide books',
                 SOFT_DELETE_BOOKS: 'Delete books', RESTORE_BOOKS: 'Restore books', SEQUENCE_SERIES: 'Number series',
@@ -5975,15 +5965,6 @@
                             const oldData = action.oldParentIds.find(o => o.folderId === folder.id);
                             if (oldData) {
                                 return { ...folder, parentId: oldData.oldParentId };
-                            }
-                            return folder;
-                        }));
-                        break;
-                    case 'CUT_PASTE_FOLDER':
-                        // v5.0.0-alpha.141 - Undo cut/paste: restore old parent
-                        setFolders(prev => prev.map(folder => {
-                            if (folder.id === action.folderId) {
-                                return { ...folder, parentId: action.oldParentId };
                             }
                             return folder;
                         }));
@@ -6405,15 +6386,6 @@
                         // v5.0.0-alpha.78 - Redo reparent: apply the new parentId again
                         setFolders(prev => prev.map(folder => {
                             if (action.folderIds.includes(folder.id)) {
-                                return { ...folder, parentId: action.newParentId };
-                            }
-                            return folder;
-                        }));
-                        break;
-                    case 'CUT_PASTE_FOLDER':
-                        // v5.0.0-alpha.141 - Redo cut/paste: apply new parent
-                        setFolders(prev => prev.map(folder => {
-                            if (folder.id === action.folderId) {
                                 return { ...folder, parentId: action.newParentId };
                             }
                             return folder;
@@ -15966,19 +15938,8 @@
                                             }
 
                                             if (folderClipboard.operation === 'cut') {
-                                                // Move folder
-                                                const oldParentId = folderToPaste.parentId;
-                                                recordAction({
-                                                    type: 'CUT_PASTE_FOLDER',
-                                                    folderId: folderId,
-                                                    oldParentId: oldParentId,
-                                                    newParentId: folder.id
-                                                });
-                                                setFolders(prev => prev.map(f =>
-                                                    f.id === folderId ? { ...f, parentId: folder.id } : f
-                                                ));
+                                                reparentFolder([folderId], folder.id); // paste-move = reparent (single source)
                                                 setFolderClipboard({ items: [], operation: null });
-                                                console.log(`📌 Pasted (moved) "${folderToPaste.name}" into "${folder.name}"`);
                                             } else if (folderClipboard.operation === 'copy') {
                                                 // Copy folder with deep copy
                                                 const copyFolderRecursive = (sourceFolderId, newParentId) => {
