@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2463,6 +2463,7 @@
                 foldersToDelete.forEach(f => { if (folderSortSettings[f.id]) savedSortSettings[f.id] = folderSortSettings[f.id]; });
                 recordAction({
                     type: 'DELETE_FOLDERS',
+                    label: `Delete folder "${folder.name}"`,
                     deletedFolders: foldersToDelete.map(f => ({ ...f })),
                     folderIndices,
                     orphanedBooks: orphanedBookIds,
@@ -2516,9 +2517,9 @@
                     return f;
                 }));
 
-                recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId, toFolderId, bookIds, fromIndices, toIndex: 0 });
-
                 const name = targetFolder?.name || (toFolderId === '__inbox__' ? 'Inbox' : 'folder');
+                recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId, toFolderId, bookIds, fromIndices, toIndex: 0, label: `Move ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to '${name}'` });
+
                 showToast(`Moved ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to '${name}'`, opts.toastAt?.x, opts.toastAt?.y);
             };
 
@@ -5653,9 +5654,35 @@
                 return () => window.removeEventListener('keydown', handleEditEnter);
             }, [isEditingBook]);
 
+            // v6.13.1-alpha.3 (ops refactor #2.5) - Standardized undo/redo feedback: recordAction stamps a human LABEL
+            // on EVERY action, and undo()/redo() always toast it — so no action can be silent and there are no
+            // per-reducer-case showToasts left to drift. An op passes a rich `label` when it records (e.g. "Move 3
+            // books to 'Sci-Fi'"); anything without one falls back to this friendly name (and warns), forcing coverage.
+            const FRIENDLY_ACTION = {
+                MOVE_BOOKS_FOLDER: 'Move books', COPY_BOOKS_FOLDER: 'Copy books', COPY_BOOKS_TO_FOLDER: 'Copy books',
+                REMOVE_BOOKS_FOLDER: 'Remove books from folder', REORDER_BOOKS_FOLDER: 'Reorder books',
+                REORDER_BOOKS_BOOKLIST: 'Reorder Book List', PASTE_BOOKS_CUT: 'Paste books', PASTE_BOOKS_COPY: 'Paste books',
+                MOVE_ITEMS: 'Move items', CREATE_FOLDER: 'Create folder', DELETE_FOLDERS: 'Delete folder',
+                REORDER_FOLDER: 'Reorder folders', REPARENT_FOLDER: 'Move folder', MOVE_FOLDER: 'Move folder',
+                CUT_PASTE_FOLDER: 'Move folder', COPY_PASTE_FOLDER: 'Copy folder', BOOKLIST_ADD: 'Add to Book List',
+                BOOKLIST_REMOVE: 'Remove from Book List', BOOKLIST_CREATE: 'Create Book List', BOOKLIST_DELETE: 'Delete Book List',
+                EDIT_BOOK: 'Edit book', BULK_EDIT_BOOKS: 'Edit books', TOGGLE_HIDE: 'Hide / unhide books',
+                SOFT_DELETE_BOOKS: 'Delete books', RESTORE_BOOKS: 'Restore books', SEQUENCE_SERIES: 'Number series',
+                TAG_BOOKS_DRAG: 'Tag books', WIZARD_ORGANIZE: 'Auto-Organize', COMPOUND: 'Multiple changes'
+            };
+            // Resolve an action's undo/redo label: explicit label > legacy description > friendly type name (warns if none).
+            const actionLabel = (action) => {
+                if (action.label) return action.label;
+                if (action.description) return action.description;
+                if (FRIENDLY_ACTION[action.type]) return FRIENDLY_ACTION[action.type];
+                console.warn('recordAction: no undo/redo label for action type', action.type);
+                return action.type;
+            };
+
             const recordAction = (action) => {
+                const labeled = { ...action, label: actionLabel(action), timestamp: Date.now() };
                 setUndoStack(prev => {
-                    const newStack = [...prev, { ...action, timestamp: Date.now() }];
+                    const newStack = [...prev, labeled];
                     if (newStack.length > MAX_UNDO) newStack.shift();
                     return newStack;
                 });
@@ -5686,11 +5713,9 @@
                     case 'BOOKLIST_CREATE':
                         setBookLists(prev => prev.filter(bl => bl.id !== action.bookList.id));
                         if (selectedFolderId === `__booklist_${action.bookList.id}__`) navigateToFolder('__all__');
-                        showToast(`Undo: removed Book List '${action.bookList.name}'`);
                         break;
                     case 'BOOKLIST_DELETE':
                         setBookLists(prev => { const next = [...prev]; next.splice(Math.min(action.index ?? next.length, next.length), 0, action.bookList); return next; });
-                        showToast(`Undo: restored Book List '${action.bookList.name}'`);
                         break;
                     // v6.12.0 - Undo sequential numbering: restore each book's prior series & position
                     case 'SEQUENCE_SERIES':
@@ -5910,7 +5935,6 @@
                             }
                             return updated;
                         });
-                        showToast('Undo: moved items');
                         break;
                     }
                     case 'REPARENT_FOLDER':
@@ -5922,7 +5946,6 @@
                             }
                             return folder;
                         }));
-                        showToast(`Undo: ${action.description}`);
                         break;
                     case 'MOVE_FOLDER':
                         // v5.0.0-alpha.135 - Undo single folder move: restore old parent
@@ -6010,7 +6033,6 @@
                                 return updated;
                             });
                         }
-                        showToast(`Undo: ${action.description}`);
                         break;
                     case 'WIZARD_ORGANIZE':
                         // v5.1.0-alpha.13 - Phase 1.5/1.6: Undo wizard organize
@@ -6052,7 +6074,6 @@
 
                             return updated;
                         });
-                        showToast(`Undo: ${action.description}`);
                         break;
                     // v5.5.15-alpha.33 - Undo tag add/move from drag to tag view
                     case 'TAG_BOOKS_DRAG': {
@@ -6101,7 +6122,6 @@
                             });
                             return updated;
                         });
-                        showToast('Undo: Delete');
                         break;
                     }
                     // v6.0.0-alpha.54 - Undo restore (re-trash books + remove from folders)
@@ -6143,7 +6163,6 @@
                             });
                             return updated;
                         });
-                        showToast('Undo: Restore');
                         break;
                     }
                     default:
@@ -6367,7 +6386,6 @@
                             }
                             return updated;
                         });
-                        showToast('Redo: moved items');
                         break;
                     }
                     case 'REPARENT_FOLDER':
@@ -6378,7 +6396,6 @@
                             }
                             return folder;
                         }));
-                        showToast(`Redo: ${action.description}`);
                         break;
                     case 'MOVE_FOLDER':
                         // v5.0.0-alpha.135 - Redo single folder move: apply new parent
@@ -6475,7 +6492,6 @@
                                 return updated;
                             });
                         }
-                        showToast(`Redo: ${action.description}`);
                         break;
                     case 'WIZARD_ORGANIZE':
                         // v5.1.0-alpha.13 - Phase 1.5/1.6: Redo wizard organize
@@ -6518,7 +6534,6 @@
 
                             return updated;
                         });
-                        showToast(`Redo: ${action.description}`);
                         break;
                     // v5.5.15-alpha.33 - Redo tag add/move from drag to tag view
                     case 'TAG_BOOKS_DRAG': {
@@ -6611,6 +6626,7 @@
                 executeUndo(action);
                 setUndoStack(prev => prev.slice(0, -1));
                 setRedoStack(prev => [...prev, action]);
+                showToast(`Undone: ${action.label || FRIENDLY_ACTION[action.type] || action.type}`);
             };
 
             const redo = () => {
@@ -6621,6 +6637,7 @@
                 executeRedo(action);
                 setRedoStack(prev => prev.slice(0, -1));
                 setUndoStack(prev => [...prev, action]);
+                showToast(`Redone: ${action.label || FRIENDLY_ACTION[action.type] || action.type}`);
             };
 
 
@@ -16477,7 +16494,7 @@
                                 if (!isCopy) next = next.map(f => f.id === fromFolderId ? { ...f, bookIds: (f.bookIds || []).filter(id => !ids.includes(id)) } : f);
                                 return next;
                             });
-                            recordAction({ type: 'COMPOUND', actions: [
+                            recordAction({ type: 'COMPOUND', label: `${isCopy ? 'Copy' : 'Move'} ${ids.length} book${ids.length !== 1 ? 's' : ''} to new folder '${trimmed}'`, actions: [
                                 { type: 'CREATE_FOLDER', folderId: newId, parentId: parentId || null, folder: { ...newFolder, bookIds: [] } },
                                 isCopy
                                     ? { type: 'COPY_BOOKS_TO_FOLDER', bookIds: ids, toFolderId: newId }
