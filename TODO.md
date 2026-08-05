@@ -33,7 +33,7 @@
 
 ## 🔜 Next (6.12.x follow-ups)
 
-- [ ] **Operations single-source-of-truth refactor (HIGH)** — one function per mutating operation (delete / move / copy / add-to-list / rename / create, across folders, Book Lists, Searches, tags, books), each owning its confirm text + mutation + undo record + toast; call sites (context menus in both panes, keyboard, drag-drop, buttons) become thin adapters passing context (cursor x/y for drag toasts, drop index). Kills handler drift — surfaced by the folder-delete toast/confirm divergence (left-pane menu + keyboard paths had no toast; two DELETE_FOLDERS undo payload shapes). **Audit-first → design doc**, then extract incrementally. Feeds MODULE-SPLIT.
+- [ ] **Operations single-source-of-truth refactor (HIGH)** — one function per mutating operation (delete / move / copy / add-to-list / rename / create, across folders, Book Lists, Searches, tags, books), each owning its confirm text + mutation + undo record + toast; call sites (context menus in both panes, keyboard, drag-drop, buttons) become thin adapters passing context (cursor x/y for drag toasts, drop index). Kills handler drift — surfaced by the folder-delete toast/confirm divergence (left-pane menu + keyboard paths had no toast; two DELETE_FOLDERS undo payload shapes). **Audit done → see docs/design/OPERATIONS-REFACTOR.md**; extract incrementally (order: deleteFolder → move/copy books → book-list create/delete → folder-move family). Feeds MODULE-SPLIT.
 
 **Auto-Organize ergonomics:**
 - [ ] Auto-Organize wizard: add a **filter/search field** to the author list (scrolling to find a name is painful)
