@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2494,6 +2494,32 @@
                     : `Deleted "${folder.name}"`);
                 console.log(`🗑️ Deleted folder "${folder.name}"${subCount > 0 ? ` + ${subCount} subfolder(s)` : ''}${bookCount > 0 ? `, ${bookCount} book(s) → ${destinationName}` : ''}`);
                 return true;
+            };
+
+            // v6.13.1-alpha.2 (ops refactor #2a) - Single source of truth for MOVING books into another folder
+            // (cross-folder only). Replaces the drag paths' inline MOVE_BOOKS_FOLDER logic and the menu's separate
+            // MOVE_BOOKS_TO_FOLDER type (now retired). Dedups against the target, removes from the source, and records
+            // MOVE_BOOKS_FOLDER with fromIndices (REQUIRED — the undo reducer reads them to restore original source
+            // positions; a payload without them crashes undo). `opts.toastAt` = {x, y} to place the toast at a drop
+            // point. Reorder-within-a-folder is a different op (REORDER_BOOKS_FOLDER) and is untouched.
+            const moveBooksToFolder = (bookIds, fromFolderId, toFolderId, opts = {}) => {
+                if (!bookIds || bookIds.length === 0 || !toFolderId || fromFolderId === toFolderId) return;
+                const targetFolder = folders.find(f => f.id === toFolderId);
+                const sourceFolder = folders.find(f => f.id === fromFolderId);
+                const existing = new Set(targetFolder?.bookIds || []);
+                const toAdd = bookIds.filter(id => !existing.has(id));
+                const fromIndices = bookIds.map(id => (sourceFolder?.bookIds || []).indexOf(id));
+
+                setFolders(prev => prev.map(f => {
+                    if (f.id === toFolderId) return { ...f, bookIds: [...toAdd, ...(f.bookIds || [])] };
+                    if (f.id === fromFolderId) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
+                    return f;
+                }));
+
+                recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId, toFolderId, bookIds, fromIndices, toIndex: 0 });
+
+                const name = targetFolder?.name || (toFolderId === '__inbox__' ? 'Inbox' : 'folder');
+                showToast(`Moved ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to '${name}'`, opts.toastAt?.x, opts.toastAt?.y);
             };
 
             // v6.11.2 - Unified move: handles books + folders in one atomic operation
@@ -5920,20 +5946,6 @@
                         // v5.0.0-alpha.141 - Undo copy/paste: delete copied folders
                         setFolders(prev => prev.filter(folder => !action.newFolderIds.includes(folder.id)));
                         break;
-                    case 'MOVE_BOOKS_TO_FOLDER':
-                        // v5.0.0-alpha.166 - Undo book move: restore books to original folder
-                        setFolders(prev => prev.map(folder => {
-                            if (folder.id === action.fromFolderId) {
-                                // Add books back to source folder (at top)
-                                return { ...folder, bookIds: [...action.bookIds, ...folder.bookIds] };
-                            }
-                            if (folder.id === action.toFolderId) {
-                                // Remove books from target folder
-                                return { ...folder, bookIds: folder.bookIds.filter(id => !action.bookIds.includes(id)) };
-                            }
-                            return folder;
-                        }));
-                        break;
                     case 'COPY_BOOKS_TO_FOLDER':
                         // v5.0.0-alpha.166 - Undo book copy: remove books from target folder
                         setFolders(prev => prev.map(folder => {
@@ -6392,20 +6404,6 @@
                         // For now, this is a limitation - we can't redo copy operations
                         // TODO: Store copied folder data in action for proper redo
                         showToast('Cannot redo copy operation', null, null, { level: 'error' });
-                        break;
-                    case 'MOVE_BOOKS_TO_FOLDER':
-                        // v5.0.0-alpha.166 - Redo book move: move books to target folder again
-                        setFolders(prev => prev.map(folder => {
-                            if (folder.id === action.fromFolderId) {
-                                // Remove books from source folder
-                                return { ...folder, bookIds: folder.bookIds.filter(id => !action.bookIds.includes(id)) };
-                            }
-                            if (folder.id === action.toFolderId) {
-                                // Add books to target folder (at top)
-                                return { ...folder, bookIds: [...action.bookIds, ...folder.bookIds] };
-                            }
-                            return folder;
-                        }));
                         break;
                     case 'COPY_BOOKS_TO_FOLDER':
                         // v5.0.0-alpha.166 - Redo book copy: add books to target folder again
@@ -16375,42 +16373,10 @@
 
                         // Move books to target folder
                         const handleMoveToFolder = (targetFolderId) => {
-                            const selectedBookIds = getSelectedBookIds();
-                            const currentFolderId = selectedFolderId;
-
-                            // Remove books from current folder
-                            setFolders(prev => prev.map(f => {
-                                if (f.id === currentFolderId) {
-                                    return {
-                                        ...f,
-                                        bookIds: f.bookIds.filter(id => !selectedBookIds.includes(id))
-                                    };
-                                }
-                                if (f.id === targetFolderId) {
-                                    // Add to target folder (at top)
-                                    return {
-                                        ...f,
-                                        bookIds: [...selectedBookIds, ...f.bookIds]
-                                    };
-                                }
-                                return f;
-                            }));
-
-                            // Record undo
-                            recordAction({
-                                type: 'MOVE_BOOKS_TO_FOLDER',
-                                bookIds: selectedBookIds,
-                                fromFolderId: currentFolderId,
-                                toFolderId: targetFolderId
-                            });
-
-                            // Clear selection and close menu
+                            moveBooksToFolder(getSelectedBookIds(), selectedFolderId, targetFolderId);
                             setExplorerSelectedItems(new Set());
                             setExplorerBookContextMenu(null);
                             setContextSubmenu(null);
-
-                            const targetFolder = folders.find(f => f.id === targetFolderId);
-                            console.log(`📚 Moved ${selectedBookIds.length} book(s) to "${targetFolder?.name || 'Unknown'}"`);
                         };
 
                         // Copy books to target folder
@@ -16504,6 +16470,7 @@
                             const trimmed = (name || '').trim() || 'New Folder';
                             const newId = `folder-${Date.now()}`;
                             const fromFolderId = selectedFolderId;
+                            const fromIndices = ids.map(id => (folders.find(f => f.id === fromFolderId)?.bookIds || []).indexOf(id));
                             const newFolder = { id: newId, name: trimmed, parentId: parentId || null, bookIds: [...ids], childFolderIds: [], collapsed: false };
                             setFolders(prev => {
                                 let next = [...prev, newFolder];
@@ -16514,7 +16481,7 @@
                                 { type: 'CREATE_FOLDER', folderId: newId, parentId: parentId || null, folder: { ...newFolder, bookIds: [] } },
                                 isCopy
                                     ? { type: 'COPY_BOOKS_TO_FOLDER', bookIds: ids, toFolderId: newId }
-                                    : { type: 'MOVE_BOOKS_TO_FOLDER', bookIds: ids, fromFolderId, toFolderId: newId }
+                                    : { type: 'MOVE_BOOKS_FOLDER', bookIds: ids, fromFolderId, toFolderId: newId, fromIndices, toIndex: 0 }
                             ] });
                             setExplorerSelectedItems(new Set());
                             setExplorerBookContextMenu(null);
