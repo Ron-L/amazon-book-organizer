@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2505,6 +2505,7 @@
             // point. Reorder-within-a-folder is a different op (REORDER_BOOKS_FOLDER) and is untouched.
             const moveBooksToFolder = (bookIds, fromFolderId, toFolderId, opts = {}) => {
                 if (!bookIds || bookIds.length === 0 || !toFolderId || fromFolderId === toFolderId) return;
+                console.log('🔧 moveBooksToFolder', bookIds.length, 'from', fromFolderId, '→', toFolderId); // TEMP diagnostic alpha.6
                 const targetFolder = folders.find(f => f.id === toFolderId);
                 const sourceFolder = folders.find(f => f.id === fromFolderId);
                 const existing = new Set(targetFolder?.bookIds || []);
@@ -2529,6 +2530,7 @@
             // COPY_BOOKS_FOLDER with only the newly-added ids, so undo removes exactly what was added.
             const copyBooksToFolder = (bookIds, toFolderId, opts = {}) => {
                 if (!bookIds || bookIds.length === 0 || !toFolderId) return;
+                console.log('🔧 copyBooksToFolder', bookIds.length, '→', toFolderId); // TEMP diagnostic alpha.6
                 const targetFolder = folders.find(f => f.id === toFolderId);
                 const existing = new Set(targetFolder?.bookIds || []);
                 const toAdd = bookIds.filter(id => !existing.has(id));
