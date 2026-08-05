@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2497,53 +2497,12 @@
                 return true;
             };
 
-            // v6.13.1-alpha.2 (ops refactor #2a) - Single source of truth for MOVING books into another folder
-            // (cross-folder only). Replaces the drag paths' inline MOVE_BOOKS_FOLDER logic and the menu's separate
-            // MOVE_BOOKS_TO_FOLDER type (now retired). Dedups against the target, removes from the source, and records
-            // MOVE_BOOKS_FOLDER with fromIndices (REQUIRED — the undo reducer reads them to restore original source
-            // positions; a payload without them crashes undo). `opts.toastAt` = {x, y} to place the toast at a drop
-            // point. Reorder-within-a-folder is a different op (REORDER_BOOKS_FOLDER) and is untouched.
-            const moveBooksToFolder = (bookIds, fromFolderId, toFolderId, opts = {}) => {
-                if (!bookIds || bookIds.length === 0 || !toFolderId || fromFolderId === toFolderId) return;
-                const targetFolder = folders.find(f => f.id === toFolderId);
-                const sourceFolder = folders.find(f => f.id === fromFolderId);
-                const existing = new Set(targetFolder?.bookIds || []);
-                const toAdd = bookIds.filter(id => !existing.has(id));
-                const fromIndices = bookIds.map(id => (sourceFolder?.bookIds || []).indexOf(id));
-
-                setFolders(prev => prev.map(f => {
-                    if (f.id === toFolderId) return { ...f, bookIds: [...toAdd, ...(f.bookIds || [])] };
-                    if (f.id === fromFolderId) return { ...f, bookIds: (f.bookIds || []).filter(id => !bookIds.includes(id)) };
-                    return f;
-                }));
-
-                const name = targetFolder?.name || (toFolderId === '__inbox__' ? 'Inbox' : 'folder');
-                recordAction({ type: 'MOVE_BOOKS_FOLDER', fromFolderId, toFolderId, bookIds, fromIndices, toIndex: 0, label: `Move ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to '${name}'` });
-
-                showToast(`Moved ${bookIds.length} book${bookIds.length !== 1 ? 's' : ''} to '${name}'`, opts.toastAt?.x, opts.toastAt?.y);
-            };
-
-            // v6.13.1-alpha.4 (ops refactor #2b) - Single source of truth for COPYING books into another folder (the
-            // book stays in its source too — a linked copy). Replaces the drag paths' inline COPY_BOOKS_FOLDER logic
-            // and the menu's separate COPY_BOOKS_TO_FOLDER type (now retired). Dedups against the target and records
-            // COPY_BOOKS_FOLDER with only the newly-added ids, so undo removes exactly what was added.
-            const copyBooksToFolder = (bookIds, toFolderId, opts = {}) => {
-                if (!bookIds || bookIds.length === 0 || !toFolderId) return;
-                const targetFolder = folders.find(f => f.id === toFolderId);
-                const existing = new Set(targetFolder?.bookIds || []);
-                const toAdd = bookIds.filter(id => !existing.has(id));
-                if (toAdd.length === 0) {
-                    showToast(bookIds.length === 1 ? 'Book already in folder' : 'Books already in folder', opts.toastAt?.x, opts.toastAt?.y);
-                    return;
-                }
-                setFolders(prev => prev.map(f => f.id === toFolderId ? { ...f, bookIds: [...toAdd, ...(f.bookIds || [])] } : f));
-
-                const name = targetFolder?.name || (toFolderId === '__inbox__' ? 'Inbox' : 'folder');
-                recordAction({ type: 'COPY_BOOKS_FOLDER', toFolderId, bookIds: toAdd, toIndex: 0, label: `Copy ${toAdd.length} book${toAdd.length !== 1 ? 's' : ''} to '${name}'` });
-                showToast(`Copied to '${name}' — same book, two folders. Your ratings, notes, and edits apply to both.`, opts.toastAt?.x, opts.toastAt?.y);
-            };
-
-            // v6.11.2 - Unified move: handles books + folders in one atomic operation
+            // v6.11.2 - Unified move: handles books + folders in one atomic operation. v6.13.1-alpha.8 (ops refactor
+            // #2 rework) - THE single source of truth for moving/copying books+folders into a folder, for EVERY
+            // surface: drag (all drop handlers) AND the menu Move to / Copy to. (The alpha.2/4/5 moveBooksToFolder /
+            // copyBooksToFolder were retired — they duplicated this, and their drag call sites were dead x-readerwrangler
+            // fallbacks; the real drag path always routed here via x-rw-items.) MOVE_BOOKS_FOLDER/COPY_BOOKS_FOLDER
+            // types survive only as sub-actions of the "new folder then place" compound.
             const moveItems = (itemIds, targetFolderId, sourceFolderId, { isCopy = false } = {}) => {
                 const bookIds = itemIds.filter(id => bookMap.has(id));
                 const folderIdsToMove = itemIds.filter(id => folders.some(f => f.id === id));
@@ -12372,8 +12331,7 @@
                                             // v6.6.0 - Read ctrlKey from drop event (more reliable than onDragOver ref on Windows/Chrome)
                                             const isCopy = ctrlKeyRef.current;
                                             explorerIsCopyDragRef.current = isCopy;
-                                            if (isCopy) copyBooksToFolder(bookIds, '__inbox__');
-                                            else moveBooksToFolder(bookIds, sourceFolder, '__inbox__');
+                                            moveItems(bookIds, '__inbox__', sourceFolder, { isCopy });
                                             setFolderDropHighlight(null);
                                             setExplorerSelectedItems(new Set());
                                             stopDragVirtualization(); // v5.5.4-alpha.23
@@ -12729,8 +12687,7 @@
                                                             // v6.6.0 - Capture isCopy BEFORE setFolders — updater runs after event handler so ref would already be reset
                                                             const isCopy = ctrlKeyRef.current;
                                                             explorerIsCopyDragRef.current = isCopy;
-                                                            if (isCopy) copyBooksToFolder(bookIds, folder.id, { toastAt: { x: e.clientX, y: e.clientY } });
-                                                            else moveBooksToFolder(bookIds, sourceFolder, folder.id, { toastAt: { x: e.clientX, y: e.clientY } });
+                                                            moveItems(bookIds, folder.id, sourceFolder, { isCopy });
                                                             setFolderDropHighlight(null);
                                                             setExplorerSelectedItems(new Set());
                                                             explorerIsCopyDragRef.current = false;
@@ -13076,7 +13033,7 @@
                                                                     const targetFolder = folders.find(f => f.id === folder.id);
                                                                     if (!targetFolder) return;
 
-                                                                    moveBooksToFolder(bookIds, sourceFolder, folder.id, { toastAt: { x: e.clientX, y: e.clientY } });
+                                                                    moveItems(bookIds, folder.id, sourceFolder);
                                                                     setExplorerSelectedItems(new Set());
                                                                     stopDragVirtualization(); // v5.5.4-alpha.23
                                             // v5.5.4 - Drag cleanup: source row may unmount before onDragEnd fires
@@ -13988,8 +13945,7 @@
                                                                             // v6.6.0 - Capture isCopy BEFORE setFolders — updater runs after event handler so ref would already be reset
                                                                             const isCopy = ctrlKeyRef.current;
                                                                             explorerIsCopyDragRef.current = isCopy;
-                                                                            if (isCopy) copyBooksToFolder(bookIds, folder.id, { toastAt: { x: e.clientX, y: e.clientY } });
-                                                                            else moveBooksToFolder(bookIds, sourceFolder, folder.id, { toastAt: { x: e.clientX, y: e.clientY } });
+                                                                            moveItems(bookIds, folder.id, sourceFolder, { isCopy });
                                                                         }
                                                                         setFolderDropHighlight(null);
                                                                         setExplorerSelectedItems(new Set());
@@ -14719,8 +14675,7 @@
                                                                     // v6.6.0 - Capture isCopy BEFORE setFolders — updater runs after event handler so ref would already be reset
                                                                     const isCopy = ctrlKeyRef.current;
                                                                     explorerIsCopyDragRef.current = isCopy;
-                                                                    if (isCopy) copyBooksToFolder(bookIds, folder.id, { toastAt: { x: e.clientX, y: e.clientY } });
-                                                                    else moveBooksToFolder(bookIds, sourceFolder, folder.id, { toastAt: { x: e.clientX, y: e.clientY } });
+                                                                    moveItems(bookIds, folder.id, sourceFolder, { isCopy });
                                                                 }
                                                                 setFolderDropHighlight(null);
                                                                 setExplorerSelectedItems(new Set());
@@ -16262,7 +16217,7 @@
 
                         // Move books to target folder
                         const handleMoveToFolder = (targetFolderId) => {
-                            moveBooksToFolder(getSelectedBookIds(), selectedFolderId, targetFolderId);
+                            moveItems(getSelectedBookIds(), targetFolderId, selectedFolderId, { isCopy: false });
                             setExplorerSelectedItems(new Set());
                             setExplorerBookContextMenu(null);
                             setContextSubmenu(null);
@@ -16270,7 +16225,7 @@
 
                         // Copy books to target folder
                         const handleCopyToFolder = (targetFolderId) => {
-                            copyBooksToFolder(getSelectedBookIds(), targetFolderId);
+                            moveItems(getSelectedBookIds(), targetFolderId, selectedFolderId, { isCopy: true });
                             setExplorerSelectedItems(new Set());
                             setExplorerBookContextMenu(null);
                             setContextSubmenu(null);
