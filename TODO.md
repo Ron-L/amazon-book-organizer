@@ -33,8 +33,9 @@
 
 ## 🔜 Next (6.12.x follow-ups)
 
-**Auto-Organize ergonomics (HIGH — real friction while actively organizing):** _(decision: wizard default stays **All** — first-run value; the right-click flow below is the incremental-case fix, so don't flip the default unless it proves insufficient)_
-- [ ] Right-click a book → **Auto-Organize by Author / by Series** (book-anchored, bottom-up; cover-preview confirm; reuses the wizard engine; subsumes "create an Author/Series folder as a move target") → see docs/design/AUTO-ORGANIZE-RIGHTCLICK.md (spec)
+- [ ] **Operations single-source-of-truth refactor (HIGH)** — one function per mutating operation (delete / move / copy / add-to-list / rename / create, across folders, Book Lists, Searches, tags, books), each owning its confirm text + mutation + undo record + toast; call sites (context menus in both panes, keyboard, drag-drop, buttons) become thin adapters passing context (cursor x/y for drag toasts, drop index). Kills handler drift — surfaced by the folder-delete toast/confirm divergence (left-pane menu + keyboard paths had no toast; two DELETE_FOLDERS undo payload shapes). **Audit-first → design doc**, then extract incrementally. Feeds MODULE-SPLIT.
+
+**Auto-Organize ergonomics:**
 - [ ] Auto-Organize wizard: add a **filter/search field** to the author list (scrolling to find a name is painful)
 
 - [ ] **See where a book lives (HIGH)** — hover a cover in a Folder or Book List → the same "In" popup (all Folders + Book Lists it's in) that All Books already shows. Hover is unbound there today, so no conflict. Kills the "did I also put this elsewhere?" pain while organizing. (The auto-organize preview inherits this via the shared cover component.)

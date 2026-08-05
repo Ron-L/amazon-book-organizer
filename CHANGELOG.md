@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.13.0] - 2026-08-04
+
+Organizing straight from a book — the Auto-Organize wizard now has a fast, book-anchored companion.
+
+### Added
+- **Auto-Organize from a right-click** — Right-click any book (or a selection) in the Inbox or All Books and pick **Auto-Organize ▸ By Author…** or **By Series…** to file all of that author's unfiled books in one step. *By Author* drops them flat under an author folder; *By Series* builds author/series subfolders (non-series books sit at the author's root). A **preview** shows exactly what will happen — the actual book covers, grouped by author and series — before you commit anything.
+- **Queue while you file, in the preview** — Select covers in the preview and right-click to **add them to a Book List** (e.g. a "New To Read" queue): confirm, and the books file into their series folder *and* stay on the list as shortcuts. **Hover** a cover to see which folders and Book Lists it already lives in, and **double-click** a cover to open its full details.
+- **Series-folder threshold in the Auto-Organize wizard** — Choose how many books of a series you must own before it earns its own folder (default 2), so large libraries stay tidy. (The right-click flow always makes the folder, even for a single owned book.)
+
 ## [6.12.0] - 2026-08-02
 
 The largest release yet: a ground-up rework of how you organize your library — **Searches**, **Book Lists**, and a unified **folder-ordering** model — plus a full mobile visual refresh and a batch of data-integrity fixes.

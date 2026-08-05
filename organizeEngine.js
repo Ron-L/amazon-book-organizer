@@ -1,4 +1,4 @@
-// organizeEngine.js — v6.13.0-alpha.1
+// organizeEngine.js — v6.13.0
 // Pure, testable core of Auto-Organize, extracted from readerwrangler.js's executeWizardOrganize so the
 // wizard AND the (upcoming) right-click Auto-Organize share ONE engine. No React, no globals: inputs →
 // deterministic output. Loaded as a classic <script> (functions become global, like uiHelpers.js) and

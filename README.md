@@ -126,6 +126,7 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 <!-- SYNC: Keep "Recent Features" in sync with features.html -->
 ## Recent Features
 
+- **Auto-Organize from a right-click** — Right-click a book (or a selection) to file its author or series in one step, with a cover preview before you commit. In the preview you can select covers to add to a Book List (a "New To Read" queue), see where each book already lives, and double-click to open its details.
 - **Searches** — Save any filter combination (search, ratings, ownership, tags, dates, deals) as a named Search in the sidebar. Recall one to restore that filtered view in place — a saved lens over your library.
 - **Book Lists** — Hand-pick sets of books into simple, flat lists kept separate from your folders. Adding or removing a book from a list never tags, moves, or deletes the book itself.
 - **Unified folder ordering** — One shared order — Manual, A→Z, or Z→A — across the sidebar, the Folders view, and the Move/Copy trees. Drag to reorder in Manual mode.
