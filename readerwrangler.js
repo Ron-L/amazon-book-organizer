@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.1-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -12131,7 +12131,16 @@
                                                                 onChange={(e) => setEditingBookListName(e.target.value)}
                                                                 onBlur={() => {
                                                                     const nm = editingBookListName.trim();
-                                                                    if (nm) setBookLists(prev => prev.map(x => x.id === bl.id ? { ...x, name: nm } : x));
+                                                                    if (nm) {
+                                                                        setBookLists(prev => prev.map(x => x.id === bl.id ? { ...x, name: nm } : x));
+                                                                        // v6.13.1-alpha.11 - reflect the final name in the create's undo entry (if this list was just created)
+                                                                        setUndoStack(prev => {
+                                                                            const last = prev[prev.length - 1];
+                                                                            return (last && last.type === 'BOOKLIST_CREATE' && last.bookList?.id === bl.id)
+                                                                                ? [...prev.slice(0, -1), { ...last, label: `Create Book List '${nm}'`, bookList: { ...last.bookList, name: nm } }]
+                                                                                : prev;
+                                                                        });
+                                                                    }
                                                                     setEditingBookListId(null); setEditingBookListName('');
                                                                 }}
                                                                 onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') e.target.blur(); else if (e.key === 'Escape') { setEditingBookListId(null); setEditingBookListName(''); } }}
