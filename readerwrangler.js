@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.2-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.2-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -14176,7 +14176,7 @@
                                                                     tooltipHideTimeoutRef.current = null;
                                                                 }
                                                                 const rect = e.currentTarget.getBoundingClientRect();
-                                                                setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top, bottom: rect.bottom, height: rect.height, cursorY: e.clientY });
+                                                                setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top, bottom: rect.bottom, height: rect.height, cursorY: e.clientY, right: rect.right });
                                                             } : undefined}
                                                             onMouseLeave={selectedFolderId === '__all__' ? () => {
                                                                 // v5.0.0-alpha.132 - Delay hide to allow cursor to reach tooltip
@@ -14779,7 +14779,7 @@
                                                                 tooltipHideTimeoutRef.current = null;
                                                             }
                                                             const rect = e.currentTarget.getBoundingClientRect();
-                                                            setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top });
+                                                            setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top, bottom: rect.bottom, height: rect.height, cursorY: e.clientY, right: rect.right });
                                                         } : undefined}
                                                         onMouseLeave={selectedFolderId === '__all__' ? () => {
                                                             // v5.0.0-alpha.132 - Delay hide to allow cursor to reach tooltip
@@ -15355,13 +15355,19 @@
                         const roomAbove = cvTop >= estH + 12;
                         const roomBelow = (vh - cvBottom) >= estH + 12;
                         const placeAbove = roomAbove && (cursorHigh || !roomBelow); // extend away from the cursor
-                        const posLeft = Math.max(8, Math.min(bookTooltip.x, vw - PW - 8));
+                        const cvRight = bookTooltip.right ?? (bookTooltip.x + 120);
+                        // If a full-width popup would run off the right, anchor its RIGHT edge to the cover's right edge
+                        // (it then extends left only as far as its content needs — a narrow popup stays over a right-edge
+                        // cover instead of jumping onto the neighbor). Otherwise anchor the left edge to the cover's left.
+                        const anchorRight = (bookTooltip.x + PW) > (vw - 8);
 
                         return (
                             <div
                                 className="fixed bg-white border border-gray-300 shadow-lg rounded px-3 py-2 text-sm z-50"
                                 style={{
-                                    left: `${posLeft}px`,
+                                    ...(anchorRight
+                                        ? { right: `${Math.max(8, vw - cvRight)}px` }
+                                        : { left: `${Math.max(8, bookTooltip.x)}px` }),
                                     ...(placeAbove
                                         ? { bottom: `${Math.max(8, vh - (cvTop + overlap))}px` }
                                         : { top: `${Math.min(cvBottom - overlap, vh - estH - 8)}px` }),
