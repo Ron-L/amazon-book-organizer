@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.13.1] - 2026-08-05
+
+A reliability & consistency pass. Under the hood, each library action (delete a folder, move/copy books, move a folder, create/delete a Book List) now runs through a single shared implementation, so it behaves the same whether you use a menu, the keyboard, or drag — which fixed a batch of drift bugs and filled in missing feedback.
+
+### Fixed
+- **Deleting a folder** now tells you where the books go — the confirmation reads "…the books return to the Inbox" (or to the parent folder), and **every** delete path shows a result toast. Two underlying bugs are fixed: deleting a top-level folder from the keyboard could leave its books with no home, and undoing a folder delete could duplicate a book's folder memberships.
+- **Moving books into a folder from the right-click menu** was silent — it now shows a toast, and undo puts the books back in their original spots.
+- **Undo and Redo now tell you what they did** — e.g. "Undone: Move 3 books to 'Sci-Fi'", "Redone: Create Book List 'To Read'". Previously many actions undid silently.
+- **Deleting a Book List** now confirms and toasts on every path; creating one with the "+" button toasts once you've named it.
+- **Moving a folder to a new parent** (menu "Move to", cut-and-paste, or drag) now behaves identically everywhere — one toast, one undo step.
+
 ## [6.13.0] - 2026-08-04
 
 Organizing straight from a book — the Auto-Organize wizard now has a fast, book-anchored companion.
