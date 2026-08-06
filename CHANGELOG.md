@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.13.2] - 2026-08-06
+
+A UX-polish release centered on **seeing where each book lives** while you organize.
+
+### Added
+- **See where a book lives** — Hover a book — now in **any folder or Book List**, not just All Books — to see every folder and Book List it belongs to. Works in both cover and list views. Answers "did I also put this somewhere else?" without leaving the shelf you're on.
+
+### Changed
+- **The "where it lives" popup is easier to reach and read** — It now grows from your cursor as its inner corner (point at a cover and it fills the space away from the library's center), always keeps a little overlap with the cover, and only appears once you hold still — so scanning across covers no longer makes a popup flicker or run away from you.
+- **Deleting an *empty* folder or Book List no longer asks "are you sure?"** — there's nothing to lose, so it just deletes. (Deleting a folder or list that still holds books still confirms first.)
+- **Naming a new folder keeps its buttons reachable** — while you type a new folder's name, its controls stay put, matching how Book Lists already behave.
+
 ## [6.13.1] - 2026-08-05
 
 A reliability & consistency pass. Under the hood, each library action (delete a folder, move/copy books, move a folder, create/delete a Book List) now runs through a single shared implementation, so it behaves the same whether you use a menu, the keyboard, or drag — which fixed a batch of drift bugs and filled in missing feedback.
