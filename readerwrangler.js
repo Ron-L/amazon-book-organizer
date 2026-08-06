@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.2-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.2-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2624,6 +2624,25 @@
 
             // v5.0.0-alpha.132 - Tooltip hide delay (prevents tooltip from disappearing when moving cursor to it)
             const tooltipHideTimeoutRef = useRef(null);
+            // v6.13.2-alpha.5 - "In" popup hover-intent + cursor tracking. Only pop after the cursor SETTLES on a cover
+            // (~280ms of stillness); remember the cursor position (used as the popup's inner corner). Movement resets
+            // the timer, so scanning across covers never flickers a popup. Shared by both cover-render paths.
+            const coverTipTimerRef = useRef(null);
+            const coverTipPendingRef = useRef(null);
+            const showCoverTipSoon = (el, bookId, clientX, clientY) => {
+                if (tooltipHideTimeoutRef.current) { clearTimeout(tooltipHideTimeoutRef.current); tooltipHideTimeoutRef.current = null; }
+                const rect = el.getBoundingClientRect();
+                coverTipPendingRef.current = { bookId, x: rect.left, y: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height, cursorX: clientX, cursorY: clientY };
+                if (coverTipTimerRef.current) clearTimeout(coverTipTimerRef.current);
+                coverTipTimerRef.current = setTimeout(() => { if (coverTipPendingRef.current) setBookTooltip(coverTipPendingRef.current); }, 280);
+            };
+            const handleCoverTip = (e, bookId) => { if (selectedFolderId === '__all__') showCoverTipSoon(e.currentTarget, bookId, e.clientX, e.clientY); };
+            const handleCoverTipLeave = () => {
+                coverTipPendingRef.current = null;
+                if (coverTipTimerRef.current) { clearTimeout(coverTipTimerRef.current); coverTipTimerRef.current = null; }
+                if (tooltipHideTimeoutRef.current) clearTimeout(tooltipHideTimeoutRef.current);
+                tooltipHideTimeoutRef.current = setTimeout(() => setBookTooltip(null), 150);
+            };
 
             // Status bar state (v3.9.0 - Load-state-only, 4 states)
             const [libraryStatus, setLibraryStatus] = useState({
@@ -14169,21 +14188,9 @@
                                                                 return styles;
                                                             })()}
                                                             draggable="true"
-                                                            onMouseEnter={selectedFolderId === '__all__' ? (e) => {
-                                                                // Clear any pending hide timeout
-                                                                if (tooltipHideTimeoutRef.current) {
-                                                                    clearTimeout(tooltipHideTimeoutRef.current);
-                                                                    tooltipHideTimeoutRef.current = null;
-                                                                }
-                                                                const rect = e.currentTarget.getBoundingClientRect();
-                                                                setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top, bottom: rect.bottom, height: rect.height, cursorY: e.clientY, right: rect.right });
-                                                            } : undefined}
-                                                            onMouseLeave={selectedFolderId === '__all__' ? () => {
-                                                                // v5.0.0-alpha.132 - Delay hide to allow cursor to reach tooltip
-                                                                tooltipHideTimeoutRef.current = setTimeout(() => {
-                                                                    setBookTooltip(null);
-                                                                }, 150);
-                                                            } : undefined}
+                                                            onMouseEnter={selectedFolderId === '__all__' ? (e) => handleCoverTip(e, book.id) : undefined}
+                                                            onMouseMove={selectedFolderId === '__all__' ? (e) => handleCoverTip(e, book.id) : undefined}
+                                                            onMouseLeave={selectedFolderId === '__all__' ? handleCoverTipLeave : undefined}
                                                             onDragStart={(e) => {
                                                                 e.stopPropagation();
                                                                 e.dataTransfer.effectAllowed = 'copyMove';
@@ -14772,21 +14779,9 @@
                                                             return styles;
                                                         })()}
                                                         draggable="true"
-                                                        onMouseEnter={selectedFolderId === '__all__' ? (e) => {
-                                                            // Clear any pending hide timeout
-                                                            if (tooltipHideTimeoutRef.current) {
-                                                                clearTimeout(tooltipHideTimeoutRef.current);
-                                                                tooltipHideTimeoutRef.current = null;
-                                                            }
-                                                            const rect = e.currentTarget.getBoundingClientRect();
-                                                            setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top, bottom: rect.bottom, height: rect.height, cursorY: e.clientY, right: rect.right });
-                                                        } : undefined}
-                                                        onMouseLeave={selectedFolderId === '__all__' ? () => {
-                                                            // v5.0.0-alpha.132 - Delay hide to allow cursor to reach tooltip
-                                                            tooltipHideTimeoutRef.current = setTimeout(() => {
-                                                                setBookTooltip(null);
-                                                            }, 150);
-                                                        } : undefined}
+                                                        onMouseEnter={selectedFolderId === '__all__' ? (e) => handleCoverTip(e, book.id) : undefined}
+                                                        onMouseMove={selectedFolderId === '__all__' ? (e) => handleCoverTip(e, book.id) : undefined}
+                                                        onMouseLeave={selectedFolderId === '__all__' ? handleCoverTipLeave : undefined}
                                                         onDragStart={(e) => {
                                                             e.stopPropagation();
                                                             e.dataTransfer.effectAllowed = 'copyMove';
@@ -15347,31 +15342,33 @@
                             + (containingLists.length > 0 ? 28 + containingLists.length * 26 : 0);
                         const vw = (typeof window !== 'undefined' ? window.innerWidth : 1200);
                         const vh = (typeof window !== 'undefined' ? window.innerHeight : 800);
-                        const cvTop = bookTooltip.y;
-                        const cvBottom = bookTooltip.bottom ?? bookTooltip.y;
-                        const cvH = bookTooltip.height ?? ((cvBottom - cvTop) || 120);
-                        const overlap = Math.max(8, Math.round(cvH * 0.1)); // ~10% of the cover
-                        const cursorHigh = (bookTooltip.cursorY ?? (cvTop + cvH / 2)) < (cvTop + cvH / 2);
-                        const roomAbove = cvTop >= estH + 12;
-                        const roomBelow = (vh - cvBottom) >= estH + 12;
-                        const placeAbove = roomAbove && (cursorHigh || !roomBelow); // extend away from the cursor
-                        const cvRight = bookTooltip.right ?? (bookTooltip.x + 120);
-                        // If a full-width popup would run off the right, anchor its RIGHT edge to the cover's right edge
-                        // (it then extends left only as far as its content needs — a narrow popup stays over a right-edge
-                        // cover instead of jumping onto the neighbor). Otherwise anchor the left edge to the cover's left.
-                        const anchorRight = (bookTooltip.x + PW) > (vw - 8);
+                        // v6.13.2-alpha.5 - Cursor = the popup's INNER corner (the one nearest the cover center); the
+                        // popup fills the quadrant AWAY from center. NW cursor → popup up-left, its SE corner at the
+                        // cursor. Cursor is clamped to ≤90% from center so there's always ≥10% overlap, and it sits on
+                        // the cover IMAGE (where you hover) not the title below. Room-checks flip a side that would overrun.
+                        const cw = bookTooltip.width ?? 120;
+                        const ch = bookTooltip.height ?? 160;
+                        const mx = bookTooltip.x + cw / 2;
+                        const my = bookTooltip.y + ch / 2;
+                        const cx = Math.max(mx - 0.45 * cw, Math.min(bookTooltip.cursorX ?? mx, mx + 0.45 * cw)); // ≤90% from center
+                        const cy = Math.max(my - 0.45 * ch, Math.min(bookTooltip.cursorY ?? my, my + 0.45 * ch));
+                        let vUp = cy < my;   // cursor above center → extend up (popup bottom edge at the cursor)
+                        let hLeft = cx < mx; // cursor left of center → extend left (popup right edge at the cursor)
+                        if (vUp && cy < estH + 8) vUp = false; else if (!vUp && (vh - cy) < estH + 8) vUp = true;
+                        if (hLeft && cx < 140) hLeft = false; else if (!hLeft && (vw - cx) < 140) hLeft = true;
+                        const maxW = Math.max(140, Math.min(PW, hLeft ? (cx - 8) : (vw - cx - 8)));
 
                         return (
                             <div
                                 className="fixed bg-white border border-gray-300 shadow-lg rounded px-3 py-2 text-sm z-50"
                                 style={{
-                                    ...(anchorRight
-                                        ? { right: `${Math.max(8, vw - cvRight)}px` }
-                                        : { left: `${Math.max(8, bookTooltip.x)}px` }),
-                                    ...(placeAbove
-                                        ? { bottom: `${Math.max(8, vh - (cvTop + overlap))}px` }
-                                        : { top: `${Math.min(cvBottom - overlap, vh - estH - 8)}px` }),
-                                    maxWidth: `${PW}px`,
+                                    ...(hLeft
+                                        ? { right: `${Math.max(8, vw - cx)}px` }
+                                        : { left: `${Math.max(8, cx)}px` }),
+                                    ...(vUp
+                                        ? { bottom: `${Math.max(8, vh - cy)}px` }
+                                        : { top: `${Math.max(8, cy)}px` }),
+                                    maxWidth: `${maxW}px`,
                                     maxHeight: '70vh',
                                     overflowY: 'auto'
                                 }}
