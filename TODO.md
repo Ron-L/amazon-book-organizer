@@ -38,6 +38,8 @@
 
 **Auto-Organize ergonomics:**
 - [ ] Auto-Organize wizard: add a **filter/search field** to the author list (scrolling to find a name is painful)
+- [ ] **Auto-Organize preview: Ctrl+A + Shift-range select** — the preview covers only support click-toggle today. **Ctrl+A leaks to the outer Inbox** (selects ALL Inbox books — startling, though the preview only acts on its own `autoOrgSel`); **Shift-click range** also leaks out. Trap both in the modal and scope them to `autoOrgSel`, so "select all the unread ones" is one gesture. (D2 selection gap.)
+- [ ] **Smart default Book List name from a single-author Auto-Organize preview** — when you create a new Book List from a preview scoped to ONE author, pre-fill the name field with **`<Author> - To Read`** (accept with Enter, or edit). Drives Ron's methodology — folders (nested) hold *everything* by an author; a flat Book List is the *unread queue* — without lengthening the menu (no `+ New Book List` submenu). Pairs with the "In" popup below.
 
 - [ ] **See where a book lives (HIGH)** — hover a cover in a Folder or Book List → the same "In" popup (all Folders + Book Lists it's in) that All Books already shows. Hover is unbound there today, so no conflict. Kills the "did I also put this elsewhere?" pain while organizing. (The auto-organize preview inherits this via the shared cover component.)
 - [ ] **Terminology copy pass** (6.12.1) — "shortcut" language in Book List toasts/menus; explain "Linked Copies" once in manual/GPT → see docs/design/TERMINOLOGY.md (spec)
@@ -57,7 +59,7 @@
 - [ ] Folder "Move to Top / Move to Bottom" context items (D)
 - [ ] Fix drag-subfolder→root drop-position (**confirmed still broken 2026-08-03**, annoying) — dropping a subfolder at root lands it alphabetical-ish near the bottom instead of at the drop target; shares a root cause with new-folder alphabetical insert + Move-to stale position
 - [ ] Book Lists: **"Arrange by series #"** — in Manual mode, bake the series-number order into the list's manual order (persistent, then hand-tweak). The Book-List analog of folder sort-then-bake; a one-time rearrange, not a live sort mode. (Distinct from the existing "Number by current order," which sets each book's *position value*, not the list's order.)
-- [ ] Left-pane **jump-to-top** chevron (complement to the shipped jump-to-bottom "F"); place both as chevrons at the two ends of the scrollbar
+- [ ] **Left-pane jump-to-top/bottom placement** — both chevrons now ship, but they sit at the **bottom-left**, not at the two **scrollbar ends** as originally intended (Ron expected top-at-top / bottom-at-bottom). Scroll affordances conventionally live by the scrollbar (right). Reconsider: move the pair to the right near the scrollbar (spatial mapping), or adopt the single context-aware "back to top" that appears on scroll-down. **Per-section jump** (Searches / Book Lists / Folders): skip — the collapsible sections already handle that navigation.
 
 ## 🗄️ Backlog (post-launch)
 
