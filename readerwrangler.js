@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.2-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -1168,7 +1168,8 @@
             };
             const deleteBookList = async (bl) => {
                 if (!bl) return false;
-                if (!(await showConfirmDialog('Delete Book List', `Delete the book list "${bl.name}"? The books themselves are not deleted.`))) return false;
+                // v6.13.2-alpha.1 - Empty Book List deletes without a confirm — nothing to lose.
+                if ((bl.bookIds || []).length > 0 && !(await showConfirmDialog('Delete Book List', `Delete the book list "${bl.name}"? The books themselves are not deleted.`))) return false;
                 const index = bookLists.findIndex(x => x.id === bl.id);
                 recordAction({ type: 'BOOKLIST_DELETE', bookList: bl, index, label: `Delete Book List '${bl.name}'` });
                 setBookLists(prev => prev.filter(x => x.id !== bl.id));
@@ -2499,15 +2500,18 @@
                 const bookCount = orphanedBookIds.length;
                 const subCount = descendants.length;
 
-                let confirmMsg = `Delete folder "${folder.name}"?`;
-                if (bookCount > 0 && subCount > 0) {
-                    confirmMsg = `Delete "${folder.name}", its ${bookCount} book${bookCount !== 1 ? 's' : ''}, and ${subCount} subfolder${subCount !== 1 ? 's' : ''}? The book${bookCount !== 1 ? 's' : ''} return to ${destLabel}.`;
-                } else if (bookCount > 0) {
-                    confirmMsg = `Delete "${folder.name}" and its ${bookCount} book${bookCount !== 1 ? 's' : ''}? The book${bookCount !== 1 ? 's' : ''} return to ${destLabel}.`;
-                } else if (subCount > 0) {
-                    confirmMsg = `Delete "${folder.name}" and its ${subCount} subfolder${subCount !== 1 ? 's' : ''}?`;
+                // v6.13.2-alpha.1 - Empty folder (no books, no subfolders) deletes without a confirm — nothing to lose.
+                if (bookCount > 0 || subCount > 0) {
+                    let confirmMsg;
+                    if (bookCount > 0 && subCount > 0) {
+                        confirmMsg = `Delete "${folder.name}", its ${bookCount} book${bookCount !== 1 ? 's' : ''}, and ${subCount} subfolder${subCount !== 1 ? 's' : ''}? The book${bookCount !== 1 ? 's' : ''} return to ${destLabel}.`;
+                    } else if (bookCount > 0) {
+                        confirmMsg = `Delete "${folder.name}" and its ${bookCount} book${bookCount !== 1 ? 's' : ''}? The book${bookCount !== 1 ? 's' : ''} return to ${destLabel}.`;
+                    } else {
+                        confirmMsg = `Delete "${folder.name}" and its ${subCount} subfolder${subCount !== 1 ? 's' : ''}?`;
+                    }
+                    if (!(await showConfirmDialog('Delete Folder', confirmMsg))) return false;
                 }
-                if (!(await showConfirmDialog('Delete Folder', confirmMsg))) return false;
 
                 const savedSortSettings = {};
                 foldersToDelete.forEach(f => { if (folderSortSettings[f.id]) savedSortSettings[f.id] = folderSortSettings[f.id]; });
@@ -14173,7 +14177,7 @@
                                                                     tooltipHideTimeoutRef.current = null;
                                                                 }
                                                                 const rect = e.currentTarget.getBoundingClientRect();
-                                                                setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top });
+                                                                setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top, bottom: rect.bottom });
                                                             } : undefined}
                                                             onMouseLeave={selectedFolderId === '__all__' ? () => {
                                                                 // v5.0.0-alpha.132 - Delay hide to allow cursor to reach tooltip
@@ -15334,13 +15338,28 @@
                         const containingLists = getBookListsContainingBook(bookTooltip.bookId); // v6.12.0-alpha.56 (A)
                         if (containingFolders.length === 0 && containingLists.length === 0) return null;
 
+                        // v6.13.2-alpha.1 - Position the popup BELOW the cover (reachable by moving DOWN, without
+                        // crossing a sibling cover) and clamp it to the viewport. Fixes the rightmost cover pushing
+                        // it off-screen, and the "chase it rightward" problem (it used to sit 220px to the right,
+                        // over the next covers). Flips above the cover if it would overrun the bottom edge.
+                        const PW = 300;
+                        const estH = 20
+                            + (containingFolders.length > 0 ? 24 + containingFolders.length * 26 : 0)
+                            + (containingLists.length > 0 ? 28 + containingLists.length * 26 : 0);
+                        const vw = (typeof window !== 'undefined' ? window.innerWidth : 1200);
+                        const vh = (typeof window !== 'undefined' ? window.innerHeight : 800);
+                        const posLeft = Math.max(8, Math.min(bookTooltip.x, vw - PW - 8));
+                        const posTop = ((bookTooltip.bottom ?? bookTooltip.y) + 6 + estH <= vh - 8)
+                            ? (bookTooltip.bottom ?? bookTooltip.y) + 6
+                            : Math.max(8, bookTooltip.y - 6 - estH);
+
                         return (
                             <div
                                 className="fixed bg-white border border-gray-300 shadow-lg rounded px-3 py-2 text-sm z-50"
                                 style={{
-                                    left: `${bookTooltip.x + 220}px`,
-                                    top: `${bookTooltip.y}px`,
-                                    maxWidth: '300px'
+                                    left: `${posLeft}px`,
+                                    top: `${posTop}px`,
+                                    maxWidth: `${PW}px`
                                 }}
                                 onMouseEnter={() => {
                                     // v5.0.0-alpha.132 - Cancel hide timeout when cursor enters tooltip
