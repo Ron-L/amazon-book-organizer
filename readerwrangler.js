@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.2-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.2-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -12782,8 +12782,9 @@
                                                                 className={`flex-1 px-1 py-0.5 text-sm border border-blue-400 rounded outline-none ${isPlaceholderMode ? 'text-gray-400' : ''}`}
                                                             />
                                                         ) : (
-                                                            <>
-                                                                <span className="flex-1 pointer-events-none">{folder.name}</span>
+                                                            <span className="flex-1 pointer-events-none">{folder.name}</span>
+                                                        )}
+                                                        {/* v6.13.2-alpha.2 - Count + action buttons live OUTSIDE the edit ternary, so ×/＋ stay reachable while naming a new folder (like Book Lists — delete a mis-created folder without hitting Enter first). */}
                                                                 {/* v6.3.0 - Count hidden on hover; buttons shown in its place (no overlap) */}
                                                                 <span className="group-hover:hidden">
                                                                 {(() => {
@@ -12877,8 +12878,6 @@
                                                                     ×
                                                                 </button>
                                                                 </div>
-                                                            </>
-                                                        )}
                                                     </div>
                                                     {/* Render children if expanded */}
                                                     {hasChildren && isExpanded && children.map(child => renderFolder(child, depth + 1))}
