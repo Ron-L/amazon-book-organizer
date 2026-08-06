@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.2-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.2-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -14176,7 +14176,7 @@
                                                                     tooltipHideTimeoutRef.current = null;
                                                                 }
                                                                 const rect = e.currentTarget.getBoundingClientRect();
-                                                                setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top, bottom: rect.bottom });
+                                                                setBookTooltip({ bookId: book.id, x: rect.left, y: rect.top, bottom: rect.bottom, height: rect.height, cursorY: e.clientY });
                                                             } : undefined}
                                                             onMouseLeave={selectedFolderId === '__all__' ? () => {
                                                                 // v5.0.0-alpha.132 - Delay hide to allow cursor to reach tooltip
@@ -15337,28 +15337,37 @@
                         const containingLists = getBookListsContainingBook(bookTooltip.bookId); // v6.12.0-alpha.56 (A)
                         if (containingFolders.length === 0 && containingLists.length === 0) return null;
 
-                        // v6.13.2-alpha.1 - Position the popup BELOW the cover (reachable by moving DOWN, without
-                        // crossing a sibling cover) and clamp it to the viewport. Fixes the rightmost cover pushing
-                        // it off-screen, and the "chase it rightward" problem (it used to sit 220px to the right,
-                        // over the next covers). Flips above the cover if it would overrun the bottom edge.
+                        // v6.13.2-alpha.3 - Cursor-aware placement: the popup extends AWAY from where you entered the
+                        // cover — up if you came in high, down if low — overlapping the cover by only ~10% (enough to
+                        // bridge cover→popup for reachability, without burying the cover). Re-enter from the other half
+                        // to flip sides. Clamped to the viewport, with room-checks so it never runs off an edge.
                         const PW = 300;
                         const estH = 20
                             + (containingFolders.length > 0 ? 24 + containingFolders.length * 26 : 0)
                             + (containingLists.length > 0 ? 28 + containingLists.length * 26 : 0);
                         const vw = (typeof window !== 'undefined' ? window.innerWidth : 1200);
                         const vh = (typeof window !== 'undefined' ? window.innerHeight : 800);
+                        const cvTop = bookTooltip.y;
+                        const cvBottom = bookTooltip.bottom ?? bookTooltip.y;
+                        const cvH = bookTooltip.height ?? ((cvBottom - cvTop) || 120);
+                        const overlap = Math.max(8, Math.round(cvH * 0.1)); // ~10% of the cover
+                        const cursorHigh = (bookTooltip.cursorY ?? (cvTop + cvH / 2)) < (cvTop + cvH / 2);
+                        const roomAbove = cvTop >= estH + 12;
+                        const roomBelow = (vh - cvBottom) >= estH + 12;
+                        const placeAbove = roomAbove && (cursorHigh || !roomBelow); // extend away from the cursor
                         const posLeft = Math.max(8, Math.min(bookTooltip.x, vw - PW - 8));
-                        const posTop = ((bookTooltip.bottom ?? bookTooltip.y) + 6 + estH <= vh - 8)
-                            ? (bookTooltip.bottom ?? bookTooltip.y) + 6
-                            : Math.max(8, bookTooltip.y - 6 - estH);
 
                         return (
                             <div
                                 className="fixed bg-white border border-gray-300 shadow-lg rounded px-3 py-2 text-sm z-50"
                                 style={{
                                     left: `${posLeft}px`,
-                                    top: `${posTop}px`,
-                                    maxWidth: `${PW}px`
+                                    ...(placeAbove
+                                        ? { bottom: `${Math.max(8, vh - (cvTop + overlap))}px` }
+                                        : { top: `${Math.min(cvBottom - overlap, vh - estH - 8)}px` }),
+                                    maxWidth: `${PW}px`,
+                                    maxHeight: '70vh',
+                                    overflowY: 'auto'
                                 }}
                                 onMouseEnter={() => {
                                     // v5.0.0-alpha.132 - Cancel hide timeout when cursor enters tooltip
