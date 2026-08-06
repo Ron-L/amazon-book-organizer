@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.2-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.13.2-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2636,7 +2636,10 @@
                 if (coverTipTimerRef.current) clearTimeout(coverTipTimerRef.current);
                 coverTipTimerRef.current = setTimeout(() => { if (coverTipPendingRef.current) setBookTooltip(coverTipPendingRef.current); }, 280);
             };
-            const handleCoverTip = (e, bookId) => { if (selectedFolderId === '__all__') showCoverTipSoon(e.currentTarget, bookId, e.clientX, e.clientY); };
+            // v6.13.2-alpha.6 - The "In" popup shows in cover view for every content view (All Books, Inbox, Library,
+            // any folder, any Book List) — everywhere except Trash and the Views/Searches list. "See where a book lives."
+            const bookTipViewOk = (fid) => fid !== '__trash__' && fid !== '__views__';
+            const handleCoverTip = (e, bookId) => { if (bookTipViewOk(selectedFolderId)) showCoverTipSoon(e.currentTarget, bookId, e.clientX, e.clientY); };
             const handleCoverTipLeave = () => {
                 coverTipPendingRef.current = null;
                 if (coverTipTimerRef.current) { clearTimeout(coverTipTimerRef.current); coverTipTimerRef.current = null; }
@@ -14188,9 +14191,9 @@
                                                                 return styles;
                                                             })()}
                                                             draggable="true"
-                                                            onMouseEnter={selectedFolderId === '__all__' ? (e) => handleCoverTip(e, book.id) : undefined}
-                                                            onMouseMove={selectedFolderId === '__all__' ? (e) => handleCoverTip(e, book.id) : undefined}
-                                                            onMouseLeave={selectedFolderId === '__all__' ? handleCoverTipLeave : undefined}
+                                                            onMouseEnter={bookTipViewOk(selectedFolderId) ? (e) => handleCoverTip(e, book.id) : undefined}
+                                                            onMouseMove={bookTipViewOk(selectedFolderId) ? (e) => handleCoverTip(e, book.id) : undefined}
+                                                            onMouseLeave={bookTipViewOk(selectedFolderId) ? handleCoverTipLeave : undefined}
                                                             onDragStart={(e) => {
                                                                 e.stopPropagation();
                                                                 e.dataTransfer.effectAllowed = 'copyMove';
@@ -14779,9 +14782,9 @@
                                                             return styles;
                                                         })()}
                                                         draggable="true"
-                                                        onMouseEnter={selectedFolderId === '__all__' ? (e) => handleCoverTip(e, book.id) : undefined}
-                                                        onMouseMove={selectedFolderId === '__all__' ? (e) => handleCoverTip(e, book.id) : undefined}
-                                                        onMouseLeave={selectedFolderId === '__all__' ? handleCoverTipLeave : undefined}
+                                                        onMouseEnter={bookTipViewOk(selectedFolderId) ? (e) => handleCoverTip(e, book.id) : undefined}
+                                                        onMouseMove={bookTipViewOk(selectedFolderId) ? (e) => handleCoverTip(e, book.id) : undefined}
+                                                        onMouseLeave={bookTipViewOk(selectedFolderId) ? handleCoverTipLeave : undefined}
                                                         onDragStart={(e) => {
                                                             e.stopPropagation();
                                                             e.dataTransfer.effectAllowed = 'copyMove';
@@ -15327,7 +15330,7 @@
                             className="w-6 h-6 flex items-center justify-center rounded bg-white/90 border border-gray-300 shadow-sm text-gray-500 hover:bg-gray-100 hover:text-gray-800 text-sm leading-none">⤓</button>
                     </div>
 
-                    {bookTooltip && selectedFolderId === '__all__' && (() => {
+                    {bookTooltip && bookTipViewOk(selectedFolderId) && (() => {
                         const containingFolders = getFoldersContainingBook(bookTooltip.bookId);
                         const containingLists = getBookListsContainingBook(bookTooltip.bookId); // v6.12.0-alpha.56 (A)
                         if (containingFolders.length === 0 && containingLists.length === 0) return null;
