@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.14.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.14.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6936,6 +6936,9 @@
                 return books.filter(b => idset.has(b.id));
             };
             const sourceFolderIdForScope = (fid) => (!fid || fid === '__inbox__' || fid === '__all__') ? '__inbox__' : fid;
+            // Auto-Organize is a folder operation: offered in the Inbox, All Books, or a real folder — never in a
+            // Book List (supplemental, not a custodial home) or any other special view.
+            const canAutoOrganizeInView = (fid) => (!fid || fid === '__inbox__' || fid === '__all__' || folders.some(f => f.id === fid));
             const normAuthorKey = (a) => (a || '').trim().toLowerCase();
             const displayAuthorName = (a) => (a && a.trim()) ? a.trim() : 'Unknown Author';
 
@@ -10062,18 +10065,19 @@
                                                 <div key={ag.displayName} className="mb-4">
                                                     <div className="font-semibold text-gray-900 flex items-center gap-2">📁 {ag.displayName}</div>
                                                     <div className="ml-4 mt-1">
-                                                        {[...seriesGroups.values()].map(s => (
-                                                            <div key={s.originalName} className="mb-2">
-                                                                <div className="text-sm text-gray-700 flex items-center gap-2">📚 {s.originalName} <span className="text-gray-400">({s.books.length})</span></div>
-                                                                {coverRow(s.books)}
-                                                            </div>
-                                                        ))}
+                                                        {/* Top level (author root) first, then the 2nd-level series subfolders — reads top-down. */}
                                                         {standaloneBooks.length > 0 && (
                                                             <div className="mb-2">
                                                                 <div className="text-sm text-gray-500 italic">Directly under {ag.displayName} <span className="text-gray-400">({standaloneBooks.length})</span></div>
                                                                 {coverRow(standaloneBooks)}
                                                             </div>
                                                         )}
+                                                        {[...seriesGroups.values()].map(s => (
+                                                            <div key={s.originalName} className="mb-2">
+                                                                <div className="text-sm text-gray-700 flex items-center gap-2">📚 {s.originalName} <span className="text-gray-400">({s.books.length})</span></div>
+                                                                {coverRow(s.books)}
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
                                             );
@@ -16678,7 +16682,10 @@
                                                 </div>
                                             )}
 
-                                            {/* v6.13.0-alpha.4 - Auto-Organize submenu (book-anchored; files the author's/series' Inbox books) */}
+                                            {/* v6.13.0-alpha.4 / v6.14.0 - Auto-Organize submenu (book-anchored; files the current
+                                                folder's books by author). Hidden in Book List views — a list is supplemental, not a
+                                                custodial home, so this folder operation doesn't apply there. */}
+                                            {canAutoOrganizeInView(selectedFolderId) && (
                                             <div
                                                 className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
                                                 role="menuitem" aria-haspopup="true"
@@ -16714,6 +16721,7 @@
                                                     </div>
                                                 )}
                                             </div>
+                                            )}
 
                                             {/* v6.10.0-alpha.9 - Share submenu */}
                                             <div
