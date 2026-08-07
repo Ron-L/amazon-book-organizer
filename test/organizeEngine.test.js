@@ -96,4 +96,48 @@ test('createSeriesFolders:false files everything flat at author root', () => {
     assert.deepStrictEqual(author.bookIds.sort(), ['b1', 'b2', 'b3']);
 });
 
+test('sourceFolderId: organized books move out of the given folder; other memberships untouched', () => {
+    // b1,b2,b3 live in BOTH the Inbox and a Collections folder — organizing from Collections must
+    // remove them from Collections only, leaving the Inbox membership intact.
+    const inboxF = { id: '__inbox__', name: 'Inbox', parentId: null, bookIds: ['b1', 'b2', 'b3'] };
+    const collections = { id: 'fc', name: 'Collections', parentId: null, bookIds: ['b1', 'b2', 'b3'] };
+    const plan = computeOrganizePlan([sanderson], [inboxF, collections], { sourceFolderId: 'fc' }, counterIdGen());
+    const coll = plan.newFolders.find(f => f.id === 'fc');
+    assert.deepStrictEqual(coll.bookIds, [], 'books removed from the source (Collections) folder');
+    const inboxAfter = plan.newFolders.find(f => f.id === '__inbox__');
+    assert.deepStrictEqual(inboxAfter.bookIds, ['b1', 'b2', 'b3'], 'Inbox membership left intact — only the source folder is touched');
+    const removal = plan.subActions.find(a => a.type === 'REMOVE_BOOKS_FROM_FOLDER');
+    assert.strictEqual(removal.folderId, 'fc', 'removal subaction targets the source folder (undo restores it)');
+});
+
+test('de-organize guard: By Author from inside the author tree skips (no flatten)', () => {
+    // Standing in the Mistborn subfolder, choosing By Author (flat) would move books up to the author
+    // root — an ANCESTOR of the source. The guard must skip it.
+    const existing = [
+        { id: '__inbox__', name: 'Inbox', parentId: null, bookIds: [] },
+        { id: 'fa', name: 'Brandon Sanderson', parentId: null, bookIds: [] },
+        { id: 'fs', name: 'Mistborn', parentId: 'fa', bookIds: ['b1', 'b2'] },
+    ];
+    const group = { displayName: 'Brandon Sanderson', books: [books[0], books[1]] };
+    const plan = computeOrganizePlan([group], existing, { createSeriesFolders: false, sourceFolderId: 'fs' }, counterIdGen());
+    assert.strictEqual(plan.totalBooksOrganized, 0, 'nothing organized — guard blocks the flatten');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fa').bookIds, [], 'author root not flattened into');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fs').bookIds, ['b1', 'b2'], 'series books stay put');
+    assert.ok(!plan.subActions.some(a => a.type === 'REMOVE_BOOKS_FROM_FOLDER'), 'no move-out when nothing is organized');
+});
+
+test('de-organize guard: By Series from the author root still deepens into a series subfolder', () => {
+    // Source is the author root; the series subfolder is a DESCENDANT — allowed (moving deeper is an improvement).
+    const existing = [
+        { id: '__inbox__', name: 'Inbox', parentId: null, bookIds: [] },
+        { id: 'fa', name: 'Brandon Sanderson', parentId: null, bookIds: ['b1', 'b2'] },
+    ];
+    const group = { displayName: 'Brandon Sanderson', books: [books[0], books[1]] };
+    const plan = computeOrganizePlan([group], existing, { seriesFolderMinBooks: 1, sourceFolderId: 'fa' }, counterIdGen());
+    const mistborn = plan.newFolders.find(f => f.name === 'Mistborn');
+    assert.ok(mistborn && mistborn.parentId === 'fa', 'Mistborn subfolder created under the author root');
+    assert.deepStrictEqual(mistborn.bookIds, ['b1', 'b2'], 'books moved down into the series subfolder');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fa').bookIds, [], 'books removed from the source (author root) — deepened, not duplicated');
+});
+
 console.log(`\nAll ${passed} tests passed.`);

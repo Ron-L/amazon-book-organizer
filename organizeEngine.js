@@ -47,7 +47,9 @@ function defaultOrganizeIdGen(prefix) {
 // PURE — never mutates `existingFolders`; returns a fresh folders array + undo subActions + summary.
 //   authorGroups:    [{ displayName, books: [...] }]  (books already scoped to what should be filed)
 //   existingFolders: current folders (incl. the '__inbox__' folder)
-//   opts:            { createSeriesFolders=true, sortByPosition=true, createMiscellaneous=false }
+//   opts:            { createSeriesFolders=true, sortByPosition=true, createMiscellaneous=false, sourceFolderId='__inbox__' }
+//   opts.sourceFolderId: the folder the books came from — organized books are removed from it (the
+//                        "move out of current folder" step). Defaults to '__inbox__' (prior behavior).
 //   idGen:           (prefix) => id   (inject for determinism in tests)
 function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
     opts = opts || {};
@@ -62,6 +64,24 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
     // Copy-on-write: never mutate the caller's folder objects.
     const folders = existingFolders.map(f => ({ ...f, bookIds: [...(f.bookIds || [])] }));
     const findFolder = (name, parentId) => folders.find(f => f.name === name && f.parentId === parentId);
+
+    // v6.14.0 - Source scope + de-organize guard. `sourceFolderId` is the folder the books came from
+    // (default the Inbox, preserving prior callers). A destination that IS the source folder or an
+    // ANCESTOR of it would move books up/out of an existing home (de-organize) — `wouldDeOrganize`
+    // skips those adds. New folders can't be ancestors of the source, so this only ever blocks adds
+    // into an already-existing same-or-ancestor folder; an Inbox/unfiled source (no folder chain) is
+    // never a de-organize, so the guard is a no-op there.
+    const sourceFolderId = opts.sourceFolderId || '__inbox__';
+    const folderById = new Map(folders.map(f => [f.id, f]));
+    const wouldDeOrganize = (destFolderId) => {
+        let cur = sourceFolderId, guard = 0;
+        while (cur && guard++ < 100) {
+            if (cur === destFolderId) return true;
+            const f = folderById.get(cur);
+            cur = f ? f.parentId : null;
+        }
+        return false;
+    };
 
     const subActions = [];
     const createdFolders = [];
@@ -99,7 +119,7 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
                         ? seriesData.books
                         : seriesData.books.slice().sort((a, b) => (a.dateAdded || '').localeCompare(b.dateAdded || ''));
                     const seriesBookIds = ordered.map(b => b.id).filter(id => !seriesFolder.bookIds.includes(id));
-                    if (seriesBookIds.length > 0) {
+                    if (seriesBookIds.length > 0 && !wouldDeOrganize(seriesFolder.id)) {
                         seriesFolder.bookIds = [...seriesFolder.bookIds, ...seriesBookIds];
                         totalBooksOrganized += seriesBookIds.length;
                         allBookIdsToOrganize.push(...seriesBookIds);
@@ -121,7 +141,7 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
                 const miscBookIds = standaloneBooks.slice()
                     .sort((a, b) => (a.dateAdded || '').localeCompare(b.dateAdded || ''))
                     .map(b => b.id).filter(id => !miscFolder.bookIds.includes(id));
-                if (miscBookIds.length > 0) {
+                if (miscBookIds.length > 0 && !wouldDeOrganize(miscFolder.id)) {
                     miscFolder.bookIds = [...miscFolder.bookIds, ...miscBookIds];
                     totalBooksOrganized += miscBookIds.length;
                     allBookIdsToOrganize.push(...miscBookIds);
@@ -132,7 +152,7 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
             }
 
             const rootBookIds = booksToAuthorRoot.map(b => b.id).filter(id => !targetFolder.bookIds.includes(id));
-            if (rootBookIds.length > 0) {
+            if (rootBookIds.length > 0 && !wouldDeOrganize(targetFolder.id)) {
                 targetFolder.bookIds = [...targetFolder.bookIds, ...rootBookIds];
                 totalBooksOrganized += rootBookIds.length;
                 allBookIdsToOrganize.push(...rootBookIds);
@@ -140,7 +160,7 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
             }
         } else {
             const bookIdsToAdd = author.books.map(b => b.id).filter(id => !targetFolder.bookIds.includes(id));
-            if (bookIdsToAdd.length > 0) {
+            if (bookIdsToAdd.length > 0 && !wouldDeOrganize(targetFolder.id)) {
                 targetFolder.bookIds = [...targetFolder.bookIds, ...bookIdsToAdd];
                 totalBooksOrganized += bookIdsToAdd.length;
                 allBookIdsToOrganize.push(...bookIdsToAdd);
@@ -150,11 +170,13 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
     });
 
     if (allBookIdsToOrganize.length > 0) {
-        const inboxFolder = folders.find(f => f.id === '__inbox__');
-        if (inboxFolder) {
+        // Move out of the source folder (default the Inbox). Only the source folder's membership is
+        // touched — a book's other folder/list memberships are left intact.
+        const sourceFolder = folders.find(f => f.id === sourceFolderId);
+        if (sourceFolder) {
             const bookIdsSet = new Set(allBookIdsToOrganize);
-            inboxFolder.bookIds = inboxFolder.bookIds.filter(id => !bookIdsSet.has(id));
-            subActions.push({ type: 'REMOVE_BOOKS_FROM_FOLDER', folderId: '__inbox__', bookIds: allBookIdsToOrganize });
+            sourceFolder.bookIds = sourceFolder.bookIds.filter(id => !bookIdsSet.has(id));
+            subActions.push({ type: 'REMOVE_BOOKS_FROM_FOLDER', folderId: sourceFolderId, bookIds: allBookIdsToOrganize });
         }
     }
 

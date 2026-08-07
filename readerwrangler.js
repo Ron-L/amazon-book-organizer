@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.13.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.14.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6924,26 +6924,38 @@
                 folders.forEach(f => { if (f.id !== '__inbox__' && f.id !== '__all__') (f.bookIds || []).forEach(id => inFolders.add(id)); });
                 return books.filter(b => !inFolders.has(b.id));
             };
+            // v6.14.0 - Auto-Organize is scoped to the folder you invoked it from (not always the Inbox):
+            // a real folder → its books; Inbox / All Books → unfiled (inboxSourceBooks); a Book List id →
+            // [] (lists aren't in `folders`, so find() misses — and the menu is hidden there anyway). The
+            // matching sourceFolderId (below) is what the engine removes organized books FROM.
+            const currentFolderSourceBooks = (fid) => {
+                if (!fid || fid === '__inbox__' || fid === '__all__') return inboxSourceBooks();
+                const folder = folders.find(f => f.id === fid);
+                if (!folder) return []; // unknown id or a Book List — not a custodial folder → nothing to organize
+                const idset = new Set(folder.bookIds || []);
+                return books.filter(b => idset.has(b.id));
+            };
+            const sourceFolderIdForScope = (fid) => (!fid || fid === '__inbox__' || fid === '__all__') ? '__inbox__' : fid;
             const normAuthorKey = (a) => (a || '').trim().toLowerCase();
             const displayAuthorName = (a) => (a && a.trim()) ? a.trim() : 'Unknown Author';
 
-            // Group ALL of the selected books' authors' Inbox books (not just the clicked books) by author.
+            // Group ALL of the selected books' authors' books IN THE CURRENT FOLDER (not just the clicked books) by author.
             const buildAuthorGroupsFromSelection = (selBooks) => {
-                const inbox = inboxSourceBooks();
+                const pool = currentFolderSourceBooks(selectedFolderId);
                 const wantAuthors = new Map(); // normKey -> original author string (first seen)
                 (selBooks || []).forEach(b => { const k = normAuthorKey(b.author); if (!wantAuthors.has(k)) wantAuthors.set(k, b.author); });
                 const authorGroups = [];
                 wantAuthors.forEach((orig, key) => {
-                    const bks = inbox.filter(b => normAuthorKey(b.author) === key);
+                    const bks = pool.filter(b => normAuthorKey(b.author) === key);
                     if (bks.length > 0) authorGroups.push({ displayName: displayAuthorName(orig), books: bks });
                 });
                 return authorGroups;
             };
-            // Menu gating: do the selected books' authors have ANY series book in the Inbox? (So By Series shows
-            // even when you right-clicked a standalone by an author who also has a series in the Inbox.)
+            // Menu gating: do the selected books' authors have ANY series book in the current folder? (So By Series
+            // shows even when you right-clicked a standalone by an author who also has a series here.)
             const selectionAuthorsHaveSeries = (selBooks) => {
                 const keys = new Set((selBooks || []).map(b => normAuthorKey(b.author)));
-                return inboxSourceBooks().some(b => keys.has(normAuthorKey(b.author)) && b.series && b.series.trim());
+                return currentFolderSourceBooks(selectedFolderId).some(b => keys.has(normAuthorKey(b.author)) && b.series && b.series.trim());
             };
 
             // v6.13.0-alpha.7 (D1) - Right-click no longer commits immediately: it opens the confirm/preview.
@@ -6952,11 +6964,14 @@
             const openAutoOrgPreview = (mode, selBooks, opts, labelFor) => {
                 setExplorerBookContextMenu(null); setContextSubmenu(null);
                 const authorGroups = buildAuthorGroupsFromSelection(selBooks);
-                if (authorGroups.length === 0) { showToast('Nothing to organize — those authors have no unfiled books'); return; }
-                const dryPlan = computeOrganizePlan(authorGroups, folders, opts);
-                if (dryPlan.totalBooksOrganized === 0) { showToast('Nothing to organize — already filed'); return; }
+                if (authorGroups.length === 0) { showToast('Nothing to organize — no books by those authors here'); return; }
+                // Scope the plan to the current folder: the engine removes organized books from THIS folder
+                // (Inbox for the unfiled views) and the guard skips any that are already home under their author.
+                const scopedOpts = { ...opts, sourceFolderId: sourceFolderIdForScope(selectedFolderId) };
+                const dryPlan = computeOrganizePlan(authorGroups, folders, scopedOpts);
+                if (dryPlan.totalBooksOrganized === 0) { showToast('Nothing to organize — already filed under their author'); return; }
                 setAutoOrgSel(new Set()); setAutoOrgMenu(null); setAutoOrgHover(null);
-                setAutoOrgPreview({ mode, authorGroups, opts, label: labelFor(authorGroups), dryPlan });
+                setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label: labelFor(authorGroups), dryPlan });
             };
             const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
                 { createSeriesFolders: false }, // FLAT — no series subfolders
