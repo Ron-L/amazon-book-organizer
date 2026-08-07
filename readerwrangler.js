@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -882,6 +882,7 @@
             const [newFolderHiddenAlert, setNewFolderHiddenAlert] = useState(null); // v6.8.0 - { folderName } when newly created folder is hidden by active filters
             const [viewsSectionCollapsed, setViewsSectionCollapsed] = useState(false); // v6.4.0 - Collapse/expand Views section
             const [bookListsSectionCollapsed, setBookListsSectionCollapsed] = useState(false); // v6.12.0 - Collapse/expand Book Lists section
+            const [foldersSectionCollapsed, setFoldersSectionCollapsed] = useState(false); // v6.15.0 - Collapse/expand Folders section (accordion parity with Searches/Book Lists)
             const [savedExpansionState, setSavedExpansionState] = useState(null); // v5.0.0-alpha.169 - Saved folder expansion state (Map of folderId → collapsed)
             const [visibleColumns, setVisibleColumns] = useState({ // v5.0.0-alpha.104 - Column visibility (Name always visible)
                 author: true,
@@ -11900,20 +11901,20 @@
                                     </div>
                                     {/* v6.12.0 - SEARCHES section header (was "Views"); Phase 7 removed the filter-view drop zone (use the visible "Save" control) */}
                                     <div
-                                        className="flex items-center justify-between px-2 pt-1 pb-0.5 rounded transition-colors">
+                                        className="flex items-center gap-1 px-2 pt-1 pb-0.5 rounded transition-colors">
+                                        <button
+                                            onClick={() => setViewsSectionCollapsed(prev => !prev)}
+                                            className="text-gray-400 hover:text-gray-600 text-xs px-0.5 hover:bg-gray-200 rounded leading-none"
+                                            title={viewsSectionCollapsed ? 'Expand searches' : 'Collapse searches'}
+                                            aria-label={viewsSectionCollapsed ? 'Expand searches' : 'Collapse searches'}>
+                                            {viewsSectionCollapsed ? '▶' : '▼'}
+                                        </button>
                                         <span
                                             className={`text-xs font-semibold uppercase tracking-wide cursor-pointer ${selectedFolderId === '__views__' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                                             onClick={() => navigateToFolder('__views__')}
                                             title="Saved searches — live filters that re-run every time you open them">
                                             Searches
                                         </span>
-                                        <button
-                                            onClick={() => setViewsSectionCollapsed(prev => !prev)}
-                                            className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
-                                            title={viewsSectionCollapsed ? 'Expand searches' : 'Collapse searches'}
-                                            aria-label={viewsSectionCollapsed ? 'Expand searches' : 'Collapse searches'}>
-                                            {viewsSectionCollapsed ? '▶' : '▼'}
-                                        </button>
                                     </div>
                                     {!viewsSectionCollapsed && <>
                                     {/* v6.12.0 - Saved searches render under SEARCHES */}
@@ -12077,33 +12078,33 @@
                                         Bolder top divider signals these are LOCATIONS (clicking replaces your view),
                                         distinct from Searches above (filter presets that overlay the current view). */}
                                     <div className="flex items-center justify-between px-2 pt-2 pb-0.5 mt-2 border-t-2 border-gray-300">
-                                        <span
-                                            className="text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-gray-600 cursor-default"
-                                            title="Hand-picked lists of books, like playlists. A book can be on many lists; removing it from a list never deletes the book.">
-                                            Book Lists
-                                        </span>
-                                        <div className="flex items-center gap-0.5">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    const newBL = createBookList('New List', []);
-                                                    if (bookListsSectionCollapsed) setBookListsSectionCollapsed(false);
-                                                    navigateToFolder(`__booklist_${newBL.id}__`);
-                                                    setEditingBookListId(newBL.id);
-                                                    setEditingBookListName('New List');
-                                                }}
-                                                className="text-blue-500 hover:text-blue-700 text-sm px-1 hover:bg-gray-100 rounded"
-                                                title="New book list" aria-label="New book list">
-                                                +
-                                            </button>
+                                        <div className="flex items-center gap-1 min-w-0">
                                             <button
                                                 onClick={() => setBookListsSectionCollapsed(prev => !prev)}
-                                                className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
+                                                className="text-gray-400 hover:text-gray-600 text-xs px-0.5 hover:bg-gray-200 rounded leading-none"
                                                 title={bookListsSectionCollapsed ? 'Expand book lists' : 'Collapse book lists'}
                                                 aria-label={bookListsSectionCollapsed ? 'Expand book lists' : 'Collapse book lists'}>
                                                 {bookListsSectionCollapsed ? '▶' : '▼'}
                                             </button>
+                                            <span
+                                                className="text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-gray-600 cursor-default"
+                                                title="Hand-picked lists of books, like playlists. A book can be on many lists; removing it from a list never deletes the book.">
+                                                Book Lists
+                                            </span>
                                         </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const newBL = createBookList('New List', []);
+                                                if (bookListsSectionCollapsed) setBookListsSectionCollapsed(false);
+                                                navigateToFolder(`__booklist_${newBL.id}__`);
+                                                setEditingBookListId(newBL.id);
+                                                setEditingBookListName('New List');
+                                            }}
+                                            className="text-blue-500 hover:text-blue-700 text-sm px-1 hover:bg-gray-100 rounded"
+                                            title="New book list" aria-label="New book list">
+                                            +
+                                        </button>
                                     </div>
                                     {!bookListsSectionCollapsed && (() => {
                                         if (bookLists.length === 0) return <div className="px-2 py-1.5 text-xs text-gray-400 italic">No book lists yet</div>;
@@ -12231,6 +12232,14 @@
                                     })()}
                                     {/* v6.4.0 - FOLDERS section header */}
                                     <div className="flex items-center justify-between px-2 pt-2 pb-0.5 mt-1 border-t border-gray-100">
+                                        <div className="flex items-center gap-1 min-w-0">
+                                        <button
+                                            onClick={() => setFoldersSectionCollapsed(prev => !prev)}
+                                            className="text-gray-400 hover:text-gray-600 text-xs px-0.5 hover:bg-gray-200 rounded leading-none flex-shrink-0"
+                                            title={foldersSectionCollapsed ? 'Expand folders' : 'Collapse folders'}
+                                            aria-label={foldersSectionCollapsed ? 'Expand folders' : 'Collapse folders'}>
+                                            {foldersSectionCollapsed ? '▶' : '▼'}
+                                        </button>
                                         <span
                                             className={`text-xs font-semibold uppercase tracking-wide cursor-pointer ${selectedFolderId === '__library__' ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'}`}
                                             onClick={() => navigateToFolder('__library__')}
@@ -12260,6 +12269,7 @@
                                             title="Your personal organization — drag books into any folder below to arrange your library.">
                                             Folders
                                         </span>
+                                        </div>
                                         <div className="flex items-center gap-1">
                                             {/* v6.12.0-alpha.71 - Folder sort control (Manual / Name); drives the whole folder list */}
                                             <div className="relative">
@@ -12327,6 +12337,7 @@
                                             </button>
                                         </div>
                                     </div>
+                                    {!foldersSectionCollapsed && (<>
                                     {/* Inbox - indented as part of folder hierarchy */}
                                     <div
                                         className={`w-full flex items-center gap-2 pl-4 pr-2 py-1.5 rounded cursor-pointer ${selectedFolderId === '__inbox__' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
@@ -12984,6 +12995,7 @@
 
                                         return elements;
                                     })()}
+                                    </>)}
                                     {/* v5.0.0-alpha.52 - Removed bottom "New Folder" button; use "+" on All Books or folder rows instead */}
 
                                     {/* v6.0.0-alpha.50 - Trash Bin */}
