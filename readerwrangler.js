@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -389,8 +389,10 @@
                 const trigger = (ref.current.offsetParent || ref.current.parentElement).getBoundingClientRect();
                 const self = ref.current.getBoundingClientRect();
                 const vw = window.innerWidth, vh = window.innerHeight;
+                // pos.h/pos.v are the CSS EDGE set to 100%/0: left:100% opens right, right:100% opens left (flip);
+                // top:0 opens down, bottom:0 opens up (flip). So an overflow on the right → set 'right' (flip left).
                 setPos({
-                    h: (trigger.right + self.width + margin > vw) && (trigger.left - self.width - margin >= 0) ? 'left' : 'right',
+                    h: (trigger.right + self.width + margin > vw) && (trigger.left - self.width - margin >= 0) ? 'right' : 'left',
                     v: (trigger.top + self.height + margin > vh) && (trigger.bottom - self.height - margin >= 0) ? 'bottom' : 'top',
                 });
             }, [open, children, margin]);
