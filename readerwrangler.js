@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5489,6 +5489,7 @@
             // v6.16.0 (#55) - Book-detail prev/next: cycle the current view's books in display order (circular).
             const modalNavIdx = modalBook ? explorerSortedBooks.findIndex(b => b.id === modalBook.id) : -1;
             const modalCanNav = modalNavIdx >= 0 && explorerSortedBooks.length > 1 && !autoOrgPreview; // not while the auto-organize preview is open (its shelf ≠ the explorer view)
+            if (modalBook) console.log('[navrender]', { idx: modalNavIdx, canNav: modalCanNav, editing: isEditingBook, preview: !!autoOrgPreview, len: explorerSortedBooks.length, modalId: modalBook.id }); // v6.16.0-alpha.4 TEMP
             const goToModalNav = (delta) => {
                 if (modalNavIdx < 0 || explorerSortedBooks.length <= 1) return;
                 const n = explorerSortedBooks.length;
