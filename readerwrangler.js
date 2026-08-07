@@ -1,5 +1,5 @@
         // ARCHITECTURE: See docs/design/ARCHITECTURE.md for Version Management, Status Icons, Cache-Busting patterns
-        const { useState, useEffect, useRef, useMemo } = React;
+        const { useState, useEffect, useLayoutEffect, useRef, useMemo } = React;
 
         // APP_VERSION - Defined ONCE in readerwrangler.html, available in global scope
         // Single source of truth - no duplication!
@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -374,6 +374,35 @@
 
         // v5.0.9 - Custom dialog for backup restore completion
         // v5.5.7-alpha.13: CSS variables for dark mode support
+
+        // v6.15.0 - Reusable submenu/popup that flips to stay on-screen by MEASURING real geometry (no hardcoded
+        // per-item offset estimates). Absolutely positioned against its trigger — the nearest positioned ancestor
+        // (a `position: relative` .submenu-trigger). On open it measures the trigger + itself and picks a side
+        // (right/left) and vertical alignment (top/bottom) that fits the viewport. Runs in useLayoutEffect so the
+        // correction lands before paint — no flicker, no caching needed. Replaces the old *ItemOffset guessing and
+        // is reusable by any menu (book/folder context menus, dropdowns).
+        function FlipToFitPopup({ open, className, style, role, ariaLabel, onMouseEnter, onMouseLeave, onClick, children, margin = 8 }) {
+            const ref = useRef(null);
+            const [pos, setPos] = useState({ h: 'right', v: 'top' }); // sensible default before measurement
+            useLayoutEffect(() => {
+                if (!open || !ref.current) return;
+                const trigger = (ref.current.offsetParent || ref.current.parentElement).getBoundingClientRect();
+                const self = ref.current.getBoundingClientRect();
+                const vw = window.innerWidth, vh = window.innerHeight;
+                setPos({
+                    h: (trigger.right + self.width + margin > vw) && (trigger.left - self.width - margin >= 0) ? 'left' : 'right',
+                    v: (trigger.top + self.height + margin > vh) && (trigger.bottom - self.height - margin >= 0) ? 'bottom' : 'top',
+                });
+            }, [open, children, margin]);
+            if (!open) return null;
+            return (
+                <div ref={ref} className={className} role={role} aria-label={ariaLabel}
+                    onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave} onClick={onClick}
+                    style={{ position: 'absolute', [pos.h]: '100%', [pos.v]: 0, ...style }}>
+                    {children}
+                </div>
+            );
+        }
 
         // v5.5.4 - Isolated search input component (prevents 10K-row re-render on every keystroke)
         // v6.12.0 - Recents = full filter combos. Parent passes pre-labeled recents + apply/save/remove actions.
@@ -16196,9 +16225,6 @@
                         const editSubmenuHeight = 165;
                         const editSubmenuOverflows = top + editItemOffset + editSubmenuHeight > viewportHeight;
                         // v6.10.0-alpha.9 - Share submenu is ~2nd item (~70px from menu top)
-                        const shareItemOffset = 70;
-                        const shareSubmenuHeight = navigator.share ? 130 : 90;
-                        const shareSubmenuOverflows = top + shareItemOffset + shareSubmenuHeight > viewportHeight;
 
                         // v5.0.0-alpha.166 - Phase 2: Helper functions for Move to / Copy to
 
@@ -16741,14 +16767,9 @@
                                                 <span>Share</span>
                                                 <span className="ml-auto">▶</span>
 
-                                                {contextSubmenu === 'share' && (
-                                                    <div
-                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[180px] z-[70]"
-                                                        role="menu" aria-label="Share options"
-                                                        style={{
-                                                            [submenuOnLeft ? 'right' : 'left']: '100%',
-                                                            [shareSubmenuOverflows ? 'bottom' : 'top']: '0'
-                                                        }}
+                                                <FlipToFitPopup open={contextSubmenu === 'share'}
+                                                        className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[180px] z-[70]"
+                                                        role="menu" ariaLabel="Share options"
                                                         onMouseEnter={() => setContextSubmenu('share')}
                                                         onMouseLeave={() => setContextSubmenu(null)}
                                                         onClick={(e) => e.stopPropagation()}>
@@ -16806,8 +16827,7 @@
                                                                 <span>Share…</span>
                                                             </div>
                                                         )}
-                                                    </div>
-                                                )}
+                                                </FlipToFitPopup>
                                             </div>
 
                                             {/* Copy Title(s) */}
