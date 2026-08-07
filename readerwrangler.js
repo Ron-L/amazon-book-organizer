@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.14.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16876,39 +16876,7 @@
                                                 )}
                                             </div>
 
-                                            {/* Add/Edit Note (single book only) */}
-                                            {count === 1 ? (
-                                                <div
-                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const book = selectedBooksArray[0];
-                                                        openBookModal(book, null);
-                                                        // v5.4.6 - Enter edit mode directly with book data
-                                                        setEditBookFields({
-                                                            title: book.title || '',
-                                                            author: book.author || '',
-                                                            series: book.series || '',
-                                                            seriesPosition: book.seriesPosition != null ? String(book.seriesPosition) : '',
-                                                            userNote: book.userNote || ''
-                                                        });
-                                                        setIsEditingBook(true);
-                                                        setExplorerBookContextMenu(null);
-                                                        setContextSubmenu(null);
-                                                    }}>
-                                                    <span>{selectedBooksArray[0]?.userNote ? '✏️' : '📝'}</span>
-                                                    <span>{selectedBooksArray[0]?.userNote ? 'Edit Note' : 'Add Note'}</span>
-                                                </div>
-                                            ) : (
-                                                <div
-                                                    className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3" role="menuitem" aria-disabled="true"
-                                                    title="Notes can only be edited for one book at a time">
-                                                    <span>📝</span>
-                                                    <span>Add/Edit Note</span>
-                                                </div>
-                                            )}
-
-                                            {/* v5.0.0-alpha.170.1 - Tags submenu (moved to be with Add Note) */}
+                                            {/* Tags submenu */}
                                             <div
                                                 className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative" role="menuitem" aria-haspopup="true"
                                                 onMouseEnter={() => { setTagInputValue(''); setContextSubmenu('explorer-tags'); }}
