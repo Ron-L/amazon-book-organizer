@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.14";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -12296,17 +12296,24 @@
                                                 )}
                                             </div>
                                             {/* Collapse all button */}
-                                            {folders.some(f => !f.collapsed) && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setFolders(prev => prev.map(f => ({ ...f, collapsed: true })));
-                                                    }}
-                                                    className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded"
-                                                    title="Collapse all folders" aria-label="Collapse all folders">
-                                                    ▲
-                                                </button>
-                                            )}
+                                            {/* v6.15.0 - Persistent collapse-all ⇄ expand-all toggle (shown whenever nested
+                                                folders exist, so it never vanishes and shifts the sort icon). ⊟/⊞ read distinctly
+                                                from the section chevron ▼/▶. */}
+                                            {folders.some(f => f.parentId) && (() => {
+                                                const anyExpanded = folders.some(f => !f.collapsed && folders.some(c => c.parentId === f.id));
+                                                return (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setFolders(prev => prev.map(f => ({ ...f, collapsed: anyExpanded })));
+                                                        }}
+                                                        className="text-gray-400 hover:text-gray-600 text-xs px-1 hover:bg-gray-200 rounded leading-none"
+                                                        title={anyExpanded ? 'Collapse all subfolders' : 'Expand all subfolders'}
+                                                        aria-label={anyExpanded ? 'Collapse all subfolders' : 'Expand all subfolders'}>
+                                                        {anyExpanded ? '⊟' : '⊞'}
+                                                    </button>
+                                                );
+                                            })()}
                                             {/* New Folder button */}
                                             <button
                                                 onClick={(e) => {
