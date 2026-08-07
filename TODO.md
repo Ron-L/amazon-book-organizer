@@ -14,7 +14,6 @@
 **Docs & onboarding**
 - [ ] USER-GUIDE.md + GPT manual — rewrite around the new mental model (All Books / Searches / Book Lists / Folders; custodial vs supplemental; "when to use which"), **including the Book List ↔ Folder workflow pattern** (structure lives in Folders; to-read queues live in Book Lists) and "get books out of Inbox → use a folder, not a Book List". Draw the backlog-wrangling examples from **docs/design/WORKFLOW-PATTERNS.md** (running collection of real usage patterns)
 - [ ] Sizzle reel — update the script for Book Lists/Searches, then record + produce
-- [ ] Delete 3 obsolete design docs (ENHANCED-GETTING-STARTED-UX, VIDEO-PRODUCTION-PLAN, BOOK-EXPLORER-VIDEO-SCENARIOS)
 - [ ] Add "Watch Tutorials" to the app Help menu
 - [ ] Refresh the landing-page before/after screenshot (post-redesign "after")
 - [ ] FAQ page — faq.html (Security/Privacy, Data/Backup, Troubleshooting, Library, General); link from Help, README, features/tutorials footers
@@ -39,7 +38,7 @@
 **Auto-Organize ergonomics:**
 - [ ] Auto-Organize wizard: add a **filter/search field** to the author list (scrolling to find a name is painful)
 - [ ] **Auto-Organize preview: Ctrl+A + Shift-range select** — the preview covers only support click-toggle today. **Ctrl+A leaks to the outer Inbox** (selects ALL Inbox books — startling, though the preview only acts on its own `autoOrgSel`); **Shift-click range** also leaks out. Trap both in the modal and scope them to `autoOrgSel`, so "select all the unread ones" is one gesture. (D2 selection gap.)
-- [ ] **Smart default Book List name from a single-author Auto-Organize preview** — when you create a new Book List from a preview scoped to ONE author, pre-fill the name field with **`<Author> - To Read`** (accept with Enter, or edit). Drives Ron's methodology — folders (nested) hold *everything* by an author; a flat Book List is the *unread queue* — without lengthening the menu (no `+ New Book List` submenu). Pairs with the "In" popup below.
+- [ ] **Smart default Book List name from a single-author Auto-Organize preview** — when you create a new Book List from a preview scoped to ONE author, pre-fill the name field with **`<Author> - To Read`** (accept with Enter, or edit). Drives Ron's methodology — folders (nested) hold *everything* by an author; a flat Book List is the *unread queue* — without lengthening the menu (no `+ New Book List` submenu).
 
 - [ ] **Terminology copy pass** (6.12.1) — "shortcut" language in Book List toasts/menus; explain "Linked Copies" once in manual/GPT → see docs/design/TERMINOLOGY.md (spec)
 - [ ] **Fetcher `ee6d83c` re-apply** on v4.11.10 — `LIBRARY_EXCLUDE_TAGS` named-constant/doc + delisted-book (`product=null`) count+notice adapted to coexist with null-product recovery (count only when recovery also fails)
