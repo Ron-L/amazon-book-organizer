@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16817,7 +16817,31 @@
                                             {!isTrashView && (<>
                                             {/* v6.15.0 - Divider: reference/copy actions above (non-mutating) vs entry edits below */}
                                             <div className="border-t border-gray-200 my-1" role="separator"></div>
-                                            {/* v5.4.7 - Bulk Edit submenu */}
+                                            {/* v6.15.0 - Edit: a SINGLE book opens the full detail dialog (everything —
+                                                Title / Note / Rating included). A MULTI-selection gets a bulk field submenu of
+                                                just the fields that make sense to set across many books at once. */}
+                                            {count === 1 ? (
+                                            <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const book = selectedBooksArray[0];
+                                                    openBookModal(book, null);
+                                                    setEditBookFields({
+                                                        title: book.title || '',
+                                                        author: book.author || '',
+                                                        series: book.series || '',
+                                                        seriesPosition: book.seriesPosition != null ? String(book.seriesPosition) : '',
+                                                        userNote: book.userNote || '',
+                                                        onWishlist: book.onWishlist || false
+                                                    });
+                                                    setIsEditingBook(true);
+                                                    setExplorerBookContextMenu(null);
+                                                    setContextSubmenu(null);
+                                                }}>
+                                                <span>✏️</span>
+                                                <span>Edit…</span>
+                                            </div>
+                                            ) : (
                                             <div
                                                 className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
                                                 role="menuitem" aria-haspopup="true"
@@ -16853,6 +16877,23 @@
                                                             onClick={() => openBulkEditModal('position')}>
                                                             Position...
                                                         </div>
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
+                                                            onClick={async () => {
+                                                                setExplorerBookContextMenu(null);
+                                                                setContextSubmenu(null);
+                                                                const orderedIds = explorerDisplayItems.filter(it => it.type === 'book' && explorerSelectedItems.has(it.book.id)).map(it => it.book.id);
+                                                                if (orderedIds.length < 2) {
+                                                                    await showConfirmDialog('Number by current order', "Select 2 or more books first.\n\nThis numbers the selected books 1, 2, 3… in the order currently shown — it sets each book's series position, handy for putting an author's books in publication order. Tip: switch to Manual Order sort, drag them into the order you want, select them, then run this.", 'OK', 'Close');
+                                                                    return;
+                                                                }
+                                                                const sortCol = explorerSort[0]?.column;
+                                                                const sortLabel = !sortCol || sortCol === 'custom' ? 'Manual' : sortCol;
+                                                                const name = await showInputDialog('Number by current order', `Number the ${orderedIds.length} selected books 1, 2, 3… in the order currently shown (sorted by ${sortLabel}), setting each book's series position.\n\nOptionally give them a series name (blank = none):`, '', 'Series name (optional)', 'Apply', 'Cancel');
+                                                                if (name === null) return;
+                                                                applySequentialNumbering(orderedIds, name);
+                                                            }}>
+                                                            Number by current order...
+                                                        </div>
                                                         <div className="border-t border-gray-200 my-1" role="separator"></div>
                                                         <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
                                                             onClick={() => openBulkEditModal('ownership')}>
@@ -16860,6 +16901,7 @@
                                                         </div>
                                                 </FlipToFitPopup>
                                             </div>
+                                            )}
 
                                             {/* Tags submenu */}
                                             <div
@@ -17209,28 +17251,6 @@
                                                             Clear Price Goal
                                                         </div>
                                                 </FlipToFitPopup>
-                                            </div>
-
-                                            {/* v6.12.0 - Number by current order — a metadata edit (sets each book's series
-                                                position), grouped with the other edits. Hidden in Trash. */}
-                                            <div
-                                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
-                                                onClick={async () => {
-                                                    setExplorerBookContextMenu(null);
-                                                    setContextSubmenu(null);
-                                                    const orderedIds = explorerDisplayItems.filter(it => it.type === 'book' && explorerSelectedItems.has(it.book.id)).map(it => it.book.id);
-                                                    if (orderedIds.length < 2) {
-                                                        await showConfirmDialog('Number by current order', "Select 2 or more books first.\n\nThis numbers the selected books 1, 2, 3… in the order currently shown — it sets each book's series position, handy for putting an author's books in publication order. Tip: switch to Manual Order sort, drag them into the order you want, select them, then run this.", 'OK', 'Close');
-                                                        return;
-                                                    }
-                                                    const sortCol = explorerSort[0]?.column;
-                                                    const sortLabel = !sortCol || sortCol === 'custom' ? 'Manual' : sortCol;
-                                                    const name = await showInputDialog('Number by current order', `Number the ${orderedIds.length} selected books 1, 2, 3… in the order currently shown (sorted by ${sortLabel}), setting each book's series position.\n\nOptionally give them a series name (blank = none):`, '', 'Series name (optional)', 'Apply', 'Cancel');
-                                                    if (name === null) return;
-                                                    applySequentialNumbering(orderedIds, name);
-                                                }}>
-                                                <span>🔢</span>
-                                                <span>Number by current order…</span>
                                             </div>
 
                                             </>)}
