@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16815,6 +16815,8 @@
 
                                             {/* Edit, Note, Tags, Price Goal — hidden in Trash view */}
                                             {!isTrashView && (<>
+                                            {/* v6.15.0 - Divider: reference/copy actions above (non-mutating) vs entry edits below */}
+                                            <div className="border-t border-gray-200 my-1" role="separator"></div>
                                             {/* v5.4.7 - Bulk Edit submenu */}
                                             <div
                                                 className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
