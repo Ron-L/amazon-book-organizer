@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7049,7 +7049,16 @@
             const addPreviewSelToNewBookList = async (ids) => {
                 setAutoOrgMenu(null);
                 if (!ids || ids.length === 0) return;
-                const name = await showInputDialog('New Book List', `Add ${ids.length} book${ids.length !== 1 ? 's' : ''} to a new Book List.`, '', 'List name (e.g. New To Read)');
+                // v6.15.0 - Smart default name (Ron's queue convention): all one series → "<Series> - To Read";
+                // else all one author → "<Author> - To Read"; else blank (mixed authors → the generic New To Read list).
+                const sel = ids.map(id => books.find(b => b.id === id)).filter(Boolean);
+                const seriesSet = new Set(sel.map(b => (b.series || '').trim()).filter(Boolean));
+                const authorSet = new Set(sel.map(b => normAuthorKey(b.author)).filter(Boolean));
+                const suggested =
+                    (seriesSet.size === 1 && sel.every(b => (b.series || '').trim())) ? `${[...seriesSet][0]} - To Read`
+                    : (authorSet.size === 1 && sel.every(b => (b.author || '').trim())) ? `${displayAuthorName(sel[0].author)} - To Read`
+                    : '';
+                const name = await showInputDialog('New Book List', `Add ${ids.length} book${ids.length !== 1 ? 's' : ''} to a new Book List.`, suggested, 'List name (e.g. New To Read)');
                 if (name === null) return;
                 const trimmed = (name || '').trim() || 'New To Read';
                 const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
