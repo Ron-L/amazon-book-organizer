@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5486,6 +5486,16 @@
                 setShowAllReviews(false);
             };
 
+            // v6.16.0 (#55) - Book-detail prev/next: cycle the current view's books in display order (circular).
+            const modalNavIdx = modalBook ? explorerSortedBooks.findIndex(b => b.id === modalBook.id) : -1;
+            const modalCanNav = modalNavIdx >= 0 && explorerSortedBooks.length > 1 && !autoOrgPreview; // not while the auto-organize preview is open (its shelf ≠ the explorer view)
+            const goToModalNav = (delta) => {
+                if (modalNavIdx < 0 || explorerSortedBooks.length <= 1) return;
+                const n = explorerSortedBooks.length;
+                const next = explorerSortedBooks[(modalNavIdx + delta + n) % n];
+                if (next) openBookModal(next, null);
+            };
+
             const closeBookModal = () => {
                 setModalBook(null);
                 setIsEditingBook(false);
@@ -5682,6 +5692,20 @@
             useEffect(() => {
                 anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || showBulkEditModal || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || relayHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData || autoOrgPreview);
             }, [modalBook, showBulkPriceModal, showBulkEditModal, tagManagementOpen, wizardModalOpen, folderPropertiesDialog, resetConfirmOpen, statusModalOpen, aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen, wizardHelpOpen, relayHelpOpen, wizardPreviewMode, wizardResultsOpen, lastCopyDialogData, autoOrgPreview]);
+
+            // v6.16.0 (#55) - ←/→ navigate the open book-detail modal (not while editing or typing in a field).
+            useEffect(() => {
+                if (!modalBook || isEditingBook || autoOrgPreview) return;
+                const handleArrowNav = (e) => {
+                    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+                    const tag = (e.target.tagName || '').toLowerCase();
+                    if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
+                    e.preventDefault();
+                    goToModalNav(e.key === 'ArrowLeft' ? -1 : 1);
+                };
+                window.addEventListener('keydown', handleArrowNav);
+                return () => window.removeEventListener('keydown', handleArrowNav);
+            }, [modalBook, isEditingBook, explorerSortedBooks, autoOrgPreview]);
 
             // v5.4.2 - ESC closes innermost modal (layered dismissal)
             // aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen handled separately in handleEscKey
@@ -10966,6 +10990,15 @@
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeBookModal(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-label="Book details" onClick={(e) => { e.stopPropagation(); if (contextSubmenu === 'addTagModal') { setContextSubmenu(null); setTagInputValue(''); } }}>
                                 <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-end gap-2">
+                                    {/* v6.16.0 (#55) - Prev/next through the current view's books (circular). Counter is the
+                                        wrap indicator (resets on loop); mr-auto keeps it left while the controls stay right. */}
+                                    {modalCanNav && !isEditingBook && (
+                                        <div className="flex items-center gap-1 mr-auto text-gray-500">
+                                            <button onClick={() => goToModalNav(-1)} className="text-2xl leading-none hover:text-gray-800 px-1" title="Previous book (←)" aria-label="Previous book">‹</button>
+                                            <span className="text-xs tabular-nums select-none" title="Position in the current view">{modalNavIdx + 1} / {explorerSortedBooks.length}</span>
+                                            <button onClick={() => goToModalNav(1)} className="text-2xl leading-none hover:text-gray-800 px-1" title="Next book (→)" aria-label="Next book">›</button>
+                                        </div>
+                                    )}
                                     {isEditingBook ? (
                                         <>
                                             <button onClick={saveEditMode} className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors" title="Save changes">
