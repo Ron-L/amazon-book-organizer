@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -31,7 +31,7 @@
         // v6.12.0 - Single source of truth for acquisition/ownership type (label + dialog badge color).
         // Cover view keeps its own short labels (KU/COMIX) for the tiny tile badge.
         const OWNERSHIP_META = {
-            purchased:       { label: 'Purchased',        badge: null },          // no badge (the common case)
+            purchased:       { label: 'Owned',            badge: null },          // no badge (common case); data key 'purchased' unchanged
             sample:          { label: 'Sample',           badge: 'bg-amber-500' },
             wishlist:        { label: 'Wishlist',         badge: 'bg-pink-600' },
             borrowed:        { label: 'Borrowed',         badge: 'bg-teal-500' },
@@ -319,14 +319,14 @@
                 `;
 
                 const titleEl = document.createElement('h2');
-                titleEl.textContent = '⚠️ Purchased Book' + (purchasedCount !== 1 ? 's' : '');
+                titleEl.textContent = '⚠️ Owned Book' + (purchasedCount !== 1 ? 's' : '');
                 titleEl.style.cssText = `margin: 0 0 16px 0; font-size: 20px; font-weight: 600; color: var(--text-primary);`;
 
                 const messageEl = document.createElement('div');
                 messageEl.style.cssText = `margin-bottom: 24px; font-size: 14px; line-height: 1.6; color: var(--text-secondary);`;
                 messageEl.textContent = purchasedCount === 1
-                    ? 'This book is purchased and likely still in your Amazon library. It will reappear the next time you run the fetcher. Consider using Hide instead.'
-                    : `${purchasedCount} of these books are purchased and likely still in your Amazon library. They will reappear the next time you run the fetcher. Consider using Hide instead.`;
+                    ? 'This book is owned and likely still in your Amazon library. It will reappear the next time you run the fetcher. Consider using Hide instead.'
+                    : `${purchasedCount} of these books are owned and likely still in your Amazon library. They will reappear the next time you run the fetcher. Consider using Hide instead.`;
 
                 const btnRow = document.createElement('div');
                 btnRow.style.cssText = `display: flex; gap: 8px; justify-content: flex-end;`;
@@ -7809,7 +7809,7 @@
                                     (() => {
                                         const labels = {
                                             'wishlist': 'Wishlist',
-                                            'purchased': 'Purchased',
+                                            'purchased': 'Owned',
                                             'sample': 'Sample',
                                             'borrowed': 'Borrowed',
                                             'prime': 'Prime',
@@ -7850,7 +7850,7 @@
                                     </div>
                                     {[
                                         { value: 'wishlist', label: 'Wishlist' },
-                                        { value: 'purchased', label: 'Purchased' },
+                                        { value: 'purchased', label: 'Owned' },
                                         { value: 'sample', label: 'Sample' },
                                         { value: 'borrowed', label: 'Borrowed' },
                                         { value: 'prime', label: 'Prime' },
@@ -8567,7 +8567,7 @@
                                 {collectionFilter && (ratingFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {ratingFilter && <span>Rating: {ratingFilter}+★</span>}
                                 {ratingFilter && (ownershipFilter || seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
-                                {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter === 'insideAmazon' ? 'Amazon Insider' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
+                                {ownershipFilter && <span>Ownership: {ownershipFilter === 'kindleUnlimited' ? 'Kindle Unlimited' : ownershipFilter === 'insideAmazon' ? 'Amazon Insider' : ownershipFilter === 'purchased' ? 'Owned' : ownershipFilter.charAt(0).toUpperCase() + ownershipFilter.slice(1)}</span>}
                                 {ownershipFilter && (seriesFilter || datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
                                 {seriesFilter && <span>Series: {seriesFilter === 'NOT_IN_SERIES' ? 'Not in Series' : seriesFilter}</span>}
                                 {seriesFilter && (datePreset || tagFilter?.length > 0 || selectedCollections.length > 0) && <span>|</span>}
@@ -10706,7 +10706,7 @@
                             author:    { title: 'Edit Author',    fieldKey: 'author' },
                             series:    { title: 'Edit Series',    fieldKey: 'series' },
                             position:  { title: 'Edit Position',  fieldKey: 'seriesPosition' },
-                            ownership: { title: 'Edit Ownership', fieldKey: 'onWishlist' }
+                            ownership: { title: 'Owned / Wishlist', fieldKey: 'onWishlist' }
                         };
                         const config = fieldConfig[bulkEditField];
                         if (!config) return null;
@@ -10809,7 +10809,7 @@
                                                             ? 'bg-green-100 text-green-800 border-green-400 ring-2 ring-green-400'
                                                             : 'bg-gray-50 text-gray-600 border-gray-300 hover:bg-gray-100'
                                                     }`}>
-                                                    Purchased
+                                                    Owned
                                                 </button>
                                                 <button type="button"
                                                     onClick={() => setBulkEditInput('true')}
@@ -11073,14 +11073,14 @@
                                                         value={editBookFields.onWishlist ? 'wishlist' : 'purchased'}
                                                         onChange={(e) => setEditBookFields(prev => ({ ...prev, onWishlist: e.target.value === 'wishlist' }))}
                                                         onKeyDown={(e) => e.stopPropagation()}
-                                                        title="Mark as Purchased or on Wishlist"
+                                                        title="Mark as Owned or on Wishlist"
                                                         className={`px-3 py-1 rounded-full text-sm font-medium border cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                                                             editBookFields.onWishlist
                                                                 ? 'bg-amber-100 text-amber-800 border-amber-300'
                                                                 : 'bg-green-100 text-green-800 border-green-300'
                                                         }`}
                                                     >
-                                                        <option value="purchased">Purchased</option>
+                                                        <option value="purchased">Owned</option>
                                                         <option value="wishlist">Wishlist Item</option>
                                                     </select>
                                                     {/* v4.17.0.k - View on Amazon button */}
@@ -16897,7 +16897,7 @@
                                                         <div className="border-t border-gray-200 my-1" role="separator"></div>
                                                         <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
                                                             onClick={() => openBulkEditModal('ownership')}>
-                                                            Ownership...
+                                                            Owned / Wishlist...
                                                         </div>
                                                 </FlipToFitPopup>
                                             </div>
