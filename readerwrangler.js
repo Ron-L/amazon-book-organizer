@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.14.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.14.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -6967,11 +6967,14 @@
                 if (authorGroups.length === 0) { showToast('Nothing to organize — no books by those authors here'); return; }
                 // Scope the plan to the current folder: the engine removes organized books from THIS folder
                 // (Inbox for the unfiled views) and the guard skips any that are already home under their author.
-                const scopedOpts = { ...opts, sourceFolderId: sourceFolderIdForScope(selectedFolderId) };
+                const srcId = sourceFolderIdForScope(selectedFolderId);
+                const scopedOpts = { ...opts, sourceFolderId: srcId };
                 const dryPlan = computeOrganizePlan(authorGroups, folders, scopedOpts);
                 if (dryPlan.totalBooksOrganized === 0) { showToast('Nothing to organize — already filed under their author'); return; }
+                // Source folder name for the dialog title/body (null = the unfiled Inbox scope).
+                const sourceName = srcId === '__inbox__' ? null : (folders.find(f => f.id === srcId)?.name || null);
                 setAutoOrgSel(new Set()); setAutoOrgMenu(null); setAutoOrgHover(null);
-                setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label: labelFor(authorGroups), dryPlan });
+                setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label: labelFor(authorGroups), dryPlan, sourceName });
             };
             const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
                 { createSeriesFolders: false }, // FLAT — no series subfolders
@@ -10010,7 +10013,7 @@
 
                     {/* v6.13.0-alpha.7 (D1) - Auto-Organize confirm/preview: hierarchical Author→Series→covers before commit */}
                     {autoOrgPreview && (() => {
-                        const { mode, authorGroups, dryPlan } = autoOrgPreview;
+                        const { mode, authorGroups, dryPlan, sourceName } = autoOrgPreview;
                         const cover = (b) => {
                             const sel = autoOrgSel.has(b.id);
                             return (
@@ -10043,12 +10046,12 @@
                             <div className="bg-white rounded-lg shadow-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-autoorg-preview" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
                                 {/* Header */}
                                 <div className="flex justify-between items-center p-4 bg-indigo-100 rounded-t-lg border-b border-indigo-300">
-                                    <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">✨ Auto-Organize — {mode === 'series' ? 'By Series' : 'By Author'}</h2>
+                                    <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">✨ Auto-Organize {sourceName ? `‘${sourceName}’` : 'Inbox'} — {mode === 'series' ? 'By Series' : 'By Author'}</h2>
                                     <button onClick={closeAutoOrgPreview} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
                                 {/* Summary */}
                                 <div className="px-4 pt-3 text-sm text-gray-700">
-                                    Move <strong>{dryPlan.totalBooksOrganized}</strong> book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''} into <strong>{folderCount}</strong> author folder{folderCount !== 1 ? 's' : ''}{subCount > 0 ? <> and <strong>{subCount}</strong> series subfolder{subCount !== 1 ? 's' : ''}</> : null}. These leave the Inbox.
+                                    Move <strong>{dryPlan.totalBooksOrganized}</strong> book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''} into <strong>{folderCount}</strong> author folder{folderCount !== 1 ? 's' : ''}{subCount > 0 ? <> and <strong>{subCount}</strong> series subfolder{subCount !== 1 ? 's' : ''}</> : null}. These leave {sourceName || 'the Inbox'}.
                                 </div>
                                 {/* Scrollable hierarchy */}
                                 <div className="p-4 overflow-y-auto" style={{ flex: 1 }}>
