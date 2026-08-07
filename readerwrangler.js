@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16519,7 +16519,45 @@
                                     </div>
                                 )}
 
-                                {/* v5.0.0-alpha.168.4 - Cut/Copy/Paste right after Move to/Copy to */}
+                                {/* v6.13.0-alpha.4 / v6.14.0 - Auto-Organize (book-anchored; files the current folder's books
+                                    by author). Grouped with the other placement actions. Hidden in Book List views — a list is
+                                    supplemental, not a custodial home, so this folder operation doesn't apply there. */}
+                                {canAutoOrganizeInView(selectedFolderId) && (
+                                <div
+                                    className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
+                                    role="menuitem" aria-haspopup="true"
+                                    onMouseEnter={() => setContextSubmenu('auto-organize')}
+                                    onMouseLeave={(e) => {
+                                        setTimeout(() => {
+                                            const activeSubmenu = document.querySelector('.context-submenu:hover');
+                                            const activeTrigger = document.querySelector('.submenu-trigger:hover');
+                                            if (!activeSubmenu && !activeTrigger) setContextSubmenu(null);
+                                        }, 600);
+                                    }}>
+                                    <span>✨</span>
+                                    <span>Auto-Organize</span>
+                                    <span className="ml-auto">▶</span>
+                                    <FlipToFitPopup open={contextSubmenu === 'auto-organize'}
+                                            className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[190px] z-[70]"
+                                            role="menu" ariaLabel="Auto-Organize"
+                                            onMouseEnter={() => setContextSubmenu('auto-organize')}
+                                            onMouseLeave={() => setContextSubmenu(null)}
+                                            onClick={(e) => e.stopPropagation()}>
+                                            <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
+                                                onClick={() => autoOrganizeByAuthor(selectedBooksArray)}>
+                                                <span>📁</span><span>By Author…</span>
+                                            </div>
+                                            {selectionAuthorsHaveSeries(selectedBooksArray) && (
+                                                <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
+                                                    onClick={() => autoOrganizeBySeries(selectedBooksArray)}>
+                                                    <span>📚</span><span>By Series…</span>
+                                                </div>
+                                            )}
+                                    </FlipToFitPopup>
+                                </div>
+                                )}
+
+                                {/* v5.0.0-alpha.168.4 - Cut/Copy/Paste */}
                                 <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                 {/* Cut - disabled in special folders */}
@@ -16678,44 +16716,6 @@
                                                     <span>🔗</span>
                                                     <span>Open in Amazon</span>
                                                 </div>
-                                            )}
-
-                                            {/* v6.13.0-alpha.4 / v6.14.0 - Auto-Organize submenu (book-anchored; files the current
-                                                folder's books by author). Hidden in Book List views — a list is supplemental, not a
-                                                custodial home, so this folder operation doesn't apply there. */}
-                                            {canAutoOrganizeInView(selectedFolderId) && (
-                                            <div
-                                                className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
-                                                role="menuitem" aria-haspopup="true"
-                                                onMouseEnter={() => setContextSubmenu('auto-organize')}
-                                                onMouseLeave={(e) => {
-                                                    setTimeout(() => {
-                                                        const activeSubmenu = document.querySelector('.context-submenu:hover');
-                                                        const activeTrigger = document.querySelector('.submenu-trigger:hover');
-                                                        if (!activeSubmenu && !activeTrigger) setContextSubmenu(null);
-                                                    }, 600);
-                                                }}>
-                                                <span>✨</span>
-                                                <span>Auto-Organize</span>
-                                                <span className="ml-auto">▶</span>
-                                                <FlipToFitPopup open={contextSubmenu === 'auto-organize'}
-                                                        className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[190px] z-[70]"
-                                                        role="menu" ariaLabel="Auto-Organize"
-                                                        onMouseEnter={() => setContextSubmenu('auto-organize')}
-                                                        onMouseLeave={() => setContextSubmenu(null)}
-                                                        onClick={(e) => e.stopPropagation()}>
-                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
-                                                            onClick={() => autoOrganizeByAuthor(selectedBooksArray)}>
-                                                            <span>📁</span><span>By Author…</span>
-                                                        </div>
-                                                        {selectionAuthorsHaveSeries(selectedBooksArray) && (
-                                                            <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
-                                                                onClick={() => autoOrganizeBySeries(selectedBooksArray)}>
-                                                                <span>📚</span><span>By Series…</span>
-                                                            </div>
-                                                        )}
-                                                </FlipToFitPopup>
-                                            </div>
                                             )}
 
                                             {/* v6.10.0-alpha.9 - Share submenu */}
@@ -17209,6 +17209,28 @@
                                                 </FlipToFitPopup>
                                             </div>
 
+                                            {/* v6.12.0 - Number by current order — a metadata edit (sets each book's series
+                                                position), grouped with the other edits. Hidden in Trash. */}
+                                            <div
+                                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
+                                                onClick={async () => {
+                                                    setExplorerBookContextMenu(null);
+                                                    setContextSubmenu(null);
+                                                    const orderedIds = explorerDisplayItems.filter(it => it.type === 'book' && explorerSelectedItems.has(it.book.id)).map(it => it.book.id);
+                                                    if (orderedIds.length < 2) {
+                                                        await showConfirmDialog('Number by current order', "Select 2 or more books first.\n\nThis numbers the selected books 1, 2, 3… in the order currently shown — it sets each book's series position, handy for putting an author's books in publication order. Tip: switch to Manual Order sort, drag them into the order you want, select them, then run this.", 'OK', 'Close');
+                                                        return;
+                                                    }
+                                                    const sortCol = explorerSort[0]?.column;
+                                                    const sortLabel = !sortCol || sortCol === 'custom' ? 'Manual' : sortCol;
+                                                    const name = await showInputDialog('Number by current order', `Number the ${orderedIds.length} selected books 1, 2, 3… in the order currently shown (sorted by ${sortLabel}), setting each book's series position.\n\nOptionally give them a series name (blank = none):`, '', 'Series name (optional)', 'Apply', 'Cancel');
+                                                    if (name === null) return;
+                                                    applySequentialNumbering(orderedIds, name);
+                                                }}>
+                                                <span>🔢</span>
+                                                <span>Number by current order…</span>
+                                            </div>
+
                                             </>)}
                                             {/* Hide Book — available in all views including Trash */}
                                             {(() => {
@@ -17250,30 +17272,8 @@
                                                 );
                                             })()}
 
-                                            {/* Separator before Delete/Restore */}
+                                            {/* Divider before Delete (isolated at the bottom) */}
                                             <div className="border-t border-gray-200 my-1" role="separator"></div>
-
-                                            {/* v6.12.0 - Number by current order (operates on selection, in display order) */}
-                                            <div className="border-t border-gray-200 my-1" role="separator"></div>
-                                            <div
-                                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
-                                                onClick={async () => {
-                                                    setExplorerBookContextMenu(null);
-                                                    setContextSubmenu(null);
-                                                    const orderedIds = explorerDisplayItems.filter(it => it.type === 'book' && explorerSelectedItems.has(it.book.id)).map(it => it.book.id);
-                                                    if (orderedIds.length < 2) {
-                                                        await showConfirmDialog('Number by current order', "Select 2 or more books first.\n\nThis numbers the selected books 1, 2, 3… in the order currently shown — it sets each book's series position, handy for putting an author's books in publication order. Tip: switch to Manual Order sort, drag them into the order you want, select them, then run this.", 'OK', 'Close');
-                                                        return;
-                                                    }
-                                                    const sortCol = explorerSort[0]?.column;
-                                                    const sortLabel = !sortCol || sortCol === 'custom' ? 'Manual' : sortCol;
-                                                    const name = await showInputDialog('Number by current order', `Number the ${orderedIds.length} selected books 1, 2, 3… in the order currently shown (sorted by ${sortLabel}), setting each book's series position.\n\nOptionally give them a series name (blank = none):`, '', 'Series name (optional)', 'Apply', 'Cancel');
-                                                    if (name === null) return;
-                                                    applySequentialNumbering(orderedIds, name);
-                                                }}>
-                                                <span>🔢</span>
-                                                <span>Number by current order…</span>
-                                            </div>
 
                                             {/* v6.0.0-alpha.49 - Delete / Trash actions */}
                                             {selectedFolderId === '__trash__' ? (
