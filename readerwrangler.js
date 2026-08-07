@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16209,22 +16209,11 @@
                             ? Math.max(10, explorerBookContextMenu.x - menuWidth)
                             : explorerBookContextMenu.x;
 
-                        // v5.0.0-alpha.169.8 - Determine submenu position (left or right of main menu)
+                        // v6.15.0 - Vertical submenu flip is now MEASURED per-submenu by FlipToFitPopup (no item-order
+                        // estimates). submenuOnLeft (horizontal) still feeds the not-yet-converted flat submenus
+                        // (Move to / Copy to / Add to Book List / Auto-Organize).
                         const submenuWidth = 200;
-                        const submenuHeight = 250; // v5.0.0-alpha.169.9 - For price goal submenu
                         const submenuOnLeft = left + menuWidth + submenuWidth > viewportWidth;
-                        // v5.0.0-alpha.169.9 - Price Goal is ~12th item (~400px from menu top)
-                        const priceGoalItemOffset = 400;
-                        const priceGoalSubmenuOverflows = top + priceGoalItemOffset + submenuHeight > viewportHeight;
-                        // v5.0.0-alpha.170.1 - Tags is ~11th item (~360px from menu top, after Add Note)
-                        const tagsItemOffset = 360;
-                        const tagsSubmenuHeight = 300; // Tags submenu can be tall with many tags
-                        const tagsSubmenuOverflows = top + tagsItemOffset + tagsSubmenuHeight > viewportHeight;
-                        // v5.4.7 - Edit submenu is ~8th item (~280px from menu top)
-                        const editItemOffset = 280;
-                        const editSubmenuHeight = 165;
-                        const editSubmenuOverflows = top + editItemOffset + editSubmenuHeight > viewportHeight;
-                        // v6.10.0-alpha.9 - Share submenu is ~2nd item (~70px from menu top)
 
                         // v5.0.0-alpha.166 - Phase 2: Helper functions for Move to / Copy to
 
@@ -16864,14 +16853,9 @@
                                                 <span>Edit</span>
                                                 <span className="ml-auto">▶</span>
 
-                                                {contextSubmenu === 'bulk-edit' && (
-                                                    <div
-                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[160px] z-[70]"
-                                                        role="menu" aria-label="Edit options"
-                                                        style={{
-                                                            [submenuOnLeft ? 'right' : 'left']: '100%',
-                                                            [editSubmenuOverflows ? 'bottom' : 'top']: '0'
-                                                        }}
+                                                <FlipToFitPopup open={contextSubmenu === 'bulk-edit'}
+                                                        className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[160px] z-[70]"
+                                                        role="menu" ariaLabel="Edit options"
                                                         onMouseEnter={() => setContextSubmenu('bulk-edit')}
                                                         onMouseLeave={() => setContextSubmenu(null)}
                                                         onClick={(e) => e.stopPropagation()}>
@@ -16892,8 +16876,7 @@
                                                             onClick={() => openBulkEditModal('ownership')}>
                                                             Ownership...
                                                         </div>
-                                                    </div>
-                                                )}
+                                                </FlipToFitPopup>
                                             </div>
 
                                             {/* Tags submenu */}
@@ -16920,13 +16903,8 @@
                                                 <span className="ml-auto">▶</span>
 
                                                 {/* Tags Submenu */}
-                                                {contextSubmenu === 'explorer-tags' && (
-                                                    <div
-                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[220px] max-h-[350px] overflow-y-auto z-[70]" role="menu" aria-label="Tags"
-                                                        style={{
-                                                            [submenuOnLeft ? 'right' : 'left']: '100%',
-                                                            [tagsSubmenuOverflows ? 'bottom' : 'top']: '0'
-                                                        }}
+                                                <FlipToFitPopup open={contextSubmenu === 'explorer-tags'}
+                                                        className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[220px] max-h-[350px] overflow-y-auto z-[70]" role="menu" ariaLabel="Tags"
                                                         onMouseEnter={() => setContextSubmenu('explorer-tags')}
                                                         onMouseLeave={() => setContextSubmenu(null)}
                                                         onClick={(e) => e.stopPropagation()}>
@@ -17167,8 +17145,7 @@
                                                                 ⚙️ Manage Tags...
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                )}
+                                                </FlipToFitPopup>
                                             </div>
 
                                             {/* Set Price Goal submenu */}
@@ -17189,13 +17166,8 @@
                                                 <span className="ml-auto">▶</span>
 
                                                 {/* Price Goal Submenu - v5.0.0-alpha.169.9 viewport-aware vertical positioning */}
-                                                {contextSubmenu === 'price-goal' && (
-                                                    <div
-                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[150px] z-[70]" role="menu" aria-label="Price goal options"
-                                                        style={{
-                                                            [submenuOnLeft ? 'right' : 'left']: '100%',
-                                                            [priceGoalSubmenuOverflows ? 'bottom' : 'top']: '0'
-                                                        }}
+                                                <FlipToFitPopup open={contextSubmenu === 'price-goal'}
+                                                        className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[150px] z-[70]" role="menu" ariaLabel="Price goal options"
                                                         onMouseEnter={() => setContextSubmenu('price-goal')}
                                                         onMouseLeave={() => setContextSubmenu(null)}
                                                         onClick={(e) => e.stopPropagation()}>
@@ -17254,8 +17226,7 @@
                                                             }}>
                                                             Clear Price Goal
                                                         </div>
-                                                    </div>
-                                                )}
+                                                </FlipToFitPopup>
                                             </div>
 
                                             </>)}
