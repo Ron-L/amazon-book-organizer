@@ -39,6 +39,7 @@
 **Auto-Organize ergonomics:**
 - [ ] **Auto-Organize: scope to the current folder, not just the Inbox** — today it only ever organizes *unfiled* books, so invoking it inside a non-Inbox folder shows the author's *Inbox* books (or "Nothing to organize"). Generalize "Inbox-only" → "current-folder-only": real folder → that folder's books (move to Author/Series home); Inbox/All Books → unfiled (unchanged); **Book List → not offered** (category mismatch — lists are supplemental, not custodial homes). Dialog title gains the scope ("Auto-Organize '<Folder>' — By Series"). Unlocks pre-filing wishlist gap-fillers into series folders (right-click inside the Wishlist folder). Meaty bit = source-folder move-out in `applyOrganizePlan`. → docs/design/AUTO-ORGANIZE-SCOPE.md
 - [ ] Auto-Organize wizard: add a **filter/search field** to the author list (scrolling to find a name is painful)
+- [ ] **Auto-Organize preview: author-root before series** — in the confirm dialog, show each author's top-level (root) books first, then the series/2nd-level subfolders. Top-down reads more naturally than series-first. (Ron, 6.14.0 scope testing.)
 - [ ] **Auto-Organize preview: Ctrl+A + Shift-range select** — the preview covers only support click-toggle today. **Ctrl+A leaks to the outer Inbox** (selects ALL Inbox books — startling, though the preview only acts on its own `autoOrgSel`); **Shift-click range** also leaks out. Trap both in the modal and scope them to `autoOrgSel`, so "select all the unread ones" is one gesture. (D2 selection gap.)
 - [ ] **Smart default Book List name from a single-author Auto-Organize preview** — when you create a new Book List from a preview scoped to ONE author, pre-fill the name field with **`<Author> - To Read`** (accept with Enter, or edit). Drives Ron's methodology — folders (nested) hold *everything* by an author; a flat Book List is the *unread queue* — without lengthening the menu (no `+ New Book List` submenu). Pairs with the "In" popup below.
 
@@ -53,6 +54,7 @@
 - [ ] Rectangle/Lasso selection in cover view (extends `explorerSelectedItems`)
 - [ ] Fetcher follow-ups: ownership-**upgrade** live positive test; recovery-sweep Stage 2 (fold into orphan scan); un-trash on ownership upgrade (storage.js); fix the "772%" enriched ratio
 - [ ] Book detail dialog tooltips (esp. Collections = read-only-from-Amazon)
+- [ ] **Book detail dialog: previous/next navigation** — ‹ prev / › next to cycle the current folder's books (circular), so you can flip through to check Amazon Collections or confirm cover-mode order without re-aiming/clicking each book. In the Auto-Organize preview, cycles just that shelf's books. Wrap indicator that doesn't consume a click target: a position counter ("12 / 27") that visibly resets on wrap (lightbox convention), optionally a subtle edge-bounce on wrap; keyboard ←/→ too. (Ron, 6.14.0 testing.)
 - [ ] Wishlist fetcher — capture real binding on add (product-page `bindingInformation`), not only after enrichment
 - [ ] Metadata import (paste-list / CSV) + matching → see docs/design/Metadata-Import.md
 
