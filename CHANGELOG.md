@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.15.0] - 2026-08-07
+
+A polish pass across the book right-click menu and the left sidebar — clearer grouping, submenus that never run off-screen, and a few quality-of-life additions.
+
+### Changed
+- **Book right-click menu, reorganized** — items are grouped by what they *do*: **placement** (Move / Copy / Add to Book List / Auto-Organize) · a look-and-share group (Open in Amazon / Share / Copy Title) · **edits** (Edit / Tags / Price Goal / Number by current order) · and **Delete**, isolated at the bottom. A divider separates the actions that only *read* the book from the ones that *change* it.
+- **Edit does what you expect** — right-click **one** book and **Edit…** opens its full details (including the Note and rating, which had no menu path before). Select **several** and **Edit ▸** offers just the fields that make sense in bulk (Author, Series, Position, Number-by-order, Owned/Wishlist).
+- **Submenus stay on screen** — every right-click submenu now flips left or up as needed so it's never clipped near a screen edge.
+- **"Purchased" is now "Owned"** — the ownership label reads *Owned* everywhere (column, filter, book details), contrasting more clearly with the *borrowed* types (Prime, Kindle Unlimited, Sample). The edit control is labelled **"Owned / Wishlist"** — the one ownership state you set by hand (the rest come from Amazon).
+- **Consistent sidebar accordion** — the collapse/expand arrow now sits to the **left** of each section title (Searches / Book Lists / Folders), with +/sort buttons trailing. **Folders can now collapse to a single row**, and its subfolder control is a persistent **⊟ / ⊞** toggle — one click to collapse *or* expand all subfolders.
+
+### Added
+- **Smart Book List names** — creating a Book List from an Auto-Organize preview pre-fills the name: all one series → *"&lt;Series&gt; - To Read"*, one author → *"&lt;Author&gt; - To Read"*, otherwise blank. Just a suggestion — type over it freely.
+
+### Removed
+- **"Add Note"** from the right-click menu — the edit dialog already covers notes (and everything else), reached via **Edit…** on a single book.
+
 ## [6.14.0] - 2026-08-06
 
 Auto-Organize now works from **any folder**, not just the Inbox.
