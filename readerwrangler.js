@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16211,11 +16211,8 @@
                             ? Math.max(10, explorerBookContextMenu.x - menuWidth)
                             : explorerBookContextMenu.x;
 
-                        // v6.15.0 - Vertical submenu flip is now MEASURED per-submenu by FlipToFitPopup (no item-order
-                        // estimates). submenuOnLeft (horizontal) still feeds the not-yet-converted flat submenus
-                        // (Move to / Copy to / Add to Book List / Auto-Organize).
-                        const submenuWidth = 200;
-                        const submenuOnLeft = left + menuWidth + submenuWidth > viewportWidth;
+                        // v6.15.0 - All book-menu submenus now position themselves via FlipToFitPopup (measured, both
+                        // axes). The old submenuOnLeft / *ItemOffset estimates are gone.
 
                         // v5.0.0-alpha.166 - Phase 2: Helper functions for Move to / Copy to
 
@@ -16424,11 +16421,9 @@
                                         <span className="ml-auto">▶</span>
 
                                         {/* Submenu - v5.0.0-alpha.169.8 viewport-aware positioning */}
-                                        {contextSubmenu === 'move-to' && (
-                                            <div
-                                                className="context-submenu absolute top-0 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto z-[70]"
-                                                role="menu" aria-label="Move to folder"
-                                                style={{ [submenuOnLeft ? 'right' : 'left']: '100%' }}
+                                        <FlipToFitPopup open={contextSubmenu === 'move-to'}
+                                                className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto z-[70]"
+                                                role="menu" ariaLabel="Move to folder"
                                                 onMouseEnter={() => setContextSubmenu('move-to')}
                                                 onMouseLeave={() => setContextSubmenu(null)}
                                                 onClick={(e) => e.stopPropagation()}>
@@ -16440,8 +16435,7 @@
                                                 <div className="border-t border-gray-200 my-1" role="separator"></div>
                                                 {/* Folder tree */}
                                                 {buildFolderTree(null)}
-                                            </div>
-                                        )}
+                                            </FlipToFitPopup>
                                     </div>
                                 )}
 
@@ -16464,11 +16458,9 @@
                                     <span className="ml-auto">▶</span>
 
                                     {/* Submenu - v5.0.0-alpha.169.8 viewport-aware positioning */}
-                                    {contextSubmenu === 'copy-to' && (
-                                        <div
-                                            className="context-submenu absolute top-0 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto z-[70]"
-                                            role="menu" aria-label="Copy to folder"
-                                            style={{ [submenuOnLeft ? 'right' : 'left']: '100%' }}
+                                    <FlipToFitPopup open={contextSubmenu === 'copy-to'}
+                                            className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[400px] max-h-[400px] overflow-y-auto z-[70]"
+                                            role="menu" ariaLabel="Copy to folder"
                                             onMouseEnter={() => setContextSubmenu('copy-to')}
                                             onMouseLeave={() => setContextSubmenu(null)}
                                             onClick={(e) => e.stopPropagation()}>
@@ -16480,8 +16472,7 @@
                                             <div className="border-t border-gray-200 my-1" role="separator"></div>
                                             {/* Folder tree */}
                                             {buildFolderTree(null)}
-                                        </div>
-                                    )}
+                                        </FlipToFitPopup>
                                 </div>
 
                                 {/* v6.12.0-alpha.53 - Add to Book List (supplemental; add/copy semantics, distinct from folder Move) */}
@@ -16493,11 +16484,9 @@
                                     <span>📗</span>
                                     <span>Add to Book List</span>
                                     <span className="ml-auto">▶</span>
-                                    {contextSubmenu === 'add-to-booklist' && (
-                                        <div
-                                            className="context-submenu absolute top-0 bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[240px] max-h-[400px] overflow-y-auto z-[70]"
-                                            role="menu" aria-label="Add to Book List"
-                                            style={{ [submenuOnLeft ? 'right' : 'left']: '100%' }}
+                                    <FlipToFitPopup open={contextSubmenu === 'add-to-booklist'}
+                                            className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[240px] max-h-[400px] overflow-y-auto z-[70]"
+                                            role="menu" ariaLabel="Add to Book List"
                                             onMouseEnter={() => setContextSubmenu('add-to-booklist')}
                                             onMouseLeave={() => setContextSubmenu(null)}
                                             onClick={(e) => e.stopPropagation()}>
@@ -16513,8 +16502,7 @@
                                                 </div>
                                             ))}
                                             {bookLists.length === 0 && <div className="px-4 py-2 text-gray-400 text-sm">No Book Lists yet — use "New Book List…"</div>}
-                                        </div>
-                                    )}
+                                        </FlipToFitPopup>
                                 </div>
 
                                 {/* v6.12.0-alpha.53 - Remove from this Book List (only while viewing one) */}
@@ -16717,11 +16705,9 @@
                                                 <span>✨</span>
                                                 <span>Auto-Organize</span>
                                                 <span className="ml-auto">▶</span>
-                                                {contextSubmenu === 'auto-organize' && (
-                                                    <div
-                                                        className="context-submenu absolute bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[190px] z-[70]"
-                                                        role="menu" aria-label="Auto-Organize"
-                                                        style={{ [submenuOnLeft ? 'right' : 'left']: '100%', top: '0' }}
+                                                <FlipToFitPopup open={contextSubmenu === 'auto-organize'}
+                                                        className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[190px] z-[70]"
+                                                        role="menu" ariaLabel="Auto-Organize"
                                                         onMouseEnter={() => setContextSubmenu('auto-organize')}
                                                         onMouseLeave={() => setContextSubmenu(null)}
                                                         onClick={(e) => e.stopPropagation()}>
@@ -16735,8 +16721,7 @@
                                                                 <span>📚</span><span>By Series…</span>
                                                             </div>
                                                         )}
-                                                    </div>
-                                                )}
+                                                </FlipToFitPopup>
                                             </div>
                                             )}
 
