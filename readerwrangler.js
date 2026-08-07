@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5484,6 +5484,7 @@
 
                 setModalBook(book);
                 setShowAllReviews(false);
+                console.log('[navdebug]', { openedId: book.id, foundIdx: explorerSortedBooks.findIndex(b => b.id === book.id), listLen: explorerSortedBooks.length, sampleIds: explorerSortedBooks.slice(0, 3).map(b => b.id) }); // v6.16.0-alpha.2 TEMP
             };
 
             // v6.16.0 (#55) - Book-detail prev/next: cycle the current view's books in display order (circular).
