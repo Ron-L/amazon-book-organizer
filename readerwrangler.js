@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.15.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.15.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -16214,6 +16214,11 @@
                         // v6.15.0 - All book-menu submenus now position themselves via FlipToFitPopup (measured, both
                         // axes). The old submenuOnLeft / *ItemOffset estimates are gone.
 
+                        // v6.15.0 - Book-aware selection, hoisted so the WHOLE menu shares one scope (the old nested
+                        // IIFE that computed these is gone) — lets every item, including Auto-Organize, sit anywhere.
+                        const selectedBooksArray = getSelectedBookIds().map(id => books.find(b => b.id === id)).filter(Boolean);
+                        const count = selectedBooksArray.length;
+
                         // v5.0.0-alpha.166 - Phase 2: Helper functions for Move to / Copy to
 
                         // v5.0.0-alpha.166.1 - Check if current folder is virtual (can't move books from virtual folders)
@@ -16650,18 +16655,6 @@
 
                                 {/* v5.0.0-alpha.167 - Phase 3: Other menu items */}
 
-                                {/* Helper to get selected books as array */}
-                                {(() => {
-                                    const getSelectedBooksArray = () => {
-                                        const selectedIds = getSelectedBookIds();
-                                        return selectedIds.map(id => books.find(b => b.id === id)).filter(Boolean);
-                                    };
-
-                                    const selectedBooksArray = getSelectedBooksArray();
-                                    const count = selectedBooksArray.length;
-
-                                    return (
-                                        <>
                                             {/* Open in Amazon - v5.0.0-alpha.167.6: Single book only (popup blockers prevent multiple) */}
                                             {count === 1 ? (
                                                 <div
@@ -17350,9 +17343,6 @@
                                                     <span className="ml-auto text-xs text-gray-400">Del</span>
                                                 </div>
                                             )}
-                                        </>
-                                    );
-                                })()}
                             </div>
                         );
                     })()}
