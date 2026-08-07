@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.14.0] - 2026-08-06
+
+Auto-Organize now works from **any folder**, not just the Inbox.
+
+### Changed
+- **Auto-Organize files the folder you're in** — Right-click a book inside *any* folder (Collections, a "New To Read" catch-all, a Wishlist folder…) and Auto-Organize now files **that folder's** books by the same author into their Author/Series folders, moving them out of the current folder. Previously it only ever acted on unfiled (Inbox) books, so invoking it inside a folder was confusing or did nothing. Only the current folder's membership changes — a book's other folders and Book Lists are left untouched.
+- **It never dis-organizes your shelves** — a built-in guard means Auto-Organize only ever moves books *into* their author/series home, never *up or out* of one. Standing inside a series subfolder and choosing "By Author" no longer flattens it; it recognizes the books are already filed. (By Series can still deepen loose author-root books into series subfolders.)
+- **The confirm dialog names the folder** — the title and summary now read *"Auto-Organize "Collections" Folder — By Author"* and *"These leave the "Collections" folder"*, so it's always clear which books are affected. From the Inbox / All Books it reads "Inbox" as before.
+- **Book Lists sit it out** — Auto-Organize is a folder (custodial) operation, so it no longer appears in the right-click menu when you're viewing a Book List (or Trash).
+- The confirm preview now lists each author's top-level books first, then the series subfolders.
+
 ## [6.13.2] - 2026-08-06
 
 A UX-polish release centered on **seeing where each book lives** while you organize.
