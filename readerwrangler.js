@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5486,14 +5486,15 @@
                 setShowAllReviews(false);
             };
 
-            // v6.16.0 (#55) - Book-detail prev/next: cycle the current view's books in display order (circular).
-            const modalNavIdx = modalBook ? explorerSortedBooks.findIndex(b => b.id === modalBook.id) : -1;
-            const modalCanNav = modalNavIdx >= 0 && explorerSortedBooks.length > 1 && !autoOrgPreview; // not while the auto-organize preview is open (its shelf ≠ the explorer view)
-            if (modalBook) console.log('[navrender]', { idx: modalNavIdx, canNav: modalCanNav, editing: isEditingBook, preview: !!autoOrgPreview, len: explorerSortedBooks.length, modalId: modalBook.id }); // v6.16.0-alpha.4 TEMP
+            // v6.16.0 (#55) - Book-detail prev/next: cycle the CURRENT context's books, circular — the explorer view,
+            // or the Auto-Organize preview's shelf when that's open (the detail modal opens over the preview).
+            const modalNavList = autoOrgPreview ? autoOrgPreview.authorGroups.flatMap(ag => ag.books) : explorerSortedBooks;
+            const modalNavIdx = modalBook ? modalNavList.findIndex(b => b.id === modalBook.id) : -1;
+            const modalCanNav = modalNavIdx >= 0 && modalNavList.length > 1;
             const goToModalNav = (delta) => {
-                if (modalNavIdx < 0 || explorerSortedBooks.length <= 1) return;
-                const n = explorerSortedBooks.length;
-                const next = explorerSortedBooks[(modalNavIdx + delta + n) % n];
+                if (modalNavIdx < 0 || modalNavList.length <= 1) return;
+                const n = modalNavList.length;
+                const next = modalNavList[(modalNavIdx + delta + n) % n];
                 if (next) openBookModal(next, null);
             };
 
@@ -5696,7 +5697,7 @@
 
             // v6.16.0 (#55) - ←/→ navigate the open book-detail modal (not while editing or typing in a field).
             useEffect(() => {
-                if (!modalBook || isEditingBook || autoOrgPreview) return;
+                if (!modalBook || isEditingBook) return;
                 const handleArrowNav = (e) => {
                     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
                     const tag = (e.target.tagName || '').toLowerCase();
@@ -10996,7 +10997,7 @@
                                     {modalCanNav && !isEditingBook && (
                                         <div className="flex items-center gap-1 mr-auto text-gray-500">
                                             <button onClick={() => goToModalNav(-1)} className="text-2xl leading-none hover:text-gray-800 px-1" title="Previous book (←)" aria-label="Previous book">‹</button>
-                                            <span className="text-xs tabular-nums select-none" title="Position in the current view">{modalNavIdx + 1} / {explorerSortedBooks.length}</span>
+                                            <span className="text-xs tabular-nums select-none" title="Position in the current list">{modalNavIdx + 1} / {modalNavList.length}</span>
                                             <button onClick={() => goToModalNav(1)} className="text-2xl leading-none hover:text-gray-800 px-1" title="Next book (→)" aria-label="Next book">›</button>
                                         </div>
                                     )}
