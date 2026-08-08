@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.6";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -5488,7 +5488,23 @@
 
             // v6.16.0 (#55) - Book-detail prev/next: cycle the CURRENT context's books, circular — the explorer view,
             // or the Auto-Organize preview's shelf when that's open (the detail modal opens over the preview).
-            const modalNavList = autoOrgPreview ? autoOrgPreview.authorGroups.flatMap(ag => ag.books) : explorerSortedBooks;
+            const modalNavList = (() => {
+                if (!autoOrgPreview) return explorerSortedBooks;
+                const id = modalBook?.id;
+                if (id == null) return [];
+                // Match the ROW (shelf) as displayed: By Series → the "Directly under…" row or the specific series row;
+                // By Author → the author's single row.
+                for (const ag of autoOrgPreview.authorGroups) {
+                    if (autoOrgPreview.mode === 'series') {
+                        const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
+                        if (standaloneBooks.some(b => b.id === id)) return standaloneBooks;
+                        for (const s of seriesGroups.values()) if (s.books.some(b => b.id === id)) return s.books;
+                    } else if (ag.books.some(b => b.id === id)) {
+                        return ag.books;
+                    }
+                }
+                return [];
+            })();
             const modalNavIdx = modalBook ? modalNavList.findIndex(b => b.id === modalBook.id) : -1;
             const modalCanNav = modalNavIdx >= 0 && modalNavList.length > 1;
             const goToModalNav = (delta) => {
