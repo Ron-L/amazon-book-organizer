@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.9";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7028,9 +7028,19 @@
             const normAuthorKey = (a) => (a || '').trim().toLowerCase();
             const displayAuthorName = (a) => (a && a.trim()) ? a.trim() : 'Unknown Author';
 
+            // v6.16.0 - The organize pool is the source-folder scope PLUS the explicitly-selected books. A book that
+            // is BOTH in the source (e.g. the Inbox) and already filed elsewhere is otherwise pre-excluded by
+            // inboxSourceBooks() (unfiled-only) — including it keeps it a candidate the engine evaluates (and leaves
+            // un-moved as already-filed, which we then surface) instead of vanishing into a "no books here" toast.
+            const organizePoolFor = (fid, selBooks) => {
+                const scoped = currentFolderSourceBooks(fid);
+                const seen = new Set(scoped.map(b => b.id));
+                return [...scoped, ...(selBooks || []).filter(b => b && !seen.has(b.id))];
+            };
+
             // Group ALL of the selected books' authors' books IN THE CURRENT FOLDER (not just the clicked books) by author.
             const buildAuthorGroupsFromSelection = (selBooks) => {
-                const pool = currentFolderSourceBooks(selectedFolderId);
+                const pool = organizePoolFor(selectedFolderId, selBooks);
                 const wantAuthors = new Map(); // normKey -> original author string (first seen)
                 (selBooks || []).forEach(b => { const k = normAuthorKey(b.author); if (!wantAuthors.has(k)) wantAuthors.set(k, b.author); });
                 const authorGroups = [];
@@ -7044,12 +7054,30 @@
             // shows even when you right-clicked a standalone by an author who also has a series here.)
             const selectionAuthorsHaveSeries = (selBooks) => {
                 const keys = new Set((selBooks || []).map(b => normAuthorKey(b.author)));
-                return currentFolderSourceBooks(selectedFolderId).some(b => keys.has(normAuthorKey(b.author)) && b.series && b.series.trim());
+                return organizePoolFor(selectedFolderId, selBooks).some(b => keys.has(normAuthorKey(b.author)) && b.series && b.series.trim());
             };
 
             // v6.13.0-alpha.7 (D1) - Right-click no longer commits immediately: it opens the confirm/preview.
             // computeOrganizePlan is PURE, so the dry-run plan drives the preview counts without touching state;
             // Confirm re-applies via applyOrganizePlan (which recomputes against the then-current folders + records undo).
+            // v6.16.0 - The books the engine would NOT move because they already sit in the exact folder it would
+            // file them to, AND that are still in the source folder — i.e. filed-and-also-in-the-source. We surface
+            // these (with WHERE they live) and offer "Remove from <source>" instead of a dead-end "nothing here" toast.
+            const computeAlreadyFiled = (authorGroups, dryPlan, srcId) => {
+                const movers = new Set(dryPlan.allBookIdsToOrganize);
+                const srcFolder = folders.find(f => f.id === srcId);
+                const srcIds = new Set(srcFolder ? (srcFolder.bookIds || []) : []);
+                const isRealHome = (f) => !['__inbox__', '__all__', '__library__', '__trash__', '__booklists__'].includes(f.id);
+                const out = [], seen = new Set();
+                authorGroups.forEach(ag => ag.books.forEach(b => {
+                    if (movers.has(b.id) || seen.has(b.id) || !srcIds.has(b.id)) return;
+                    const homes = getFoldersContainingBook(b.id).filter(f => isRealHome(f) && f.id !== srcId);
+                    if (homes.length === 0) return; // in the source but not actually filed elsewhere → nothing to show
+                    seen.add(b.id);
+                    out.push({ book: b, folders: homes.map(f => ({ id: f.id, name: f.name })) });
+                }));
+                return out;
+            };
             const openAutoOrgPreview = (mode, selBooks, opts, labelFor) => {
                 setExplorerBookContextMenu(null); setContextSubmenu(null);
                 const authorGroups = buildAuthorGroupsFromSelection(selBooks);
@@ -7059,11 +7087,13 @@
                 const srcId = sourceFolderIdForScope(selectedFolderId);
                 const scopedOpts = { ...opts, sourceFolderId: srcId };
                 const dryPlan = computeOrganizePlan(authorGroups, folders, scopedOpts);
-                if (dryPlan.totalBooksOrganized === 0) { showToast('Nothing to organize — already filed under their author'); return; }
+                const alreadyFiled = computeAlreadyFiled(authorGroups, dryPlan, srcId);
+                // Only a true no-op (nothing to move AND nothing already-filed-in-source to clean up) stays a toast.
+                if (dryPlan.totalBooksOrganized === 0 && alreadyFiled.length === 0) { showToast('Nothing to organize — already filed under their author'); return; }
                 // Source folder name for the dialog title/body (null = the unfiled Inbox scope).
                 const sourceName = srcId === '__inbox__' ? null : (folders.find(f => f.id === srcId)?.name || null);
                 setAutoOrgSel(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null);
-                setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label: labelFor(authorGroups), dryPlan, sourceName });
+                setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label: labelFor(authorGroups), dryPlan, sourceName, sourceFolderId: srcId, alreadyFiled });
             };
             const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
                 { createSeriesFolders: false }, // FLAT — no series subfolders
@@ -7074,17 +7104,49 @@
 
             const closeAutoOrgPreview = () => { setAutoOrgPreview(null); setAutoOrgSel(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null); };
 
+            // v6.16.0 - Undoable removal of books from a single folder (shape matches the REMOVE_BOOKS_FOLDER undo/redo
+            // handlers: fromIndices lets undo re-insert at the original positions). Touches only that folder's membership.
+            const removeBooksFromFolder = (folderId, bookIds, label) => {
+                const folder = folders.find(f => f.id === folderId);
+                if (!folder) return 0;
+                const cur = folder.bookIds || [];
+                const present = bookIds.filter(id => cur.includes(id));
+                if (present.length === 0) return 0;
+                const fromIndices = present.map(id => cur.indexOf(id));
+                setFolders(prev => prev.map(f => f.id === folderId
+                    ? { ...f, bookIds: (f.bookIds || []).filter(id => !present.includes(id)) }
+                    : f));
+                recordAction({ type: 'REMOVE_BOOKS_FOLDER', folderId, bookIds: present, fromIndices, label });
+                return present.length;
+            };
+            // v6.16.0 - "Remove from <source>" for the already-filed books: take them out of the source folder (Inbox
+            // or the folder Auto-Organize was invoked from) while leaving their real folder home(s) + any Book List intact.
+            const removeAlreadyFiledFromSource = () => {
+                if (!autoOrgPreview) return;
+                const { alreadyFiled, sourceFolderId, sourceName } = autoOrgPreview;
+                const ids = (alreadyFiled || []).map(x => x.book.id);
+                if (ids.length === 0) { closeAutoOrgPreview(); return; }
+                const where = sourceName ? `“${sourceName}”` : 'the Inbox';
+                const n = removeBooksFromFolder(sourceFolderId, ids, `Remove ${ids.length} book${ids.length !== 1 ? 's' : ''} from ${where}`);
+                showToast(n > 0
+                    ? `Removed ${n} book${n !== 1 ? 's' : ''} from ${where} — still filed where they were`
+                    : `Nothing to remove from ${where}`);
+                closeAutoOrgPreview();
+            };
+
             // v6.16.0 - Preview selection model. Books in DISPLAY (row) order — standalone row then each series row, per
             // author (By Series); the author's row (By Author). Used for Shift-range and Ctrl+A within the preview.
             const getPreviewOrderedBooks = (preview) => {
                 if (!preview) return [];
+                const filed = new Set((preview.alreadyFiled || []).map(x => x.book.id)); // selection acts on the movers only
                 const out = [];
                 for (const ag of preview.authorGroups) {
+                    const bks = ag.books.filter(b => !filed.has(b.id));
                     if (preview.mode === 'series') {
-                        const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
+                        const { seriesGroups, standaloneBooks } = groupBooksBySeries(bks);
                         out.push(...standaloneBooks);
                         for (const s of seriesGroups.values()) out.push(...s.books);
-                    } else out.push(...ag.books);
+                    } else out.push(...bks);
                 }
                 return out;
             };
@@ -7125,7 +7187,9 @@
                         .filter(ag => ag.books.length > 0);
                     if (authorGroups.length === 0) return null; // everything got filed/deleted from the detail modal
                     const dryPlan = computeOrganizePlan(authorGroups, folders, prev.opts);
-                    return { ...prev, authorGroups, dryPlan };
+                    const alreadyFiled = computeAlreadyFiled(authorGroups, dryPlan, prev.sourceFolderId);
+                    if (dryPlan.totalBooksOrganized === 0 && alreadyFiled.length === 0) return null; // nothing left to do
+                    return { ...prev, authorGroups, dryPlan, alreadyFiled };
                 });
             };
 
@@ -10159,7 +10223,13 @@
 
                     {/* v6.13.0-alpha.7 (D1) - Auto-Organize confirm/preview: hierarchical Author→Series→covers before commit */}
                     {autoOrgPreview && (() => {
-                        const { mode, authorGroups, dryPlan, sourceName } = autoOrgPreview;
+                        const { mode, authorGroups, dryPlan, sourceName, alreadyFiled = [] } = autoOrgPreview;
+                        const filedIds = new Set(alreadyFiled.map(x => x.book.id));
+                        // The bottom "Will organize" section shows the movers only — the already-filed books render in the
+                        // top section instead, so they're never double-listed.
+                        const moverGroups = authorGroups
+                            .map(ag => ({ ...ag, books: ag.books.filter(b => !filedIds.has(b.id)) }))
+                            .filter(ag => ag.books.length > 0);
                         const cover = (b) => {
                             const sel = autoOrgSel.has(b.id);
                             return (
@@ -10185,6 +10255,17 @@
                             );
                         };
                         const coverRow = (bks) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{bks.map(cover)}</div>;
+                        // Already-filed covers are context, not organize targets — no selection ring/handlers; double-click still opens detail.
+                        const filedCover = (b) => (
+                            <div key={b.id}
+                                title={`${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`}
+                                style={{ width: '46px', flex: '0 0 auto', cursor: 'pointer' }}
+                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null); }}>
+                                {b.coverUrl
+                                    ? <img src={b.coverUrl} alt="" style={{ width: '46px', height: '69px', objectFit: 'cover', borderRadius: '3px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                                    : <div style={{ width: '46px', height: '69px', borderRadius: '3px', background: 'var(--bg-hover, #e5e7eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', lineHeight: 1.1, textAlign: 'center', padding: '3px', overflow: 'hidden', color: 'var(--text-secondary, #6b7280)' }}>{b.title || 'Untitled'}</div>}
+                            </div>
+                        );
                         const folderCount = dryPlan.createdFolders.length + dryPlan.mergedFolders.length;
                         const subCount = dryPlan.subActions.filter(a => a.type === 'CREATE_FOLDER' && a.parentId !== null).length;
                         return (
@@ -10195,13 +10276,40 @@
                                     <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">✨ Auto-Organize {sourceName ? `“${sourceName}” Folder` : 'Inbox'} — {mode === 'series' ? 'By Series' : 'By Author'}</h2>
                                     <button onClick={closeAutoOrgPreview} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
-                                {/* Summary */}
-                                <div className="px-4 pt-3 text-sm text-gray-700">
-                                    Move <strong>{dryPlan.totalBooksOrganized}</strong> book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''} into <strong>{folderCount}</strong> author folder{folderCount !== 1 ? 's' : ''}{subCount > 0 ? <> and <strong>{subCount}</strong> series subfolder{subCount !== 1 ? 's' : ''}</> : null}. These leave {sourceName ? `the “${sourceName}” folder` : 'the Inbox'}.
-                                </div>
+                                {/* Summary — only when there's something to move (the pure already-filed case has its own copy below) */}
+                                {dryPlan.totalBooksOrganized > 0 && (
+                                    <div className="px-4 pt-3 text-sm text-gray-700">
+                                        Move <strong>{dryPlan.totalBooksOrganized}</strong> book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''} into <strong>{folderCount}</strong> author folder{folderCount !== 1 ? 's' : ''}{subCount > 0 ? <> and <strong>{subCount}</strong> series subfolder{subCount !== 1 ? 's' : ''}</> : null}. These leave {sourceName ? `the “${sourceName}” folder` : 'the Inbox'}.
+                                    </div>
+                                )}
                                 {/* Scrollable hierarchy */}
                                 <div className="p-4 overflow-y-auto" style={{ flex: 1 }}>
-                                    {authorGroups.map(ag => {
+                                    {/* v6.16.0 - Top section: books already filed where Auto-Organize would put them, still sitting in the source. */}
+                                    {alreadyFiled.length > 0 && (
+                                        <div className="mb-4">
+                                            <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">✅ Already filed <span className="text-gray-400 font-normal">({alreadyFiled.length})</span></div>
+                                            <div className="text-xs text-gray-500 mt-1 mb-2">
+                                                {alreadyFiled.length === 1 ? 'This book is' : `These ${alreadyFiled.length} books are`} already filed where Auto-Organize would put {alreadyFiled.length === 1 ? 'it' : 'them'}, but {alreadyFiled.length === 1 ? "it's" : "they're"} still in {sourceName ? `the “${sourceName}” folder` : 'the Inbox'}. Nothing new to organize — use <strong>Remove from {sourceName ? `“${sourceName}”` : 'Inbox'}</strong> to take {alreadyFiled.length === 1 ? 'it' : 'them'} out of {sourceName ? 'this folder' : 'the Inbox'}, leaving {alreadyFiled.length === 1 ? 'it' : 'them'} filed below.
+                                            </div>
+                                            {alreadyFiled.map(({ book, folders: homes }) => (
+                                                <div key={book.id} className="flex items-center gap-3 mb-2">
+                                                    {filedCover(book)}
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {homes.map(f => (
+                                                            <span key={f.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">✓ {f.name}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {moverGroups.length > 0 && (
+                                                <>
+                                                    <div className="border-t border-gray-200 my-3"></div>
+                                                    <div className="text-sm font-semibold text-gray-900 mb-1">Will organize <span className="text-gray-400 font-normal">({dryPlan.totalBooksOrganized})</span></div>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                    {moverGroups.map(ag => {
                                         if (mode === 'series') {
                                             const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
                                             return (
@@ -10236,13 +10344,20 @@
                                 {/* Footer */}
                                 <div className="p-4 border-t border-gray-200 flex justify-between items-center gap-3">
                                     <div className="text-xs text-gray-500 flex-1">
-                                        {autoOrgSel.size > 0
-                                            ? `${autoOrgSel.size} selected — right-click to add to a Book List`
-                                            : 'Tip: click covers to select, then right-click → add them to a Book List (e.g. New To Read)'}
+                                        {dryPlan.totalBooksOrganized === 0
+                                            ? (alreadyFiled.length === 1 ? 'Already filed — nothing new to organize.' : 'All already filed — nothing new to organize.')
+                                            : autoOrgSel.size > 0
+                                                ? `${autoOrgSel.size} selected — right-click to add to a Book List`
+                                                : 'Tip: click covers to select, then right-click → add them to a Book List (e.g. New To Read)'}
                                     </div>
                                     <div className="flex gap-2 flex-shrink-0">
                                         <button onClick={closeAutoOrgPreview} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Cancel</button>
-                                        <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>
+                                        {alreadyFiled.length > 0 && (
+                                            <button onClick={removeAlreadyFiledFromSource} className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition-colors">Remove {alreadyFiled.length} from {sourceName ? `“${sourceName}”` : 'Inbox'}</button>
+                                        )}
+                                        {dryPlan.totalBooksOrganized > 0 && (
+                                            <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
