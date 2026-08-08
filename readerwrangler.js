@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.7";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -660,6 +660,7 @@
             const [wizardResultsOpen, setWizardResultsOpen] = useState(false); // v5.1.0-alpha.29 - Phase 3.3: Results dialog visibility
             const [autoOrgPreview, setAutoOrgPreview] = useState(null); // v6.13.0-alpha.7 - Right-click Auto-Organize confirm/preview: { mode, authorGroups, opts, label, dryPlan } or null
             const [autoOrgSel, setAutoOrgSel] = useState(new Set());    // v6.13.0-alpha.9 (D2) - selected cover ids within the preview
+            const [autoOrgAnchor, setAutoOrgAnchor] = useState(null);  // v6.16.0 - shift-range pivot (last plain/ctrl-clicked cover) in the preview
             const [autoOrgMenu, setAutoOrgMenu] = useState(null);       // v6.13.0-alpha.9 (D2) - preview cover right-click menu: { x, y, bookIds } or null
             const [autoOrgHover, setAutoOrgHover] = useState(null);     // v6.13.0-alpha.9 (D2) - preview cover hover "In" popup: { bookId, x, y } or null
             const [wizardResultsData, setWizardResultsData] = useState(null); // v5.1.0-alpha.29 - Phase 3.3: Results summary data
@@ -681,6 +682,7 @@
             const redoStackRef = useRef(redoStack);
             const modalBookRef = useRef(modalBook); // v4.21.0.g - Ref to check modal state in keyboard handler
             const anyModalOpenRef = useRef(false); // v5.2.0-alpha.18 - Track any modal open for global key guard
+            const autoOrgPreviewRef = useRef(null); // v6.16.0 - current auto-organize preview, for the keydown handler (which doesn't dep on it)
             const backdropMouseDownRef = useRef(null); // v5.2.0-alpha.15 - Track mousedown origin for backdrop close (prevents swipe-past-edge closing modals)
             const [contextMenu, setContextMenu] = useState(null); // {x, y, bookId, columnId}
             const [contextSubmenu, setContextSubmenu] = useState(null); // v4.16.0.ba - 'move' | 'copyTo' | 'priceGoal' | null for submenu hover
@@ -3869,6 +3871,13 @@
                         return;
                     }
 
+                    // v6.16.0 - Ctrl+A inside the Auto-Organize preview selects THAT preview's books (was leaking to the Inbox behind it).
+                    if (autoOrgPreviewRef.current && (e.ctrlKey || e.metaKey) && e.key === 'a') {
+                        e.preventDefault();
+                        setAutoOrgSel(new Set(getPreviewOrderedBooks(autoOrgPreviewRef.current).map(b => b.id)));
+                        return;
+                    }
+
                     // v5.0.0-alpha.92 - Alt+Left: Back, Alt+Right: Forward
                     if (e.altKey && e.key === 'ArrowLeft') {
                         e.preventDefault();
@@ -5706,6 +5715,9 @@
             useEffect(() => {
                 modalBookRef.current = modalBook;
             }, [modalBook]);
+            useEffect(() => {
+                autoOrgPreviewRef.current = autoOrgPreview;
+            }, [autoOrgPreview]);
             // v5.2.0-alpha.18 - Track whether any modal/dialog overlay is open
             useEffect(() => {
                 anyModalOpenRef.current = !!(modalBook || showBulkPriceModal || showBulkEditModal || tagManagementOpen || wizardModalOpen || folderPropertiesDialog || resetConfirmOpen || statusModalOpen || aboutDialogOpen || shortcutsDialogOpen || howToDialogOpen || wizardHelpOpen || relayHelpOpen || wizardPreviewMode || wizardResultsOpen || lastCopyDialogData || autoOrgPreview);
@@ -7050,7 +7062,7 @@
                 if (dryPlan.totalBooksOrganized === 0) { showToast('Nothing to organize — already filed under their author'); return; }
                 // Source folder name for the dialog title/body (null = the unfiled Inbox scope).
                 const sourceName = srcId === '__inbox__' ? null : (folders.find(f => f.id === srcId)?.name || null);
-                setAutoOrgSel(new Set()); setAutoOrgMenu(null); setAutoOrgHover(null);
+                setAutoOrgSel(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null);
                 setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label: labelFor(authorGroups), dryPlan, sourceName });
             };
             const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
@@ -7060,7 +7072,47 @@
                 { createSeriesFolders: true, seriesFolderMinBooks: 1, createMiscellaneous: false }, // series subfolders; non-series at author root
                 (ags) => ags.length === 1 ? `Auto-Organized ${ags[0].displayName} by series` : `Auto-Organized ${ags.length} authors by series`);
 
-            const closeAutoOrgPreview = () => { setAutoOrgPreview(null); setAutoOrgSel(new Set()); setAutoOrgMenu(null); setAutoOrgHover(null); };
+            const closeAutoOrgPreview = () => { setAutoOrgPreview(null); setAutoOrgSel(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null); };
+
+            // v6.16.0 - Preview selection model. Books in DISPLAY (row) order — standalone row then each series row, per
+            // author (By Series); the author's row (By Author). Used for Shift-range and Ctrl+A within the preview.
+            const getPreviewOrderedBooks = (preview) => {
+                if (!preview) return [];
+                const out = [];
+                for (const ag of preview.authorGroups) {
+                    if (preview.mode === 'series') {
+                        const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
+                        out.push(...standaloneBooks);
+                        for (const s of seriesGroups.values()) out.push(...s.books);
+                    } else out.push(...ag.books);
+                }
+                return out;
+            };
+            // Click = replace selection; Ctrl/Cmd+click = toggle; Shift+click = range from the anchor (Ctrl+Shift extends).
+            const handlePreviewCoverClick = (e, b) => {
+                e.stopPropagation();
+                if (e.shiftKey && autoOrgAnchor) {
+                    const ordered = getPreviewOrderedBooks(autoOrgPreview);
+                    const a = ordered.findIndex(x => x.id === autoOrgAnchor);
+                    const c = ordered.findIndex(x => x.id === b.id);
+                    if (a >= 0 && c >= 0) {
+                        const [lo, hi] = a <= c ? [a, c] : [c, a];
+                        const rangeIds = ordered.slice(lo, hi + 1).map(x => x.id);
+                        setAutoOrgSel(prev => {
+                            const base = (e.ctrlKey || e.metaKey) ? new Set(prev) : new Set();
+                            rangeIds.forEach(id => base.add(id));
+                            return base;
+                        });
+                        return; // keep the anchor for further shift-clicks
+                    }
+                }
+                if (e.ctrlKey || e.metaKey) {
+                    setAutoOrgSel(prev => { const n = new Set(prev); n.has(b.id) ? n.delete(b.id) : n.add(b.id); return n; });
+                } else {
+                    setAutoOrgSel(new Set([b.id]));
+                }
+                setAutoOrgAnchor(b.id);
+            };
 
             // v6.13.0-alpha.10 (D3) - After the book detail modal closes over the preview, re-map the preview's books to
             // fresh objects (so in-modal edits show) and drop any now-filed/deleted, then recompute the dry-run so the
@@ -10106,7 +10158,7 @@
                             <div key={b.id}
                                 title={`${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`}
                                 style={{ width: '46px', flex: '0 0 auto', position: 'relative', cursor: 'pointer', borderRadius: '4px', outline: sel ? '2px solid #4f46e5' : '2px solid transparent', outlineOffset: '1px' }}
-                                onClick={(e) => { e.stopPropagation(); setAutoOrgSel(prev => { const n = new Set(prev); n.has(b.id) ? n.delete(b.id) : n.add(b.id); return n; }); }}
+                                onClick={(e) => handlePreviewCoverClick(e, b)}
                                 onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null); }}
                                 onContextMenu={(e) => {
                                     e.preventDefault(); e.stopPropagation();
