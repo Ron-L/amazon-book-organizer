@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.8";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7153,7 +7153,15 @@
                     (seriesSet.size === 1 && sel.every(b => (b.series || '').trim())) ? `${[...seriesSet][0]} - To Read`
                     : (authorSet.size === 1 && sel.every(b => (b.author || '').trim())) ? `${displayAuthorName(sel[0].author)} - To Read`
                     : '';
-                const name = await showInputDialog('New Book List', `Add ${ids.length} book${ids.length !== 1 ? 's' : ''} to a new Book List.`, suggested, 'List name (e.g. New To Read)');
+                // v6.16.0 - If the smart default matches an existing list, be honest: OK adds to it (the common case —
+                // topping up a series/author queue); typing a different name still creates a new one.
+                const suggestedMatch = suggested && bookLists.find(b => (b.name || '').trim().toLowerCase() === suggested.trim().toLowerCase());
+                const n = ids.length, s = n !== 1 ? 's' : '';
+                const title = suggestedMatch ? 'Add to Book List' : 'New Book List';
+                const message = suggestedMatch
+                    ? `A Book List named “${suggestedMatch.name}” already exists — press OK to add ${n} book${s} to it, or type a different name to create a new list.`
+                    : `Add ${n} book${s} to a new Book List.`;
+                const name = await showInputDialog(title, message, suggested, 'List name (e.g. New To Read)');
                 if (name === null) return;
                 const trimmed = (name || '').trim() || 'New To Read';
                 const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
