@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.20";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.21";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3508,15 +3508,12 @@
                     return author.trim();
                 };
 
-                // v5.1.0-alpha.10 - Source is always Inbox (books not in any user folder)
-                const booksInFolders = new Set();
-                folders.forEach(folder => {
-                    // Only count books in actual user folders, not virtual folders
-                    if (folder.id !== '__inbox__' && folder.id !== '__all__') {
-                        (folder.bookIds || []).forEach(bookId => booksInFolders.add(bookId));
-                    }
-                });
-                const sourceBooks = books.filter(book => !booksInFolders.has(book.id));
+                // v6.16.0 - Source is the Inbox's actual membership (matches the right-click preview + the Inbox view),
+                // NOT the unfiled complement. This includes books that are in the Inbox AND already filed elsewhere,
+                // so the rich preview can surface them as "already filed" instead of silently dropping them.
+                const inboxFolder = folders.find(f => f.id === '__inbox__');
+                const inboxIds = new Set(inboxFolder ? (inboxFolder.bookIds || []) : []);
+                const sourceBooks = books.filter(book => inboxIds.has(book.id) && !book.isDeleted);
 
                 // v5.1.0-alpha.30 - Phase 3.4: Track source books count for validation
                 setWizardSourceBooksCount(sourceBooks.length);
@@ -7115,24 +7112,43 @@
                 }));
                 return out;
             };
-            const openAutoOrgPreview = (mode, selBooks, opts, labelFor) => {
-                setExplorerBookContextMenu(null); setContextSubmenu(null);
-                const authorGroups = buildAuthorGroupsFromSelection(selBooks);
-                if (authorGroups.length === 0) { showToast('Nothing to organize — no books by those authors here'); return; }
-                // Scope the plan to the current folder: the engine removes organized books from THIS folder
-                // (Inbox for the unfiled views) and the guard skips any that are already home under their author.
-                const srcId = sourceFolderIdForScope(selectedFolderId);
+            // v6.16.0 - Shared open-the-rich-preview step for BOTH the right-click path and the wizard: given
+            // pre-built authorGroups + a source folder id + opts + mode, compute the dry plan + already-filed set,
+            // default everything selected, and show the preview. Returns false (with a toast) if there's nothing to do.
+            const openAutoOrgPreviewCore = (authorGroups, srcId, opts, mode, label) => {
+                if (authorGroups.length === 0) { showToast('Nothing to organize — no books by those authors here'); return false; }
                 const scopedOpts = { ...opts, sourceFolderId: srcId };
                 const dryPlan = computeOrganizePlan(authorGroups, folders, scopedOpts);
                 const alreadyFiled = computeAlreadyFiled(authorGroups, dryPlan, srcId);
-                // Only a true no-op (nothing to move AND nothing already-filed-in-source to clean up) stays a toast.
-                if (dryPlan.totalBooksOrganized === 0 && alreadyFiled.length === 0) { showToast('Nothing to organize — already filed under their author'); return; }
-                // Source folder name for the dialog title/body (null = the unfiled Inbox scope).
+                if (dryPlan.totalBooksOrganized === 0 && alreadyFiled.length === 0) { showToast('Nothing to organize — already filed under their author'); return false; }
                 const sourceName = srcId === '__inbox__' ? null : (folders.find(f => f.id === srcId)?.name || null);
-                // Default: everything selected (movers + already-filed). authorGroups holds both.
                 const allIds = authorGroups.flatMap(ag => ag.books.map(b => b.id));
                 setAutoOrgSel(new Set(allIds)); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null);
-                setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label: labelFor(authorGroups), dryPlan, sourceName, sourceFolderId: srcId, alreadyFiled });
+                setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label, dryPlan, sourceName, sourceFolderId: srcId, alreadyFiled });
+                return true;
+            };
+            // Right-click path: build authorGroups from the clicked/selected books, scope to the current folder.
+            const openAutoOrgPreview = (mode, selBooks, opts, labelFor) => {
+                setExplorerBookContextMenu(null); setContextSubmenu(null);
+                const authorGroups = buildAuthorGroupsFromSelection(selBooks);
+                const srcId = sourceFolderIdForScope(selectedFolderId);
+                openAutoOrgPreviewCore(authorGroups, srcId, opts, mode, labelFor(authorGroups));
+            };
+            // Wizard path: build authorGroups from the selected (shown) authors' Inbox books, always Inbox-scoped,
+            // honoring the wizard's own options (series-folder threshold, Miscellaneous). Closes the wizard on open.
+            const openWizardRichPreview = () => {
+                const active = wizardActiveAuthors();
+                if (active.length === 0) { showInfoDialog('No Selection', 'Please select at least one listed author to organize.'); return; }
+                const authorGroups = active.map(a => ({ displayName: a.displayName, books: a.books }));
+                const opts = {
+                    createSeriesFolders: wizardCreateSeriesFolders,
+                    sortByPosition: wizardSortByPosition,
+                    createMiscellaneous: wizardCreateMiscellaneous,
+                    seriesFolderMinBooks: wizardSeriesFolderMin
+                };
+                const mode = wizardCreateSeriesFolders ? 'series' : 'author';
+                const label = active.length === 1 ? `Auto-Organized ${active[0].displayName}` : `Auto-Organized ${active.length} authors`;
+                if (openAutoOrgPreviewCore(authorGroups, '__inbox__', opts, mode, label)) setWizardModalOpen(false);
             };
             const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
                 { createSeriesFolders: false }, // FLAT — no series subfolders
@@ -10038,10 +10054,10 @@
                                         </div>
                                     </div>
 
-                                    {/* Action buttons — operate on shown-and-selected; count shown so the scope is explicit. */}
+                                    {/* Action buttons — one "Preview →" opens the shared rich preview (checkbox tree, already-filed,
+                                        destination context, adaptive Organize) for the shown-and-selected authors. v6.16.0. */}
                                     {(() => {
-                                        const active = wizardActiveAuthors();
-                                        const n = active.length;
+                                        const n = wizardActiveAuthors().length;
                                         return (
                                         <div className="flex justify-end gap-3 pt-2">
                                             <button
@@ -10049,22 +10065,11 @@
                                                 className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium transition-colors">
                                                 Cancel
                                             </button>
-                                            {/* v5.1.0-alpha.28 - Phase 3.1: Preview button */}
                                             <button
-                                                onClick={() => {
-                                                    const previewData = calculateWizardPreview(active);
-                                                    setWizardPreviewData(previewData);
-                                                    setWizardPreviewMode(true);
-                                                }}
-                                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                disabled={n === 0}>
-                                                Preview{n > 0 ? ` (${n})` : ''}
-                                            </button>
-                                            <button
-                                                onClick={() => executeWizardOrganize()}
+                                                onClick={openWizardRichPreview}
                                                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 disabled={n === 0}>
-                                                Organize {n} author{n !== 1 ? 's' : ''}
+                                                Preview {n} author{n !== 1 ? 's' : ''} →
                                             </button>
                                         </div>
                                         );
@@ -10288,7 +10293,7 @@
 
                     {/* v6.13.0-alpha.7 (D1) - Auto-Organize confirm/preview: hierarchical Author→Series→covers before commit */}
                     {autoOrgPreview && (() => {
-                        const { mode, authorGroups, dryPlan, sourceName, sourceFolderId, alreadyFiled = [] } = autoOrgPreview;
+                        const { mode, authorGroups, dryPlan, sourceName, sourceFolderId, opts = {}, alreadyFiled = [] } = autoOrgPreview;
                         const filedIds = new Set(alreadyFiled.map(x => x.book.id));
                         // The bottom "Will organize" section shows the movers only — the already-filed books render in the
                         // top section instead, so they're never double-listed.
@@ -10406,10 +10411,30 @@
                                             {moverGroups.map(ag => {
                                                 const multiAuthor = moverGroups.length > 1;
                                                 if (mode === 'series') {
+                                                    // v6.16.0 - Bucket exactly as the engine will file (so the preview matches the plan for BOTH
+                                                    // the right-click path [min 1, no misc] and the wizard [its threshold + Miscellaneous]):
+                                                    //  · a series with ≥ threshold books → its own subfolder shelf
+                                                    //  · a below-threshold series → folds into the author root
+                                                    //  · standalones → a "Miscellaneous" subfolder (if enabled) else the author root
+                                                    const minSeries = opts.seriesFolderMinBooks != null ? opts.seriesFolderMinBooks : 1;
+                                                    const createMisc = opts.createMiscellaneous === true;
                                                     const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
+                                                    const rootBooks = [];
+                                                    const seriesShelves = [];
+                                                    for (const s of seriesGroups.values()) {
+                                                        if (s.books.length >= minSeries) seriesShelves.push({ key: s.originalName, standalone: false, destSeries: s.originalName, name: s.originalName, books: s.books });
+                                                        else rootBooks.push(...s.books);
+                                                    }
                                                     const shelves = [];
-                                                    if (standaloneBooks.length > 0) shelves.push({ key: '__standalone__', standalone: true, name: `Directly under ${ag.displayName}`, books: standaloneBooks });
-                                                    for (const s of seriesGroups.values()) shelves.push({ key: s.originalName, standalone: false, name: s.originalName, books: s.books });
+                                                    if (createMisc && standaloneBooks.length > 0) {
+                                                        if (rootBooks.length > 0) shelves.push({ key: '__standalone__', standalone: true, destSeries: null, name: `Directly under ${ag.displayName}`, books: rootBooks });
+                                                        shelves.push(...seriesShelves);
+                                                        shelves.push({ key: '__misc__', standalone: false, destSeries: 'Miscellaneous', name: 'Miscellaneous', books: standaloneBooks });
+                                                    } else {
+                                                        const root = [...rootBooks, ...standaloneBooks];
+                                                        if (root.length > 0) shelves.push({ key: '__standalone__', standalone: true, destSeries: null, name: `Directly under ${ag.displayName}`, books: root });
+                                                        shelves.push(...seriesShelves);
+                                                    }
                                                     const multiShelf = shelves.length > 1;
                                                     return (
                                                         <div key={ag.displayName} className="mb-4">
@@ -10419,7 +10444,7 @@
                                                             </div>
                                                             <div className="ml-4 mt-1">
                                                                 {shelves.map(sh => {
-                                                                    const existing = existingInDest(ag.displayName, sh.standalone ? null : sh.name);
+                                                                    const existing = existingInDest(ag.displayName, sh.destSeries);
                                                                     return (
                                                                     <div key={sh.key} className="mb-2">
                                                                         <div className={`text-sm flex items-center gap-2 ${sh.standalone ? 'text-gray-500 italic' : 'text-gray-700'}`}>
