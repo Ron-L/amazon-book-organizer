@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.21";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.22";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7148,7 +7148,10 @@
                 };
                 const mode = wizardCreateSeriesFolders ? 'series' : 'author';
                 const label = active.length === 1 ? `Auto-Organized ${active[0].displayName}` : `Auto-Organized ${active.length} authors`;
-                if (openAutoOrgPreviewCore(authorGroups, '__inbox__', opts, mode, label)) setWizardModalOpen(false);
+                // v6.16.0 - Leave the wizard OPEN underneath: the rich preview stacks on top (it renders later → higher),
+                // so Cancel/Organize returns to the wizard to work the next author batch. The wizard's author list
+                // auto-refreshes (its effect keys on books/folders) once organized books leave the Inbox.
+                openAutoOrgPreviewCore(authorGroups, '__inbox__', opts, mode, label);
             };
             const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
                 { createSeriesFolders: false }, // FLAT — no series subfolders
