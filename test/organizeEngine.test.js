@@ -140,4 +140,19 @@ test('de-organize guard: By Series from the author root still deepens into a ser
     assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fa').bookIds, [], 'books removed from the source (author root) — deepened, not duplicated');
 });
 
+test('existing series folder overrides the threshold (never split a series that already has a home)', () => {
+    // Dune already has a folder with 3 books; one more Dune book comes in. Even with the default threshold (2),
+    // and though only ONE book is incoming, it must join the existing Dune folder — not scatter to the author root.
+    const existing = [
+        { id: '__inbox__', name: 'Inbox', parentId: null, bookIds: ['b4'] },
+        { id: 'fa', name: 'Frank Herbert', parentId: null, bookIds: [] },
+        { id: 'fs', name: 'Dune', parentId: 'fa', bookIds: ['d1', 'd2', 'd3'] }, // 3 already filed
+    ];
+    const plan = computeOrganizePlan([herbert], existing, {}, counterIdGen()); // default seriesFolderMinBooks: 2
+    const dune = plan.newFolders.find(f => f.name === 'Dune');
+    assert.deepStrictEqual(dune.bookIds, ['d1', 'd2', 'd3', 'b4'], 'incoming Dune book joins the existing folder');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fa').bookIds, [], 'nothing scattered to the author root');
+    assert.strictEqual(plan.totalBooksOrganized, 1);
+});
+
 console.log(`\nAll ${passed} tests passed.`);

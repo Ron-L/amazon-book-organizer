@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.23";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.24";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -9897,7 +9897,7 @@
                                                     className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-40">+</button>
                                             </span>
                                             <span>book{wizardSeriesFolderMin !== 1 ? 's' : ''} of it</span>
-                                            <span className="w-full text-xs text-gray-400">1 = every series gets its own folder; higher = fewer, tidier folders.</span>
+                                            <span className="w-full text-xs text-gray-400">1 = every series gets its own folder; higher = fewer, tidier folders. A series that already has a folder always keeps it.</span>
                                         </div>
                                         <label className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-2 rounded cursor-pointer">
                                             <input
@@ -10414,30 +10414,30 @@
                                             {moverGroups.map(ag => {
                                                 const multiAuthor = moverGroups.length > 1;
                                                 if (mode === 'series') {
-                                                    // v6.16.0 - Bucket incoming books exactly as the engine will file them (threshold + Miscellaneous),
-                                                    // keyed by destination (null = author root):
+                                                    // v6.16.0 - Enumerate the author's real folder first, then bucket incoming books exactly as the
+                                                    // engine files them (threshold + Miscellaneous), keyed by destination (null = author root). Key rule:
+                                                    // an EXISTING series subfolder always takes its books regardless of the threshold (never split a series
+                                                    // that already has a home) — matches the engine.
                                                     const minSeries = opts.seriesFolderMinBooks != null ? opts.seriesFolderMinBooks : 1;
                                                     const createMisc = opts.createMiscellaneous === true;
+                                                    const authorFolder = folders.find(f => f.name === ag.displayName && f.parentId === null);
+                                                    const existingSubs = authorFolder ? folders.filter(f => f.parentId === authorFolder.id) : [];
+                                                    const existingSubNames = new Set(existingSubs.map(f => f.name));
                                                     const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
                                                     const rootIncoming = [];
                                                     const targetByDest = new Map();
                                                     for (const s of seriesGroups.values()) {
-                                                        if (s.books.length >= minSeries) targetByDest.set(s.originalName, s.books);
+                                                        if (s.books.length >= minSeries || existingSubNames.has(s.originalName)) targetByDest.set(s.originalName, s.books);
                                                         else rootIncoming.push(...s.books);
                                                     }
                                                     if (createMisc && standaloneBooks.length > 0) targetByDest.set('Miscellaneous', standaloneBooks);
                                                     else rootIncoming.push(...standaloneBooks);
                                                     if (rootIncoming.length > 0) targetByDest.set(null, rootIncoming);
-                                                    // v6.16.0 (d) - Show the author's FULL existing structure, not just targets: enumerate the author
-                                                    // folder's real subfolders (+ root) and merge with the incoming buckets. Non-target subfolders render
-                                                    // muted with their existing books (small covers), so you see the whole neighborhood in-place.
-                                                    const authorFolder = folders.find(f => f.name === ag.displayName && f.parentId === null);
-                                                    const existingSubNames = new Set();
+                                                    // Merge the incoming buckets with the author's FULL existing structure so non-target subfolders show too.
                                                     const slots = [];
                                                     const rootExisting = existingInDest(ag.displayName, null);
                                                     if ((targetByDest.get(null) || []).length > 0 || rootExisting.length > 0) slots.push({ key: '__root__', standalone: true, name: `Directly under ${ag.displayName}`, incoming: targetByDest.get(null) || [], existing: rootExisting });
-                                                    if (authorFolder) folders.filter(f => f.parentId === authorFolder.id).forEach(sub => {
-                                                        existingSubNames.add(sub.name);
+                                                    existingSubs.forEach(sub => {
                                                         slots.push({ key: sub.id, standalone: false, name: sub.name, incoming: targetByDest.get(sub.name) || [], existing: existingInDest(ag.displayName, sub.name) });
                                                     });
                                                     targetByDest.forEach((books, dest) => {

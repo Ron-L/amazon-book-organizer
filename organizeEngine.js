@@ -107,9 +107,13 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
             const booksToAuthorRoot = [];
 
             seriesGroups.forEach((seriesData) => {
-                if (seriesData.books.length >= seriesFolderMinBooks) {
-                    const seriesFolderName = seriesData.originalName;
-                    let seriesFolder = findFolder(seriesFolderName, targetFolder.id);
+                const seriesFolderName = seriesData.originalName;
+                const existingSeriesFolder = findFolder(seriesFolderName, targetFolder.id);
+                // v6.16.0 - An existing series folder ALWAYS receives its books. The threshold only gates whether to
+                // CREATE a new folder — so we never split a series that already has a home (existing 9 + new 3 must
+                // land together in the folder, not scatter 3 to the author root just because 3 < threshold).
+                if (existingSeriesFolder || seriesData.books.length >= seriesFolderMinBooks) {
+                    let seriesFolder = existingSeriesFolder;
                     if (!seriesFolder) {
                         seriesFolder = { id: idGen('folder-series'), name: seriesFolderName, bookIds: [], parentId: targetFolder.id, collapsed: false };
                         folders.push(seriesFolder);
