@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.14";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -663,10 +663,9 @@
             const [autoOrgAnchor, setAutoOrgAnchor] = useState(null);  // v6.16.0 - shift-range pivot (last plain/ctrl-clicked cover) in the preview
             const [autoOrgMenu, setAutoOrgMenu] = useState(null);       // v6.13.0-alpha.9 (D2) - preview cover right-click menu: { x, y, bookIds } or null
             const [autoOrgHover, setAutoOrgHover] = useState(null);     // v6.13.0-alpha.9 (D2) - preview cover hover "In" popup: { bookId, x, y } or null
-            // v6.16.0 - Mixed-case section toggles: which sections the single footer action includes. Only surfaced
-            // (as checkboxes) when the preview has BOTH an already-filed section and movers; default both on.
-            const [autoOrgIncFiled, setAutoOrgIncFiled] = useState(true);
-            const [autoOrgIncMovers, setAutoOrgIncMovers] = useState(true);
+            // v6.16.0 - The preview has ONE selection (autoOrgSel): default all-in. The checkbox tree (section → author →
+            // shelf) is just select-all/none over it; cover-clicks toggle individuals. Both the footer action AND
+            // "Add to Book List" read this one set. (No separate include-flags — the selection IS the include set.)
             const [wizardResultsData, setWizardResultsData] = useState(null); // v5.1.0-alpha.29 - Phase 3.3: Results summary data
             const [wizardSourceBooksCount, setWizardSourceBooksCount] = useState(0); // v5.1.0-alpha.30 - Phase 3.4: Track Inbox book count for validation
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -7103,8 +7102,9 @@
                 if (dryPlan.totalBooksOrganized === 0 && alreadyFiled.length === 0) { showToast('Nothing to organize — already filed under their author'); return; }
                 // Source folder name for the dialog title/body (null = the unfiled Inbox scope).
                 const sourceName = srcId === '__inbox__' ? null : (folders.find(f => f.id === srcId)?.name || null);
-                setAutoOrgSel(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null);
-                setAutoOrgIncFiled(true); setAutoOrgIncMovers(true);
+                // Default: everything selected (movers + already-filed). authorGroups holds both.
+                const allIds = authorGroups.flatMap(ag => ag.books.map(b => b.id));
+                setAutoOrgSel(new Set(allIds)); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null);
                 setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label: labelFor(authorGroups), dryPlan, sourceName, sourceFolderId: srcId, alreadyFiled });
             };
             const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
@@ -7131,43 +7131,41 @@
                 recordAction({ type: 'REMOVE_BOOKS_FOLDER', folderId, bookIds: present, fromIndices, label });
                 return present.length;
             };
-            // v6.16.0 - The single footer action. It commits whichever section(s) are included: organize the movers
-            // and/or remove the already-filed books from the source. In the mixed case those inclusions are the two
-            // section checkboxes (autoOrgIncMovers / autoOrgIncFiled); in a single-section preview the lone section is
-            // always included. Doing BOTH is folded into ONE WIZARD_ORGANIZE undo by extending the plan's source-removal
-            // to also pull the already-filed ids (so one Ctrl+Z reverts the whole click, not two).
+            // v6.16.0 - The single footer action, driven by the ONE selection: organize the SELECTED movers and/or
+            // remove the SELECTED already-filed books from the source. Doing both is folded into ONE WIZARD_ORGANIZE
+            // undo by extending the plan's source-removal to also pull the already-filed ids (one Ctrl+Z reverts it all).
             const commitAutoOrgPreview = () => {
                 if (!autoOrgPreview) return;
-                const { authorGroups, opts, label, mode, alreadyFiled = [], dryPlan, sourceFolderId, sourceName } = autoOrgPreview;
-                const hasMovers = dryPlan.totalBooksOrganized > 0;
-                const hasFiled = alreadyFiled.length > 0;
-                const mixed = hasMovers && hasFiled;
-                const doOrganize = hasMovers && (!mixed || autoOrgIncMovers);
-                const doRemove = hasFiled && (!mixed || autoOrgIncFiled);
-                if (!doOrganize && !doRemove) return; // "Nothing selected" — button is disabled, but guard anyway
-                const filedIds = alreadyFiled.map(x => x.book.id);
+                const { authorGroups, opts, label, mode, alreadyFiled = [], sourceFolderId, sourceName } = autoOrgPreview;
+                const filedSet = new Set(alreadyFiled.map(x => x.book.id));
+                const selectedFiledIds = alreadyFiled.map(x => x.book.id).filter(id => autoOrgSel.has(id));
+                // Selected movers, grouped (drop already-filed and anything unselected).
+                const selMoverGroups = authorGroups
+                    .map(ag => ({ ...ag, books: ag.books.filter(b => !filedSet.has(b.id) && autoOrgSel.has(b.id)) }))
+                    .filter(ag => ag.books.length > 0);
+                const willOrganize = selMoverGroups.length > 0;
+                const willRemove = selectedFiledIds.length > 0;
+                if (!willOrganize && !willRemove) return; // "Nothing selected" — button is disabled, but guard anyway
                 const where = sourceName ? `“${sourceName}”` : 'the Inbox';
-                if (doOrganize && doRemove) {
-                    // One plan, one undo: compute the organize plan, then also strip the already-filed ids from the
-                    // source (both in the resulting folders AND in the plan's REMOVE_BOOKS_FROM_FOLDER, so undo restores them).
-                    const plan = computeOrganizePlan(authorGroups, folders, opts);
+                if (willOrganize && willRemove) {
+                    const plan = computeOrganizePlan(selMoverGroups, folders, opts);
                     const newFolders = plan.newFolders.map(f => f.id === sourceFolderId
-                        ? { ...f, bookIds: (f.bookIds || []).filter(id => !filedIds.includes(id)) }
+                        ? { ...f, bookIds: (f.bookIds || []).filter(id => !selectedFiledIds.includes(id)) }
                         : f);
                     const subActions = plan.subActions.slice();
                     const rem = subActions.find(a => a.type === 'REMOVE_BOOKS_FROM_FOLDER' && a.folderId === sourceFolderId);
-                    if (rem) rem.bookIds = [...rem.bookIds, ...filedIds];
-                    else subActions.push({ type: 'REMOVE_BOOKS_FROM_FOLDER', folderId: sourceFolderId, bookIds: filedIds });
+                    if (rem) rem.bookIds = [...rem.bookIds, ...selectedFiledIds];
+                    else subActions.push({ type: 'REMOVE_BOOKS_FROM_FOLDER', folderId: sourceFolderId, bookIds: selectedFiledIds });
                     setFolders(newFolders);
-                    recordAction({ type: 'WIZARD_ORGANIZE', description: `${label} + removed ${filedIds.length} already-filed from ${where}`, subActions });
-                    showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} and removed ${filedIds.length} from ${where}`);
-                } else if (doOrganize) {
-                    const plan = applyOrganizePlan(authorGroups, opts, label);
+                    recordAction({ type: 'WIZARD_ORGANIZE', description: `${label} + removed ${selectedFiledIds.length} already-filed from ${where}`, subActions });
+                    showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} and removed ${selectedFiledIds.length} from ${where}`);
+                } else if (willOrganize) {
+                    const plan = applyOrganizePlan(selMoverGroups, opts, label);
                     showToast(mode === 'author'
                         ? `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} into author folders`
                         : `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} with series subfolders`);
                 } else {
-                    const n = removeBooksFromFolder(sourceFolderId, filedIds, `Remove ${filedIds.length} book${filedIds.length !== 1 ? 's' : ''} from ${where}`);
+                    const n = removeBooksFromFolder(sourceFolderId, selectedFiledIds, `Remove ${selectedFiledIds.length} book${selectedFiledIds.length !== 1 ? 's' : ''} from ${where}`);
                     showToast(n > 0
                         ? `Removed ${n} book${n !== 1 ? 's' : ''} from ${where} — still filed where they were`
                         : `Nothing to remove from ${where}`);
@@ -7177,10 +7175,12 @@
 
             // v6.16.0 - Preview selection model. Books in DISPLAY (row) order — standalone row then each series row, per
             // author (By Series); the author's row (By Author). Used for Shift-range and Ctrl+A within the preview.
+            // Display order across BOTH sections (already-filed first, then movers per author) — for Shift-range + Ctrl+A.
             const getPreviewOrderedBooks = (preview) => {
                 if (!preview) return [];
-                const filed = new Set((preview.alreadyFiled || []).map(x => x.book.id)); // selection acts on the movers only
                 const out = [];
+                (preview.alreadyFiled || []).forEach(x => out.push(x.book));
+                const filed = new Set((preview.alreadyFiled || []).map(x => x.book.id));
                 for (const ag of preview.authorGroups) {
                     const bks = ag.books.filter(b => !filed.has(b.id));
                     if (preview.mode === 'series') {
@@ -7191,7 +7191,8 @@
                 }
                 return out;
             };
-            // Click = replace selection; Ctrl/Cmd+click = toggle; Shift+click = range from the anchor (Ctrl+Shift extends).
+            // Checklist model (selection = the include set): plain click TOGGLES one; Shift+click applies the target's
+            // new state across the range from the anchor. (No "replace" — the selection persists as the working set.)
             const handlePreviewCoverClick = (e, b) => {
                 e.stopPropagation();
                 if (e.shiftKey && autoOrgAnchor) {
@@ -7201,19 +7202,13 @@
                     if (a >= 0 && c >= 0) {
                         const [lo, hi] = a <= c ? [a, c] : [c, a];
                         const rangeIds = ordered.slice(lo, hi + 1).map(x => x.id);
-                        setAutoOrgSel(prev => {
-                            const base = (e.ctrlKey || e.metaKey) ? new Set(prev) : new Set();
-                            rangeIds.forEach(id => base.add(id));
-                            return base;
-                        });
-                        return; // keep the anchor for further shift-clicks
+                        const turnOn = !autoOrgSel.has(b.id); // match what a plain click on the target would do
+                        setAutoOrgSel(prev => { const n = new Set(prev); rangeIds.forEach(id => turnOn ? n.add(id) : n.delete(id)); return n; });
+                        setAutoOrgAnchor(b.id);
+                        return;
                     }
                 }
-                if (e.ctrlKey || e.metaKey) {
-                    setAutoOrgSel(prev => { const n = new Set(prev); n.has(b.id) ? n.delete(b.id) : n.add(b.id); return n; });
-                } else {
-                    setAutoOrgSel(new Set([b.id]));
-                }
+                setAutoOrgSel(prev => { const n = new Set(prev); n.has(b.id) ? n.delete(b.id) : n.add(b.id); return n; });
                 setAutoOrgAnchor(b.id);
             };
 
@@ -10258,9 +10253,19 @@
                         const moverGroups = authorGroups
                             .map(ag => ({ ...ag, books: ag.books.filter(b => !filedIds.has(b.id)) }))
                             .filter(ag => ag.books.length > 0);
-                        // Mixed = both a movers section AND an already-filed section → the two section checkboxes appear,
-                        // choosing what the single footer action includes. In a single-section preview there's no choice.
-                        const mixed = alreadyFiled.length > 0 && dryPlan.totalBooksOrganized > 0;
+                        // v6.16.0 - Selection helpers over the ONE include-set. A group's tri-state is derived from how many
+                        // of its books are selected; the checkbox toggles the whole group. Shown only where a group has a
+                        // real choice (siblings) — a lone shelf/author needs no redundant box.
+                        const groupState = (ids) => { if (!ids.length) return 'none'; const s = ids.reduce((a, id) => a + (autoOrgSel.has(id) ? 1 : 0), 0); return s === 0 ? 'none' : s === ids.length ? 'all' : 'some'; };
+                        const toggleGroup = (ids) => { const on = groupState(ids) !== 'all'; setAutoOrgSel(prev => { const n = new Set(prev); ids.forEach(id => on ? n.add(id) : n.delete(id)); return n; }); };
+                        const triCheck = (ids) => { const st = groupState(ids); return (
+                            <span role="checkbox" aria-checked={st === 'all'} title={st === 'all' ? 'Deselect all' : 'Select all'}
+                                onClick={(e) => { e.stopPropagation(); toggleGroup(ids); }}
+                                className="inline-flex items-center justify-center flex-shrink-0 cursor-pointer select-none rounded-sm"
+                                style={{ width: '16px', height: '16px', border: `1.5px solid ${st === 'none' ? '#9ca3af' : '#4f46e5'}`, background: st === 'none' ? '#fff' : '#4f46e5', color: '#fff', fontSize: '11px', lineHeight: 1 }}>
+                                {st === 'all' ? '✓' : st === 'some' ? '–' : ''}
+                            </span>
+                        ); };
                         const cover = (b) => {
                             const sel = autoOrgSel.has(b.id);
                             return (
@@ -10271,8 +10276,8 @@
                                 onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null); }}
                                 onContextMenu={(e) => {
                                     e.preventDefault(); e.stopPropagation();
-                                    const ids = (autoOrgSel.has(b.id) && autoOrgSel.size > 0) ? [...autoOrgSel] : [b.id];
-                                    if (!autoOrgSel.has(b.id)) setAutoOrgSel(new Set([b.id]));
+                                    // Add-to-Book-List reads the current selection (don't disturb it); fall back to this cover if empty.
+                                    const ids = autoOrgSel.size > 0 ? [...autoOrgSel] : [b.id];
                                     setAutoOrgHover(null);
                                     setAutoOrgMenu({ x: e.clientX, y: e.clientY, bookIds: ids });
                                 }}
@@ -10286,19 +10291,6 @@
                             );
                         };
                         const coverRow = (bks) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{bks.map(cover)}</div>;
-                        // Already-filed covers are context, not organize targets — no selection ring/handlers; double-click still opens detail.
-                        const filedCover = (b) => (
-                            <div key={b.id}
-                                title={`${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`}
-                                style={{ width: '46px', flex: '0 0 auto', cursor: 'pointer' }}
-                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null); }}>
-                                {b.coverUrl
-                                    ? <img src={b.coverUrl} alt="" style={{ width: '46px', height: '69px', objectFit: 'cover', borderRadius: '3px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                                    : <div style={{ width: '46px', height: '69px', borderRadius: '3px', background: 'var(--bg-hover, #e5e7eb)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', lineHeight: 1.1, textAlign: 'center', padding: '3px', overflow: 'hidden', color: 'var(--text-secondary, #6b7280)' }}>{b.title || 'Untitled'}</div>}
-                            </div>
-                        );
-                        const folderCount = dryPlan.createdFolders.length + dryPlan.mergedFolders.length;
-                        const subCount = dryPlan.subActions.filter(a => a.type === 'CREATE_FOLDER' && a.parentId !== null).length;
                         return (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeAutoOrgPreview(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-autoorg-preview" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
@@ -10307,105 +10299,95 @@
                                     <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">✨ Auto-Organize {sourceName ? `“${sourceName}” Folder` : 'Inbox'} — {mode === 'series' ? 'By Series' : 'By Author'}</h2>
                                     <button onClick={closeAutoOrgPreview} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
-                                {/* Summary — normal case only. In the mixed case the "Will organize (N)" section header carries
-                                    the count, and a static "Move 3…" here would contradict an unticked box. */}
-                                {dryPlan.totalBooksOrganized > 0 && alreadyFiled.length === 0 && (
-                                    <div className="px-4 pt-3 text-sm text-gray-700">
-                                        Move <strong>{dryPlan.totalBooksOrganized}</strong> book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''} into <strong>{folderCount}</strong> author folder{folderCount !== 1 ? 's' : ''}{subCount > 0 ? <> and <strong>{subCount}</strong> series subfolder{subCount !== 1 ? 's' : ''}</> : null}. These leave {sourceName ? `the “${sourceName}” folder` : 'the Inbox'}.
-                                    </div>
-                                )}
-                                {/* Scrollable hierarchy */}
+                                {/* Scrollable hierarchy — one selection; checkbox tree = select-all/none per group */}
                                 <div className="p-4 overflow-y-auto" style={{ flex: 1 }}>
-                                    {/* v6.16.0 - Top section: books already filed where Auto-Organize would put them, still sitting in the source. */}
+                                    {/* Already-filed section — its checkbox is select-all/none over the filed books. */}
                                     {alreadyFiled.length > 0 && (
-                                        <div className="mb-4">
-                                            {/* Header — a checkbox in the mixed case decides whether the footer action includes this section. */}
-                                            <label className={`text-sm font-semibold text-gray-900 flex items-center gap-2 ${mixed ? 'cursor-pointer' : ''}`}>
-                                                {mixed && <input type="checkbox" checked={autoOrgIncFiled} onChange={(e) => setAutoOrgIncFiled(e.target.checked)} className="w-4 h-4 accent-indigo-600" />}
-                                                <span>✅ Already filed</span> <span className="text-gray-400 font-normal">({alreadyFiled.length})</span>
-                                            </label>
-                                            <div className={`transition-opacity ${mixed && !autoOrgIncFiled ? 'opacity-40' : ''}`}>
-                                                <div className="text-xs text-gray-500 mt-1 mb-2">
-                                                    {alreadyFiled.length === 1 ? 'This book is' : `These ${alreadyFiled.length} books are`} already filed where Auto-Organize would put {alreadyFiled.length === 1 ? 'it' : 'them'}, but {alreadyFiled.length === 1 ? "it's" : "they're"} still in {sourceName ? `the “${sourceName}” folder` : 'the Inbox'}. Removing {alreadyFiled.length === 1 ? 'it' : 'them'} from {sourceName ? 'this folder' : 'the Inbox'} leaves {alreadyFiled.length === 1 ? 'it' : 'them'} filed where {alreadyFiled.length === 1 ? 'it is' : 'they are'}.
-                                                </div>
-                                                {alreadyFiled.map(({ book, folders: homes }) => (
-                                                    <div key={book.id} className="flex items-center gap-3 mb-2">
-                                                        {filedCover(book)}
-                                                        <div className="flex flex-wrap gap-1.5">
-                                                            {homes.map(f => (
-                                                                <span key={f.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">✓ {f.name}</span>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                        <div className="mb-3">
+                                            <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                                {triCheck(alreadyFiled.map(x => x.book.id))}
+                                                <span>Already filed</span> <span className="text-gray-400 font-normal">({alreadyFiled.length})</span>
                                             </div>
-                                            {moverGroups.length > 0 && (
-                                                <>
-                                                    <div className="border-t border-gray-200 my-3"></div>
-                                                    <label className={`text-sm font-semibold text-gray-900 flex items-center gap-2 mb-1 ${mixed ? 'cursor-pointer' : ''}`}>
-                                                        {mixed && <input type="checkbox" checked={autoOrgIncMovers} onChange={(e) => setAutoOrgIncMovers(e.target.checked)} className="w-4 h-4 accent-indigo-600" />}
-                                                        <span>Will organize</span> <span className="text-gray-400 font-normal">({dryPlan.totalBooksOrganized})</span>
-                                                    </label>
-                                                </>
-                                            )}
-                                        </div>
-                                    )}
-                                    <div className={`transition-opacity ${mixed && !autoOrgIncMovers ? 'opacity-40' : ''}`}>
-                                    {moverGroups.map(ag => {
-                                        if (mode === 'series') {
-                                            const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
-                                            return (
-                                                <div key={ag.displayName} className="mb-4">
-                                                    <div className="font-semibold text-gray-900 flex items-center gap-2">📁 {ag.displayName}</div>
-                                                    <div className="ml-4 mt-1">
-                                                        {/* Top level (author root) first, then the 2nd-level series subfolders — reads top-down. */}
-                                                        {standaloneBooks.length > 0 && (
-                                                            <div className="mb-2">
-                                                                <div className="text-sm text-gray-500 italic">Directly under {ag.displayName} <span className="text-gray-400">({standaloneBooks.length})</span></div>
-                                                                {coverRow(standaloneBooks)}
-                                                            </div>
-                                                        )}
-                                                        {[...seriesGroups.values()].map(s => (
-                                                            <div key={s.originalName} className="mb-2">
-                                                                <div className="text-sm text-gray-700 flex items-center gap-2">📚 {s.originalName} <span className="text-gray-400">({s.books.length})</span></div>
-                                                                {coverRow(s.books)}
-                                                            </div>
+                                            <div className="text-xs text-gray-500 mt-1 mb-2">
+                                                {alreadyFiled.length === 1 ? 'This book is' : `These ${alreadyFiled.length} books are`} already filed where Auto-Organize would put {alreadyFiled.length === 1 ? 'it' : 'them'}, but still in {sourceName ? `the “${sourceName}” folder` : 'the Inbox'}. Selected ones get removed from {sourceName ? 'this folder' : 'the Inbox'} (they stay filed where they are).
+                                            </div>
+                                            {alreadyFiled.map(({ book, folders: homes }) => (
+                                                <div key={book.id} className="flex items-center gap-3 mb-2">
+                                                    {cover(book)}
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {homes.map(f => (
+                                                            <span key={f.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">✓ {f.name}</span>
                                                         ))}
                                                     </div>
                                                 </div>
-                                            );
-                                        }
-                                        return (
-                                            <div key={ag.displayName} className="mb-4">
-                                                <div className="font-semibold text-gray-900 flex items-center gap-2">📁 {ag.displayName} <span className="text-gray-400 font-normal">({ag.books.length})</span></div>
-                                                <div className="ml-4">{coverRow(ag.books)}</div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    {/* Will-organize section — section box = select-all/none of movers; author/shelf boxes appear only where there's a real choice (siblings). */}
+                                    {moverGroups.length > 0 && (
+                                        <div>
+                                            {alreadyFiled.length > 0 && <div className="border-t border-gray-200 mb-3"></div>}
+                                            <div className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-1">
+                                                {triCheck(moverGroups.flatMap(ag => ag.books.map(b => b.id)))}
+                                                <span>Will organize</span> <span className="text-gray-400 font-normal">({moverGroups.reduce((a, ag) => a + ag.books.length, 0)})</span>
                                             </div>
-                                        );
-                                    })}
-                                    </div>
+                                            {moverGroups.map(ag => {
+                                                const multiAuthor = moverGroups.length > 1;
+                                                if (mode === 'series') {
+                                                    const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
+                                                    const shelves = [];
+                                                    if (standaloneBooks.length > 0) shelves.push({ key: '__standalone__', standalone: true, name: `Directly under ${ag.displayName}`, books: standaloneBooks });
+                                                    for (const s of seriesGroups.values()) shelves.push({ key: s.originalName, standalone: false, name: s.originalName, books: s.books });
+                                                    const multiShelf = shelves.length > 1;
+                                                    return (
+                                                        <div key={ag.displayName} className="mb-4">
+                                                            <div className="font-semibold text-gray-900 flex items-center gap-2">
+                                                                {multiAuthor && triCheck(ag.books.map(b => b.id))}
+                                                                📁 {ag.displayName}
+                                                            </div>
+                                                            <div className="ml-4 mt-1">
+                                                                {shelves.map(sh => (
+                                                                    <div key={sh.key} className="mb-2">
+                                                                        <div className={`text-sm flex items-center gap-2 ${sh.standalone ? 'text-gray-500 italic' : 'text-gray-700'}`}>
+                                                                            {multiShelf && triCheck(sh.books.map(b => b.id))}
+                                                                            {sh.standalone ? sh.name : <>📚 {sh.name}</>} <span className="text-gray-400 not-italic">({sh.books.length})</span>
+                                                                        </div>
+                                                                        {coverRow(sh.books)}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                return (
+                                                    <div key={ag.displayName} className="mb-4">
+                                                        <div className="font-semibold text-gray-900 flex items-center gap-2">
+                                                            {multiAuthor && triCheck(ag.books.map(b => b.id))}
+                                                            📁 {ag.displayName} <span className="text-gray-400 font-normal">({ag.books.length})</span>
+                                                        </div>
+                                                        <div className="ml-4">{coverRow(ag.books)}</div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
-                                {/* Footer. One adaptive primary that commits whichever section(s) are included (both, in the
-                                    mixed case, are the two checkboxes; single-section previews always include their lone section).
-                                    The label spells out exactly what it will do; disabled + "Nothing selected" when both are off.
-                                    Cancel is always present and unambiguous — there's only ever one action button beside it. */}
+                                {/* Footer. One adaptive primary driven by the selection: it organizes the SELECTED movers and/or
+                                    removes the SELECTED already-filed books, spelling out exactly what it will do; disabled +
+                                    "Nothing selected" when the selection is empty. Cancel always present. */}
                                 {(() => {
-                                    const hasMovers = dryPlan.totalBooksOrganized > 0;
-                                    const hasFiled = alreadyFiled.length > 0;
-                                    const doOrganize = hasMovers && (!mixed || autoOrgIncMovers);
-                                    const doRemove = hasFiled && (!mixed || autoOrgIncFiled);
-                                    const enabled = doOrganize || doRemove;
-                                    const orgN = dryPlan.totalBooksOrganized, remN = alreadyFiled.length;
+                                    const selMovers = moverGroups.flatMap(ag => ag.books.map(b => b.id)).filter(id => autoOrgSel.has(id)).length;
+                                    const selFiled = alreadyFiled.map(x => x.book.id).filter(id => autoOrgSel.has(id)).length;
+                                    const enabled = selMovers > 0 || selFiled > 0;
                                     const inbox = sourceName ? `“${sourceName}”` : 'Inbox';
-                                    const label = (doOrganize && doRemove) ? `Organize ${orgN} & remove ${remN} from ${inbox}`
-                                        : doOrganize ? `Organize ${orgN} book${orgN !== 1 ? 's' : ''}`
-                                        : doRemove ? `Remove ${remN} from ${inbox}`
+                                    const label = (selMovers > 0 && selFiled > 0) ? `Organize ${selMovers} & remove ${selFiled} from ${inbox}`
+                                        : selMovers > 0 ? `Organize ${selMovers} book${selMovers !== 1 ? 's' : ''}`
+                                        : selFiled > 0 ? `Remove ${selFiled} from ${inbox}`
                                         : 'Nothing selected';
                                     return (
                                         <div className="p-4 border-t border-gray-200 flex justify-between items-center gap-3">
                                             <div className="text-xs text-gray-500 flex-1 px-1">
-                                                {hasMovers && (autoOrgSel.size > 0
-                                                    ? `${autoOrgSel.size} selected — right-click to add to a Book List`
-                                                    : 'Tip: click covers to select, then right-click → add them to a Book List (e.g. New To Read)')}
+                                                {autoOrgSel.size} selected — right-click a cover to add them to a Book List
                                             </div>
                                             <div className="flex gap-2 flex-shrink-0">
                                                 <button onClick={closeAutoOrgPreview} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Cancel</button>
