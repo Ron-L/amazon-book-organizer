@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.24";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.25";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -569,6 +569,7 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [searchHistory, setSearchHistory] = useState([]);
             const [modalBook, setModalBook] = useState(null);
+            const [modalNavOverride, setModalNavOverride] = useState(null); // v6.16.0 - explicit nav list (e.g. a preview shelf: incoming + already-here)
             const [dataSource, setDataSource] = useState('none');
             const [blankImageBooks, setBlankImageBooks] = useState(new Set());
             // v5.0.0-alpha.175.1 - Menu bar state
@@ -5497,7 +5498,8 @@
             };
 
 
-            const openBookModal = (book, columnId) => {
+            const openBookModal = (book, columnId, navList) => {
+                setModalNavOverride(navList && navList.length ? navList : null); // v6.16.0 - explicit nav context (e.g. a preview shelf)
                 try {
                     const cache = localStorage.getItem(CACHE_KEY);
                     if (cache) {
@@ -5524,6 +5526,7 @@
             // v6.16.0 (#55) - Book-detail prev/next: cycle the CURRENT context's books, circular — the explorer view,
             // or the Auto-Organize preview's shelf when that's open (the detail modal opens over the preview).
             const modalNavList = (() => {
+                if (modalNavOverride) return modalNavOverride; // explicit shelf (incoming + already-here), set at open time
                 if (!autoOrgPreview) return explorerSortedBooks;
                 const id = modalBook?.id;
                 if (id == null) return [];
@@ -5546,11 +5549,12 @@
                 if (modalNavIdx < 0 || modalNavList.length <= 1) return;
                 const n = modalNavList.length;
                 const next = modalNavList[(modalNavIdx + delta + n) % n];
-                if (next) openBookModal(next, null);
+                if (next) openBookModal(next, null, modalNavOverride); // keep the same list while cycling
             };
 
             const closeBookModal = () => {
                 setModalBook(null);
+                setModalNavOverride(null);
                 setIsEditingBook(false);
                 setEditBookFields({ title: '', author: '', series: '', seriesPosition: '', userNote: '', onWishlist: false });
                 setEditBookSeriesDropdownOpen(false);
@@ -5761,7 +5765,7 @@
                 };
                 window.addEventListener('keydown', handleArrowNav);
                 return () => window.removeEventListener('keydown', handleArrowNav);
-            }, [modalBook, isEditingBook, explorerSortedBooks, autoOrgPreview]);
+            }, [modalBook, isEditingBook, explorerSortedBooks, autoOrgPreview, modalNavOverride]);
 
             // v5.4.2 - ESC closes innermost modal (layered dismissal)
             // aboutDialogOpen, shortcutsDialogOpen, howToDialogOpen handled separately in handleEscKey
@@ -10316,14 +10320,14 @@
                                 {st === 'all' ? '✓' : st === 'some' ? '–' : ''}
                             </span>
                         ); };
-                        const cover = (b) => {
+                        const cover = (b, navList) => {
                             const sel = autoOrgSel.has(b.id);
                             return (
                             <div key={b.id}
                                 title={`${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`}
                                 style={{ width: '46px', flex: '0 0 auto', position: 'relative', cursor: 'pointer', borderRadius: '4px', outline: sel ? '2px solid #4f46e5' : '2px solid transparent', outlineOffset: '1px' }}
                                 onClick={(e) => handlePreviewCoverClick(e, b)}
-                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null); }}
+                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null, navList); }}
                                 onContextMenu={(e) => {
                                     e.preventDefault(); e.stopPropagation();
                                     // Add-to-Book-List reads the current selection (don't disturb it); fall back to this cover if empty.
@@ -10340,7 +10344,7 @@
                             </div>
                             );
                         };
-                        const coverRow = (bks) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{bks.map(cover)}</div>;
+                        const coverRow = (bks) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{bks.map(b => cover(b, bks))}</div>;
                         // v6.16.0 - Destination context: the books ALREADY in the folder each shelf would file into (filed
                         // elsewhere, not in the source), so you see the full series/author at once — e.g. "2 new · 5 already
                         // here". Read-only (faded, no selection); double-click still opens detail. Source books are excluded
@@ -10353,24 +10357,28 @@
                             if (!target) return [];
                             return (target.bookIds || []).filter(id => !sourceIdSet.has(id)).map(id => bookMap.get(id)).filter(Boolean);
                         };
-                        const contextCover = (b) => (
+                        const contextCover = (b, navList) => (
                             <div key={'ctx-' + b.id}
                                 title={`Already here: ${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`}
                                 style={{ width: '38px', flex: '0 0 auto', cursor: 'pointer' }}
-                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null); }}>
+                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null, navList); }}>
                                 {b.coverUrl
                                     ? <img src={b.coverUrl} alt="" style={{ width: '38px', height: '57px', objectFit: 'cover', borderRadius: '3px' }} />
                                     : <div style={{ width: '38px', height: '57px', borderRadius: '3px', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', lineHeight: 1.1, textAlign: 'center', padding: '2px', overflow: 'hidden', color: '#6b7280' }}>{b.title || 'Untitled'}</div>}
                             </div>
                         );
-                        // A row of movers + (faded) existing-in-destination covers, split by a hairline.
-                        const shelfRow = (movers, existing) => (
+                        // A row of movers + (faded) existing-in-destination covers, split by a hairline. Book-detail nav
+                        // (‹ ›) spans the WHOLE shelf — incoming + already-here — so you can flip through all of them.
+                        const shelfRow = (movers, existing) => {
+                            const full = [...movers, ...existing];
+                            return (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px', alignItems: 'flex-start' }}>
-                                {movers.map(cover)}
+                                {movers.map(b => cover(b, full))}
                                 {existing.length > 0 && <div style={{ width: '1px', alignSelf: 'stretch', background: '#e5e7eb', margin: '0 3px' }} />}
-                                {existing.map(contextCover)}
+                                {existing.map(b => contextCover(b, full))}
                             </div>
-                        );
+                            );
+                        };
                         return (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeAutoOrgPreview(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-autoorg-preview" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
@@ -10393,7 +10401,7 @@
                                             </div>
                                             {alreadyFiled.map(({ book, folders: homes }) => (
                                                 <div key={book.id} className="flex items-center gap-3 mb-2">
-                                                    {cover(book)}
+                                                    {cover(book, alreadyFiled.map(x => x.book))}
                                                     <div className="flex flex-wrap gap-1.5">
                                                         {homes.map(f => (
                                                             <span key={f.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">✓ {f.name}</span>
@@ -10466,7 +10474,7 @@
                                                                         </div>
                                                                         {hasIncoming
                                                                             ? shelfRow(slot.incoming, slot.existing)
-                                                                            : <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{slot.existing.map(contextCover)}</div>}
+                                                                            : <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{slot.existing.map(b => contextCover(b, slot.existing))}</div>}
                                                                     </div>
                                                                     );
                                                                 })}
