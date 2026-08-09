@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.12";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7011,11 +7011,17 @@
                 return books.filter(b => !inFolders.has(b.id));
             };
             // v6.14.0 - Auto-Organize is scoped to the folder you invoked it from (not always the Inbox):
-            // a real folder → its books; Inbox / All Books → unfiled (inboxSourceBooks); a Book List id →
-            // [] (lists aren't in `folders`, so find() misses — and the menu is hidden there anyway). The
-            // matching sourceFolderId (below) is what the engine removes organized books FROM.
+            // a real folder → its books; a Book List id → [] (lists aren't in `folders`, so find() misses — and
+            // the menu is hidden there anyway). The matching sourceFolderId (below) is what the engine removes
+            // organized books FROM.
+            // v6.16.0 - The INBOX now uses its explicit membership (falls through to the generic branch), so its
+            // organize scope matches the Inbox VIEW exactly — a book that's in the Inbox AND already filed elsewhere
+            // is IN scope (surfaced as "already filed") no matter which same-author book you clicked. Only ALL BOOKS
+            // keeps the unfiled-complement meaning (organizing "everything" = give the still-unfiled books a home;
+            // you can't remove a book FROM the All view). Previously the Inbox shared that complement, which dropped
+            // filed-but-in-Inbox books from the scope and made the preview depend on which book was clicked.
             const currentFolderSourceBooks = (fid) => {
-                if (!fid || fid === '__inbox__' || fid === '__all__') return inboxSourceBooks();
+                if (!fid || fid === '__all__') return inboxSourceBooks();
                 const folder = folders.find(f => f.id === fid);
                 if (!folder) return []; // unknown id or a Book List — not a custodial folder → nothing to organize
                 const idset = new Set(folder.bookIds || []);
@@ -7028,10 +7034,11 @@
             const normAuthorKey = (a) => (a || '').trim().toLowerCase();
             const displayAuthorName = (a) => (a && a.trim()) ? a.trim() : 'Unknown Author';
 
-            // v6.16.0 - The organize pool is the source-folder scope PLUS the explicitly-selected books. A book that
-            // is BOTH in the source (e.g. the Inbox) and already filed elsewhere is otherwise pre-excluded by
-            // inboxSourceBooks() (unfiled-only) — including it keeps it a candidate the engine evaluates (and leaves
-            // un-moved as already-filed, which we then surface) instead of vanishing into a "no books here" toast.
+            // v6.16.0 - The organize pool is the source-folder scope PLUS the explicitly-selected books. This matters
+            // for sources that use the unfiled-complement scope (ALL BOOKS): a selected book that's already filed
+            // isn't in that complement, so we add it back as a candidate the engine evaluates (and leaves un-moved as
+            // already-filed, which we surface). For the Inbox this is now redundant (its scope is explicit membership),
+            // but harmless — kept as a safety net.
             const organizePoolFor = (fid, selBooks) => {
                 const scoped = currentFolderSourceBooks(fid);
                 const seen = new Set(scoped.map(b => b.id));
@@ -10346,19 +10353,27 @@
                                     })}
                                 </div>
                                 {/* Footer */}
-                                {/* Footer holds only Organize (primary, pinned). No Cancel button — the header X and Escape both
-                                    dismiss, and a footer Cancel next to Organize is exactly what read as "cancel just the Organize."
-                                    Remove lives inline in its own section above. Pure already-filed case → no footer at all. */}
-                                {dryPlan.totalBooksOrganized > 0 && (
-                                    <div className="p-4 border-t border-gray-200 flex justify-between items-center gap-3">
-                                        <div className="text-xs text-gray-500 flex-1 px-1">
-                                            {autoOrgSel.size > 0
-                                                ? `${autoOrgSel.size} selected — right-click to add to a Book List`
-                                                : 'Tip: click covers to select, then right-click → add them to a Book List (e.g. New To Read)'}
+                                {/* Footer. Organize (when there are movers) is the pinned primary. Cancel appears ONLY when the
+                                    dialog has a single section (normal OR pure already-filed) — one action, so Cancel is unambiguous.
+                                    In the mixed two-action case (already-filed + movers) it's omitted so it can't read as "cancel
+                                    just the Organize"; the header X and Escape still dismiss. Remove lives inline in its section above. */}
+                                {(() => {
+                                    const hasMovers = dryPlan.totalBooksOrganized > 0;
+                                    const showCancel = !(alreadyFiled.length > 0 && hasMovers); // hide only in the mixed (2-section) case
+                                    return (
+                                        <div className="p-4 border-t border-gray-200 flex justify-between items-center gap-3">
+                                            <div className="text-xs text-gray-500 flex-1 px-1">
+                                                {hasMovers && (autoOrgSel.size > 0
+                                                    ? `${autoOrgSel.size} selected — right-click to add to a Book List`
+                                                    : 'Tip: click covers to select, then right-click → add them to a Book List (e.g. New To Read)')}
+                                            </div>
+                                            <div className="flex gap-2 flex-shrink-0">
+                                                {showCancel && <button onClick={closeAutoOrgPreview} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Cancel</button>}
+                                                {hasMovers && <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>}
+                                            </div>
                                         </div>
-                                        <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex-shrink-0">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>
-                                    </div>
-                                )}
+                                    );
+                                })()}
                             </div>
                         </div>
                         );
