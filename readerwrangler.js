@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.26";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.27";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7166,6 +7166,21 @@
 
             const closeAutoOrgPreview = () => { setAutoOrgPreview(null); setAutoOrgSel(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null); };
 
+            // v6.16.0 - Live By Author ↔ By Series toggle inside the preview: recompute the plan + already-filed in
+            // place (the selection is per-book, so it persists — only the destinations change).
+            const setAutoOrgMode = (newMode) => {
+                setAutoOrgPreview(prev => {
+                    if (!prev || prev.mode === newMode) return prev;
+                    const opts = { ...prev.opts, createSeriesFolders: newMode === 'series' };
+                    const dryPlan = computeOrganizePlan(prev.authorGroups, folders, opts);
+                    const alreadyFiled = computeAlreadyFiled(prev.authorGroups, dryPlan, prev.sourceFolderId);
+                    const label = prev.authorGroups.length === 1
+                        ? `Auto-Organized ${prev.authorGroups[0].displayName}${newMode === 'series' ? ' by series' : ''}`
+                        : `Auto-Organized ${prev.authorGroups.length} authors${newMode === 'series' ? ' by series' : ''}`;
+                    return { ...prev, mode: newMode, opts, dryPlan, alreadyFiled, label };
+                });
+            };
+
             // v6.16.0 - Undoable removal of books from a single folder (shape matches the REMOVE_BOOKS_FOLDER undo/redo
             // handlers: fromIndices lets undo re-insert at the original positions). Touches only that folder's membership.
             const removeBooksFromFolder = (folderId, bookIds, label) => {
@@ -9837,7 +9852,7 @@
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) setWizardModalOpen(false); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-wizard" onClick={(e) => e.stopPropagation()}>
                                 <div className="flex justify-between items-center p-4 bg-gray-200 rounded-t-lg border-b border-gray-300">
-                                    <h2 id="modal-wizard" className="text-xl font-bold text-gray-900">✨ Auto-Organize by Author</h2>
+                                    <h2 id="modal-wizard" className="text-xl font-bold text-gray-900">✨ Auto-Organize — Choose Authors</h2>
                                     <div className="flex items-center gap-2">
                                         {/* v5.1.0-alpha.10 - Help icon */}
                                         <button
@@ -9875,17 +9890,9 @@
                                         </div>
                                     </div>
 
-                                    {/* v5.1.0-alpha.20 - Phase 2.1: Series subfolder options */}
+                                    {/* v5.1.0-alpha.20 - Phase 2.1: Series subfolder options. v6.16.0 - the By Author/By Series choice
+                                        moved to a live toggle in the preview; these remain as By-Series defaults (Stage 2 moves them too). */}
                                     <div className="space-y-2 pt-2 pb-2">
-                                        <label className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-2 rounded cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={wizardCreateSeriesFolders}
-                                                onChange={(e) => setWizardCreateSeriesFolders(e.target.checked)}
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                            />
-                                            <span>Create subfolders for each series</span>
-                                        </label>
                                         {/* v6.13.0-alpha.2 - how many books a series needs before it earns its own folder */}
                                         <div className={`flex items-center flex-wrap gap-x-2 gap-y-1 text-sm pl-8 pr-2 ${wizardCreateSeriesFolders ? 'text-gray-700' : 'text-gray-400'}`}>
                                             <span>Create a series folder once I own at least</span>
@@ -10382,10 +10389,18 @@
                         return (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeAutoOrgPreview(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-autoorg-preview" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
-                                {/* Header */}
-                                <div className="flex justify-between items-center p-4 bg-indigo-100 rounded-t-lg border-b border-indigo-300">
-                                    <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">✨ Auto-Organize {sourceName ? `“${sourceName}” Folder` : 'Inbox'} — {mode === 'series' ? 'By Series' : 'By Author'}</h2>
-                                    <button onClick={closeAutoOrgPreview} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
+                                {/* Header — the mode is a live segmented toggle (recomputes the preview in place). */}
+                                <div className="flex justify-between items-center gap-3 p-4 bg-indigo-100 rounded-t-lg border-b border-indigo-300">
+                                    <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">✨ Auto-Organize {sourceName ? `“${sourceName}” Folder` : 'Inbox'}</h2>
+                                    <div className="flex items-center gap-3 flex-shrink-0">
+                                        <div className="flex border border-indigo-400 rounded overflow-hidden text-sm" role="group" aria-label="Organize mode">
+                                            <button onClick={() => setAutoOrgMode('author')} aria-pressed={mode === 'author'}
+                                                className={`px-3 py-1 transition-colors ${mode === 'author' ? 'bg-indigo-600 text-white font-semibold' : 'bg-white text-gray-700 hover:bg-indigo-50'}`}>By Author</button>
+                                            <button onClick={() => setAutoOrgMode('series')} aria-pressed={mode === 'series'}
+                                                className={`px-3 py-1 border-l border-indigo-400 transition-colors ${mode === 'series' ? 'bg-indigo-600 text-white font-semibold' : 'bg-white text-gray-700 hover:bg-indigo-50'}`}>By Series</button>
+                                        </div>
+                                        <button onClick={closeAutoOrgPreview} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
+                                    </div>
                                 </div>
                                 {/* Scrollable hierarchy — one selection; checkbox tree = select-all/none per group */}
                                 <div className="p-4 overflow-y-auto" style={{ flex: 1 }}>
@@ -16931,42 +16946,14 @@
                                     </div>
                                 )}
 
-                                {/* v6.13.0-alpha.4 / v6.14.0 - Auto-Organize (book-anchored; files the current folder's books
-                                    by author). Grouped with the other placement actions. Hidden in Book List views — a list is
-                                    supplemental, not a custodial home, so this folder operation doesn't apply there. */}
+                                {/* v6.16.0 - Auto-Organize (book-anchored; files the current folder's books). One item now — the
+                                    preview opens with a live By Author | By Series toggle, so no upfront submenu. Hidden in Book
+                                    List views — a list is supplemental, not a custodial home, so this folder operation doesn't apply. */}
                                 {canAutoOrganizeInView(selectedFolderId) && (
-                                <div
-                                    className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
-                                    role="menuitem" aria-haspopup="true"
-                                    onMouseEnter={() => setContextSubmenu('auto-organize')}
-                                    onMouseLeave={(e) => {
-                                        setTimeout(() => {
-                                            const activeSubmenu = document.querySelector('.context-submenu:hover');
-                                            const activeTrigger = document.querySelector('.submenu-trigger:hover');
-                                            if (!activeSubmenu && !activeTrigger) setContextSubmenu(null);
-                                        }, 600);
-                                    }}>
-                                    <span>✨</span>
-                                    <span>Auto-Organize</span>
-                                    <span className="ml-auto">▶</span>
-                                    <FlipToFitPopup open={contextSubmenu === 'auto-organize'}
-                                            className="context-submenu bg-white border border-gray-300 shadow-lg rounded py-1 min-w-[190px] z-[70]"
-                                            role="menu" ariaLabel="Auto-Organize"
-                                            onMouseEnter={() => setContextSubmenu('auto-organize')}
-                                            onMouseLeave={() => setContextSubmenu(null)}
-                                            onClick={(e) => e.stopPropagation()}>
-                                            <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
-                                                onClick={() => autoOrganizeByAuthor(selectedBooksArray)}>
-                                                <span>📁</span><span>By Author…</span>
-                                            </div>
-                                            {selectionAuthorsHaveSeries(selectedBooksArray) && (
-                                                <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2" role="menuitem"
-                                                    onClick={() => autoOrganizeBySeries(selectedBooksArray)}>
-                                                    <span>📚</span><span>By Series…</span>
-                                                </div>
-                                            )}
-                                    </FlipToFitPopup>
-                                </div>
+                                    <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3" role="menuitem"
+                                        onClick={() => autoOrganizeBySeries(selectedBooksArray)}>
+                                        <span>✨</span><span>Auto-Organize…</span>
+                                    </div>
                                 )}
 
                                 {/* v5.0.0-alpha.168.4 - Cut/Copy/Paste */}
