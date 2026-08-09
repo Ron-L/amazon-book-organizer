@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.25";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.26";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10421,19 +10421,19 @@
                                             </div>
                                             {moverGroups.map(ag => {
                                                 const multiAuthor = moverGroups.length > 1;
+                                                // v6.16.0 - Enumerate the author's real folder, then bucket incoming books by destination (null = root)
+                                                // per mode. By Series: threshold + Miscellaneous + existing-folder override. By Author: everything flat at
+                                                // the root. EITHER WAY we render the author's FULL structure, so an existing series subfolder is visible
+                                                // even in By Author — telling you you're about to flatten it.
+                                                const authorFolder = folders.find(f => f.name === ag.displayName && f.parentId === null);
+                                                const existingSubs = authorFolder ? folders.filter(f => f.parentId === authorFolder.id) : [];
+                                                const existingSubNames = new Set(existingSubs.map(f => f.name));
+                                                const targetByDest = new Map();
                                                 if (mode === 'series') {
-                                                    // v6.16.0 - Enumerate the author's real folder first, then bucket incoming books exactly as the
-                                                    // engine files them (threshold + Miscellaneous), keyed by destination (null = author root). Key rule:
-                                                    // an EXISTING series subfolder always takes its books regardless of the threshold (never split a series
-                                                    // that already has a home) — matches the engine.
                                                     const minSeries = opts.seriesFolderMinBooks != null ? opts.seriesFolderMinBooks : 1;
                                                     const createMisc = opts.createMiscellaneous === true;
-                                                    const authorFolder = folders.find(f => f.name === ag.displayName && f.parentId === null);
-                                                    const existingSubs = authorFolder ? folders.filter(f => f.parentId === authorFolder.id) : [];
-                                                    const existingSubNames = new Set(existingSubs.map(f => f.name));
                                                     const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
                                                     const rootIncoming = [];
-                                                    const targetByDest = new Map();
                                                     for (const s of seriesGroups.values()) {
                                                         if (s.books.length >= minSeries || existingSubNames.has(s.originalName)) targetByDest.set(s.originalName, s.books);
                                                         else rootIncoming.push(...s.books);
@@ -10441,55 +10441,47 @@
                                                     if (createMisc && standaloneBooks.length > 0) targetByDest.set('Miscellaneous', standaloneBooks);
                                                     else rootIncoming.push(...standaloneBooks);
                                                     if (rootIncoming.length > 0) targetByDest.set(null, rootIncoming);
-                                                    // Merge the incoming buckets with the author's FULL existing structure so non-target subfolders show too.
-                                                    const slots = [];
-                                                    const rootExisting = existingInDest(ag.displayName, null);
-                                                    if ((targetByDest.get(null) || []).length > 0 || rootExisting.length > 0) slots.push({ key: '__root__', standalone: true, name: `Directly under ${ag.displayName}`, incoming: targetByDest.get(null) || [], existing: rootExisting });
-                                                    existingSubs.forEach(sub => {
-                                                        slots.push({ key: sub.id, standalone: false, name: sub.name, incoming: targetByDest.get(sub.name) || [], existing: existingInDest(ag.displayName, sub.name) });
-                                                    });
-                                                    targetByDest.forEach((books, dest) => {
-                                                        if (dest === null || existingSubNames.has(dest)) return; // brand-new subfolder
-                                                        slots.push({ key: '__new__' + dest, standalone: false, name: dest, incoming: books, existing: [] });
-                                                    });
-                                                    const multiShelf = slots.filter(s => s.incoming.length > 0).length > 1;
-                                                    return (
-                                                        <div key={ag.displayName} className="mb-4">
-                                                            <div className="font-semibold text-gray-900 flex items-center gap-2">
-                                                                {multiAuthor && triCheck(ag.books.map(b => b.id))}
-                                                                📁 {ag.displayName}
-                                                            </div>
-                                                            <div className="ml-4 mt-1">
-                                                                {slots.map(slot => {
-                                                                    const hasIncoming = slot.incoming.length > 0;
-                                                                    if (!hasIncoming && slot.existing.length === 0) return null; // empty non-target subfolder
-                                                                    const parts = [];
-                                                                    if (hasIncoming) parts.push(`${slot.incoming.length} new`);
-                                                                    if (slot.existing.length > 0) parts.push(`${slot.existing.length} ${hasIncoming ? 'already here' : 'here'}`);
-                                                                    return (
-                                                                    <div key={slot.key} className="mb-2">
-                                                                        <div className={`text-sm flex items-center gap-2 ${slot.standalone ? 'italic ' : ''}${hasIncoming ? 'text-gray-700' : 'text-gray-400'}`}>
-                                                                            {hasIncoming && multiShelf && triCheck(slot.incoming.map(b => b.id))}
-                                                                            {slot.standalone ? slot.name : <>📚 {slot.name}</>} <span className="text-gray-400 not-italic">({parts.join(' · ')})</span>
-                                                                        </div>
-                                                                        {hasIncoming
-                                                                            ? shelfRow(slot.incoming, slot.existing)
-                                                                            : <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{slot.existing.map(b => contextCover(b, slot.existing))}</div>}
-                                                                    </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    );
+                                                } else if (ag.books.length > 0) {
+                                                    targetByDest.set(null, ag.books); // By Author: everything flat at the author root
                                                 }
-                                                const existing = existingInDest(ag.displayName, null);
+                                                // Merge the incoming buckets with the author's FULL existing structure so non-target subfolders show too.
+                                                const slots = [];
+                                                const rootExisting = existingInDest(ag.displayName, null);
+                                                if ((targetByDest.get(null) || []).length > 0 || rootExisting.length > 0) slots.push({ key: '__root__', standalone: true, name: `Directly under ${ag.displayName}`, incoming: targetByDest.get(null) || [], existing: rootExisting });
+                                                existingSubs.forEach(sub => {
+                                                    slots.push({ key: sub.id, standalone: false, name: sub.name, incoming: targetByDest.get(sub.name) || [], existing: existingInDest(ag.displayName, sub.name) });
+                                                });
+                                                targetByDest.forEach((books, dest) => {
+                                                    if (dest === null || existingSubNames.has(dest)) return; // brand-new subfolder
+                                                    slots.push({ key: '__new__' + dest, standalone: false, name: dest, incoming: books, existing: [] });
+                                                });
+                                                const multiShelf = slots.filter(s => s.incoming.length > 0).length > 1;
                                                 return (
                                                     <div key={ag.displayName} className="mb-4">
                                                         <div className="font-semibold text-gray-900 flex items-center gap-2">
                                                             {multiAuthor && triCheck(ag.books.map(b => b.id))}
-                                                            📁 {ag.displayName} <span className="text-gray-400 font-normal">({ag.books.length}{existing.length > 0 ? ` new · ${existing.length} already here` : ''})</span>
+                                                            📁 {ag.displayName}
                                                         </div>
-                                                        <div className="ml-4">{shelfRow(ag.books, existing)}</div>
+                                                        <div className="ml-4 mt-1">
+                                                            {slots.map(slot => {
+                                                                const hasIncoming = slot.incoming.length > 0;
+                                                                if (!hasIncoming && slot.existing.length === 0) return null; // empty non-target subfolder
+                                                                const parts = [];
+                                                                if (hasIncoming) parts.push(`${slot.incoming.length} new`);
+                                                                if (slot.existing.length > 0) parts.push(`${slot.existing.length} ${hasIncoming ? 'already here' : 'here'}`);
+                                                                return (
+                                                                <div key={slot.key} className="mb-2">
+                                                                    <div className={`text-sm flex items-center gap-2 ${slot.standalone ? 'italic ' : ''}${hasIncoming ? 'text-gray-700' : 'text-gray-400'}`}>
+                                                                        {hasIncoming && multiShelf && triCheck(slot.incoming.map(b => b.id))}
+                                                                        {slot.standalone ? slot.name : <>📚 {slot.name}</>} <span className="text-gray-400 not-italic">({parts.join(' · ')})</span>
+                                                                    </div>
+                                                                    {hasIncoming
+                                                                        ? shelfRow(slot.incoming, slot.existing)
+                                                                        : <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{slot.existing.map(b => contextCover(b, slot.existing))}</div>}
+                                                                </div>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                 );
                                             })}
