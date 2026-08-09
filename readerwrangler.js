@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.16";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.17";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2356,15 +2356,17 @@
                 });
             };
 
-            // v6.12.0 - Sequentially number the given book ids (1,2,3…) in the order provided;
-            // optionally set a series name. Undoable. Skips trashed books.
-            const applySequentialNumbering = (orderedIds, seriesName) => {
+            // v6.12.0 - Number the given book ids in the order provided, optionally set a series name. Undoable,
+            // skips trashed books. `values` (v6.16.0) supplies an EXPLICIT position per book (e.g. 13, 13.5, 14 for
+            // in-between volumes); omit it for plain 1,2,3… sequential numbering.
+            const applyNumbering = (orderedIds, seriesName, values) => {
                 orderedIds = (orderedIds || []).filter(id => { const bk = bookMap.get(id); return bk && !bk.isDeleted; });
                 if (orderedIds.length === 0) return;
                 const name = (seriesName || '').trim();
                 const prev = orderedIds.map(id => { const bk = bookMap.get(id); return { id, series: bk.series, seriesPosition: bk.seriesPosition, userEdited: bk.userEdited }; });
+                const positions = orderedIds.map((id, i) => values ? values[i] : i + 1); // aligned with `prev`; lets redo re-apply the exact numbers
+                const posMap = new Map(orderedIds.map((id, i) => [id, positions[i]]));
                 setBooks(prevBooks => {
-                    const posMap = new Map(orderedIds.map((id, i) => [id, i + 1]));
                     const updated = prevBooks.map(b => {
                         if (!posMap.has(b.id)) return b;
                         // v6.12.0 - Flag as user-edited so a later Amazon/relay import won't overwrite the numbering
@@ -2377,9 +2379,12 @@
                     saveBooksToIndexedDB(updated);
                     return updated;
                 });
-                recordAction({ type: 'SEQUENCE_SERIES', prev, seriesName: name });
-                showToast(`Numbered ${orderedIds.length} book${orderedIds.length !== 1 ? 's' : ''} in current order${name ? ` (series "${name}")` : ''}`);
+                recordAction({ type: 'SEQUENCE_SERIES', prev, seriesName: name, positions });
+                showToast(values
+                    ? `Set numbers on ${orderedIds.length} book${orderedIds.length !== 1 ? 's' : ''}${name ? ` (series "${name}")` : ''}`
+                    : `Numbered ${orderedIds.length} book${orderedIds.length !== 1 ? 's' : ''} in current order${name ? ` (series "${name}")` : ''}`);
             };
+            const applySequentialNumbering = (orderedIds, seriesName) => applyNumbering(orderedIds, seriesName, null);
 
             // v5.5.15-alpha.31 - Reorder books within a tag view's bookOrder
             // v5.6.3-alpha.1 - Fix: include unordered books (newly tagged) in bookOrder before reordering
@@ -6313,10 +6318,11 @@
                         setBookLists(prev => prev.filter(bl => bl.id !== action.bookList.id));
                         if (selectedFolderId === `__booklist_${action.bookList.id}__`) navigateToFolder('__all__');
                         break;
-                    // v6.12.0 - Redo sequential numbering: re-apply 1..N + series name
+                    // v6.12.0 - Redo numbering: re-apply the exact positions (v6.16.0) + series name; older actions
+                    // without stored positions fall back to 1..N.
                     case 'SEQUENCE_SERIES':
                         setBooks(prevBooks => {
-                            const posMap = new Map(action.prev.map((p, i) => [p.id, i + 1]));
+                            const posMap = new Map(action.prev.map((p, i) => [p.id, action.positions ? action.positions[i] : i + 1]));
                             const updated = prevBooks.map(b => {
                                 if (!posMap.has(b.id)) return b;
                                 // v6.12.0 - Re-apply user-edited flags (mirror applySequentialNumbering)
@@ -14817,9 +14823,9 @@
                                                                         cellClass += ' text-gray-500 text-xs font-mono';
                                                                         break;
                                                                     case 'amazon':
-                                                                        content = <a href={getAmazonUrl(book.asin)} target="_blank" rel="noopener noreferrer"
+                                                                        content = <a href={getAmazonUrl(book.asin)} target="_blank" rel="noopener noreferrer" title="Open on Amazon"
                                                                             className="text-blue-600 hover:text-blue-800 hover:underline text-xs"
-                                                                            onClick={(e) => e.stopPropagation()}>Amazon</a>;
+                                                                            onClick={(e) => e.stopPropagation()}>View ↗</a>;
                                                                         cellClass += ' text-center';
                                                                         break;
                                                                     default:
@@ -17232,6 +17238,28 @@
                                                                 applySequentialNumbering(orderedIds, name);
                                                             }}>
                                                             Number by current order...
+                                                        </div>
+                                                        <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"
+                                                            onClick={async () => {
+                                                                setExplorerBookContextMenu(null);
+                                                                setContextSubmenu(null);
+                                                                const orderedIds = explorerDisplayItems.filter(it => it.type === 'book' && explorerSelectedItems.has(it.book.id)).map(it => it.book.id);
+                                                                if (orderedIds.length < 1) {
+                                                                    await showConfirmDialog('Set numbers', 'Select one or more books first.\n\nThis maps a comma-separated list of numbers onto the selected books in the order currently shown — so you can place in-between volumes at 13.5, 14.5, etc.', 'OK', 'Close');
+                                                                    return;
+                                                                }
+                                                                const raw = await showInputDialog('Set numbers', `Enter ${orderedIds.length} number${orderedIds.length !== 1 ? 's' : ''}, comma-separated, mapped to the selected books in the order shown.\n\nDecimals are fine for in-between volumes — e.g. "13, 13.5, 14, 14.5".`, '', 'e.g. 13, 13.5, 14, 14.5', 'Apply', 'Cancel');
+                                                                if (raw === null) return;
+                                                                const tokens = raw.split(',').map(t => t.trim()).filter(t => t.length > 0);
+                                                                const nums = tokens.map(t => Number(t));
+                                                                if (tokens.length !== orderedIds.length || nums.some(n => !isFinite(n))) {
+                                                                    const bad = nums.some(n => !isFinite(n));
+                                                                    await showConfirmDialog('Set numbers', `Enter exactly ${orderedIds.length} number${orderedIds.length !== 1 ? 's' : ''} — you entered ${tokens.length}${bad ? ', and some weren’t numbers' : ''}. They map one-to-one to the selected books in display order.`, 'OK', 'Close');
+                                                                    return;
+                                                                }
+                                                                applyNumbering(orderedIds, '', nums);
+                                                            }}>
+                                                            Set numbers (13, 13.5, 14…)...
                                                         </div>
                                                         <div className="border-t border-gray-200 my-1" role="separator"></div>
                                                         <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer" role="menuitem"

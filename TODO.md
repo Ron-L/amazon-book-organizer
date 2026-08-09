@@ -59,6 +59,7 @@
 - [ ] Metadata import (paste-list / CSV) + matching → see docs/design/Metadata-Import.md
 
 - [ ] Comma-separated series-position multi-edit ("2, 4" mapped to selected books in display order) — **needed for David Drake / Raj Whitehall** (ownership gaps that "renumber by current order" can't handle)
+- [ ] **Omnibus / multi-volume series position (B)** — a single book that IS volumes 1–3 wants a range/multi position (`1-3` or `1,2,3`) on ONE record. Distinct from the comma-separated multi-edit above (which spreads a sequence across MANY books). Needs a data-model decision: `seriesPosition` is a single value today ("1-3" would sort as 1, display as text). Consider a `seriesPositionEnd` or a positions array + sort/display/number-by-order handling. (Ron, 2026-08-09.)
 - [ ] Folder "Move to Top / Move to Bottom" context items (D)
 - [ ] Fix drag-subfolder→root drop-position (**confirmed still broken 2026-08-03**, annoying) — dropping a subfolder at root lands it alphabetical-ish near the bottom instead of at the drop target; shares a root cause with new-folder alphabetical insert + Move-to stale position
 - [ ] Book Lists: **"Arrange by series #"** — in Manual mode, bake the series-number order into the list's manual order (persistent, then hand-tweak). The Book-List analog of folder sort-then-bake; a one-time rearrange, not a live sort mode. (Distinct from the existing "Number by current order," which sets each book's *position value*, not the list's order.)
