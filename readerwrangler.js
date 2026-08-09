@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.22";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.23";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10414,31 +10414,37 @@
                                             {moverGroups.map(ag => {
                                                 const multiAuthor = moverGroups.length > 1;
                                                 if (mode === 'series') {
-                                                    // v6.16.0 - Bucket exactly as the engine will file (so the preview matches the plan for BOTH
-                                                    // the right-click path [min 1, no misc] and the wizard [its threshold + Miscellaneous]):
-                                                    //  · a series with ≥ threshold books → its own subfolder shelf
-                                                    //  · a below-threshold series → folds into the author root
-                                                    //  · standalones → a "Miscellaneous" subfolder (if enabled) else the author root
+                                                    // v6.16.0 - Bucket incoming books exactly as the engine will file them (threshold + Miscellaneous),
+                                                    // keyed by destination (null = author root):
                                                     const minSeries = opts.seriesFolderMinBooks != null ? opts.seriesFolderMinBooks : 1;
                                                     const createMisc = opts.createMiscellaneous === true;
                                                     const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
-                                                    const rootBooks = [];
-                                                    const seriesShelves = [];
+                                                    const rootIncoming = [];
+                                                    const targetByDest = new Map();
                                                     for (const s of seriesGroups.values()) {
-                                                        if (s.books.length >= minSeries) seriesShelves.push({ key: s.originalName, standalone: false, destSeries: s.originalName, name: s.originalName, books: s.books });
-                                                        else rootBooks.push(...s.books);
+                                                        if (s.books.length >= minSeries) targetByDest.set(s.originalName, s.books);
+                                                        else rootIncoming.push(...s.books);
                                                     }
-                                                    const shelves = [];
-                                                    if (createMisc && standaloneBooks.length > 0) {
-                                                        if (rootBooks.length > 0) shelves.push({ key: '__standalone__', standalone: true, destSeries: null, name: `Directly under ${ag.displayName}`, books: rootBooks });
-                                                        shelves.push(...seriesShelves);
-                                                        shelves.push({ key: '__misc__', standalone: false, destSeries: 'Miscellaneous', name: 'Miscellaneous', books: standaloneBooks });
-                                                    } else {
-                                                        const root = [...rootBooks, ...standaloneBooks];
-                                                        if (root.length > 0) shelves.push({ key: '__standalone__', standalone: true, destSeries: null, name: `Directly under ${ag.displayName}`, books: root });
-                                                        shelves.push(...seriesShelves);
-                                                    }
-                                                    const multiShelf = shelves.length > 1;
+                                                    if (createMisc && standaloneBooks.length > 0) targetByDest.set('Miscellaneous', standaloneBooks);
+                                                    else rootIncoming.push(...standaloneBooks);
+                                                    if (rootIncoming.length > 0) targetByDest.set(null, rootIncoming);
+                                                    // v6.16.0 (d) - Show the author's FULL existing structure, not just targets: enumerate the author
+                                                    // folder's real subfolders (+ root) and merge with the incoming buckets. Non-target subfolders render
+                                                    // muted with their existing books (small covers), so you see the whole neighborhood in-place.
+                                                    const authorFolder = folders.find(f => f.name === ag.displayName && f.parentId === null);
+                                                    const existingSubNames = new Set();
+                                                    const slots = [];
+                                                    const rootExisting = existingInDest(ag.displayName, null);
+                                                    if ((targetByDest.get(null) || []).length > 0 || rootExisting.length > 0) slots.push({ key: '__root__', standalone: true, name: `Directly under ${ag.displayName}`, incoming: targetByDest.get(null) || [], existing: rootExisting });
+                                                    if (authorFolder) folders.filter(f => f.parentId === authorFolder.id).forEach(sub => {
+                                                        existingSubNames.add(sub.name);
+                                                        slots.push({ key: sub.id, standalone: false, name: sub.name, incoming: targetByDest.get(sub.name) || [], existing: existingInDest(ag.displayName, sub.name) });
+                                                    });
+                                                    targetByDest.forEach((books, dest) => {
+                                                        if (dest === null || existingSubNames.has(dest)) return; // brand-new subfolder
+                                                        slots.push({ key: '__new__' + dest, standalone: false, name: dest, incoming: books, existing: [] });
+                                                    });
+                                                    const multiShelf = slots.filter(s => s.incoming.length > 0).length > 1;
                                                     return (
                                                         <div key={ag.displayName} className="mb-4">
                                                             <div className="font-semibold text-gray-900 flex items-center gap-2">
@@ -10446,15 +10452,21 @@
                                                                 📁 {ag.displayName}
                                                             </div>
                                                             <div className="ml-4 mt-1">
-                                                                {shelves.map(sh => {
-                                                                    const existing = existingInDest(ag.displayName, sh.destSeries);
+                                                                {slots.map(slot => {
+                                                                    const hasIncoming = slot.incoming.length > 0;
+                                                                    if (!hasIncoming && slot.existing.length === 0) return null; // empty non-target subfolder
+                                                                    const parts = [];
+                                                                    if (hasIncoming) parts.push(`${slot.incoming.length} new`);
+                                                                    if (slot.existing.length > 0) parts.push(`${slot.existing.length} ${hasIncoming ? 'already here' : 'here'}`);
                                                                     return (
-                                                                    <div key={sh.key} className="mb-2">
-                                                                        <div className={`text-sm flex items-center gap-2 ${sh.standalone ? 'text-gray-500 italic' : 'text-gray-700'}`}>
-                                                                            {multiShelf && triCheck(sh.books.map(b => b.id))}
-                                                                            {sh.standalone ? sh.name : <>📚 {sh.name}</>} <span className="text-gray-400 not-italic">({sh.books.length}{existing.length > 0 ? ` new · ${existing.length} already here` : ''})</span>
+                                                                    <div key={slot.key} className="mb-2">
+                                                                        <div className={`text-sm flex items-center gap-2 ${slot.standalone ? 'italic ' : ''}${hasIncoming ? 'text-gray-700' : 'text-gray-400'}`}>
+                                                                            {hasIncoming && multiShelf && triCheck(slot.incoming.map(b => b.id))}
+                                                                            {slot.standalone ? slot.name : <>📚 {slot.name}</>} <span className="text-gray-400 not-italic">({parts.join(' · ')})</span>
                                                                         </div>
-                                                                        {shelfRow(sh.books, existing)}
+                                                                        {hasIncoming
+                                                                            ? shelfRow(slot.incoming, slot.existing)
+                                                                            : <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{slot.existing.map(contextCover)}</div>}
                                                                     </div>
                                                                     );
                                                                 })}
