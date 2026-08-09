@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.20";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -3574,12 +3574,15 @@
             }, [wizardModalOpen, wizardMinBooks, wizardSortBy, books, folders]);
 
             // v6.16.0 (#40) - Clear the author filter each time the wizard opens, and a helper to apply it (matches
-            // displayName, case-insensitive). Select-All/None and the list both operate on the FILTERED set.
+            // displayName, case-insensitive). The wizard ACTS ON WHAT'S SHOWN: Select-All/None, the preview, and
+            // Organize all operate on the filtered set — so "type a name until it's one author, Organize" does just
+            // that author. The Organize/Preview buttons show the active count, so the scope is always visible.
             useEffect(() => { if (wizardModalOpen) setWizardAuthorFilter(''); }, [wizardModalOpen]);
             const wizardFilteredAuthors = () => {
                 const f = wizardAuthorFilter.trim().toLowerCase();
                 return f ? wizardAuthors.filter(a => (a.displayName || '').toLowerCase().includes(f)) : wizardAuthors;
             };
+            const wizardActiveAuthors = () => wizardFilteredAuthors().filter(a => wizardSelectedAuthors.has(a.normalizedName));
 
             // v5.0.0-alpha.175.28 - Expose state for console debugging
             useEffect(() => {
@@ -7302,10 +7305,10 @@
 
             // v6.13.0-alpha.4 - Wizard organize is now a thin caller of the shared applyOrganizePlan.
             const executeWizardOrganize = () => {
-                const selectedAuthors = wizardAuthors.filter(a => wizardSelectedAuthors.has(a.normalizedName));
+                const selectedAuthors = wizardActiveAuthors(); // v6.16.0 - shown-and-selected only
 
                 if (selectedAuthors.length === 0) {
-                    showInfoDialog('No Selection', 'Please select at least one author to organize.');
+                    showInfoDialog('No Selection', 'Please select at least one listed author to organize.');
                     return;
                 }
 
@@ -10035,38 +10038,37 @@
                                         </div>
                                     </div>
 
-                                    {/* Action buttons */}
-                                    <div className="flex justify-end gap-3 pt-2">
-                                        <button
-                                            onClick={() => setWizardModalOpen(false)}
-                                            className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium transition-colors">
-                                            Cancel
-                                        </button>
-                                        {/* v5.1.0-alpha.28 - Phase 3.1: Preview button */}
-                                        <button
-                                            onClick={() => {
-                                                const selectedAuthors = wizardAuthors.filter(a => wizardSelectedAuthors.has(a.normalizedName));
-
-                                                if (selectedAuthors.length === 0) {
-                                                    showInfoDialog('No Selection', 'Please select at least one author to preview.');
-                                                    return;
-                                                }
-
-                                                const previewData = calculateWizardPreview(selectedAuthors);
-                                                setWizardPreviewData(previewData);
-                                                setWizardPreviewMode(true);
-                                            }}
-                                            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors"
-                                            disabled={wizardSelectedAuthors.size === 0}>
-                                            Preview
-                                        </button>
-                                        <button
-                                            onClick={() => executeWizardOrganize()}
-                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                                            disabled={wizardSelectedAuthors.size === 0}>
-                                            Organize
-                                        </button>
-                                    </div>
+                                    {/* Action buttons — operate on shown-and-selected; count shown so the scope is explicit. */}
+                                    {(() => {
+                                        const active = wizardActiveAuthors();
+                                        const n = active.length;
+                                        return (
+                                        <div className="flex justify-end gap-3 pt-2">
+                                            <button
+                                                onClick={() => setWizardModalOpen(false)}
+                                                className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-lg font-medium transition-colors">
+                                                Cancel
+                                            </button>
+                                            {/* v5.1.0-alpha.28 - Phase 3.1: Preview button */}
+                                            <button
+                                                onClick={() => {
+                                                    const previewData = calculateWizardPreview(active);
+                                                    setWizardPreviewData(previewData);
+                                                    setWizardPreviewMode(true);
+                                                }}
+                                                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                disabled={n === 0}>
+                                                Preview{n > 0 ? ` (${n})` : ''}
+                                            </button>
+                                            <button
+                                                onClick={() => executeWizardOrganize()}
+                                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                disabled={n === 0}>
+                                                Organize {n} author{n !== 1 ? 's' : ''}
+                                            </button>
+                                        </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>
