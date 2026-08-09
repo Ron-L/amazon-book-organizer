@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.17";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.18";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10321,7 +10321,7 @@
                         const contextCover = (b) => (
                             <div key={'ctx-' + b.id}
                                 title={`Already here: ${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`}
-                                style={{ width: '38px', flex: '0 0 auto', cursor: 'pointer', opacity: 0.5, filter: 'grayscale(0.5)' }}
+                                style={{ width: '38px', flex: '0 0 auto', cursor: 'pointer' }}
                                 onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null); }}>
                                 {b.coverUrl
                                     ? <img src={b.coverUrl} alt="" style={{ width: '38px', height: '57px', objectFit: 'cover', borderRadius: '3px' }} />
