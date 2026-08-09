@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.18";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.19";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -651,6 +651,7 @@
             const [wizardSortBy, setWizardSortBy] = useState('bookCount'); // v5.1.0-alpha.10 - Sort by bookCount or authorName
             const [wizardAuthors, setWizardAuthors] = useState([]); // v5.1.0-alpha.4 - Detected authors array
             const [wizardSelectedAuthors, setWizardSelectedAuthors] = useState(new Set()); // v5.1.0-alpha.5 - Selected author normalized names
+            const [wizardAuthorFilter, setWizardAuthorFilter] = useState(''); // v6.16.0 (#40) - filter the wizard author list by name
             const [wizardHelpOpen, setWizardHelpOpen] = useState(false); // v5.1.0-alpha.10 - Help dialog
             const [wizardCreateSeriesFolders, setWizardCreateSeriesFolders] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Create series subfolders
             const [wizardSortByPosition, setWizardSortByPosition] = useState(true); // v5.1.0-alpha.20 - Phase 2.1: Sort books by series position
@@ -3571,6 +3572,14 @@
                 const allAuthorNames = new Set(sorted.map(a => a.normalizedName));
                 setWizardSelectedAuthors(allAuthorNames);
             }, [wizardModalOpen, wizardMinBooks, wizardSortBy, books, folders]);
+
+            // v6.16.0 (#40) - Clear the author filter each time the wizard opens, and a helper to apply it (matches
+            // displayName, case-insensitive). Select-All/None and the list both operate on the FILTERED set.
+            useEffect(() => { if (wizardModalOpen) setWizardAuthorFilter(''); }, [wizardModalOpen]);
+            const wizardFilteredAuthors = () => {
+                const f = wizardAuthorFilter.trim().toLowerCase();
+                return f ? wizardAuthors.filter(a => (a.displayName || '').toLowerCase().includes(f)) : wizardAuthors;
+            };
 
             // v5.0.0-alpha.175.28 - Expose state for console debugging
             useEffect(() => {
@@ -9901,17 +9910,19 @@
                                                 <span className="text-xs text-gray-500">Select:</span>
                                                 <div className="flex border border-gray-300 rounded overflow-hidden">
                                                     {(() => {
-                                                        const selectedCount = wizardSelectedAuthors.size;
-                                                        const totalCount = wizardAuthors.length;
-                                                        const isAll = selectedCount === totalCount && totalCount > 0;
-                                                        const isNone = selectedCount === 0;
+                                                        // v6.16.0 (#40) - All/None act on the FILTERED authors (add/remove them), so "filter → All"
+                                                        // selects just the matches; the indicator reflects the filtered set too.
+                                                        const filtered = wizardFilteredAuthors();
+                                                        const selInFiltered = filtered.reduce((n, a) => n + (wizardSelectedAuthors.has(a.normalizedName) ? 1 : 0), 0);
+                                                        const isAll = filtered.length > 0 && selInFiltered === filtered.length;
+                                                        const isNone = selInFiltered === 0;
                                                         const isSome = !isAll && !isNone;
 
                                                         return (
                                                             <>
                                                                 <button
-                                                                    onClick={() => setWizardSelectedAuthors(new Set(wizardAuthors.map(a => a.normalizedName)))}
-                                                                    title="Select all authors"
+                                                                    onClick={() => setWizardSelectedAuthors(prev => new Set([...prev, ...filtered.map(a => a.normalizedName)]))}
+                                                                    title="Select all listed authors"
                                                                     className={`px-3 py-1 text-xs transition-colors ${
                                                                         isAll
                                                                             ? 'bg-blue-600 text-white font-semibold'
@@ -9929,8 +9940,8 @@
                                                                     Some
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => setWizardSelectedAuthors(new Set())}
-                                                                    title="Deselect all authors"
+                                                                    onClick={() => setWizardSelectedAuthors(prev => { const n = new Set(prev); filtered.forEach(a => n.delete(a.normalizedName)); return n; })}
+                                                                    title="Deselect all listed authors"
                                                                     className={`px-3 py-1 text-xs border-l border-gray-300 transition-colors ${
                                                                         isNone
                                                                             ? 'bg-blue-600 text-white font-semibold'
@@ -9966,9 +9977,17 @@
                                             </div>
                                         </div>
 
+                                        {/* v6.16.0 (#40) - Filter the author list by name (scrolling to find one is painful) */}
+                                        <div className="px-3 py-2 border-b border-gray-200">
+                                            <input type="text" value={wizardAuthorFilter} onChange={(e) => setWizardAuthorFilter(e.target.value)}
+                                                placeholder="Filter authors by name…"
+                                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                                        </div>
+
                                         {/* Author list scrollable area */}
                                         <div className="max-h-80 overflow-y-auto p-2">
-                                            {wizardAuthors.length === 0 ? (
+                                            {(() => {
+                                                if (wizardAuthors.length === 0) return (
                                                 <div className="text-center text-gray-500 py-8">
                                                     {wizardSourceBooksCount === 0 ? (
                                                         <>
@@ -9982,8 +10001,13 @@
                                                         </>
                                                     )}
                                                 </div>
-                                            ) : (
-                                                wizardAuthors.map(author => (
+                                                );
+                                                const shown = wizardFilteredAuthors();
+                                                if (shown.length === 0) return (
+                                                    <div className="text-center text-gray-500 py-8"><p>No authors match "{wizardAuthorFilter.trim()}"</p></div>
+                                                );
+                                                return (
+                                                shown.map(author => (
                                                     <label
                                                         key={author.normalizedName}
                                                         className="flex items-center px-3 py-2 hover:bg-gray-50 rounded cursor-pointer transition-colors">
@@ -10006,7 +10030,8 @@
                                                         <span className="text-sm text-gray-500">{author.seriesCount} series</span>
                                                     </label>
                                                 ))
-                                            )}
+                                                );
+                                            })()}
                                         </div>
                                     </div>
 
