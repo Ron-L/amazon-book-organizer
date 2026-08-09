@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.15";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.16";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10255,7 +10255,7 @@
 
                     {/* v6.13.0-alpha.7 (D1) - Auto-Organize confirm/preview: hierarchical Author→Series→covers before commit */}
                     {autoOrgPreview && (() => {
-                        const { mode, authorGroups, dryPlan, sourceName, alreadyFiled = [] } = autoOrgPreview;
+                        const { mode, authorGroups, dryPlan, sourceName, sourceFolderId, alreadyFiled = [] } = autoOrgPreview;
                         const filedIds = new Set(alreadyFiled.map(x => x.book.id));
                         // The bottom "Will organize" section shows the movers only — the already-filed books render in the
                         // top section instead, so they're never double-listed.
@@ -10300,6 +10300,36 @@
                             );
                         };
                         const coverRow = (bks) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{bks.map(cover)}</div>;
+                        // v6.16.0 - Destination context: the books ALREADY in the folder each shelf would file into (filed
+                        // elsewhere, not in the source), so you see the full series/author at once — e.g. "2 new · 5 already
+                        // here". Read-only (faded, no selection); double-click still opens detail. Source books are excluded
+                        // (those are the "Already filed" removal candidates up top). New folders → nothing here yet.
+                        const sourceIdSet = new Set((folders.find(f => f.id === sourceFolderId)?.bookIds) || []);
+                        const existingInDest = (authorName, seriesName) => {
+                            const authorFolder = folders.find(f => f.name === authorName && f.parentId === null);
+                            if (!authorFolder) return [];
+                            const target = seriesName ? folders.find(f => f.name === seriesName && f.parentId === authorFolder.id) : authorFolder;
+                            if (!target) return [];
+                            return (target.bookIds || []).filter(id => !sourceIdSet.has(id)).map(id => bookMap.get(id)).filter(Boolean);
+                        };
+                        const contextCover = (b) => (
+                            <div key={'ctx-' + b.id}
+                                title={`Already here: ${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`}
+                                style={{ width: '38px', flex: '0 0 auto', cursor: 'pointer', opacity: 0.5, filter: 'grayscale(0.5)' }}
+                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null); }}>
+                                {b.coverUrl
+                                    ? <img src={b.coverUrl} alt="" style={{ width: '38px', height: '57px', objectFit: 'cover', borderRadius: '3px' }} />
+                                    : <div style={{ width: '38px', height: '57px', borderRadius: '3px', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', lineHeight: 1.1, textAlign: 'center', padding: '2px', overflow: 'hidden', color: '#6b7280' }}>{b.title || 'Untitled'}</div>}
+                            </div>
+                        );
+                        // A row of movers + (faded) existing-in-destination covers, split by a hairline.
+                        const shelfRow = (movers, existing) => (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px', alignItems: 'flex-start' }}>
+                                {movers.map(cover)}
+                                {existing.length > 0 && <div style={{ width: '1px', alignSelf: 'stretch', background: '#e5e7eb', margin: '0 3px' }} />}
+                                {existing.map(contextCover)}
+                            </div>
+                        );
                         return (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeAutoOrgPreview(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-autoorg-preview" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
@@ -10355,26 +10385,30 @@
                                                                 📁 {ag.displayName}
                                                             </div>
                                                             <div className="ml-4 mt-1">
-                                                                {shelves.map(sh => (
+                                                                {shelves.map(sh => {
+                                                                    const existing = existingInDest(ag.displayName, sh.standalone ? null : sh.name);
+                                                                    return (
                                                                     <div key={sh.key} className="mb-2">
                                                                         <div className={`text-sm flex items-center gap-2 ${sh.standalone ? 'text-gray-500 italic' : 'text-gray-700'}`}>
                                                                             {multiShelf && triCheck(sh.books.map(b => b.id))}
-                                                                            {sh.standalone ? sh.name : <>📚 {sh.name}</>} <span className="text-gray-400 not-italic">({sh.books.length})</span>
+                                                                            {sh.standalone ? sh.name : <>📚 {sh.name}</>} <span className="text-gray-400 not-italic">({sh.books.length}{existing.length > 0 ? ` new · ${existing.length} already here` : ''})</span>
                                                                         </div>
-                                                                        {coverRow(sh.books)}
+                                                                        {shelfRow(sh.books, existing)}
                                                                     </div>
-                                                                ))}
+                                                                    );
+                                                                })}
                                                             </div>
                                                         </div>
                                                     );
                                                 }
+                                                const existing = existingInDest(ag.displayName, null);
                                                 return (
                                                     <div key={ag.displayName} className="mb-4">
                                                         <div className="font-semibold text-gray-900 flex items-center gap-2">
                                                             {multiAuthor && triCheck(ag.books.map(b => b.id))}
-                                                            📁 {ag.displayName} <span className="text-gray-400 font-normal">({ag.books.length})</span>
+                                                            📁 {ag.displayName} <span className="text-gray-400 font-normal">({ag.books.length}{existing.length > 0 ? ` new · ${existing.length} already here` : ''})</span>
                                                         </div>
-                                                        <div className="ml-4">{coverRow(ag.books)}</div>
+                                                        <div className="ml-4">{shelfRow(ag.books, existing)}</div>
                                                     </div>
                                                 );
                                             })}
