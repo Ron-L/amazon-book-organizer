@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.11";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10346,22 +10346,19 @@
                                     })}
                                 </div>
                                 {/* Footer */}
-                                {/* Footer: ghost Cancel hard-left (dialog-level dismiss — a different visual CLASS from the filled
-                                    action buttons, so it never reads as "cancel just the Organize"); Organize hard-right (primary,
-                                    pinned so it can't scroll away). Remove lives inline in its own section above, not here. */}
-                                <div className="p-4 border-t border-gray-200 flex justify-between items-center gap-3">
-                                    <button onClick={closeAutoOrgPreview} className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium transition-colors flex-shrink-0">Cancel</button>
-                                    <div className="text-xs text-gray-500 flex-1 text-center px-2">
-                                        {dryPlan.totalBooksOrganized === 0
-                                            ? (alreadyFiled.length === 1 ? 'Already filed — nothing new to organize.' : 'All already filed — nothing new to organize.')
-                                            : autoOrgSel.size > 0
+                                {/* Footer holds only Organize (primary, pinned). No Cancel button — the header X and Escape both
+                                    dismiss, and a footer Cancel next to Organize is exactly what read as "cancel just the Organize."
+                                    Remove lives inline in its own section above. Pure already-filed case → no footer at all. */}
+                                {dryPlan.totalBooksOrganized > 0 && (
+                                    <div className="p-4 border-t border-gray-200 flex justify-between items-center gap-3">
+                                        <div className="text-xs text-gray-500 flex-1 px-1">
+                                            {autoOrgSel.size > 0
                                                 ? `${autoOrgSel.size} selected — right-click to add to a Book List`
                                                 : 'Tip: click covers to select, then right-click → add them to a Book List (e.g. New To Read)'}
-                                    </div>
-                                    {dryPlan.totalBooksOrganized > 0 && (
+                                        </div>
                                         <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex-shrink-0">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>
-                                    )}
-                                </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         );
