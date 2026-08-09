@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.13";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -663,6 +663,10 @@
             const [autoOrgAnchor, setAutoOrgAnchor] = useState(null);  // v6.16.0 - shift-range pivot (last plain/ctrl-clicked cover) in the preview
             const [autoOrgMenu, setAutoOrgMenu] = useState(null);       // v6.13.0-alpha.9 (D2) - preview cover right-click menu: { x, y, bookIds } or null
             const [autoOrgHover, setAutoOrgHover] = useState(null);     // v6.13.0-alpha.9 (D2) - preview cover hover "In" popup: { bookId, x, y } or null
+            // v6.16.0 - Mixed-case section toggles: which sections the single footer action includes. Only surfaced
+            // (as checkboxes) when the preview has BOTH an already-filed section and movers; default both on.
+            const [autoOrgIncFiled, setAutoOrgIncFiled] = useState(true);
+            const [autoOrgIncMovers, setAutoOrgIncMovers] = useState(true);
             const [wizardResultsData, setWizardResultsData] = useState(null); // v5.1.0-alpha.29 - Phase 3.3: Results summary data
             const [wizardSourceBooksCount, setWizardSourceBooksCount] = useState(0); // v5.1.0-alpha.30 - Phase 3.4: Track Inbox book count for validation
             const [syncStatus, setSyncStatusInternal] = useState('loading'); // 'loading', 'fresh', 'stale', 'none', 'unknown'
@@ -7100,6 +7104,7 @@
                 // Source folder name for the dialog title/body (null = the unfiled Inbox scope).
                 const sourceName = srcId === '__inbox__' ? null : (folders.find(f => f.id === srcId)?.name || null);
                 setAutoOrgSel(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null);
+                setAutoOrgIncFiled(true); setAutoOrgIncMovers(true);
                 setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label: labelFor(authorGroups), dryPlan, sourceName, sourceFolderId: srcId, alreadyFiled });
             };
             const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
@@ -7126,18 +7131,47 @@
                 recordAction({ type: 'REMOVE_BOOKS_FOLDER', folderId, bookIds: present, fromIndices, label });
                 return present.length;
             };
-            // v6.16.0 - "Remove from <source>" for the already-filed books: take them out of the source folder (Inbox
-            // or the folder Auto-Organize was invoked from) while leaving their real folder home(s) + any Book List intact.
-            const removeAlreadyFiledFromSource = () => {
+            // v6.16.0 - The single footer action. It commits whichever section(s) are included: organize the movers
+            // and/or remove the already-filed books from the source. In the mixed case those inclusions are the two
+            // section checkboxes (autoOrgIncMovers / autoOrgIncFiled); in a single-section preview the lone section is
+            // always included. Doing BOTH is folded into ONE WIZARD_ORGANIZE undo by extending the plan's source-removal
+            // to also pull the already-filed ids (so one Ctrl+Z reverts the whole click, not two).
+            const commitAutoOrgPreview = () => {
                 if (!autoOrgPreview) return;
-                const { alreadyFiled, sourceFolderId, sourceName } = autoOrgPreview;
-                const ids = (alreadyFiled || []).map(x => x.book.id);
-                if (ids.length === 0) { closeAutoOrgPreview(); return; }
+                const { authorGroups, opts, label, mode, alreadyFiled = [], dryPlan, sourceFolderId, sourceName } = autoOrgPreview;
+                const hasMovers = dryPlan.totalBooksOrganized > 0;
+                const hasFiled = alreadyFiled.length > 0;
+                const mixed = hasMovers && hasFiled;
+                const doOrganize = hasMovers && (!mixed || autoOrgIncMovers);
+                const doRemove = hasFiled && (!mixed || autoOrgIncFiled);
+                if (!doOrganize && !doRemove) return; // "Nothing selected" — button is disabled, but guard anyway
+                const filedIds = alreadyFiled.map(x => x.book.id);
                 const where = sourceName ? `“${sourceName}”` : 'the Inbox';
-                const n = removeBooksFromFolder(sourceFolderId, ids, `Remove ${ids.length} book${ids.length !== 1 ? 's' : ''} from ${where}`);
-                showToast(n > 0
-                    ? `Removed ${n} book${n !== 1 ? 's' : ''} from ${where} — still filed where they were`
-                    : `Nothing to remove from ${where}`);
+                if (doOrganize && doRemove) {
+                    // One plan, one undo: compute the organize plan, then also strip the already-filed ids from the
+                    // source (both in the resulting folders AND in the plan's REMOVE_BOOKS_FROM_FOLDER, so undo restores them).
+                    const plan = computeOrganizePlan(authorGroups, folders, opts);
+                    const newFolders = plan.newFolders.map(f => f.id === sourceFolderId
+                        ? { ...f, bookIds: (f.bookIds || []).filter(id => !filedIds.includes(id)) }
+                        : f);
+                    const subActions = plan.subActions.slice();
+                    const rem = subActions.find(a => a.type === 'REMOVE_BOOKS_FROM_FOLDER' && a.folderId === sourceFolderId);
+                    if (rem) rem.bookIds = [...rem.bookIds, ...filedIds];
+                    else subActions.push({ type: 'REMOVE_BOOKS_FROM_FOLDER', folderId: sourceFolderId, bookIds: filedIds });
+                    setFolders(newFolders);
+                    recordAction({ type: 'WIZARD_ORGANIZE', description: `${label} + removed ${filedIds.length} already-filed from ${where}`, subActions });
+                    showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} and removed ${filedIds.length} from ${where}`);
+                } else if (doOrganize) {
+                    const plan = applyOrganizePlan(authorGroups, opts, label);
+                    showToast(mode === 'author'
+                        ? `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} into author folders`
+                        : `Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} with series subfolders`);
+                } else {
+                    const n = removeBooksFromFolder(sourceFolderId, filedIds, `Remove ${filedIds.length} book${filedIds.length !== 1 ? 's' : ''} from ${where}`);
+                    showToast(n > 0
+                        ? `Removed ${n} book${n !== 1 ? 's' : ''} from ${where} — still filed where they were`
+                        : `Nothing to remove from ${where}`);
+                }
                 closeAutoOrgPreview();
             };
 
@@ -7239,19 +7273,6 @@
                 if (existing) { addPreviewSelToBookList(existing.id, ids); return; }
                 createBookList(trimmed, ids);
                 showToast(`Created '${trimmed}' with ${ids.length} book${ids.length !== 1 ? 's' : ''}`);
-            };
-
-            const confirmAutoOrgPreview = () => {
-                if (!autoOrgPreview) return;
-                const { authorGroups, opts, label, mode } = autoOrgPreview;
-                const plan = applyOrganizePlan(authorGroups, opts, label);
-                if (mode === 'author') {
-                    const folderCount = plan.createdFolders.length + plan.mergedFolders.length;
-                    showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} into ${folderCount} author folder${folderCount !== 1 ? 's' : ''}`);
-                } else {
-                    showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} with series subfolders`);
-                }
-                closeAutoOrgPreview();
             };
 
             // v6.13.0-alpha.10 (D3) - When a double-click-opened book detail modal closes over the preview, refresh it.
@@ -10237,6 +10258,9 @@
                         const moverGroups = authorGroups
                             .map(ag => ({ ...ag, books: ag.books.filter(b => !filedIds.has(b.id)) }))
                             .filter(ag => ag.books.length > 0);
+                        // Mixed = both a movers section AND an already-filed section → the two section checkboxes appear,
+                        // choosing what the single footer action includes. In a single-section preview there's no choice.
+                        const mixed = alreadyFiled.length > 0 && dryPlan.totalBooksOrganized > 0;
                         const cover = (b) => {
                             const sel = autoOrgSel.has(b.id);
                             return (
@@ -10283,8 +10307,9 @@
                                     <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">✨ Auto-Organize {sourceName ? `“${sourceName}” Folder` : 'Inbox'} — {mode === 'series' ? 'By Series' : 'By Author'}</h2>
                                     <button onClick={closeAutoOrgPreview} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                 </div>
-                                {/* Summary — only when there's something to move (the pure already-filed case has its own copy below) */}
-                                {dryPlan.totalBooksOrganized > 0 && (
+                                {/* Summary — normal case only. In the mixed case the "Will organize (N)" section header carries
+                                    the count, and a static "Move 3…" here would contradict an unticked box. */}
+                                {dryPlan.totalBooksOrganized > 0 && alreadyFiled.length === 0 && (
                                     <div className="px-4 pt-3 text-sm text-gray-700">
                                         Move <strong>{dryPlan.totalBooksOrganized}</strong> book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''} into <strong>{folderCount}</strong> author folder{folderCount !== 1 ? 's' : ''}{subCount > 0 ? <> and <strong>{subCount}</strong> series subfolder{subCount !== 1 ? 's' : ''}</> : null}. These leave {sourceName ? `the “${sourceName}” folder` : 'the Inbox'}.
                                     </div>
@@ -10294,32 +10319,38 @@
                                     {/* v6.16.0 - Top section: books already filed where Auto-Organize would put them, still sitting in the source. */}
                                     {alreadyFiled.length > 0 && (
                                         <div className="mb-4">
-                                            <div className="text-sm font-semibold text-gray-900 flex items-center gap-2">✅ Already filed <span className="text-gray-400 font-normal">({alreadyFiled.length})</span></div>
-                                            <div className="text-xs text-gray-500 mt-1 mb-2">
-                                                {alreadyFiled.length === 1 ? 'This book is' : `These ${alreadyFiled.length} books are`} already filed where Auto-Organize would put {alreadyFiled.length === 1 ? 'it' : 'them'}, but {alreadyFiled.length === 1 ? "it's" : "they're"} still in {sourceName ? `the “${sourceName}” folder` : 'the Inbox'}. Nothing new to organize — use <strong>Remove from {sourceName ? `“${sourceName}”` : 'Inbox'}</strong> to take {alreadyFiled.length === 1 ? 'it' : 'them'} out of {sourceName ? 'this folder' : 'the Inbox'}, leaving {alreadyFiled.length === 1 ? 'it' : 'them'} filed below.
-                                            </div>
-                                            {alreadyFiled.map(({ book, folders: homes }) => (
-                                                <div key={book.id} className="flex items-center gap-3 mb-2">
-                                                    {filedCover(book)}
-                                                    <div className="flex flex-wrap gap-1.5">
-                                                        {homes.map(f => (
-                                                            <span key={f.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">✓ {f.name}</span>
-                                                        ))}
-                                                    </div>
+                                            {/* Header — a checkbox in the mixed case decides whether the footer action includes this section. */}
+                                            <label className={`text-sm font-semibold text-gray-900 flex items-center gap-2 ${mixed ? 'cursor-pointer' : ''}`}>
+                                                {mixed && <input type="checkbox" checked={autoOrgIncFiled} onChange={(e) => setAutoOrgIncFiled(e.target.checked)} className="w-4 h-4 accent-indigo-600" />}
+                                                <span>✅ Already filed</span> <span className="text-gray-400 font-normal">({alreadyFiled.length})</span>
+                                            </label>
+                                            <div className={`transition-opacity ${mixed && !autoOrgIncFiled ? 'opacity-40' : ''}`}>
+                                                <div className="text-xs text-gray-500 mt-1 mb-2">
+                                                    {alreadyFiled.length === 1 ? 'This book is' : `These ${alreadyFiled.length} books are`} already filed where Auto-Organize would put {alreadyFiled.length === 1 ? 'it' : 'them'}, but {alreadyFiled.length === 1 ? "it's" : "they're"} still in {sourceName ? `the “${sourceName}” folder` : 'the Inbox'}. Removing {alreadyFiled.length === 1 ? 'it' : 'them'} from {sourceName ? 'this folder' : 'the Inbox'} leaves {alreadyFiled.length === 1 ? 'it' : 'them'} filed where {alreadyFiled.length === 1 ? 'it is' : 'they are'}.
                                                 </div>
-                                            ))}
-                                            {/* Section-owned action, co-located with the books it acts on (above the divider). */}
-                                            <div className="flex justify-end mt-1">
-                                                <button onClick={removeAlreadyFiledFromSource} className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm transition-colors">Remove {alreadyFiled.length} from {sourceName ? `“${sourceName}”` : 'Inbox'}</button>
+                                                {alreadyFiled.map(({ book, folders: homes }) => (
+                                                    <div key={book.id} className="flex items-center gap-3 mb-2">
+                                                        {filedCover(book)}
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {homes.map(f => (
+                                                                <span key={f.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-50 text-green-700 border border-green-200">✓ {f.name}</span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                             {moverGroups.length > 0 && (
                                                 <>
                                                     <div className="border-t border-gray-200 my-3"></div>
-                                                    <div className="text-sm font-semibold text-gray-900 mb-1">Will organize <span className="text-gray-400 font-normal">({dryPlan.totalBooksOrganized})</span></div>
+                                                    <label className={`text-sm font-semibold text-gray-900 flex items-center gap-2 mb-1 ${mixed ? 'cursor-pointer' : ''}`}>
+                                                        {mixed && <input type="checkbox" checked={autoOrgIncMovers} onChange={(e) => setAutoOrgIncMovers(e.target.checked)} className="w-4 h-4 accent-indigo-600" />}
+                                                        <span>Will organize</span> <span className="text-gray-400 font-normal">({dryPlan.totalBooksOrganized})</span>
+                                                    </label>
                                                 </>
                                             )}
                                         </div>
                                     )}
+                                    <div className={`transition-opacity ${mixed && !autoOrgIncMovers ? 'opacity-40' : ''}`}>
                                     {moverGroups.map(ag => {
                                         if (mode === 'series') {
                                             const { seriesGroups, standaloneBooks } = groupBooksBySeries(ag.books);
@@ -10351,15 +10382,24 @@
                                             </div>
                                         );
                                     })}
+                                    </div>
                                 </div>
-                                {/* Footer */}
-                                {/* Footer. Organize (when there are movers) is the pinned primary. Cancel appears ONLY when the
-                                    dialog has a single section (normal OR pure already-filed) — one action, so Cancel is unambiguous.
-                                    In the mixed two-action case (already-filed + movers) it's omitted so it can't read as "cancel
-                                    just the Organize"; the header X and Escape still dismiss. Remove lives inline in its section above. */}
+                                {/* Footer. One adaptive primary that commits whichever section(s) are included (both, in the
+                                    mixed case, are the two checkboxes; single-section previews always include their lone section).
+                                    The label spells out exactly what it will do; disabled + "Nothing selected" when both are off.
+                                    Cancel is always present and unambiguous — there's only ever one action button beside it. */}
                                 {(() => {
                                     const hasMovers = dryPlan.totalBooksOrganized > 0;
-                                    const showCancel = !(alreadyFiled.length > 0 && hasMovers); // hide only in the mixed (2-section) case
+                                    const hasFiled = alreadyFiled.length > 0;
+                                    const doOrganize = hasMovers && (!mixed || autoOrgIncMovers);
+                                    const doRemove = hasFiled && (!mixed || autoOrgIncFiled);
+                                    const enabled = doOrganize || doRemove;
+                                    const orgN = dryPlan.totalBooksOrganized, remN = alreadyFiled.length;
+                                    const inbox = sourceName ? `“${sourceName}”` : 'Inbox';
+                                    const label = (doOrganize && doRemove) ? `Organize ${orgN} & remove ${remN} from ${inbox}`
+                                        : doOrganize ? `Organize ${orgN} book${orgN !== 1 ? 's' : ''}`
+                                        : doRemove ? `Remove ${remN} from ${inbox}`
+                                        : 'Nothing selected';
                                     return (
                                         <div className="p-4 border-t border-gray-200 flex justify-between items-center gap-3">
                                             <div className="text-xs text-gray-500 flex-1 px-1">
@@ -10368,8 +10408,8 @@
                                                     : 'Tip: click covers to select, then right-click → add them to a Book List (e.g. New To Read)')}
                                             </div>
                                             <div className="flex gap-2 flex-shrink-0">
-                                                {showCancel && <button onClick={closeAutoOrgPreview} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Cancel</button>}
-                                                {hasMovers && <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>}
+                                                <button onClick={closeAutoOrgPreview} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Cancel</button>
+                                                <button onClick={commitAutoOrgPreview} disabled={!enabled} className={`px-4 py-2 rounded-lg font-medium transition-colors text-white ${enabled ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-300 cursor-not-allowed'}`}>{label}</button>
                                             </div>
                                         </div>
                                     );
