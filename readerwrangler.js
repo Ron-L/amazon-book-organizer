@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.10";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10301,6 +10301,10 @@
                                                     </div>
                                                 </div>
                                             ))}
+                                            {/* Section-owned action, co-located with the books it acts on (above the divider). */}
+                                            <div className="flex justify-end mt-1">
+                                                <button onClick={removeAlreadyFiledFromSource} className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm transition-colors">Remove {alreadyFiled.length} from {sourceName ? `“${sourceName}”` : 'Inbox'}</button>
+                                            </div>
                                             {moverGroups.length > 0 && (
                                                 <>
                                                     <div className="border-t border-gray-200 my-3"></div>
@@ -10342,23 +10346,21 @@
                                     })}
                                 </div>
                                 {/* Footer */}
+                                {/* Footer: ghost Cancel hard-left (dialog-level dismiss — a different visual CLASS from the filled
+                                    action buttons, so it never reads as "cancel just the Organize"); Organize hard-right (primary,
+                                    pinned so it can't scroll away). Remove lives inline in its own section above, not here. */}
                                 <div className="p-4 border-t border-gray-200 flex justify-between items-center gap-3">
-                                    <div className="text-xs text-gray-500 flex-1">
+                                    <button onClick={closeAutoOrgPreview} className="px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg font-medium transition-colors flex-shrink-0">Cancel</button>
+                                    <div className="text-xs text-gray-500 flex-1 text-center px-2">
                                         {dryPlan.totalBooksOrganized === 0
                                             ? (alreadyFiled.length === 1 ? 'Already filed — nothing new to organize.' : 'All already filed — nothing new to organize.')
                                             : autoOrgSel.size > 0
                                                 ? `${autoOrgSel.size} selected — right-click to add to a Book List`
                                                 : 'Tip: click covers to select, then right-click → add them to a Book List (e.g. New To Read)'}
                                     </div>
-                                    <div className="flex gap-2 flex-shrink-0">
-                                        <button onClick={closeAutoOrgPreview} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Cancel</button>
-                                        {alreadyFiled.length > 0 && (
-                                            <button onClick={removeAlreadyFiledFromSource} className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium transition-colors">Remove {alreadyFiled.length} from {sourceName ? `“${sourceName}”` : 'Inbox'}</button>
-                                        )}
-                                        {dryPlan.totalBooksOrganized > 0 && (
-                                            <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>
-                                        )}
-                                    </div>
+                                    {dryPlan.totalBooksOrganized > 0 && (
+                                        <button onClick={confirmAutoOrgPreview} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors flex-shrink-0">Organize {dryPlan.totalBooksOrganized} book{dryPlan.totalBooksOrganized !== 1 ? 's' : ''}</button>
+                                    )}
                                 </div>
                             </div>
                         </div>
