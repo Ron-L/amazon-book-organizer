@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.14";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.15";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -19,6 +19,7 @@
             rating: { label: 'Rating', sortKey: 'rating', defaultDir: 'asc', cssVar: '--col-rating' },
             myRating: { label: 'My Rating', sortKey: 'myRating', defaultDir: 'desc', cssVar: '--col-myRating' },
             dateAdded: { label: 'Date Added', sortKey: 'dateAdded', defaultDir: 'desc', cssVar: '--col-dateAdded' },
+            publicationDate: { label: 'Published', sortKey: 'publicationDate', defaultDir: 'asc', cssVar: '--col-publicationDate' }, // v6.16.0 - chronological/series order
             price: { label: 'Price', sortKey: 'price', defaultDir: 'asc', cssVar: '--col-price' },
             priceGoal: { label: 'Goal', sortKey: 'priceGoal', defaultDir: 'asc', cssVar: '--col-priceGoal' },
             delta: { label: 'Under', sortKey: 'delta', defaultDir: 'desc', cssVar: '--col-delta' },
@@ -896,6 +897,7 @@
                 rating: true,
                 myRating: false, // v5.0.0-alpha.175.31 - Personal rating column (hidden by default)
                 dateAdded: true,
+                publicationDate: false, // v6.16.0 - Publication date column (hidden by default)
                 price: true,
                 priceGoal: true,
                 delta: true,
@@ -915,6 +917,7 @@
                 rating: 96,
                 myRating: 100, // v5.0.0-alpha.175.31 - Personal rating column width
                 dateAdded: 112,
+                publicationDate: 112, // v6.16.0
                 price: 80,
                 priceGoal: 80,
                 delta: 80,
@@ -926,7 +929,7 @@
             const [resizingColumn, setResizingColumn] = useState(null); // v5.0.0-alpha.109 - { columnId, startX, startWidth }
             const [columnOrder, setColumnOrder] = useState([ // v5.0.0-alpha.172 - Column display order (drag to reorder)
                 'title', 'author', 'series', 'seriesNum', 'rating', 'myRating',
-                'dateAdded', 'price', 'priceGoal', 'delta', 'ownership', 'format', 'asin', 'amazon'
+                'dateAdded', 'publicationDate', 'price', 'priceGoal', 'delta', 'ownership', 'format', 'asin', 'amazon'
             ]);
             const [draggingColumn, setDraggingColumn] = useState(null); // v5.0.0-alpha.172 - Column header being dragged
             const [headerDropTarget, setHeaderDropTarget] = useState(null); // v5.0.0-alpha.172 - { column, side: 'left'|'right' }
@@ -1092,6 +1095,10 @@
                     if (!dateStr) return 'No Date';
                     const d = /^\d{8,}$/.test(dateStr) ? new Date(Number(dateStr)) : new Date(dateStr);
                     return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                }
+                if (col === 'publicationDate') {
+                    if (!book.publicationDate) return 'No Date';
+                    return new Date(book.publicationDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                 }
                 if (col === 'price') return book.currentPrice != null ? `$${book.currentPrice.toFixed(2)}` : 'No Price';
                 if (col === 'priceGoal') return book.priceTrigger != null ? `$${book.priceTrigger.toFixed(2)}` : 'No Goal';
@@ -1598,6 +1605,8 @@
                                 const dateA = parseBookDate(a.acquired || a.addedToWishlist);
                                 const dateB = parseBookDate(b.acquired || b.addedToWishlist);
                                 comparison = dateA - dateB;
+                            } else if (sort.column === 'publicationDate') {
+                                comparison = parseBookDate(a.publicationDate) - parseBookDate(b.publicationDate);
                             } else if (sort.column === 'price') {
                                 comparison = (a.currentPrice ?? Infinity) - (b.currentPrice ?? Infinity);
                             } else if (sort.column === 'priceGoal') {
@@ -13584,7 +13593,7 @@
                                                                       s.column === 'dateAdded' ? 'Date Added' :
                                                                       s.column === 'price' ? 'Price' :
                                                                       s.column === 'priceGoal' ? 'Goal' :
-                                                                      s.column === 'delta' ? 'Under' : s.column;
+                                                                      s.column === 'delta' ? 'Under' : (COLUMN_CONFIG[s.column]?.label || s.column);
                                                         const arrow = s.direction === 'asc' ? '▲' : '▼';
                                                         return (i === 0 ? `${label} ${arrow}` : ` → ${label} ${arrow}`);
                                                     }).join('')}
@@ -13790,7 +13799,8 @@
                                                                 const labels = {
                                                                     title: 'Name', author: 'Author', series: 'Series', seriesNum: '#',
                                                                     rating: 'Rating', myRating: 'My Rating', dateAdded: 'Date Added', price: 'Price',
-                                                                    priceGoal: 'Goal', delta: 'Under', ownership: 'Ownership', format: 'Format', asin: 'ASIN', amazon: 'Amazon'
+                                                                    priceGoal: 'Goal', delta: 'Under', ownership: 'Ownership', format: 'Format', asin: 'ASIN', amazon: 'Amazon',
+                                                                    publicationDate: 'Published'
                                                                 };
                                                                 return columnOrder.map(colKey => {
                                                                     if (colKey === 'title') {
@@ -14723,6 +14733,13 @@
                                                                         content = dateStr
                                                                             ? (/^\d{8,}$/.test(dateStr) ? new Date(Number(dateStr)) : new Date(dateStr))
                                                                                 .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                                                            : '-';
+                                                                        cellClass += ' text-gray-500 text-xs';
+                                                                        break;
+                                                                    }
+                                                                    case 'publicationDate': { // v6.16.0
+                                                                        content = book.publicationDate
+                                                                            ? new Date(book.publicationDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                                                                             : '-';
                                                                         cellClass += ' text-gray-500 text-xs';
                                                                         break;
