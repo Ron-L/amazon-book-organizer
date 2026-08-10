@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.17.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.17.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -685,6 +685,7 @@
             const [wizardResultsOpen, setWizardResultsOpen] = useState(false); // v5.1.0-alpha.29 - Phase 3.3: Results dialog visibility
             const [autoOrgPreview, setAutoOrgPreview] = useState(null); // v6.13.0-alpha.7 - Right-click Auto-Organize confirm/preview: { mode, authorGroups, opts, label, dryPlan } or null
             const [autoOrgSel, setAutoOrgSel] = useState(new Set());    // v6.13.0-alpha.9 (D2) - selected cover ids within the preview
+            const [autoOrgExcludedMembers, setAutoOrgExcludedMembers] = useState(new Set()); // v6.17.0 (B) - consolidate: deselected "folderId::bookId" copies (default all-in) for a multi-folder book
             const [autoOrgAnchor, setAutoOrgAnchor] = useState(null);  // v6.16.0 - shift-range pivot (last plain/ctrl-clicked cover) in the preview
             const [autoOrgMenu, setAutoOrgMenu] = useState(null);       // v6.13.0-alpha.9 (D2) - preview cover right-click menu: { x, y, bookIds } or null
             const [autoOrgHover, setAutoOrgHover] = useState(null);     // v6.13.0-alpha.9 (D2) - preview cover hover "In" popup: { bookId, x, y } or null
@@ -7155,7 +7156,7 @@
                 // Default selection = the actual movers (+ any already-filed removal candidates). For consolidate, books
                 // already in their author home aren't movers, so they default OUT — they show as neighborhood, not actions.
                 const allIds = isConsolidate ? [...dryPlan.allBookIdsToOrganize] : authorGroups.flatMap(ag => ag.books.map(b => b.id));
-                setAutoOrgSel(new Set(allIds)); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null);
+                setAutoOrgSel(new Set(allIds)); setAutoOrgExcludedMembers(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null);
                 setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label, dryPlan, sourceName, sourceFolderId: srcId, alreadyFiled, isConsolidate });
                 return true;
             };
@@ -7191,7 +7192,7 @@
                 { createSeriesFolders: true, seriesFolderMinBooks: wizardSeriesFolderMin, createMiscellaneous: wizardCreateMiscellaneous, sortByPosition: wizardSortByPosition },
                 (ags) => ags.length === 1 ? `Auto-Organized ${ags[0].displayName} by series` : `Auto-Organized ${ags.length} authors by series`);
 
-            const closeAutoOrgPreview = () => { setAutoOrgPreview(null); setAutoOrgSel(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null); };
+            const closeAutoOrgPreview = () => { setAutoOrgPreview(null); setAutoOrgSel(new Set()); setAutoOrgExcludedMembers(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null); };
 
             // v6.16.0 - Live By Author ↔ By Series toggle inside the preview: recompute the plan + already-filed in
             // place (the selection is per-book, so it persists — only the destinations change).
@@ -7269,7 +7270,25 @@
                 const selMoverGroups = authorGroups
                     .map(ag => ({ ...ag, books: ag.books.filter(b => !filedSet.has(b.id) && autoOrgSel.has(b.id)) }))
                     .filter(ag => ag.books.length > 0);
-                const willOrganize = selMoverGroups.length > 0;
+                // v6.17.0 (B) - Consolidate: keep only the picked source copies. Each book is pulled from its selected
+                // sources (consolidateRemovals); a multi-source book with every copy deselected drops out entirely.
+                let moverGroupsToApply = selMoverGroups;
+                let applyOpts = opts;
+                if (isConsolidate) {
+                    const removals = {};
+                    moverGroupsToApply = selMoverGroups
+                        .map(ag => ({ ...ag, books: ag.books.filter(b => {
+                            const srcs = getFoldersContainingBook(b.id).filter(f => !['__all__', '__library__', '__trash__', '__booklists__', '__views__', '__search__'].includes(f.id));
+                            if (srcs.length === 0) return true; // unfiled — still gets filed; nothing to pull from
+                            const kept = srcs.filter(f => !(srcs.length > 1 && autoOrgExcludedMembers.has(`${f.id}::${b.id}`))).map(f => f.id);
+                            if (kept.length === 0) return false; // multi-source, every copy deselected → skip the book
+                            removals[b.id] = kept;
+                            return true;
+                        }) }))
+                        .filter(ag => ag.books.length > 0);
+                    applyOpts = { ...opts, consolidateRemovals: removals };
+                }
+                const willOrganize = moverGroupsToApply.length > 0;
                 const willRemove = selectedFiledIds.length > 0;
                 if (!willOrganize && !willRemove) return; // "Nothing selected" — button is disabled, but guard anyway
                 const where = sourceName ? `“${sourceName}”` : 'the Inbox';
@@ -7286,7 +7305,7 @@
                     recordAction({ type: 'WIZARD_ORGANIZE', description: `${label} + removed ${selectedFiledIds.length} already-filed from ${where}`, subActions });
                     showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} and removed ${selectedFiledIds.length} from ${where}`);
                 } else if (willOrganize) {
-                    const plan = applyOrganizePlan(selMoverGroups, opts, label);
+                    const plan = applyOrganizePlan(moverGroupsToApply, applyOpts, label);
                     showToast(isConsolidate
                         ? `Consolidated ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} into their author homes`
                         : mode === 'author'
@@ -10386,6 +10405,34 @@
                             </div>
                             );
                         };
+                        // v6.17.0 (B) - Consolidate: a book's SOURCE folders (where it lives now, and will be pulled from).
+                        // __inbox__ counts as a source; the pure-virtual views don't. A multi-source book renders one
+                        // selectable cover PER source (below), so you can pull one copy and keep another.
+                        const consolidateSourcesOf = (b) => getFoldersContainingBook(b.id)
+                            .filter(f => !['__all__', '__library__', '__trash__', '__booklists__', '__views__', '__search__'].includes(f.id));
+                        const membershipCover = (b, source, navList) => {
+                            const key = `${source.id}::${b.id}`;
+                            const sel = autoOrgSel.has(b.id) && !autoOrgExcludedMembers.has(key);
+                            const toggle = (e) => {
+                                e.stopPropagation();
+                                if (sel) { setAutoOrgExcludedMembers(prev => { const n = new Set(prev); n.add(key); return n; }); }
+                                else { setAutoOrgSel(prev => { const n = new Set(prev); n.add(b.id); return n; }); setAutoOrgExcludedMembers(prev => { const n = new Set(prev); n.delete(key); return n; }); }
+                            };
+                            return (
+                            <div key={key} title={`${b.title || 'Untitled'} — from ${source.name}`} style={{ width: '46px', flex: '0 0 auto', cursor: 'pointer' }}
+                                onClick={toggle}
+                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null, navList); }}
+                                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); const ids = autoOrgSel.size > 0 ? [...autoOrgSel] : [b.id]; setAutoOrgHover(null); setAutoOrgMenu({ x: e.clientX, y: e.clientY, bookIds: ids }); }}>
+                                <div style={{ position: 'relative', borderRadius: '4px', outline: sel ? '2px solid #4f46e5' : '2px solid transparent', outlineOffset: '1px' }}>
+                                    {b.coverUrl
+                                        ? <img src={b.coverUrl} alt="" style={{ width: '46px', height: '69px', objectFit: 'cover', borderRadius: '3px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                                        : <div style={{ width: '46px', height: '69px', borderRadius: '3px', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8px', lineHeight: 1.1, textAlign: 'center', padding: '3px', overflow: 'hidden', color: '#6b7280' }}>{b.title || 'Untitled'}</div>}
+                                    {sel && <div style={{ position: 'absolute', top: '-6px', right: '-6px', width: '16px', height: '16px', borderRadius: '50%', background: '#4f46e5', color: 'white', fontSize: '10px', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>✓</div>}
+                                </div>
+                                <div style={{ fontSize: '9px', color: '#64748b', textAlign: 'center', marginTop: '2px', width: '46px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={source.name}>{source.name}</div>
+                            </div>
+                            );
+                        };
                         const coverRow = (bks) => <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{bks.map(b => cover(b, bks))}</div>;
                         // v6.16.0 - Destination context: the books ALREADY in the folder each shelf would file into (filed
                         // elsewhere, not in the source), so you see the full series/author at once — e.g. "2 new · 5 already
@@ -10448,7 +10495,9 @@
                             const full = [...movers, ...existing];
                             return (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', alignItems: 'flex-start' }}>
-                                {movers.map(b => cover(b, full))}
+                                {isConsolidate
+                                    ? movers.flatMap(b => { const srcs = consolidateSourcesOf(b); return srcs.length > 1 ? srcs.map(s => membershipCover(b, s, full)) : [cover(b, full)]; })
+                                    : movers.map(b => cover(b, full))}
                                 {existing.length > 0 && existingTray(existing, full)}
                             </div>
                             );
@@ -10628,7 +10677,16 @@
                                     removes the SELECTED already-filed books, spelling out exactly what it will do; disabled +
                                     "Nothing selected" when the selection is empty. Cancel always present. */}
                                 {(() => {
-                                    const selMovers = moverGroups.flatMap(ag => ag.books.map(b => b.id)).filter(id => autoOrgSel.has(id)).length;
+                                    // v6.17.0 (B) - In consolidate, a multi-source book counts as a mover only while ≥1 of its
+                                    // source copies is still picked (all copies deselected → nothing to pull → not organized).
+                                    const isEffectiveMover = (id) => {
+                                        if (!autoOrgSel.has(id)) return false;
+                                        if (!isConsolidate) return true;
+                                        const bk = bookMap.get(id); if (!bk) return true;
+                                        const srcs = consolidateSourcesOf(bk);
+                                        return srcs.length <= 1 || srcs.some(s => !autoOrgExcludedMembers.has(`${s.id}::${id}`));
+                                    };
+                                    const selMovers = moverGroups.flatMap(ag => ag.books.map(b => b.id)).filter(isEffectiveMover).length;
                                     const selFiled = alreadyFiled.map(x => x.book.id).filter(id => autoOrgSel.has(id)).length;
                                     const enabled = selMovers > 0 || selFiled > 0;
                                     const inbox = sourceName ? `“${sourceName}”` : 'Inbox';
