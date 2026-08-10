@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.29";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.30";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -404,6 +404,28 @@
                     style={{ position: 'absolute', [pos.h]: '100%', [pos.v]: 0, ...style }}>
                     {children}
                 </div>
+            );
+        }
+
+        // v6.16.0 - Threshold stepper: ONE set of controls (the styled −/+ with press-and-hold; NO native number
+        // spinners — type=text + inputMode=numeric). Its own edit state lets you backspace the field empty and retype
+        // without it snapping back mid-edit; onBlur restores a valid value.
+        function ThresholdStepper({ value, onSet, onStep, startHoldRepeat, stopHoldRepeat }) {
+            const [text, setText] = useState(String(value));
+            useEffect(() => { setText(String(value)); }, [value]);
+            return (
+                <span className="inline-flex items-center border border-gray-300 rounded overflow-hidden">
+                    <button type="button" aria-label="Fewer books required" disabled={value <= 1}
+                        onMouseDown={() => startHoldRepeat(() => onStep(-1))} onMouseLeave={stopHoldRepeat}
+                        className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-40 select-none">−</button>
+                    <input type="text" inputMode="numeric" value={text} aria-label="Books before a series earns its own folder"
+                        onChange={(e) => { const raw = e.target.value; setText(raw); const v = parseInt(raw, 10); if (Number.isFinite(v) && v >= 1) onSet(v); }}
+                        onBlur={() => setText(String(value))}
+                        className="w-12 text-center py-0.5 border-x border-gray-300 focus:outline-none tabular-nums" />
+                    <button type="button" aria-label="More books required"
+                        onMouseDown={() => startHoldRepeat(() => onStep(1))} onMouseLeave={stopHoldRepeat}
+                        className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 select-none">+</button>
+                </span>
             );
         }
 
@@ -10418,17 +10440,10 @@
                                             <div className="mt-2 pl-4 flex flex-col gap-2 text-sm text-gray-700">
                                                 <div className="flex items-center flex-wrap gap-2">
                                                     <span>Create a series folder once I own at least</span>
-                                                    <span className="inline-flex items-center border border-gray-300 rounded overflow-hidden">
-                                                        <button type="button" aria-label="Fewer books required" disabled={(opts.seriesFolderMinBooks || 1) <= 1}
-                                                            onMouseDown={() => startHoldRepeat(() => stepAutoOrgThreshold(-1))} onMouseLeave={stopHoldRepeat}
-                                                            className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-40 select-none">−</button>
-                                                        <input type="number" min="1" value={opts.seriesFolderMinBooks || 1}
-                                                            onChange={(e) => { const v = parseInt(e.target.value, 10); if (Number.isFinite(v) && v >= 1) setAutoOrgOpts({ seriesFolderMinBooks: v }); }}
-                                                            className="w-12 text-center py-0.5 border-x border-gray-300 focus:outline-none tabular-nums" />
-                                                        <button type="button" aria-label="More books required"
-                                                            onMouseDown={() => startHoldRepeat(() => stepAutoOrgThreshold(1))} onMouseLeave={stopHoldRepeat}
-                                                            className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 select-none">+</button>
-                                                    </span>
+                                                    <ThresholdStepper value={opts.seriesFolderMinBooks || 1}
+                                                        onSet={(v) => setAutoOrgOpts({ seriesFolderMinBooks: v })}
+                                                        onStep={stepAutoOrgThreshold}
+                                                        startHoldRepeat={startHoldRepeat} stopHoldRepeat={stopHoldRepeat} />
                                                     <span>book{(opts.seriesFolderMinBooks || 1) !== 1 ? 's' : ''} of it</span>
                                                     <span className="w-full text-xs text-gray-400">A series that already has a folder always keeps it.</span>
                                                 </div>
