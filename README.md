@@ -127,9 +127,11 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 ## Recent Features
 
 - **Cleaner right-click menu & sidebar** — the book menu is regrouped by what each action does (single-book **Edit…** opens full details; multi-select gets bulk field edits), submenus never run off-screen, and the sidebar sections collapse consistently — Folders included, with a one-click collapse/expand-all for subfolders.
-- **Auto-Organize from any folder** — Right-click a book in any folder and file that folder's books by author/series into their homes — not just the Inbox. A guard keeps it from ever flattening your existing structure, and the confirm dialog names the folder it's working on.
+- **Auto-Organize, reimagined** — Right-click a book *or* open the bulk wizard, and both land in one **live preview**: it shows the author's whole existing folder (so you never file blind), lets you flip **By Author / By Series** and tune the series-folder options on the fly, surfaces books already filed (with a one-click "remove from Inbox"), and never splits a series. A checkbox tree files exactly the books, series, or authors you choose.
+- **Publication Date column** — Show it in list view, sort by it, and use it to put a series in order.
+- **Set numbers** — On a multi-book selection, type an exact list like *"13, 13.5, 14, 14.5"* to number annual specials and fill series gaps.
+- **Book-detail navigation** — Page through the current folder's (or a preview shelf's) books with ‹ prev / next › or ←/→ — no re-opening each one.
 - **See where a book lives** — Hover a book in any folder or Book List (not just All Books) to see every folder and Book List it belongs to, in a popup that grows from your cursor. Works in cover and list views.
-- **Auto-Organize from a right-click** — Right-click a book (or a selection) to file its author or series in one step, with a cover preview before you commit. In the preview you can select covers to add to a Book List (a "New To Read" queue), see where each book already lives, and double-click to open its details.
 - **Searches** — Save any filter combination (search, ratings, ownership, tags, dates, deals) as a named Search in the sidebar. Recall one to restore that filtered view in place — a saved lens over your library.
 - **Book Lists** — Hand-pick sets of books into simple, flat lists kept separate from your folders. Adding or removing a book from a list never tags, moves, or deletes the book itself.
 - **Unified folder ordering** — One shared order — Manual, A→Z, or Z→A — across the sidebar, the Folders view, and the Move/Copy trees. Drag to reorder in Manual mode.
@@ -142,7 +144,6 @@ ReaderWrangler is the **only tool specifically designed for Amazon Kindle librar
 - **Encrypted Cloud Relay + Trash Bin** — End-to-end encrypted sync between the bookmarklet and the app. Trash Bin gives you a safety net before permanently deleting books. Orphan detection flags books removed from Amazon.
 - **Mobile Viewer** — Pair your phone with a QR code and browse your organized library anywhere — now with color-coded, collapsible Searches, Book Lists, and Folders, plus search & sort.
 - **Dark Mode + High Contrast Themes** — Four themes (light, dark, high-contrast light, high-contrast dark) with automatic OS detection.
-- **Auto-Organize Wizard** — One click to build an Author / Series / Books folder hierarchy, with preview and undo.
 - **Book Explorer** — Two-pane Windows Explorer-style interface with folder tree, list and cover grid views, drag-and-drop, and Cut/Copy/Paste.
 
 See [CHANGELOG.md](CHANGELOG.md) for complete version history.

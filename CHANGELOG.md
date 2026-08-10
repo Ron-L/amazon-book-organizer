@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.16.0] - 2026-08-10
+
+Auto-Organize grew up. The right-click and the bulk wizard now open the **same live preview**, where you see exactly where every book will land — existing folders and all — and tune the result as you go. Plus a Publication Date column, gap-friendly series numbering, and book-to-book navigation from the detail view.
+
+### Auto-Organize — one live preview for everything
+- **See the whole neighborhood, not just the target.** For each author, the preview shows the author's *entire* existing folder — every series subfolder and what's already in it — with the incoming books highlighted (*"3 new · 9 already here"*). No more organizing blind and finding surprises afterward.
+- **Pick the structure in the preview, live.** A **By Author / By Series** toggle sits in the header — flip it and the folders regroup instantly. A collapsible **⚙ Options** strip tunes the series-folder threshold, the *"Miscellaneous"* folder, and ordering, all against the real result. Your choices are remembered for next time.
+- **"Already filed," handled gracefully.** A book that's in the Inbox *and* already in its folder is now surfaced (with where it lives) and offered a one-click *"remove from the Inbox"* — instead of a confusing "nothing to organize."
+- **Choose exactly what to organize.** A checkbox tree (section / author / series) plus click-to-toggle covers lets you include or hold back any book, series, or author — so you can file the complete series now and leave the one with gaps for later.
+- **It never splits a series.** A series that already has a folder always keeps it; the threshold only decides whether to create *new* folders.
+- **The bulk wizard is now just an author picker** — with a name filter — that opens the same preview, so both paths are identical.
+- **Flip through a shelf** straight from the book-detail view to check publication dates and covers.
+
+### Added
+- **Publication Date column** in list view — show it, sort by it, and use it to put a series in order.
+- **Set numbers…** (on a multi-book selection) — type an exact list like *"13, 13.5, 14, 14.5"* and it's applied to the selected books in the order shown, so annual specials and other gaps get the numbers you want.
+- **Book-detail ‹ prev / next ›** — page through the current folder's (or a preview shelf's) books without re-opening each one; ←/→ work too.
+
+### Changed
+- The **Amazon** column cell now reads **"View ↗"** (a clear link) instead of repeating the word "Amazon".
+
+### Fixed
+- Auto-Organize no longer scatters a series across the author root when a folder for that series already exists.
+
 ## [6.15.0] - 2026-08-07
 
 A polish pass across the book right-click menu and the left sidebar — clearer grouping, submenus that never run off-screen, and a few quality-of-life additions.

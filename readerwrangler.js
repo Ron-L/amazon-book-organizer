@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.30";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7111,12 +7111,6 @@
                 });
                 return authorGroups;
             };
-            // Menu gating: do the selected books' authors have ANY series book in the current folder? (So By Series
-            // shows even when you right-clicked a standalone by an author who also has a series here.)
-            const selectionAuthorsHaveSeries = (selBooks) => {
-                const keys = new Set((selBooks || []).map(b => normAuthorKey(b.author)));
-                return organizePoolFor(selectedFolderId, selBooks).some(b => keys.has(normAuthorKey(b.author)) && b.series && b.series.trim());
-            };
 
             // v6.13.0-alpha.7 (D1) - Right-click no longer commits immediately: it opens the confirm/preview.
             // computeOrganizePlan is PURE, so the dry-run plan drives the preview counts without touching state;
@@ -7180,9 +7174,6 @@
                 // auto-refreshes (its effect keys on books/folders) once organized books leave the Inbox.
                 openAutoOrgPreviewCore(authorGroups, '__inbox__', opts, mode, label);
             };
-            const autoOrganizeByAuthor = (selBooks) => openAutoOrgPreview('author', selBooks,
-                { createSeriesFolders: false }, // FLAT — no series subfolders
-                (ags) => ags.length === 1 ? `Auto-Organized ${ags[0].displayName}` : `Auto-Organized ${ags.length} authors`);
             const autoOrganizeBySeries = (selBooks) => openAutoOrgPreview('series', selBooks,
                 // v6.16.0 - Seed from the shared, PERSISTED organize defaults (same ones the wizard uses, and the ones
                 // the preview's ⚙ Options write back to) — so a tweak in the preview sticks for next time, from either path.
