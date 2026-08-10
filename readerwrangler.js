@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.17.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.17.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -902,6 +902,7 @@
             const [bookTooltip, setBookTooltip] = useState(null); // v5.0.0-alpha.98 - Tooltip for All Books view { bookId, x, y }
             const [folderContextMenu, setFolderContextMenu] = useState(null); // v5.0.0-alpha.133 - Folder context menu { folderId, x, y }
             const [submenuExpandedFolders, setSubmenuExpandedFolders] = useState(new Set()); // v5.0.0-alpha.138 - Expanded folders in Move to submenu
+            const [submenuFilter, setSubmenuFilter] = useState(''); // v6.17.0 - filter/search box in Move to / Copy to / Add to Book List submenus
             const [folderClipboard, setFolderClipboard] = useState({ items: [], operation: null }); // v5.0.0-alpha.141 - Clipboard for cut/copy/paste
             const [folderPropertiesDialog, setFolderPropertiesDialog] = useState(null); // v5.0.0-alpha.142 - Folder properties dialog { folderId }
             const [folderPropertiesEditedName, setFolderPropertiesEditedName] = useState(''); // v5.0.0-alpha.143 - Edited name in properties dialog
@@ -10408,15 +10409,22 @@
                                     : <div style={{ width: '38px', height: '57px', borderRadius: '3px', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', lineHeight: 1.1, textAlign: 'center', padding: '2px', overflow: 'hidden', color: '#6b7280' }}>{b.title || 'Untitled'}</div>}
                             </div>
                         );
-                        // A row of movers + (faded) existing-in-destination covers, split by a hairline. Book-detail nav
-                        // (‹ ›) spans the WHOLE shelf — incoming + already-here — so you can flip through all of them.
+                        // v6.17.0 - The already-here covers sit on a recessed "shelf" tray so they read as "already
+                        // shelved here" at a glance — distinct from the incoming movers (the raised, outlined foreground)
+                        // without graying (reserved for wishlist) or motion (which would say "attention", not "settled").
+                        const existingTray = (bks, navList) => (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '5px 7px', background: '#f1f3f5', border: '1px solid #e5e7eb', borderRadius: '6px', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.06)' }}>
+                                {bks.map(b => contextCover(b, navList))}
+                            </div>
+                        );
+                        // A shelf = the incoming movers (raised) followed by the already-here tray. Book-detail nav (‹ ›)
+                        // spans the WHOLE shelf — incoming + already-here — so you can flip through all of them.
                         const shelfRow = (movers, existing) => {
                             const full = [...movers, ...existing];
                             return (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px', alignItems: 'flex-start' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', alignItems: 'flex-start' }}>
                                 {movers.map(b => cover(b, full))}
-                                {existing.length > 0 && <div style={{ width: '1px', alignSelf: 'stretch', background: '#e5e7eb', margin: '0 3px' }} />}
-                                {existing.map(b => contextCover(b, full))}
+                                {existing.length > 0 && existingTray(existing, full)}
                             </div>
                             );
                         };
@@ -10555,7 +10563,9 @@
                                                                     </div>
                                                                     {hasIncoming
                                                                         ? shelfRow(slot.incoming, slot.existing)
-                                                                        : <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>{slot.existing.map(b => contextCover(b, slot.existing))}</div>}
+                                                                        : (slot.existing.length > 0
+                                                                            ? <div style={{ marginTop: '6px' }}>{existingTray(slot.existing, slot.existing)}</div>
+                                                                            : null)}
                                                                 </div>
                                                                 );
                                                             })}
@@ -16806,6 +16816,26 @@
 
                         // Build folder tree for submenu (reused for both Move to and Copy to)
                         const buildFolderTree = (parentId, depth = 0) => {
+                            // v6.17.0 - Filter mode: when the search box has text, show a FLAT list of every folder whose
+                            // name matches (hierarchy/expand ignored — you're searching a long list, not browsing it).
+                            const q = submenuFilter.trim().toLowerCase();
+                            if (q && parentId === null) {
+                                const collect = (pid) => orderedChildFolders(pid).flatMap(f => [f, ...collect(f.id)]);
+                                const matches = collect(null).filter(f => (f.name || '').toLowerCase().includes(q));
+                                if (matches.length === 0) return <div className="px-4 py-2 text-gray-400 text-sm">No folders match “{submenuFilter}”</div>;
+                                return matches.map(f => {
+                                    const isCurrentFolder = f.id === selectedFolderId;
+                                    const parent = folders.find(p => p.id === f.parentId);
+                                    return (
+                                        <div key={f.id} role="menuitem"
+                                            className={`px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 ${isCurrentFolder ? 'bg-blue-50' : ''}`}
+                                            onClick={(e) => { e.stopPropagation(); if (contextSubmenu === 'move-to') handleMoveToFolder(f.id); else if (contextSubmenu === 'copy-to') handleCopyToFolder(f.id); }}>
+                                            <span>{isCurrentFolder ? '✓' : '📁'}</span>
+                                            <span className="flex-1">{f.name}{parent ? <span className="text-gray-400 text-xs"> · in {parent.name}</span> : null}</span>
+                                        </div>
+                                    );
+                                });
+                            }
                             // v6.12.0-alpha.83 (1c) - Order via the shared helper so the Move/Copy tree mirrors folderListSort (same as the sidebar).
                             return orderedChildFolders(parentId)
                                 .map(f => {
@@ -16870,6 +16900,23 @@
                                 });
                         };
 
+                        // v6.17.0 - Shared filter box for the folder / book-list pickers — find a target in a long list fast
+                        // (same idea as the Auto-Organize wizard's author filter). Sticky at the top of the scrolling submenu.
+                        const submenuFilterBox = (placeholder) => (
+                            <div className="px-2 pt-1 pb-1 sticky top-0 bg-white z-10 border-b border-gray-100">
+                                <div className="relative">
+                                    <input type="text" value={submenuFilter} autoFocus placeholder={placeholder}
+                                        onChange={(e) => setSubmenuFilter(e.target.value)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="w-full pl-2 pr-6 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                                    {submenuFilter && (
+                                        <span onClick={(e) => { e.stopPropagation(); setSubmenuFilter(''); }}
+                                            title="Clear" className="absolute right-1 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 cursor-pointer text-sm select-none">✕</span>
+                                    )}
+                                </div>
+                            </div>
+                        );
+
                         return (
                             <div
                                 className="fixed bg-white border border-gray-300 rounded-lg shadow-xl z-[60] py-1 min-w-[200px]"
@@ -16901,7 +16948,7 @@
                                     <div
                                         className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
                                         role="menuitem" aria-haspopup="true"
-                                        onMouseEnter={() => setContextSubmenu('move-to')}
+                                        onMouseEnter={() => { setContextSubmenu('move-to'); setSubmenuFilter(''); }}
                                         onMouseLeave={(e) => {
                                             setTimeout(() => {
                                                 const activeSubmenu = document.querySelector('.context-submenu:hover');
@@ -16922,6 +16969,7 @@
                                                 onMouseEnter={() => setContextSubmenu('move-to')}
                                                 onMouseLeave={() => setContextSubmenu(null)}
                                                 onClick={(e) => e.stopPropagation()}>
+                                                {submenuFilterBox('Filter folders…')}
                                                 {/* v6.12.0-alpha.60 (E) - New top-level folder, then move the books there */}
                                                 <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 font-medium text-blue-700"
                                                     role="menuitem" onClick={() => handleNewFolderThenPlace(null, false)}>
@@ -16938,7 +16986,7 @@
                                 <div
                                     className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
                                     role="menuitem" aria-haspopup="true"
-                                    onMouseEnter={() => setContextSubmenu('copy-to')}
+                                    onMouseEnter={() => { setContextSubmenu('copy-to'); setSubmenuFilter(''); }}
                                     onMouseLeave={(e) => {
                                         setTimeout(() => {
                                             const activeSubmenu = document.querySelector('.context-submenu:hover');
@@ -16959,6 +17007,7 @@
                                             onMouseEnter={() => setContextSubmenu('copy-to')}
                                             onMouseLeave={() => setContextSubmenu(null)}
                                             onClick={(e) => e.stopPropagation()}>
+                                            {submenuFilterBox('Filter folders…')}
                                             {/* v6.12.0-alpha.60 (E) - New top-level folder, then copy the books there */}
                                             <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 font-medium text-blue-700"
                                                 role="menuitem" onClick={() => handleNewFolderThenPlace(null, true)}>
@@ -16974,7 +17023,7 @@
                                 <div
                                     className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
                                     role="menuitem" aria-haspopup="true"
-                                    onMouseEnter={() => setContextSubmenu('add-to-booklist')}
+                                    onMouseEnter={() => { setContextSubmenu('add-to-booklist'); setSubmenuFilter(''); }}
                                     onMouseLeave={() => { setTimeout(() => { const a = document.querySelector('.context-submenu:hover'); const t = document.querySelector('.submenu-trigger:hover'); if (!a && !t) setContextSubmenu(null); }, 600); }}>
                                     <span>📗</span>
                                     <span>Add to Book List</span>
@@ -16985,12 +17034,13 @@
                                             onMouseEnter={() => setContextSubmenu('add-to-booklist')}
                                             onMouseLeave={() => setContextSubmenu(null)}
                                             onClick={(e) => e.stopPropagation()}>
+                                            {submenuFilterBox('Filter Book Lists…')}
                                             <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 font-medium text-blue-700"
                                                 role="menuitem" onClick={handleAddToNewBookList}>
                                                 <span>＋</span><span>New Book List…</span>
                                             </div>
                                             {bookLists.length > 0 && <div className="border-t border-gray-200 my-1" role="separator"></div>}
-                                            {[...bookLists].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)).map(bl => (
+                                            {[...bookLists].sort((a, b) => (a.position ?? 0) - (b.position ?? 0)).filter(bl => { const q = submenuFilter.trim().toLowerCase(); return !q || (bl.name || '').toLowerCase().includes(q); }).map(bl => (
                                                 <div key={bl.id} className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
                                                     role="menuitem" onClick={() => handleAddToExistingBookList(bl.id)}>
                                                     <span>📗</span><span className="truncate max-w-[220px]">{bl.name}</span>
