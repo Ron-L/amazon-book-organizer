@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.17.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.17.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10417,6 +10417,31 @@
                                 {bks.map(b => contextCover(b, navList))}
                             </div>
                         );
+                        // v6.17.0 - "Elsewhere": the author's books that live in the Inbox / another folder and are NOT being
+                        // organized by this action — read-only, on a DASHED (open, not-home) tray with a location chip, so you
+                        // see the whole author at a glance without confusing them for already-here (solid tray).
+                        const elsewhereLocations = (bks) => {
+                            const locs = new Set();
+                            bks.forEach(b => {
+                                const homes = getFoldersContainingBook(b.id).filter(f => !['__inbox__', '__all__', '__library__', '__trash__', '__booklists__'].includes(f.id));
+                                if (homes.length === 0) locs.add('Inbox'); else homes.forEach(f => locs.add(f.name));
+                            });
+                            return [...locs];
+                        };
+                        const elsewhereTray = (bks, navList) => {
+                            const locs = elsewhereLocations(bks);
+                            const chip = locs.length === 0 ? 'elsewhere' : locs.length <= 2 ? locs.join(', ') : `${locs.length} places`;
+                            return (
+                            <div style={{ marginTop: '6px' }}>
+                                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <span>📥</span><span>In {chip} — not organized</span>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '5px 7px', background: '#fafafa', border: '1px dashed #cbd5e1', borderRadius: '6px' }}>
+                                    {bks.map(b => contextCover(b, navList))}
+                                </div>
+                            </div>
+                            );
+                        };
                         // A shelf = the incoming movers (raised) followed by the already-here tray. Book-detail nav (‹ ›)
                         // spans the WHOLE shelf — incoming + already-here — so you can flip through all of them.
                         const shelfRow = (movers, existing) => {
@@ -10514,6 +10539,23 @@
                                                 const authorFolder = folders.find(f => f.name === ag.displayName && f.parentId === null);
                                                 const existingSubs = authorFolder ? folders.filter(f => f.parentId === authorFolder.id) : [];
                                                 const existingSubNames = new Set(existingSubs.map(f => f.name));
+                                                // v6.17.0 - The author's FULL footprint: books by this author that are NEITHER movers NOR in the home
+                                                // tree are "elsewhere" (loose in the Inbox / another folder). Shown read-only so you see all of the
+                                                // author at once, even the copies this action leaves alone. (Consolidate touches everything → none.)
+                                                const authorKey = normAuthorKey(ag.books[0] ? ag.books[0].author : ag.displayName);
+                                                const agMoverIds = new Set(ag.books.map(b => b.id));
+                                                const homeIds = new Set();
+                                                if (authorFolder) {
+                                                    const collectHome = (fid) => { (folders.find(f => f.id === fid)?.bookIds || []).forEach(id => homeIds.add(id)); folders.filter(f => f.parentId === fid).forEach(sf => collectHome(sf.id)); };
+                                                    collectHome(authorFolder.id);
+                                                }
+                                                const elsewhereBooks = isConsolidate ? [] : books.filter(b => !b.isDeleted && normAuthorKey(b.author) === authorKey && !agMoverIds.has(b.id) && !homeIds.has(b.id));
+                                                const elsewhereByDest = new Map();
+                                                elsewhereBooks.forEach(b => {
+                                                    const key = (mode === 'series' && b.series && b.series.trim()) ? b.series.trim() : null;
+                                                    if (!elsewhereByDest.has(key)) elsewhereByDest.set(key, []);
+                                                    elsewhereByDest.get(key).push(b);
+                                                });
                                                 const targetByDest = new Map();
                                                 if (mode === 'series') {
                                                     const minSeries = opts.seriesFolderMinBooks != null ? opts.seriesFolderMinBooks : 1;
@@ -10533,13 +10575,20 @@
                                                 // Merge the incoming buckets with the author's FULL existing structure so non-target subfolders show too.
                                                 const slots = [];
                                                 const rootExisting = existingInDest(ag.displayName, null);
-                                                if ((targetByDest.get(null) || []).length > 0 || rootExisting.length > 0) slots.push({ key: '__root__', standalone: true, name: `Directly under ${ag.displayName}`, incoming: targetByDest.get(null) || [], existing: rootExisting });
+                                                const rootElsewhere = elsewhereByDest.get(null) || [];
+                                                if ((targetByDest.get(null) || []).length > 0 || rootExisting.length > 0 || rootElsewhere.length > 0) slots.push({ key: '__root__', standalone: true, name: `Directly under ${ag.displayName}`, incoming: targetByDest.get(null) || [], existing: rootExisting, elsewhere: rootElsewhere });
                                                 existingSubs.forEach(sub => {
-                                                    slots.push({ key: sub.id, standalone: false, name: sub.name, incoming: targetByDest.get(sub.name) || [], existing: existingInDest(ag.displayName, sub.name) });
+                                                    slots.push({ key: sub.id, standalone: false, name: sub.name, incoming: targetByDest.get(sub.name) || [], existing: existingInDest(ag.displayName, sub.name), elsewhere: elsewhereByDest.get(sub.name) || [] });
                                                 });
                                                 targetByDest.forEach((books, dest) => {
                                                     if (dest === null || existingSubNames.has(dest)) return; // brand-new subfolder
-                                                    slots.push({ key: '__new__' + dest, standalone: false, name: dest, incoming: books, existing: [] });
+                                                    slots.push({ key: '__new__' + dest, standalone: false, name: dest, incoming: books, existing: [], elsewhere: elsewhereByDest.get(dest) || [] });
+                                                });
+                                                // v6.17.0 - Series with ONLY elsewhere books (no mover, no existing subfolder) still get a shelf,
+                                                // so the whole author shows — e.g. all of "Jack Reacher" sitting in the Inbox.
+                                                elsewhereByDest.forEach((elBooks, dest) => {
+                                                    if (dest === null || existingSubNames.has(dest) || targetByDest.has(dest)) return;
+                                                    slots.push({ key: '__else__' + dest, standalone: false, name: dest, incoming: [], existing: [], elsewhere: elBooks });
                                                 });
                                                 const multiShelf = slots.filter(s => s.incoming.length > 0).length > 1;
                                                 return (
@@ -10551,21 +10600,20 @@
                                                         <div className="ml-4 mt-1">
                                                             {slots.map(slot => {
                                                                 const hasIncoming = slot.incoming.length > 0;
-                                                                if (!hasIncoming && slot.existing.length === 0) return null; // empty non-target subfolder
+                                                                const hasElsewhere = !!(slot.elsewhere && slot.elsewhere.length > 0);
+                                                                if (!hasIncoming && slot.existing.length === 0 && !hasElsewhere) return null; // empty non-target subfolder
                                                                 const parts = [];
                                                                 if (hasIncoming) parts.push(`${slot.incoming.length} new`);
                                                                 if (slot.existing.length > 0) parts.push(`${slot.existing.length} ${hasIncoming ? 'already here' : 'here'}`);
+                                                                if (hasElsewhere) parts.push(`${slot.elsewhere.length} elsewhere`);
                                                                 return (
                                                                 <div key={slot.key} className="mb-2">
-                                                                    <div className={`text-sm flex items-center gap-2 ${slot.standalone ? 'italic ' : ''}${hasIncoming ? 'text-gray-700' : 'text-gray-400'}`}>
+                                                                    <div className={`text-sm flex items-center gap-2 ${slot.standalone ? 'italic ' : ''}${hasIncoming ? 'text-gray-700' : (hasElsewhere ? 'text-gray-600' : 'text-gray-400')}`}>
                                                                         {hasIncoming && multiShelf && triCheck(slot.incoming.map(b => b.id))}
                                                                         {slot.standalone ? slot.name : <>📚 {slot.name}</>} <span className="text-gray-400 not-italic">({parts.join(' · ')})</span>
                                                                     </div>
-                                                                    {hasIncoming
-                                                                        ? shelfRow(slot.incoming, slot.existing)
-                                                                        : (slot.existing.length > 0
-                                                                            ? <div style={{ marginTop: '6px' }}>{existingTray(slot.existing, slot.existing)}</div>
-                                                                            : null)}
+                                                                    {(hasIncoming || slot.existing.length > 0) && shelfRow(slot.incoming, slot.existing)}
+                                                                    {hasElsewhere && elsewhereTray(slot.elsewhere, slot.elsewhere)}
                                                                 </div>
                                                                 );
                                                             })}
