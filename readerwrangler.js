@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.28";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.29";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7162,7 +7162,9 @@
                 { createSeriesFolders: false }, // FLAT — no series subfolders
                 (ags) => ags.length === 1 ? `Auto-Organized ${ags[0].displayName}` : `Auto-Organized ${ags.length} authors`);
             const autoOrganizeBySeries = (selBooks) => openAutoOrgPreview('series', selBooks,
-                { createSeriesFolders: true, seriesFolderMinBooks: 1, createMiscellaneous: false }, // series subfolders; non-series at author root
+                // v6.16.0 - Seed from the shared, PERSISTED organize defaults (same ones the wizard uses, and the ones
+                // the preview's ⚙ Options write back to) — so a tweak in the preview sticks for next time, from either path.
+                { createSeriesFolders: true, seriesFolderMinBooks: wizardSeriesFolderMin, createMiscellaneous: wizardCreateMiscellaneous, sortByPosition: wizardSortByPosition },
                 (ags) => ags.length === 1 ? `Auto-Organized ${ags[0].displayName} by series` : `Auto-Organized ${ags.length} authors by series`);
 
             const closeAutoOrgPreview = () => { setAutoOrgPreview(null); setAutoOrgSel(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null); };
@@ -7182,8 +7184,12 @@
                 });
             };
             // v6.16.0 (Stage 2) - Live By-Series options (threshold / Miscellaneous / sort-by-position), tuned in the
-            // preview: patch opts and recompute the plan + already-filed in place (selection persists).
+            // preview: patch opts, recompute the plan + already-filed in place (selection persists), AND persist the
+            // choice to the shared defaults so it sticks next time (fixes "changed it, cancelled, it reverted").
             const setAutoOrgOpts = (patch) => {
+                if (patch.seriesFolderMinBooks != null) setWizardSeriesFolderMin(patch.seriesFolderMinBooks);
+                if (patch.createMiscellaneous != null) setWizardCreateMiscellaneous(patch.createMiscellaneous);
+                if (patch.sortByPosition != null) setWizardSortByPosition(patch.sortByPosition);
                 setAutoOrgPreview(prev => {
                     if (!prev) return prev;
                     const opts = { ...prev.opts, ...patch };
@@ -7191,6 +7197,25 @@
                     const alreadyFiled = computeAlreadyFiled(prev.authorGroups, dryPlan, prev.sourceFolderId);
                     return { ...prev, opts, dryPlan, alreadyFiled };
                 });
+            };
+            // Threshold stepper reads the live value off the ref (so press-and-hold repeats step correctly).
+            const stepAutoOrgThreshold = (delta) => {
+                const cur = (autoOrgPreviewRef.current && autoOrgPreviewRef.current.opts && autoOrgPreviewRef.current.opts.seriesFolderMinBooks) || 1;
+                const next = Math.max(1, cur + delta);
+                if (next !== cur) setAutoOrgOpts({ seriesFolderMinBooks: next });
+            };
+            // Press-and-hold auto-repeat: one immediate step, then accelerating repeats until release (a window-level
+            // mouseup stops it even if the button disables mid-hold, e.g. the threshold hits its floor).
+            const holdRepeatRef = useRef(null);
+            const stopHoldRepeat = () => { if (holdRepeatRef.current) { clearTimeout(holdRepeatRef.current); holdRepeatRef.current = null; } };
+            const startHoldRepeat = (fn) => {
+                stopHoldRepeat();
+                fn();
+                let delay = 300;
+                const tick = () => { fn(); delay = Math.max(45, delay - 40); holdRepeatRef.current = setTimeout(tick, delay); };
+                holdRepeatRef.current = setTimeout(tick, delay);
+                const stop = () => { stopHoldRepeat(); window.removeEventListener('mouseup', stop); };
+                window.addEventListener('mouseup', stop);
             };
 
             // v6.16.0 - Undoable removal of books from a single folder (shape matches the REMOVE_BOOKS_FOLDER undo/redo
@@ -9987,9 +10012,15 @@
 
                                         {/* v6.16.0 (#40) - Filter the author list by name (scrolling to find one is painful) */}
                                         <div className="px-3 py-2 border-b border-gray-200">
-                                            <input type="text" value={wizardAuthorFilter} onChange={(e) => setWizardAuthorFilter(e.target.value)}
-                                                placeholder="Filter authors by name…"
-                                                className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                                            <div className="relative">
+                                                <input type="text" value={wizardAuthorFilter} onChange={(e) => setWizardAuthorFilter(e.target.value)}
+                                                    placeholder="Filter authors by name…"
+                                                    className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+                                                {wizardAuthorFilter && (
+                                                    <button type="button" onClick={() => setWizardAuthorFilter('')} title="Clear filter" aria-label="Clear filter"
+                                                        className="absolute right-1.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full leading-none">×</button>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Author list scrollable area */}
@@ -10389,12 +10420,14 @@
                                                     <span>Create a series folder once I own at least</span>
                                                     <span className="inline-flex items-center border border-gray-300 rounded overflow-hidden">
                                                         <button type="button" aria-label="Fewer books required" disabled={(opts.seriesFolderMinBooks || 1) <= 1}
-                                                            onClick={() => setAutoOrgOpts({ seriesFolderMinBooks: Math.max(1, (opts.seriesFolderMinBooks || 1) - 1) })}
-                                                            className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-40">−</button>
-                                                        <span className="w-10 text-center py-0.5 border-x border-gray-300 tabular-nums">{opts.seriesFolderMinBooks || 1}</span>
+                                                            onMouseDown={() => startHoldRepeat(() => stepAutoOrgThreshold(-1))} onMouseLeave={stopHoldRepeat}
+                                                            className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-40 select-none">−</button>
+                                                        <input type="number" min="1" value={opts.seriesFolderMinBooks || 1}
+                                                            onChange={(e) => { const v = parseInt(e.target.value, 10); if (Number.isFinite(v) && v >= 1) setAutoOrgOpts({ seriesFolderMinBooks: v }); }}
+                                                            className="w-12 text-center py-0.5 border-x border-gray-300 focus:outline-none tabular-nums" />
                                                         <button type="button" aria-label="More books required"
-                                                            onClick={() => setAutoOrgOpts({ seriesFolderMinBooks: (opts.seriesFolderMinBooks || 1) + 1 })}
-                                                            className="px-2 py-0.5 text-gray-600 hover:bg-gray-100">+</button>
+                                                            onMouseDown={() => startHoldRepeat(() => stepAutoOrgThreshold(1))} onMouseLeave={stopHoldRepeat}
+                                                            className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 select-none">+</button>
                                                     </span>
                                                     <span>book{(opts.seriesFolderMinBooks || 1) !== 1 ? 's' : ''} of it</span>
                                                     <span className="w-full text-xs text-gray-400">A series that already has a folder always keeps it.</span>
