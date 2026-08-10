@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.17.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.17.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7120,6 +7120,19 @@
                 });
                 return authorGroups;
             };
+            // v6.17.0 (scope toggle) - Rebuild the author groups at an explicit scope (the narrow folder/Inbox ↔ '__all__'
+            // = Everywhere/consolidate), independent of the current view. Powers the in-dialog Scope control.
+            const authorGroupsForScope = (authorNames, scopeId) => {
+                const pool = currentFolderSourceBooks(scopeId);
+                const want = new Map();
+                (authorNames || []).forEach(n => want.set(normAuthorKey(n), n));
+                const groups = [];
+                want.forEach((orig, key) => {
+                    const bks = pool.filter(b => normAuthorKey(b.author) === key);
+                    if (bks.length > 0) groups.push({ displayName: displayAuthorName(orig), books: bks });
+                });
+                return groups;
+            };
 
             // v6.13.0-alpha.7 (D1) - Right-click no longer commits immediately: it opens the confirm/preview.
             // computeOrganizePlan is PURE, so the dry-run plan drives the preview counts without touching state;
@@ -7157,7 +7170,7 @@
                 // already in their author home aren't movers, so they default OUT — they show as neighborhood, not actions.
                 const allIds = isConsolidate ? [...dryPlan.allBookIdsToOrganize] : authorGroups.flatMap(ag => ag.books.map(b => b.id));
                 setAutoOrgSel(new Set(allIds)); setAutoOrgExcludedMembers(new Set()); setAutoOrgAnchor(null); setAutoOrgMenu(null); setAutoOrgHover(null);
-                setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label, dryPlan, sourceName, sourceFolderId: srcId, alreadyFiled, isConsolidate });
+                setAutoOrgPreview({ mode, authorGroups, opts: scopedOpts, label, dryPlan, sourceName, sourceFolderId: srcId, alreadyFiled, isConsolidate, scopeAuthorNames: authorGroups.map(ag => ag.displayName), narrowSourceId: srcId });
                 return true;
             };
             // Right-click path: build authorGroups from the clicked/selected books, scope to the current folder.
@@ -7207,6 +7220,24 @@
                         : `Auto-Organized ${prev.authorGroups.length} authors${newMode === 'series' ? ' by series' : ''}`;
                     return { ...prev, mode: newMode, opts, dryPlan, alreadyFiled, label };
                 });
+            };
+            // v6.17.0 (scope toggle) - Switch the dialog's SCOPE in place: narrow (the folder/Inbox it opened from) ↔
+            // '__all__' (Everywhere = consolidate the SAME authors from everywhere). Rebuilds the author groups at the new
+            // scope, recomputes plan + already-filed, and resets the selection to the new movers. narrowSourceId and
+            // scopeAuthorNames are fixed at open (spread through), so flipping back reproduces the original narrow view.
+            const setAutoOrgScope = (newScopeId) => {
+                const prev = autoOrgPreviewRef.current;
+                if (!prev || prev.sourceFolderId === newScopeId) return;
+                const isCons = newScopeId === '__all__';
+                const authorGroups = authorGroupsForScope(prev.scopeAuthorNames, newScopeId);
+                if (authorGroups.length === 0) { showToast('Nothing to organize at that scope'); return; }
+                const opts = { ...prev.opts, sourceFolderId: newScopeId };
+                const dryPlan = computeOrganizePlan(authorGroups, folders, opts);
+                const alreadyFiled = computeAlreadyFiled(authorGroups, dryPlan, newScopeId);
+                const sourceName = (newScopeId === '__inbox__' || isCons) ? null : (folders.find(f => f.id === newScopeId)?.name || null);
+                const allIds = isCons ? [...dryPlan.allBookIdsToOrganize] : authorGroups.flatMap(ag => ag.books.map(b => b.id));
+                setAutoOrgSel(new Set(allIds)); setAutoOrgExcludedMembers(new Set()); setAutoOrgAnchor(null);
+                setAutoOrgPreview({ ...prev, authorGroups, opts, dryPlan, alreadyFiled, sourceName, sourceFolderId: newScopeId, isConsolidate: isCons });
             };
             // v6.16.0 (Stage 2) - Live By-Series options (threshold / Miscellaneous / sort-by-position), tuned in the
             // preview: patch opts, recompute the plan + already-filed in place (selection persists), AND persist the
@@ -10358,7 +10389,7 @@
 
                     {/* v6.13.0-alpha.7 (D1) - Auto-Organize confirm/preview: hierarchical Author→Series→covers before commit */}
                     {autoOrgPreview && (() => {
-                        const { mode, authorGroups, dryPlan, sourceName, sourceFolderId, opts = {}, alreadyFiled = [], isConsolidate = false } = autoOrgPreview;
+                        const { mode, authorGroups, dryPlan, sourceName, sourceFolderId, opts = {}, alreadyFiled = [], isConsolidate = false, narrowSourceId } = autoOrgPreview;
                         const filedIds = new Set(alreadyFiled.map(x => x.book.id));
                         // The bottom "Will organize" section shows the movers only — the already-filed books render in the
                         // top section instead, so they're never double-listed.
@@ -10506,8 +10537,23 @@
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onMouseDown={(e) => { backdropMouseDownRef.current = e.target; }} onClick={(e) => { if (e.target === e.currentTarget && backdropMouseDownRef.current === e.currentTarget) closeAutoOrgPreview(); backdropMouseDownRef.current = null; }}>
                             <div className="bg-white rounded-lg shadow-2xl w-full" role="dialog" aria-modal="true" aria-labelledby="modal-autoorg-preview" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
                                 {/* Header — the mode is a live segmented toggle (recomputes the preview in place). */}
-                                <div className="flex justify-between items-center gap-3 p-4 bg-indigo-100 rounded-t-lg border-b border-indigo-300">
-                                    <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">{isConsolidate ? '✨ Consolidate — All Books' : `✨ Auto-Organize ${sourceName ? `“${sourceName}” Folder` : 'Inbox'}`}</h2>
+                                <div className="flex justify-between items-start gap-3 p-4 bg-indigo-100 rounded-t-lg border-b border-indigo-300">
+                                    <div className="flex flex-col gap-1.5 min-w-0">
+                                        <h2 id="modal-autoorg-preview" className="text-xl font-bold text-gray-900">{isConsolidate ? '✨ Consolidate — All Books' : `✨ Auto-Organize ${sourceName ? `“${sourceName}” Folder` : 'Inbox'}`}</h2>
+                                        {/* v6.17.0 - In-dialog scope switch: narrow (this folder / Inbox) ↔ Everywhere (consolidate the same
+                                            authors from all over). Hidden when opened straight from All Books (already Everywhere). */}
+                                        {narrowSourceId && narrowSourceId !== '__all__' && (
+                                            <div className="flex items-center gap-2 text-xs">
+                                                <span className="text-gray-600">Scope:</span>
+                                                <div className="flex border border-indigo-400 rounded overflow-hidden" role="group" aria-label="Organize scope">
+                                                    <button onClick={() => setAutoOrgScope(narrowSourceId)} aria-pressed={!isConsolidate}
+                                                        className={`px-2 py-0.5 transition-colors ${!isConsolidate ? 'bg-indigo-600 text-white font-semibold' : 'bg-white text-gray-700 hover:bg-indigo-50'}`}>{narrowSourceId === '__inbox__' ? 'Inbox' : 'This folder'}</button>
+                                                    <button onClick={() => setAutoOrgScope('__all__')} aria-pressed={isConsolidate}
+                                                        className={`px-2 py-0.5 border-l border-indigo-400 transition-colors ${isConsolidate ? 'bg-indigo-600 text-white font-semibold' : 'bg-white text-gray-700 hover:bg-indigo-50'}`}>Everywhere</button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="flex items-center gap-3 flex-shrink-0">
                                         <div className="flex border border-indigo-400 rounded overflow-hidden text-sm" role="group" aria-label="Organize mode">
                                             <button onClick={() => setAutoOrgMode('author')} aria-pressed={mode === 'author'}
