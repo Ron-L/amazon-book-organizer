@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.17.0] - 2026-08-10
+
+Auto-Organize goes library-wide. A new **Scope: This folder / Everywhere** switch lets you gather a scattered author out of every folder and the Inbox into one home — right from inside the preview — and the preview now shows the author's *whole* footprint, so nothing's hidden.
+
+### Consolidate — organize across the whole library
+- **Scope toggle (This folder / Everywhere)** — Auto-Organize from a folder or the Inbox as before, or flip to **Everywhere** to consolidate the same author(s) from all over in one pass. Flip it in place; when you're done you're still standing in the folder you started in.
+- **Consolidate from All Books** — Right-click a book in All Books to gather its author from wherever the copies live into the author's home. Fixes the old "organized but left a duplicate behind" case — a book now leaves its actual folder, not the Inbox.
+- **Never flattens** — Books already anywhere under the author's folder stay exactly where they are; consolidate only pulls in the strays.
+- **See the whole author** — The preview shows the author's full footprint in three clear states: **movers** (being filed), **already here** (in the home, on a recessed shelf tray), and **elsewhere** (loose in the Inbox or another folder, on a dashed tray tagged with its location) — so you always see every copy, even the ones a run leaves alone.
+- **Pick which copy** — For a book that lives in more than one folder, each copy shows separately (labeled by source) — pull one and keep another.
+
+### Also
+- **Filter box on Move to / Copy to / Add to Book List** — Type to find a target folder or list in a long, unordered menu instead of scrolling.
+- Under the hood: a pure-engine `consolidate` mode with per-membership removal, locked in with unit tests.
+
 ## [6.16.0] - 2026-08-10
 
 Auto-Organize grew up. The right-click and the bulk wizard now open the **same live preview**, where you see exactly where every book will land — existing folders and all — and tune the result as you go. Plus a Publication Date column, gap-friendly series numbering, and book-to-book navigation from the detail view.
