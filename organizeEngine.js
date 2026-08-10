@@ -1,4 +1,4 @@
-// organizeEngine.js — v6.13.0
+// organizeEngine.js — v6.17.0
 // Pure, testable core of Auto-Organize, extracted from readerwrangler.js's executeWizardOrganize so the
 // wizard AND the (upcoming) right-click Auto-Organize share ONE engine. No React, no globals: inputs →
 // deterministic output. Loaded as a classic <script> (functions become global, like uiHelpers.js) and
@@ -50,6 +50,9 @@ function defaultOrganizeIdGen(prefix) {
 //   opts:            { createSeriesFolders=true, sortByPosition=true, createMiscellaneous=false, sourceFolderId='__inbox__' }
 //   opts.sourceFolderId: the folder the books came from — organized books are removed from it (the
 //                        "move out of current folder" step). Defaults to '__inbox__' (prior behavior).
+//                        The sentinel '__all__' means CONSOLIDATE (all-source): the books were gathered
+//                        from everywhere, so each organized book is removed from EVERY real custodial
+//                        folder it lived in except its new destination — collapsing a scattered author.
 //   idGen:           (prefix) => id   (inject for determinism in tests)
 function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
     opts = opts || {};
@@ -88,9 +91,29 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
     const mergedFolders = [];
     let totalBooksOrganized = 0;
     const allBookIdsToOrganize = [];
+    const destOf = new Map(); // consolidate mode: organized book id → the destination folder it was filed into
 
     authorGroups.forEach(author => {
-        const { seriesGroups, standaloneBooks } = groupBooksBySeries(author.books);
+        // Consolidate (all-source): the target author's OWN folder subtree is excluded from the source — a
+        // book already living anywhere under this author's folder stays exactly where it is. We only pull in
+        // OUTSIDERS (scattered elsewhere / unfiled). So By Author fills the author root WITHOUT emptying
+        // existing series subfolders, and By Series fills series folders without reshuffling what's home.
+        let booksToFile = author.books;
+        if (sourceFolderId === '__all__') {
+            const authorFolder = findFolder(author.displayName, null);
+            if (authorFolder) {
+                const subtree = new Set([authorFolder.id]);
+                let grew = true;
+                while (grew) {
+                    grew = false;
+                    folders.forEach(f => { if (f.parentId && subtree.has(f.parentId) && !subtree.has(f.id)) { subtree.add(f.id); grew = true; } });
+                }
+                const insideIds = new Set();
+                folders.forEach(f => { if (subtree.has(f.id)) (f.bookIds || []).forEach(id => insideIds.add(id)); });
+                booksToFile = author.books.filter(b => !insideIds.has(b.id));
+            }
+        }
+        const { seriesGroups, standaloneBooks } = groupBooksBySeries(booksToFile);
         const folderName = author.displayName;
 
         let targetFolder = findFolder(folderName, null);
@@ -127,6 +150,7 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
                         seriesFolder.bookIds = [...seriesFolder.bookIds, ...seriesBookIds];
                         totalBooksOrganized += seriesBookIds.length;
                         allBookIdsToOrganize.push(...seriesBookIds);
+                        seriesBookIds.forEach(id => destOf.set(id, seriesFolder.id));
                         subActions.push({ type: 'ADD_BOOKS_TO_FOLDER', folderId: seriesFolder.id, bookIds: seriesBookIds });
                     }
                 } else {
@@ -149,6 +173,7 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
                     miscFolder.bookIds = [...miscFolder.bookIds, ...miscBookIds];
                     totalBooksOrganized += miscBookIds.length;
                     allBookIdsToOrganize.push(...miscBookIds);
+                    miscBookIds.forEach(id => destOf.set(id, miscFolder.id));
                     subActions.push({ type: 'ADD_BOOKS_TO_FOLDER', folderId: miscFolder.id, bookIds: miscBookIds });
                 }
             } else {
@@ -160,27 +185,54 @@ function computeOrganizePlan(authorGroups, existingFolders, opts, idGen) {
                 targetFolder.bookIds = [...targetFolder.bookIds, ...rootBookIds];
                 totalBooksOrganized += rootBookIds.length;
                 allBookIdsToOrganize.push(...rootBookIds);
+                rootBookIds.forEach(id => destOf.set(id, targetFolder.id));
                 subActions.push({ type: 'ADD_BOOKS_TO_FOLDER', folderId: targetFolder.id, bookIds: rootBookIds });
             }
         } else {
-            const bookIdsToAdd = author.books.map(b => b.id).filter(id => !targetFolder.bookIds.includes(id));
+            const bookIdsToAdd = booksToFile.map(b => b.id).filter(id => !targetFolder.bookIds.includes(id));
             if (bookIdsToAdd.length > 0 && !wouldDeOrganize(targetFolder.id)) {
                 targetFolder.bookIds = [...targetFolder.bookIds, ...bookIdsToAdd];
                 totalBooksOrganized += bookIdsToAdd.length;
                 allBookIdsToOrganize.push(...bookIdsToAdd);
+                bookIdsToAdd.forEach(id => destOf.set(id, targetFolder.id));
                 subActions.push({ type: 'ADD_BOOKS_TO_FOLDER', folderId: targetFolder.id, bookIds: bookIdsToAdd });
             }
         }
     });
 
     if (allBookIdsToOrganize.length > 0) {
-        // Move out of the source folder (default the Inbox). Only the source folder's membership is
-        // touched — a book's other folder/list memberships are left intact.
-        const sourceFolder = folders.find(f => f.id === sourceFolderId);
-        if (sourceFolder) {
-            const bookIdsSet = new Set(allBookIdsToOrganize);
-            sourceFolder.bookIds = sourceFolder.bookIds.filter(id => !bookIdsSet.has(id));
-            subActions.push({ type: 'REMOVE_BOOKS_FROM_FOLDER', folderId: sourceFolderId, bookIds: allBookIdsToOrganize });
+        const bookIdsSet = new Set(allBookIdsToOrganize);
+        if (sourceFolderId === '__all__') {
+            // Consolidate (all-source): the books were gathered from EVERYWHERE. Remove each organized book
+            // from its source folders EXCEPT the destination it was just filed into — collapsing a scattered
+            // author into one home. `opts.consolidateRemovals` ({ bookId: [folderId,...] }) is the user's
+            // per-membership pick: when present, a book is pulled ONLY from the folders they selected (so a
+            // deliberate membership can be kept); when absent, it's pulled from all its folders (select-all).
+            // Virtual containers (the All Books view, Trash, Book Lists) are never touched; the Inbox IS real.
+            const removals = opts.consolidateRemovals || null;
+            const VIRTUAL = new Set(['__all__', '__library__', '__views__', '__booklists__', '__trash__', '__search__']);
+            folders.forEach(f => {
+                if (VIRTUAL.has(f.id)) return;
+                const toRemove = (f.bookIds || []).filter(id => {
+                    if (!bookIdsSet.has(id) || destOf.get(id) === f.id) return false;
+                    if (!removals) return true; // no pick → pull from every source (select-all default)
+                    const picked = removals[id];
+                    return Array.isArray(picked) && picked.includes(f.id);
+                });
+                if (toRemove.length > 0) {
+                    const removeSet = new Set(toRemove);
+                    f.bookIds = f.bookIds.filter(id => !removeSet.has(id));
+                    subActions.push({ type: 'REMOVE_BOOKS_FROM_FOLDER', folderId: f.id, bookIds: toRemove });
+                }
+            });
+        } else {
+            // Move out of the single source folder (default the Inbox). Only that folder's membership is
+            // touched — a book's other folder/list memberships are left intact.
+            const sourceFolder = folders.find(f => f.id === sourceFolderId);
+            if (sourceFolder) {
+                sourceFolder.bookIds = sourceFolder.bookIds.filter(id => !bookIdsSet.has(id));
+                subActions.push({ type: 'REMOVE_BOOKS_FROM_FOLDER', folderId: sourceFolderId, bookIds: allBookIdsToOrganize });
+            }
         }
     }
 

@@ -155,4 +155,68 @@ test('existing series folder overrides the threshold (never split a series that 
     assert.strictEqual(plan.totalBooksOrganized, 1);
 });
 
+test('consolidate (sourceFolderId __all__): gathers a scattered author, removes from every other folder, leaves the already-home book alone', () => {
+    // Mistborn is scattered: b1 in "New To Read", b2 in "Prime". b3 (standalone) already sits at the author
+    // root. Consolidating from All Books By Series must fill Mistborn with b1,b2 (stripped from their scattered
+    // folders) and leave b3 put (already home → null-op, not moved, not duplicated).
+    const existing = [
+        { id: '__inbox__', name: 'Inbox', parentId: null, bookIds: [] },
+        { id: 'fntr', name: 'New To Read', parentId: null, bookIds: ['b1'] },
+        { id: 'fprime', name: 'Prime', parentId: null, bookIds: ['b2'] },
+        { id: 'fa', name: 'Brandon Sanderson', parentId: null, bookIds: ['b3'] },
+    ];
+    const plan = computeOrganizePlan([sanderson], existing, { seriesFolderMinBooks: 1, sourceFolderId: '__all__' }, counterIdGen());
+    const mistborn = plan.newFolders.find(f => f.name === 'Mistborn');
+    assert.deepStrictEqual(mistborn.bookIds, ['b1', 'b2'], 'scattered series books gathered into the series folder');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fntr').bookIds, [], 'b1 removed from New To Read');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fprime').bookIds, [], 'b2 removed from Prime');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fa').bookIds, ['b3'], 'b3 stays at the author root (already home)');
+});
+
+test('consolidate removes an organized book from ALL its non-destination folders (full consolidate, single home)', () => {
+    // b4 (Herbert/Dune) lives in three places at once. Consolidating By Series files it in Dune and strips
+    // it from every other folder — one home, no leftover copies.
+    const existing = [
+        { id: '__inbox__', name: 'Inbox', parentId: null, bookIds: ['b4'] },
+        { id: 'fx', name: 'New To Read', parentId: null, bookIds: ['b4'] },
+        { id: 'fy', name: 'Freebies', parentId: null, bookIds: ['b4'] },
+    ];
+    const plan = computeOrganizePlan([herbert], existing, { seriesFolderMinBooks: 1, sourceFolderId: '__all__' }, counterIdGen());
+    assert.deepStrictEqual(plan.newFolders.find(f => f.name === 'Dune').bookIds, ['b4'], 'filed into its series home');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === '__inbox__').bookIds, [], 'removed from Inbox');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fx').bookIds, [], 'removed from New To Read');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fy').bookIds, [], 'removed from Freebies');
+});
+
+test('consolidate By Author does NOT flatten an existing series subfolder (destination subtree excluded from source)', () => {
+    // b1,b2 already live in the Mistborn subfolder; b3 is scattered in "New To Read". Consolidating By Author
+    // (flat) must add ONLY the outsider b3 to the author root and LEAVE b1,b2 in Mistborn (not rip them up).
+    const existing = [
+        { id: '__inbox__', name: 'Inbox', parentId: null, bookIds: [] },
+        { id: 'fa', name: 'Brandon Sanderson', parentId: null, bookIds: [] },
+        { id: 'fs', name: 'Mistborn', parentId: 'fa', bookIds: ['b1', 'b2'] },
+        { id: 'fntr', name: 'New To Read', parentId: null, bookIds: ['b3'] },
+    ];
+    const plan = computeOrganizePlan([sanderson], existing, { createSeriesFolders: false, sourceFolderId: '__all__' }, counterIdGen());
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fs').bookIds, ['b1', 'b2'], 'Mistborn subfolder left intact (not flattened)');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fa').bookIds, ['b3'], 'only the scattered outsider b3 added to the author root');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fntr').bookIds, [], 'b3 removed from New To Read');
+    assert.strictEqual(plan.totalBooksOrganized, 1, 'only the one outsider counted as organized');
+});
+
+test('consolidate honours consolidateRemovals: pulls a copy only from the selected source folder, keeps the rest', () => {
+    // b4 is in BOTH "New To Read" and "Best of". The user picked only the New To Read copy. Consolidating
+    // files b4 in Dune and pulls it from New To Read ONLY — the deliberate Best of membership is preserved.
+    const existing = [
+        { id: '__inbox__', name: 'Inbox', parentId: null, bookIds: [] },
+        { id: 'fntr', name: 'New To Read', parentId: null, bookIds: ['b4'] },
+        { id: 'fbest', name: 'Best of', parentId: null, bookIds: ['b4'] },
+    ];
+    const plan = computeOrganizePlan([herbert], existing,
+        { seriesFolderMinBooks: 1, sourceFolderId: '__all__', consolidateRemovals: { b4: ['fntr'] } }, counterIdGen());
+    assert.deepStrictEqual(plan.newFolders.find(f => f.name === 'Dune').bookIds, ['b4'], 'filed into its series home');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fntr').bookIds, [], 'pulled from the selected source (New To Read)');
+    assert.deepStrictEqual(plan.newFolders.find(f => f.id === 'fbest').bookIds, ['b4'], 'unselected Best of membership preserved');
+});
+
 console.log(`\nAll ${passed} tests passed.`);
