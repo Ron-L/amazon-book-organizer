@@ -39,6 +39,18 @@
 - [ ] **Book List right-click menu — drop Move/Copy + block Book-List→folder drag (A)** — a Book List entry is a shortcut; Move/Copy of a shortcut INTO a folder is incoherent. When viewing a Book List, remove those two menu items (keep Add-to-Book-List, Remove-from-list, Edit, reorder); block plain AND Ctrl drag from a Book List onto a folder. (Ron, 2026-08-08 — the muddled Book-List→Inbox "move" that created the Inbox+folder+list triple-membership mess.)
 - [ ] **Undo stack clears mid-session unexpectedly (D)** — twice (2026-08-07/08) the undo stack emptied with no user undo/redo, blocking recovery from a bad move. **NEEDS A REPRODUCIBLE SCENARIO** before chasing — capture the action that preceded it next time it happens.
 
+**2026-08-10 library-cleanup findings (Ron):**
+- [ ] **BUG: Auto-Organize from All Books/Inbox of an already-filed book → DUPLICATE.** Organizing a selected book that already lives in a real folder adds it to the author folder but removes it from `__inbox__` (the nominal source), NOT its actual folder → it ends up in BOTH. Root: `sourceFolderIdForScope` maps All Books/Inbox → `__inbox__`, and the widened pool (∪ selBooks) lets a *filed* book be organized. Fix options: (a) don't organize an already-filed book from All Books — surface it as "already filed" instead; (b) remove it from its *actual* folder. Hit on Blake Crouch & Grady Hendrix in `New To Read/Prime(able)`. **HIGH — Ron: "needs fixing".**
+- [ ] **BUG: right-click Tags → new-tag input closes on the 2nd keystroke** (acts like Escape) — can't create a tag from the menu; had to use Tag Manager.
+- [ ] **BUG: adding a folder selection to a Book List CLEARS the selection** — it should persist so you can keep scanning/adding.
+- [ ] **Select already-here (destination-context) covers in the Auto-Organize preview** — so an already-filed book can be added to a Book List (it won't move — already home — but a list is a supplemental shortcut). Small size + a selection ring = "included in the list, staying put." (Philip K. Dick: 1 already filed + 4 incoming → wants all 5 on `Philip K. Dick - To Read`.)
+- [ ] **Auto-Organize preview should show Book List membership** too (alongside the folder neighborhood).
+- [ ] **"Other books by this author" quick-view** — from a book/folder, see the author's other books without jumping to All Books + filter + back.
+- [ ] **Order tags** — drag-reorder in Manage Tags; that order drives the right-click Tags submenu (alphabetical-only today).
+- [ ] **Select All in the Tags filter/menu** (complement to Clear All) — e.g. select-all then clear one tag.
+- [ ] **Right-click "Open" a book while multi-selecting** — opens the book detail WITHOUT clearing the selection; normal flow opens the whole selection as a shelf (nav). Lets you ID a book mid-scan and resume. (Name per UX.)
+- [ ] **USER-GUIDE/GPT note: "can't filter by field X" → tell them the workaround** (e.g. List view → add that column → sort). More than one way to skin a cat.
+
 - [ ] **Terminology copy pass** (6.12.1) — "shortcut" language in Book List toasts/menus; explain "Linked Copies" once in manual/GPT → see docs/design/TERMINOLOGY.md (spec)
 - [ ] **Author/Series whitespace hygiene** — collapse runs of internal whitespace + trim on fetch/import/edit so "Jodi  Taylor" (double space) can't split from "Jodi Taylor" (silently creates a duplicate author + orphan series in Auto-Organize). Add a **one-time cleanup sweep** for existing data. (Ron hit this on Jodi Taylor / Time Police — 2 of 7 books mis-authored, series looked incomplete in the Auto-Organize preview.)
 - [ ] **Fetcher `ee6d83c` re-apply** on v4.11.10 — `LIBRARY_EXCLUDE_TAGS` named-constant/doc + delisted-book (`product=null`) count+notice adapted to coexist with null-product recovery (count only when recovery also fails)
@@ -51,7 +63,6 @@
 - [ ] Rectangle/Lasso selection in cover view (extends `explorerSelectedItems`)
 - [ ] Fetcher follow-ups: ownership-**upgrade** live positive test; recovery-sweep Stage 2 (fold into orphan scan); un-trash on ownership upgrade (storage.js); fix the "772%" enriched ratio
 - [ ] Book detail dialog tooltips (esp. Collections = read-only-from-Amazon)
-- [ ] **Book detail dialog: previous/next navigation** — ‹ prev / › next to cycle the current folder's books (circular), so you can flip through to check Amazon Collections or confirm cover-mode order without re-aiming/clicking each book. In the Auto-Organize preview, cycles just that shelf's books. Wrap indicator that doesn't consume a click target: a position counter ("12 / 27") that visibly resets on wrap (lightbox convention), optionally a subtle edge-bounce on wrap; keyboard ←/→ too. (Ron, 6.14.0 testing.)
 - [ ] Wishlist fetcher — capture real binding on add (product-page `bindingInformation`), not only after enrichment
 - [ ] Metadata import (paste-list / CSV) + matching → see docs/design/Metadata-Import.md
 
