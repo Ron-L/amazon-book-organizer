@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.16.0-alpha.27";  // Build version for this file
+        const ORGANIZER_VERSION = "6.16.0-alpha.28";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -666,6 +666,7 @@
             const [autoOrgAnchor, setAutoOrgAnchor] = useState(null);  // v6.16.0 - shift-range pivot (last plain/ctrl-clicked cover) in the preview
             const [autoOrgMenu, setAutoOrgMenu] = useState(null);       // v6.13.0-alpha.9 (D2) - preview cover right-click menu: { x, y, bookIds } or null
             const [autoOrgHover, setAutoOrgHover] = useState(null);     // v6.13.0-alpha.9 (D2) - preview cover hover "In" popup: { bookId, x, y } or null
+            const [autoOrgOptionsOpen, setAutoOrgOptionsOpen] = useState(false); // v6.16.0 (Stage 2) - collapsible By-Series Options strip in the preview
             // v6.16.0 - The preview has ONE selection (autoOrgSel): default all-in. The checkbox tree (section → author →
             // shelf) is just select-all/none over it; cover-clicks toggle individuals. Both the footer action AND
             // "Add to Book List" read this one set. (No separate include-flags — the selection IS the include set.)
@@ -7180,6 +7181,17 @@
                     return { ...prev, mode: newMode, opts, dryPlan, alreadyFiled, label };
                 });
             };
+            // v6.16.0 (Stage 2) - Live By-Series options (threshold / Miscellaneous / sort-by-position), tuned in the
+            // preview: patch opts and recompute the plan + already-filed in place (selection persists).
+            const setAutoOrgOpts = (patch) => {
+                setAutoOrgPreview(prev => {
+                    if (!prev) return prev;
+                    const opts = { ...prev.opts, ...patch };
+                    const dryPlan = computeOrganizePlan(prev.authorGroups, folders, opts);
+                    const alreadyFiled = computeAlreadyFiled(prev.authorGroups, dryPlan, prev.sourceFolderId);
+                    return { ...prev, opts, dryPlan, alreadyFiled };
+                });
+            };
 
             // v6.16.0 - Undoable removal of books from a single folder (shape matches the REMOVE_BOOKS_FOLDER undo/redo
             // handlers: fromIndices lets undo re-insert at the original positions). Touches only that folder's membership.
@@ -9890,45 +9902,8 @@
                                         </div>
                                     </div>
 
-                                    {/* v5.1.0-alpha.20 - Phase 2.1: Series subfolder options. v6.16.0 - the By Author/By Series choice
-                                        moved to a live toggle in the preview; these remain as By-Series defaults (Stage 2 moves them too). */}
-                                    <div className="space-y-2 pt-2 pb-2">
-                                        {/* v6.13.0-alpha.2 - how many books a series needs before it earns its own folder */}
-                                        <div className={`flex items-center flex-wrap gap-x-2 gap-y-1 text-sm pl-8 pr-2 ${wizardCreateSeriesFolders ? 'text-gray-700' : 'text-gray-400'}`}>
-                                            <span>Create a series folder once I own at least</span>
-                                            <span className="inline-flex items-center border border-gray-300 rounded overflow-hidden">
-                                                <button type="button" aria-label="Fewer books required" disabled={!wizardCreateSeriesFolders || wizardSeriesFolderMin <= 1}
-                                                    onClick={() => setWizardSeriesFolderMin(n => Math.max(1, n - 1))}
-                                                    className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-40">−</button>
-                                                <input type="number" min="1" value={wizardSeriesFolderMin} disabled={!wizardCreateSeriesFolders}
-                                                    onChange={(e) => { const v = parseInt(e.target.value, 10); setWizardSeriesFolderMin(Number.isFinite(v) && v >= 1 ? v : 1); }}
-                                                    className="w-10 text-center py-0.5 border-x border-gray-300 focus:outline-none" />
-                                                <button type="button" aria-label="More books required" disabled={!wizardCreateSeriesFolders}
-                                                    onClick={() => setWizardSeriesFolderMin(n => n + 1)}
-                                                    className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-40">+</button>
-                                            </span>
-                                            <span>book{wizardSeriesFolderMin !== 1 ? 's' : ''} of it</span>
-                                            <span className="w-full text-xs text-gray-400">1 = every series gets its own folder; higher = fewer, tidier folders. A series that already has a folder always keeps it.</span>
-                                        </div>
-                                        <label className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-2 rounded cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={wizardSortByPosition}
-                                                onChange={(e) => setWizardSortByPosition(e.target.checked)}
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                            />
-                                            <span>Sort books by series position</span>
-                                        </label>
-                                        <label className="flex items-center gap-2 text-sm text-gray-700 hover:bg-gray-50 p-2 rounded cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                checked={wizardCreateMiscellaneous}
-                                                onChange={(e) => setWizardCreateMiscellaneous(e.target.checked)}
-                                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                            />
-                                            <span>Create 'Miscellaneous' for non-series books</span>
-                                        </label>
-                                    </div>
+                                    {/* v6.16.0 (Stage 2) - Series-folder threshold / Miscellaneous / sort-by-position moved into the
+                                        preview's ⚙ Options (tuned live against the result). The wizard is now a pure author picker. */}
 
                                     {/* v5.1.0-alpha.5 - Author list */}
                                     <div className="border border-gray-300 rounded-lg bg-white">
@@ -10402,6 +10377,40 @@
                                         <button onClick={closeAutoOrgPreview} className="text-gray-500 hover:text-gray-700 text-2xl leading-none" title="Close" aria-label="Close">×</button>
                                     </div>
                                 </div>
+                                {/* v6.16.0 (Stage 2) - Live By-Series options, collapsed by default; changes recompute the preview in place. */}
+                                {mode === 'series' && (
+                                    <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+                                        <button onClick={() => setAutoOrgOptionsOpen(o => !o)} className="text-xs font-medium text-gray-600 hover:text-gray-900 flex items-center gap-1">
+                                            <span className="inline-block w-3">{autoOrgOptionsOpen ? '▾' : '▸'}</span>⚙ Options
+                                        </button>
+                                        {autoOrgOptionsOpen && (
+                                            <div className="mt-2 pl-4 flex flex-col gap-2 text-sm text-gray-700">
+                                                <div className="flex items-center flex-wrap gap-2">
+                                                    <span>Create a series folder once I own at least</span>
+                                                    <span className="inline-flex items-center border border-gray-300 rounded overflow-hidden">
+                                                        <button type="button" aria-label="Fewer books required" disabled={(opts.seriesFolderMinBooks || 1) <= 1}
+                                                            onClick={() => setAutoOrgOpts({ seriesFolderMinBooks: Math.max(1, (opts.seriesFolderMinBooks || 1) - 1) })}
+                                                            className="px-2 py-0.5 text-gray-600 hover:bg-gray-100 disabled:opacity-40">−</button>
+                                                        <span className="w-10 text-center py-0.5 border-x border-gray-300 tabular-nums">{opts.seriesFolderMinBooks || 1}</span>
+                                                        <button type="button" aria-label="More books required"
+                                                            onClick={() => setAutoOrgOpts({ seriesFolderMinBooks: (opts.seriesFolderMinBooks || 1) + 1 })}
+                                                            className="px-2 py-0.5 text-gray-600 hover:bg-gray-100">+</button>
+                                                    </span>
+                                                    <span>book{(opts.seriesFolderMinBooks || 1) !== 1 ? 's' : ''} of it</span>
+                                                    <span className="w-full text-xs text-gray-400">A series that already has a folder always keeps it.</span>
+                                                </div>
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input type="checkbox" checked={!!opts.createMiscellaneous} onChange={(e) => setAutoOrgOpts({ createMiscellaneous: e.target.checked })} className="w-4 h-4 accent-indigo-600" />
+                                                    <span>Put standalone books in a “Miscellaneous” subfolder</span>
+                                                </label>
+                                                <label className="flex items-center gap-2 cursor-pointer">
+                                                    <input type="checkbox" checked={opts.sortByPosition !== false} onChange={(e) => setAutoOrgOpts({ sortByPosition: e.target.checked })} className="w-4 h-4 accent-indigo-600" />
+                                                    <span>Order series books by series position</span>
+                                                </label>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 {/* Scrollable hierarchy — one selection; checkbox tree = select-all/none per group */}
                                 <div className="p-4 overflow-y-auto" style={{ flex: 1 }}>
                                     {/* Already-filed section — its checkbox is select-all/none over the filed books. */}
