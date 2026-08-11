@@ -186,6 +186,9 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
         }
 
         const uniqueBooks = Array.from(booksByAsin.values());
+        // v6.17.1 - Surface the ownership-upgrade count (wishlist/sample → owned this import) so the import
+        // summary can report it separately — upgrades don't change the total, so "N new" alone hid them.
+        uniqueBooks.wishlistToOwnedCount = wishlistToOwned.length;
 
         if (duplicates.length > 0) {
             console.warn(`⚠️  Found ${duplicates.length} duplicate ASINs, owned books take priority`);

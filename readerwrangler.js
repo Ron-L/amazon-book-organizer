@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.17.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.17.1-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4398,10 +4398,17 @@
 
                     const totalBooks = result.totalBooks;
                     const newBooks = totalBooks - booksBefore;
+                    const upgraded = result.upgradedCount || 0;
+                    // v6.17.1 - Report ownership upgrades (a wishlist/sample book that's now owned) separately. They
+                    // don't change the total, so "N new" alone hid them (and an upgrade-only import wrongly read
+                    // "up to date"). e.g. "Library updated: 512 books (1 new, 1 now owned)."
+                    const parts = [];
+                    if (newBooks > 0) parts.push(`${newBooks} new`);
+                    if (upgraded > 0) parts.push(`${upgraded} now owned`);
                     const message = booksBefore === 0
                         ? `${totalBooks} books imported.`
-                        : newBooks > 0
-                            ? `Library updated: ${totalBooks} books (${newBooks} new).`
+                        : parts.length > 0
+                            ? `Library updated: ${totalBooks} books (${parts.join(', ')}).`
                             : `Library up to date (${totalBooks} books).`;
                     await progress.finish('Relay Import', message);
                 } catch (err) {
@@ -5504,7 +5511,7 @@
                     setLastSyncTime(Date.now());
                     setSyncStatus('fresh');
                     if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
-                    return { totalBooks: mergedBooks.length, newBookIds };
+                    return { totalBooks: mergedBooks.length, newBookIds, upgradedCount: mergedBooks.wishlistToOwnedCount || 0 };
                 }
 
                 // No organization found, start fresh
@@ -5512,7 +5519,7 @@
                 setLastSyncTime(Date.now());
                 setSyncStatus('fresh');
                 if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
-                return { totalBooks: mergedBooks.length, newBookIds };
+                return { totalBooks: mergedBooks.length, newBookIds, upgradedCount: mergedBooks.wishlistToOwnedCount || 0 };
             };
 
             const checkIfBlankImage = (img, bookId) => {
