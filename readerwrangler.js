@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.19.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.19.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4408,8 +4408,9 @@
                 } catch (err) {
                     console.error('❌ Relay import failed:', err);
                     if (err && err.isCorruption) {
-                        // v6.19.0 - The synced copy failed its integrity check — show actionable recovery, not a raw error.
-                        await progress.finish('Sync data check failed', 'The synced copy needs a rebuild — see the steps.');
+                        // v6.19.0 - Synced copy failed its integrity check — dismiss the progress SILENTLY and show ONE
+                        // recovery dialog (no raw error, no intermediate "see the steps" modal to click through).
+                        progress.close();
                         setCorruptionRecovery(true);
                     } else {
                         await progress.finish('Import Failed', err.message);
@@ -10402,8 +10403,9 @@
                                     <h2 className="text-lg font-bold text-gray-900">⚠️ Sync data check failed</h2>
                                 </div>
                                 <div className="p-4 overflow-y-auto" style={{ flex: 1 }}>
-                                    <p className="text-sm text-gray-700 mb-3">The <strong>synced (cloud) copy</strong> failed its integrity check — a browser tab was most likely closed while a sync was still finishing. Your books, folders, Book Lists, and wishlist items on <strong>this device are intact</strong>.</p>
-                                    <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded p-3" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{window.RW_RECOVERY_STEPS || 'Save a backup (File → Save Backup…), then re-download your library and collections from Amazon with the bookmarklet, then File → Import from Relay.'}</pre>
+                                    <p className="text-sm font-semibold text-green-700 mb-2">✅ Your library is safe on this device — only the synced (cloud) copy is affected.</p>
+                                    <p className="text-sm text-gray-700 mb-3">A browser tab was most likely closed while a sync was finishing. Keep this tab open (it’s slow to reload) and do all of these, in order:</p>
+                                    <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded p-3" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{window.RW_RECOVERY_NUMBERED || 'Save a backup (File → Save Backup…), then re-download your library and collections from Amazon with the bookmarklet, then File → Import from Relay.'}</pre>
                                 </div>
                                 <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
                                     <button onClick={() => { navigator.clipboard.writeText(window.RW_RECOVERY_STEPS || ''); showToast('Recovery steps copied'); }} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Copy instructions</button>

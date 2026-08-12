@@ -17,9 +17,7 @@
   // v6.19.0 - Recovery steps surfaced when the synced (relay) copy fails its integrity check (almost always a
   // browser tab closed mid-sync). SINGLE SOURCE OF TRUTH: the checksum error carries this text (so a fetcher's
   // error overlay shows it), and the app reads window.RW_RECOVERY_STEPS to render a dialog with a Copy button.
-  const RECOVERY_STEPS =
-    'Your library is safe on the ReaderWrangler device — this only affects the synced (cloud) copy.\n' +
-    'Keep your ReaderWrangler tab open (it’s slow to reload). Do ALL of these, in order:\n\n' +
+  const RECOVERY_NUMBERED =
     '1. SAVE A BACKUP — in your ReaderWrangler tab: File → Save Backup…\n' +
     '2. DOWNLOAD LIBRARY — in a NEW browser tab, click your ReaderWrangler bookmarklet →\n' +
     '   “Go to Amazon Library Page”, then the bookmarklet again → “Download Library”.\n' +
@@ -28,7 +26,13 @@
     '   (Separate step; the library download doesn’t include collections.)\n' +
     '4. IMPORT — back in your ReaderWrangler tab, the File menu turns red (“Update available”)\n' +
     '   → File → Import from Relay.';
-  if (typeof window !== 'undefined') window.RW_RECOVERY_STEPS = RECOVERY_STEPS;
+  const RECOVERY_STEPS =
+    'Your library is safe on the ReaderWrangler device — this only affects the synced (cloud) copy.\n' +
+    'Keep your ReaderWrangler tab open (it’s slow to reload). Do ALL of these, in order:\n\n' + RECOVERY_NUMBERED;
+  if (typeof window !== 'undefined') {
+    window.RW_RECOVERY_STEPS = RECOVERY_STEPS;       // full text — fetcher overlay + the Copy button
+    window.RW_RECOVERY_NUMBERED = RECOVERY_NUMBERED; // just the steps — app dialog block (reassurance shown above it)
+  }
 
   let _channelId = null;
   let _passphrase = null;
