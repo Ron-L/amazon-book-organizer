@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.19.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.17.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -685,7 +685,7 @@
             const [wizardResultsOpen, setWizardResultsOpen] = useState(false); // v5.1.0-alpha.29 - Phase 3.3: Results dialog visibility
             const [autoOrgPreview, setAutoOrgPreview] = useState(null); // v6.13.0-alpha.7 - Right-click Auto-Organize confirm/preview: { mode, authorGroups, opts, label, dryPlan } or null
             const [autoOrgSel, setAutoOrgSel] = useState(new Set());    // v6.13.0-alpha.9 (D2) - selected cover ids within the preview
-            const [corruptionRecovery, setCorruptionRecovery] = useState(false); // v6.19.0 - show the sync-corruption recovery dialog
+            const [corruptionRecovery, setCorruptionRecovery] = useState(false); // v6.17.1 - show the sync-corruption recovery dialog
             const [autoOrgExcludedMembers, setAutoOrgExcludedMembers] = useState(new Set()); // v6.17.0 (B) - consolidate: deselected "folderId::bookId" copies (default all-in) for a multi-folder book
             const [autoOrgAnchor, setAutoOrgAnchor] = useState(null);  // v6.16.0 - shift-range pivot (last plain/ctrl-clicked cover) in the preview
             const [autoOrgMenu, setAutoOrgMenu] = useState(null);       // v6.13.0-alpha.9 (D2) - preview cover right-click menu: { x, y, bookIds } or null
@@ -4408,7 +4408,7 @@
                 } catch (err) {
                     console.error('❌ Relay import failed:', err);
                     if (err && err.isCorruption) {
-                        // v6.19.0 - Synced copy failed its integrity check — dismiss the progress SILENTLY and show ONE
+                        // v6.17.1 - Synced copy failed its integrity check — dismiss the progress SILENTLY and show ONE
                         // recovery dialog (no raw error, no intermediate "see the steps" modal to click through).
                         progress.close();
                         setCorruptionRecovery(true);
@@ -10395,7 +10395,7 @@
                         </div>
                     )}
 
-                    {/* v6.19.0 - Sync-corruption recovery: shown when Import from Relay hits a checksum mismatch. */}
+                    {/* v6.17.1 - Sync-corruption recovery: shown when Import from Relay hits a checksum mismatch. */}
                     {corruptionRecovery && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]" onClick={() => setCorruptionRecovery(false)}>
                             <div className="bg-white rounded-lg shadow-2xl w-full" style={{ maxWidth: '560px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>

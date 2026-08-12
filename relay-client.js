@@ -14,7 +14,7 @@
   const CHUNK_SIZE = 20 * 1024 * 1024; // 20 MB per chunk (under 25 MB KV limit)
   const RELAY_STORAGE_KEY = 'readerwrangler-relay';
 
-  // v6.19.0 - Recovery steps surfaced when the synced (relay) copy fails its integrity check (almost always a
+  // v6.17.1 - Recovery steps surfaced when the synced (relay) copy fails its integrity check (almost always a
   // browser tab closed mid-sync). SINGLE SOURCE OF TRUTH: the checksum error carries this text (so a fetcher's
   // error overlay shows it), and the app reads window.RW_RECOVERY_STEPS to render a dialog with a Copy button.
   const RECOVERY_NUMBERED =
@@ -240,15 +240,6 @@
       offset += chunk.byteLength;
     }
 
-    // v6.19.0 - TEST HOOK: set `window.RW_FORCE_CORRUPTION = true` in the console to simulate a failed integrity
-    // check — exercises the recovery dialog (app) / error overlay (fetcher) WITHOUT actually corrupting the relay.
-    // Inert unless the flag is set. Set it back to false to resume normally. (Stripped at release.)
-    if (typeof window !== 'undefined' && window.RW_FORCE_CORRUPTION) {
-      const err = new Error('Sync data check failed (checksum mismatch) — the synced copy may be corrupted.\n\n' + RECOVERY_STEPS);
-      err.isCorruption = true;
-      throw err;
-    }
-
     // Step 4: Verify checksum
     if (manifest.checksum) {
       notify('verifying', 'Verifying integrity...');
@@ -257,7 +248,7 @@
       const computed = 'sha256:' + Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
 
       if (computed !== manifest.checksum) {
-        // v6.19.0 - Carry the recovery steps on the error so any display (fetcher overlay, app) shows what to do;
+        // v6.17.1 - Carry the recovery steps on the error so any display (fetcher overlay, app) shows what to do;
         // isCorruption lets the app catch it specifically and render the dialog + Copy button.
         const err = new Error('Sync data check failed (checksum mismatch) — the synced copy may be corrupted.\n\n' + RECOVERY_STEPS);
         err.isCorruption = true;
