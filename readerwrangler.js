@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.18.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "6.18.0-alpha.4";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -15917,19 +15917,20 @@
                                                             className="rounded" />
                                                     </span>
                                                     <span className="flex-1 cursor-pointer select-none hover:text-blue-600"
-                                                          onClick={() => toggleSort('name')}
-                                                          title="Click to sort by tag name">
-                                                        Tag{sortArrow('name')}
+                                                          onClick={() => {
+                                                              if (tagSortColumn === 'name' && tagSortAsc) setTagSortAsc(false);         // A→Z → Z→A
+                                                              else if (tagSortColumn === 'name' && !tagSortAsc) setTagSortColumn('manual'); // Z→A → Manual
+                                                              else { setTagSortColumn('name'); setTagSortAsc(true); }                     // Manual/Count → A→Z
+                                                          }}
+                                                          title="Click to cycle: Name A→Z → Z→A → Manual (drag rows to reorder — drives the Tags menu)">
+                                                        Tag{tagSortColumn === 'manual' ? ' ⇅' : (tagSortColumn === 'name' ? (tagSortAsc ? ' ▲' : ' ▼') : '')}
                                                     </span>
                                                     <span className="w-14 text-center cursor-pointer select-none hover:text-blue-600"
                                                           onClick={() => toggleSort('count')}
                                                           title="Click to sort by book count">
                                                         Books{sortArrow('count')}
                                                     </span>
-                                                    <span className="w-8 text-center cursor-pointer select-none hover:text-blue-600"
-                                                          title="Manual order — drag rows to reorder; this order drives the Tags menu"
-                                                          onClick={() => { setTagSortColumn(tagSortColumn === 'manual' ? 'name' : 'manual'); setTagSortAsc(true); }}
-                                                          style={{ color: tagSortColumn === 'manual' ? '#2563eb' : undefined }}>⠿</span>
+                                                    <span className="w-8"></span>
                                                     <span className="w-8 flex-shrink-0 text-center">
                                                         {selectedTags.size > 0 && (
                                                             <button onClick={handleBulkDelete}
@@ -15948,11 +15949,9 @@
                                                             const isSelected = selectedTags.has(tagId);
                                                             return (
                                                             <tr key={tagId}
-                                                                draggable={tagSortColumn === 'manual'}
-                                                                onDragStart={tagSortColumn === 'manual' ? () => setTagDragId(tagId) : undefined}
                                                                 onDragOver={tagSortColumn === 'manual' ? (e) => e.preventDefault() : undefined}
                                                                 onDrop={tagSortColumn === 'manual' ? (e) => { e.preventDefault(); reorderTags(tagDragId, tagId); setTagDragId(null); } : undefined}
-                                                                className={`border-b border-gray-100 ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'} ${tagSortColumn === 'manual' ? 'cursor-grab' : 'cursor-pointer'}`}
+                                                                className={`border-b border-gray-100 cursor-pointer ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
                                                                 onClick={(e) => handleRowClick(tagId, e)}>
                                                                 <td className="py-1.5 w-6" onClick={(e) => e.stopPropagation()}>
                                                                     <input type="checkbox" checked={isSelected}
@@ -15993,7 +15992,12 @@
                                                                             }}
                                                                         />
                                                                     ) : (
-                                                                        <span onDoubleClick={() => setEditingTagId(tagId)} style={{ cursor: 'default' }}>{label}</span>
+                                                                        <span className="inline-flex items-center gap-2">
+                                                                            {tagSortColumn === 'manual' && (
+                                                                                <span draggable onDragStart={(e) => { e.stopPropagation(); setTagDragId(tagId); }} title="Drag to reorder" style={{ cursor: 'grab', color: '#9ca3af', userSelect: 'none' }}>⠿</span>
+                                                                            )}
+                                                                            <span onDoubleClick={() => setEditingTagId(tagId)} style={{ cursor: 'default' }}>{label}</span>
+                                                                        </span>
                                                                     )}
                                                                 </td>
                                                                 <td className="py-1.5 text-center text-gray-500 w-14">{count}</td>
