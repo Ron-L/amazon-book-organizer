@@ -236,6 +236,15 @@
       offset += chunk.byteLength;
     }
 
+    // v6.19.0 - TEST HOOK: set `window.RW_FORCE_CORRUPTION = true` in the console to simulate a failed integrity
+    // check — exercises the recovery dialog (app) / error overlay (fetcher) WITHOUT actually corrupting the relay.
+    // Inert unless the flag is set. Set it back to false to resume normally. (Stripped at release.)
+    if (typeof window !== 'undefined' && window.RW_FORCE_CORRUPTION) {
+      const err = new Error('Sync data check failed (checksum mismatch) — the synced copy may be corrupted.\n\n' + RECOVERY_STEPS);
+      err.isCorruption = true;
+      throw err;
+    }
+
     // Step 4: Verify checksum
     if (manifest.checksum) {
       notify('verifying', 'Verifying integrity...');
