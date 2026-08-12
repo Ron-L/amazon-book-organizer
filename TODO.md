@@ -40,12 +40,8 @@
 - [ ] **Undo stack clears mid-session unexpectedly (D)** — twice (2026-08-07/08) the undo stack emptied with no user undo/redo, blocking recovery from a bad move. **NEEDS A REPRODUCIBLE SCENARIO** before chasing — capture the action that preceded it next time it happens.
 
 **2026-08-10 library-cleanup findings (Ron):**
-- [ ] **BUG: adding a folder selection to a Book List CLEARS the selection** — it should persist so you can keep scanning/adding.
-- [ ] **Select already-here (destination-context) covers in the Auto-Organize preview** — so an already-filed book can be added to a Book List (it won't move — already home — but a list is a supplemental shortcut). Small size + a selection ring = "included in the list, staying put." (Philip K. Dick: 1 already filed + 4 incoming → wants all 5 on `Philip K. Dick - To Read`.)
 - [ ] **Auto-Organize preview should show Book List membership** too (alongside the folder neighborhood).
 - [ ] **"Other books by this author" quick-view** — from a book/folder, see the author's other books without jumping to All Books + filter + back.
-- [ ] **Order tags** — drag-reorder in Manage Tags; that order drives the right-click Tags submenu (alphabetical-only today).
-- [ ] **Select All in the Tags filter/menu** (complement to Clear All) — e.g. select-all then clear one tag.
 - [ ] **Right-click "Open" a book while multi-selecting** — opens the book detail WITHOUT clearing the selection; normal flow opens the whole selection as a shelf (nav). Lets you ID a book mid-scan and resume. (Name per UX.)
 - [ ] **USER-GUIDE/GPT note: "can't filter by field X" → tell them the workaround** (e.g. List view → add that column → sort). More than one way to skin a cat.
 

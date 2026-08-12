@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.18.0] - 2026-08-12
+
+### Book Lists & tags
+- **Adding to a Book List keeps your selection** — it no longer clears after "Add to Book List," so you can keep scanning and adding.
+- **Add already-filed books to a list from Auto-Organize** — the small "already here" / "elsewhere" covers in the preview are now selectable, so a book that won't move can still ride onto a Book List (e.g. a whole series onto *"‹Author› - To Read"*).
+- **Smart Book-List name everywhere** — the *"‹Series›/‹Author› - To Read"* suggestion (and "matches an existing list → OK adds to it") now shows from *any* New Book List entry point, not just Auto-Organize.
+- **Select All in the Tags filter** — complements Clear All (select all, then uncheck the odd one).
+- **Order your tags** — drag tags into a custom order in Manage Tags (the **Tag** header cycles A→Z / Z→A / Manual; grab the **⠿** handle to reorder). That order drives the Tags filter and the right-click **Add tag** menu; new tags land at the bottom.
+
 ## [6.17.2] - 2026-08-12
 
 ### Fixed
