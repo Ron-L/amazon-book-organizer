@@ -685,6 +685,7 @@
             const [wizardResultsOpen, setWizardResultsOpen] = useState(false); // v5.1.0-alpha.29 - Phase 3.3: Results dialog visibility
             const [autoOrgPreview, setAutoOrgPreview] = useState(null); // v6.13.0-alpha.7 - Right-click Auto-Organize confirm/preview: { mode, authorGroups, opts, label, dryPlan } or null
             const [autoOrgSel, setAutoOrgSel] = useState(new Set());    // v6.13.0-alpha.9 (D2) - selected cover ids within the preview
+            const [corruptionRecovery, setCorruptionRecovery] = useState(false); // v6.17.1 - show the sync-corruption recovery dialog
             const [autoOrgExcludedMembers, setAutoOrgExcludedMembers] = useState(new Set()); // v6.17.0 (B) - consolidate: deselected "folderId::bookId" copies (default all-in) for a multi-folder book
             const [autoOrgAnchor, setAutoOrgAnchor] = useState(null);  // v6.16.0 - shift-range pivot (last plain/ctrl-clicked cover) in the preview
             const [autoOrgMenu, setAutoOrgMenu] = useState(null);       // v6.13.0-alpha.9 (D2) - preview cover right-click menu: { x, y, bookIds } or null
@@ -4398,15 +4399,29 @@
 
                     const totalBooks = result.totalBooks;
                     const newBooks = totalBooks - booksBefore;
+                    const upgraded = result.upgradedCount || 0;
+                    // v6.17.1 - Report ownership upgrades (a wishlist/sample book that's now owned) separately. They
+                    // don't change the total, so "N new" alone hid them (and an upgrade-only import wrongly read
+                    // "up to date"). e.g. "Library updated: 512 books (1 new, 1 now owned)."
+                    const parts = [];
+                    if (newBooks > 0) parts.push(`${newBooks} new`);
+                    if (upgraded > 0) parts.push(`${upgraded} now owned`);
                     const message = booksBefore === 0
                         ? `${totalBooks} books imported.`
-                        : newBooks > 0
-                            ? `Library updated: ${totalBooks} books (${newBooks} new).`
+                        : parts.length > 0
+                            ? `Library updated: ${totalBooks} books (${parts.join(', ')}).`
                             : `Library up to date (${totalBooks} books).`;
                     await progress.finish('Relay Import', message);
                 } catch (err) {
                     console.error('❌ Relay import failed:', err);
-                    await progress.finish('Import Failed', err.message);
+                    if (err && err.isCorruption) {
+                        // v6.17.1 - Synced copy failed its integrity check — dismiss the progress SILENTLY and show ONE
+                        // recovery dialog (no raw error, no intermediate "see the steps" modal to click through).
+                        progress.close();
+                        setCorruptionRecovery(true);
+                    } else {
+                        await progress.finish('Import Failed', err.message);
+                    }
                 } finally {
                     setRelayImporting(false);
                     dataOpInProgressRef.current = false;
@@ -5504,7 +5519,7 @@
                     setLastSyncTime(Date.now());
                     setSyncStatus('fresh');
                     if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
-                    return { totalBooks: mergedBooks.length, newBookIds };
+                    return { totalBooks: mergedBooks.length, newBookIds, upgradedCount: mergedBooks.wishlistToOwnedCount || 0 };
                 }
 
                 // No organization found, start fresh
@@ -5512,7 +5527,7 @@
                 setLastSyncTime(Date.now());
                 setSyncStatus('fresh');
                 if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
-                return { totalBooks: mergedBooks.length, newBookIds };
+                return { totalBooks: mergedBooks.length, newBookIds, upgradedCount: mergedBooks.wishlistToOwnedCount || 0 };
             };
 
             const checkIfBlankImage = (img, bookId) => {
@@ -10390,6 +10405,25 @@
                         </div>
                     )}
 
+                    {/* v6.17.1 - Sync-corruption recovery: shown when Import from Relay hits a checksum mismatch. */}
+                    {corruptionRecovery && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]" onClick={() => setCorruptionRecovery(false)}>
+                            <div className="bg-white rounded-lg shadow-2xl w-full" style={{ maxWidth: '560px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
+                                <div className="p-4 bg-amber-100 rounded-t-lg border-b border-amber-300">
+                                    <h2 className="text-lg font-bold text-gray-900">⚠️ Sync data check failed</h2>
+                                </div>
+                                <div className="p-4 overflow-y-auto" style={{ flex: 1 }}>
+                                    <p className="text-sm font-semibold text-green-700 mb-2">✅ Your library is safe on this device — only the synced (cloud) copy is affected.</p>
+                                    <p className="text-sm text-gray-700 mb-3">A browser tab was most likely closed while a sync was finishing. Keep this tab open (it’s slow to reload) and do all of these, in order:</p>
+                                    <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded p-3" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>{window.RW_RECOVERY_NUMBERED || 'Save a backup (File → Save Backup…), then re-download your library and collections from Amazon with the bookmarklet, then File → Import from Relay.'}</pre>
+                                </div>
+                                <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+                                    <button onClick={() => { navigator.clipboard.writeText(window.RW_RECOVERY_STEPS || ''); showToast('Recovery steps copied'); }} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">Copy instructions</button>
+                                    <button onClick={() => setCorruptionRecovery(false)} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">OK</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {/* v6.13.0-alpha.7 (D1) - Auto-Organize confirm/preview: hierarchical Author→Series→covers before commit */}
                     {autoOrgPreview && (() => {
                         const { mode, authorGroups, dryPlan, sourceName, sourceFolderId, opts = {}, alreadyFiled = [], isConsolidate = false, narrowSourceId } = autoOrgPreview;
