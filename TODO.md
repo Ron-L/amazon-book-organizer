@@ -40,7 +40,6 @@
 - [ ] **Undo stack clears mid-session unexpectedly (D)** — twice (2026-08-07/08) the undo stack emptied with no user undo/redo, blocking recovery from a bad move. **NEEDS A REPRODUCIBLE SCENARIO** before chasing — capture the action that preceded it next time it happens.
 
 **2026-08-10 library-cleanup findings (Ron):**
-- [ ] **BUG: right-click Tags → new-tag input closes on the 2nd keystroke** (acts like Escape) — can't create a tag from the menu; had to use Tag Manager.
 - [ ] **BUG: adding a folder selection to a Book List CLEARS the selection** — it should persist so you can keep scanning/adding.
 - [ ] **Select already-here (destination-context) covers in the Auto-Organize preview** — so an already-filed book can be added to a Book List (it won't move — already home — but a list is a supplemental shortcut). Small size + a selection ring = "included in the list, staying put." (Philip K. Dick: 1 already filed + 4 incoming → wants all 5 on `Philip K. Dick - To Read`.)
 - [ ] **Auto-Organize preview should show Book List membership** too (alongside the folder neighborhood).

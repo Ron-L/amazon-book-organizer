@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.17.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.18.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -10477,16 +10477,25 @@
                             if (!target) return [];
                             return (target.bookIds || []).filter(id => !sourceIdSet.has(id)).map(id => bookMap.get(id)).filter(Boolean);
                         };
-                        const contextCover = (b, navList) => (
+                        // v6.18.0 - Context covers (already-here / elsewhere) are read-only for MOVING, but SELECTABLE for
+                        // Book-List add: click to toggle (indigo ring + ✓ = "on the list, staying put"), right-click adds
+                        // the selection to a list. They're not in moverGroups, so selecting one never organizes it.
+                        const contextCover = (b, navList) => {
+                            const sel = autoOrgSel.has(b.id);
+                            return (
                             <div key={'ctx-' + b.id}
-                                title={`Already here: ${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''}`}
-                                style={{ width: '38px', flex: '0 0 auto', cursor: 'pointer' }}
-                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null, navList); }}>
+                                title={`${sel ? '✓ On the list · ' : ''}${b.title || 'Untitled'}${b.series ? ` — ${b.series}${b.seriesPosition ? ' #' + b.seriesPosition : ''}` : ''} — click to add to a Book List (won't move)`}
+                                style={{ width: '38px', flex: '0 0 auto', position: 'relative', cursor: 'pointer', borderRadius: '4px', outline: sel ? '2px solid #4f46e5' : '2px solid transparent', outlineOffset: '1px' }}
+                                onClick={(e) => handlePreviewCoverClick(e, b)}
+                                onDoubleClick={(e) => { e.stopPropagation(); openBookModal(b, null, navList); }}
+                                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); const ids = autoOrgSel.size > 0 ? [...autoOrgSel] : [b.id]; setAutoOrgHover(null); setAutoOrgMenu({ x: e.clientX, y: e.clientY, bookIds: ids }); }}>
                                 {b.coverUrl
                                     ? <img src={b.coverUrl} alt="" style={{ width: '38px', height: '57px', objectFit: 'cover', borderRadius: '3px' }} />
                                     : <div style={{ width: '38px', height: '57px', borderRadius: '3px', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', lineHeight: 1.1, textAlign: 'center', padding: '2px', overflow: 'hidden', color: '#6b7280' }}>{b.title || 'Untitled'}</div>}
+                                {sel && <div style={{ position: 'absolute', top: '-5px', right: '-5px', width: '14px', height: '14px', borderRadius: '50%', background: '#4f46e5', color: 'white', fontSize: '9px', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>✓</div>}
                             </div>
-                        );
+                            );
+                        };
                         // v6.17.0 - The already-here covers sit on a recessed "shelf" tray so they read as "already
                         // shelved here" at a glance — distinct from the incoming movers (the raised, outlined foreground)
                         // without graying (reserved for wishlist) or motion (which would say "attention", not "settled").
@@ -16904,7 +16913,8 @@
                             if (ids.length === 0) return;
                             const added = addBooksToBookList(bookListId, ids);
                             const bl = bookLists.find(b => b.id === bookListId);
-                            setExplorerSelectedItems(new Set());
+                            // v6.18.0 - KEEP the selection: adding to a list is a non-destructive overlay (the books
+                            // stay right where they are), so you can keep scanning and adding without re-selecting.
                             setExplorerBookContextMenu(null);
                             setContextSubmenu(null);
                             showToast(added > 0
@@ -16920,7 +16930,7 @@
                             const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
                             if (existing) { handleAddToExistingBookList(existing.id); return; }
                             createBookList(trimmed, ids);
-                            setExplorerSelectedItems(new Set());
+                            // v6.18.0 - KEEP the selection (see handleAddToExistingBookList) — non-destructive overlay.
                             setExplorerBookContextMenu(null);
                             setContextSubmenu(null);
                             showToast(`Added ${ids.length} book${ids.length !== 1 ? 's' : ''} to new list '${trimmed}'`);
