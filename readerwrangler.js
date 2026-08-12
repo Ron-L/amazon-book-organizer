@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.18.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "6.18.0-alpha.5";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -734,14 +734,19 @@
             const [tagSortAsc, setTagSortAsc] = useState(true); // v5.5.15-alpha.24 - Tag Manager sort direction
             const [tagDragId, setTagDragId] = useState(null); // v6.18.0 (#5) - tag being drag-reordered in Manage Tags
             // v6.18.0 (#5) - Tags in their user-chosen order (drag in Manage Tags → tagRegistry[name].order); tags with
-            // no order fall back to alphabetical. Drives the tag FILTER and the right-click Tags submenu, not just A→Z.
-            const tagOrderedNames = () => Object.keys(tagRegistry).sort((a, b) => {
-                const oa = tagRegistry[a] && tagRegistry[a].order, ob = tagRegistry[b] && tagRegistry[b].order;
-                if (oa != null && ob != null) return oa - ob;
-                if (oa != null) return -1;
-                if (ob != null) return 1;
-                return ((tagRegistry[a] && tagRegistry[a].label) || a).localeCompare((tagRegistry[b] && tagRegistry[b].label) || b);
-            });
+            // no order fall back to CREATION (insertion) order. Drives the tag FILTER and the right-click Tags submenu.
+            // New tags (no order) therefore land at the bottom: after every ordered tag, then by creation order.
+            const tagOrderedNames = () => {
+                const keys = Object.keys(tagRegistry);
+                const idx = {}; keys.forEach((k, i) => { idx[k] = i; }); // creation (insertion) order
+                return [...keys].sort((a, b) => {
+                    const oa = tagRegistry[a] && tagRegistry[a].order, ob = tagRegistry[b] && tagRegistry[b].order;
+                    if (oa != null && ob != null) return oa - ob;
+                    if (oa != null) return -1;
+                    if (ob != null) return 1;
+                    return idx[a] - idx[b];
+                });
+            };
             const reorderTags = (draggedId, targetId) => {
                 if (!draggedId || draggedId === targetId) return;
                 const ordered = tagOrderedNames();
