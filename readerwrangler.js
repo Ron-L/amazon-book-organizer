@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.18.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.18.0-alpha.3";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -732,6 +732,24 @@
             const [selectedTags, setSelectedTags] = useState(new Set()); // v5.5.15-alpha.24 - Tag selection for bulk delete (unified, replaces selectedOrphans)
             const [tagSortColumn, setTagSortColumn] = useState('name'); // v5.5.15-alpha.24 - Tag Manager sort column ('name' | 'count')
             const [tagSortAsc, setTagSortAsc] = useState(true); // v5.5.15-alpha.24 - Tag Manager sort direction
+            const [tagDragId, setTagDragId] = useState(null); // v6.18.0 (#5) - tag being drag-reordered in Manage Tags
+            // v6.18.0 (#5) - Tags in their user-chosen order (drag in Manage Tags → tagRegistry[name].order); tags with
+            // no order fall back to alphabetical. Drives the tag FILTER and the right-click Tags submenu, not just A→Z.
+            const tagOrderedNames = () => Object.keys(tagRegistry).sort((a, b) => {
+                const oa = tagRegistry[a] && tagRegistry[a].order, ob = tagRegistry[b] && tagRegistry[b].order;
+                if (oa != null && ob != null) return oa - ob;
+                if (oa != null) return -1;
+                if (ob != null) return 1;
+                return ((tagRegistry[a] && tagRegistry[a].label) || a).localeCompare((tagRegistry[b] && tagRegistry[b].label) || b);
+            });
+            const reorderTags = (draggedId, targetId) => {
+                if (!draggedId || draggedId === targetId) return;
+                const ordered = tagOrderedNames();
+                const from = ordered.indexOf(draggedId), to = ordered.indexOf(targetId);
+                if (from < 0 || to < 0) return;
+                ordered.splice(to, 0, ordered.splice(from, 1)[0]);
+                setTagRegistry(prev => { const next = { ...prev }; ordered.forEach((name, i) => { if (next[name]) next[name] = { ...next[name], order: i }; }); return next; });
+            };
             const [selectedCollections, setSelectedCollections] = useState([]); // v5.0.0-alpha.175.41 - Phase 5.2: Collections filter (array, OR logic)
             const [minAmazonRating, setMinAmazonRating] = useState(''); // v5.0.0-alpha.175.42 - Phase 5.3: Amazon Rating filter (single-select, minimum rating)
             const [minMyRating, setMinMyRating] = useState(''); // v5.0.0-alpha.175.43 - Phase 5.4: My Rating filter (single-select, '' = all, 'unrated' = 0, '1'-'5' = minimum rating)
@@ -8104,22 +8122,26 @@
                                         </>
                                     ) : (
                                         <>
-                                            <div
-                                                onClick={() => setTagFilter([])}
-                                                style={{
-                                                    padding: '8px 12px',
-                                                    fontSize: '13px',
-                                                    cursor: 'pointer',
-                                                    background: tagFilter.length === 0 ? 'var(--bg-hover)' : 'var(--bg-surface)',
-                                                    borderBottom: '1px solid var(--border-default)'
-                                                }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = tagFilter.length === 0 ? 'var(--bg-hover)' : 'var(--bg-surface)'}
-                                            >
-                                                Clear All
+                                            {/* v6.18.0 (#3) - Select All complements Clear All (select all, then uncheck the odd one). */}
+                                            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-default)' }}>
+                                                <div
+                                                    onClick={() => setTagFilter(tagOrderedNames())}
+                                                    style={{ flex: 1, padding: '8px 12px', fontSize: '13px', cursor: 'pointer', textAlign: 'center', background: 'var(--bg-surface)' }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--bg-surface)'}
+                                                >
+                                                    Select All
+                                                </div>
+                                                <div
+                                                    onClick={() => setTagFilter([])}
+                                                    style={{ flex: 1, padding: '8px 12px', fontSize: '13px', cursor: 'pointer', textAlign: 'center', borderLeft: '1px solid var(--border-default)', background: tagFilter.length === 0 ? 'var(--bg-hover)' : 'var(--bg-surface)' }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = tagFilter.length === 0 ? 'var(--bg-hover)' : 'var(--bg-surface)'}
+                                                >
+                                                    Clear All
+                                                </div>
                                             </div>
-                                            {Object.entries(tagRegistry)
-                                                .sort(([a], [b]) => a.localeCompare(b))
+                                            {tagOrderedNames().map(tagName => [tagName, tagRegistry[tagName]])
                                                 .map(([tagName, tagData]) => (
                                                     <div
                                                         key={tagName}
@@ -15779,16 +15801,19 @@
                                         const allTags = Object.entries(tagRegistry).map(([tagId, data]) => ({
                                             tagId, label: data.label, count: getTagCount(tagId)
                                         }));
-                                        const sorted = [...allTags].sort((a, b) => {
-                                            let cmp;
-                                            if (tagSortColumn === 'count') {
-                                                cmp = a.count - b.count;
-                                                if (cmp === 0) cmp = a.label.localeCompare(b.label);
-                                            } else {
-                                                cmp = a.label.localeCompare(b.label);
-                                            }
-                                            return tagSortAsc ? cmp : -cmp;
-                                        });
+                                        // v6.18.0 (#5) - 'manual' = the drag order (tagRegistry.order, drives the Tags menu); else name/count.
+                                        const sorted = tagSortColumn === 'manual'
+                                            ? (() => { const idx = new Map(tagOrderedNames().map((n, i) => [n, i])); return [...allTags].sort((a, b) => (idx.get(a.tagId) ?? 1e9) - (idx.get(b.tagId) ?? 1e9)); })()
+                                            : [...allTags].sort((a, b) => {
+                                                let cmp;
+                                                if (tagSortColumn === 'count') {
+                                                    cmp = a.count - b.count;
+                                                    if (cmp === 0) cmp = a.label.localeCompare(b.label);
+                                                } else {
+                                                    cmp = a.label.localeCompare(b.label);
+                                                }
+                                                return tagSortAsc ? cmp : -cmp;
+                                            });
                                         const allSelected = sorted.length > 0 && selectedTags.size === sorted.length;
 
                                         // Row click handler: click = select only this, Ctrl = toggle, Shift = range
@@ -15901,7 +15926,10 @@
                                                           title="Click to sort by book count">
                                                         Books{sortArrow('count')}
                                                     </span>
-                                                    <span className="w-8"></span>
+                                                    <span className="w-8 text-center cursor-pointer select-none hover:text-blue-600"
+                                                          title="Manual order — drag rows to reorder; this order drives the Tags menu"
+                                                          onClick={() => { setTagSortColumn(tagSortColumn === 'manual' ? 'name' : 'manual'); setTagSortAsc(true); }}
+                                                          style={{ color: tagSortColumn === 'manual' ? '#2563eb' : undefined }}>⠿</span>
                                                     <span className="w-8 flex-shrink-0 text-center">
                                                         {selectedTags.size > 0 && (
                                                             <button onClick={handleBulkDelete}
@@ -15920,7 +15948,11 @@
                                                             const isSelected = selectedTags.has(tagId);
                                                             return (
                                                             <tr key={tagId}
-                                                                className={`border-b border-gray-100 cursor-pointer ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                                                                draggable={tagSortColumn === 'manual'}
+                                                                onDragStart={tagSortColumn === 'manual' ? () => setTagDragId(tagId) : undefined}
+                                                                onDragOver={tagSortColumn === 'manual' ? (e) => e.preventDefault() : undefined}
+                                                                onDrop={tagSortColumn === 'manual' ? (e) => { e.preventDefault(); reorderTags(tagDragId, tagId); setTagDragId(null); } : undefined}
+                                                                className={`border-b border-gray-100 ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'} ${tagSortColumn === 'manual' ? 'cursor-grab' : 'cursor-pointer'}`}
                                                                 onClick={(e) => handleRowClick(tagId, e)}>
                                                                 <td className="py-1.5 w-6" onClick={(e) => e.stopPropagation()}>
                                                                     <input type="checkbox" checked={isSelected}
@@ -17815,12 +17847,14 @@
                                                                 });
                                                             }
 
+                                                            // v6.18.0 (#5) - the custom tag order (drag in Manage Tags) drives this list, not just A→Z.
+                                                            const tagOrderIdx = new Map(tagOrderedNames().map((n, i) => [n, i]));
                                                             const availableTags = Object.entries(tagRegistry)
                                                                 .filter(([id, data]) =>
                                                                     (!inputValue || data.label.toLowerCase().includes(inputValue)) &&
                                                                     !tagsOnAllBooks.has(id)
                                                                 )
-                                                                .sort((a, b) => a[1].label.localeCompare(b[1].label))
+                                                                .sort((a, b) => (tagOrderIdx.get(a[0]) ?? 1e9) - (tagOrderIdx.get(b[0]) ?? 1e9))
                                                                 .slice(0, 10); // Limit to 10
 
                                                             const exactMatchExists = Object.entries(tagRegistry)
