@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [6.17.2] - 2026-08-12
+
+### Fixed
+- **Import summary reports ownership upgrades.** When a relay import turns a wishlist/sample book you already had into an *owned* one (same ASIN), the summary now says so — e.g. *“Library updated: 512 books (1 new, 1 now owned)”* — instead of counting only the “new” additions and silently hiding the upgrade. (An upgrade-only import no longer misreads as “up to date.”)
+
+## [6.17.1] - 2026-08-12
+
+### Data integrity
+- **Clear recovery when the synced copy is corrupted.** If the cloud (relay) copy fails its integrity check — almost always a browser tab closed mid-sync — ReaderWrangler now shows a single, reassurance-first dialog (*“your library is safe on this device”*) with step-by-step recovery (save a backup → re-download library + collections with the bookmarklet → Import from Relay) and a **Copy** button, instead of a cryptic error. The steps also travel on the error itself, so a fetcher's error overlay shows the same guidance.
+- New design note: `docs/design/DATA-DURABILITY.md` — what's recoverable from Amazon vs. RW-only, why wishlist stays, and the recovery procedure.
+
 ## [6.17.0] - 2026-08-10
 
 Auto-Organize goes library-wide. A new **Scope: This folder / Everywhere** switch lets you gather a scattered author out of every folder and the Inbox into one home — right from inside the preview — and the preview now shows the author's *whole* footprint, so nothing's hidden.

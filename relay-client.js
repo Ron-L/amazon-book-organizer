@@ -14,6 +14,26 @@
   const CHUNK_SIZE = 20 * 1024 * 1024; // 20 MB per chunk (under 25 MB KV limit)
   const RELAY_STORAGE_KEY = 'readerwrangler-relay';
 
+  // v6.17.1 - Recovery steps surfaced when the synced (relay) copy fails its integrity check (almost always a
+  // browser tab closed mid-sync). SINGLE SOURCE OF TRUTH: the checksum error carries this text (so a fetcher's
+  // error overlay shows it), and the app reads window.RW_RECOVERY_STEPS to render a dialog with a Copy button.
+  const RECOVERY_NUMBERED =
+    '1. SAVE A BACKUP — in your ReaderWrangler tab: File → Save Backup…\n' +
+    '2. DOWNLOAD LIBRARY — in a NEW browser tab, click your ReaderWrangler bookmarklet →\n' +
+    '   “Go to Amazon Library Page”, then the bookmarklet again → “Download Library”.\n' +
+    '3. DOWNLOAD COLLECTIONS — in that tab (or a second new one), click the bookmarklet →\n' +
+    '   “Go to Amazon Collections Page”, then → “Download Collections”.\n' +
+    '   (Separate step; the library download doesn’t include collections.)\n' +
+    '4. IMPORT — back in your ReaderWrangler tab, the File menu turns red (“Update available”)\n' +
+    '   → File → Import from Relay.';
+  const RECOVERY_STEPS =
+    'Your library is safe on the ReaderWrangler device — this only affects the synced (cloud) copy.\n' +
+    'Keep your ReaderWrangler tab open (it’s slow to reload). Do ALL of these, in order:\n\n' + RECOVERY_NUMBERED;
+  if (typeof window !== 'undefined') {
+    window.RW_RECOVERY_STEPS = RECOVERY_STEPS;       // full text — fetcher overlay + the Copy button
+    window.RW_RECOVERY_NUMBERED = RECOVERY_NUMBERED; // just the steps — app dialog block (reassurance shown above it)
+  }
+
   let _channelId = null;
   let _passphrase = null;
   let _cryptoKey = null; // Cached after first derivation
@@ -228,7 +248,11 @@
       const computed = 'sha256:' + Array.from(hashArray).map(b => b.toString(16).padStart(2, '0')).join('');
 
       if (computed !== manifest.checksum) {
-        throw new Error('Checksum mismatch — data may be corrupted');
+        // v6.17.1 - Carry the recovery steps on the error so any display (fetcher overlay, app) shows what to do;
+        // isCorruption lets the app catch it specifically and render the dialog + Copy button.
+        const err = new Error('Sync data check failed (checksum mismatch) — the synced copy may be corrupted.\n\n' + RECOVERY_STEPS);
+        err.isCorruption = true;
+        throw err;
       }
     }
 
