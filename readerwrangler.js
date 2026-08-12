@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.18.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.18.0-alpha.2";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -7419,18 +7419,21 @@
                     ? `Added ${added} book${added !== 1 ? 's' : ''} to '${bl?.name || 'Book List'}'${added < ids.length ? ` (${ids.length - added} already there)` : ''}`
                     : `All ${ids.length} book${ids.length !== 1 ? 's' : ''} already in '${bl?.name || 'Book List'}'`);
             };
+            // v6.18.0 - Smart Book-List name from a selection (Ron's queue convention): all one series → "<Series> - To
+            // Read"; else all one author → "<Author> - To Read"; else '' (mixed → the generic New To Read list). Shared by
+            // EVERY "New Book List" entry point, so the suggestion shows from anywhere — not only Auto-Organize.
+            const suggestBookListName = (sel) => {
+                const seriesSet = new Set((sel || []).map(b => (b.series || '').trim()).filter(Boolean));
+                const authorSet = new Set((sel || []).map(b => normAuthorKey(b.author)).filter(Boolean));
+                if (seriesSet.size === 1 && sel.every(b => (b.series || '').trim())) return `${[...seriesSet][0]} - To Read`;
+                if (authorSet.size === 1 && sel.every(b => (b.author || '').trim())) return `${displayAuthorName(sel[0].author)} - To Read`;
+                return '';
+            };
             const addPreviewSelToNewBookList = async (ids) => {
                 setAutoOrgMenu(null);
                 if (!ids || ids.length === 0) return;
-                // v6.15.0 - Smart default name (Ron's queue convention): all one series → "<Series> - To Read";
-                // else all one author → "<Author> - To Read"; else blank (mixed authors → the generic New To Read list).
-                const sel = ids.map(id => books.find(b => b.id === id)).filter(Boolean);
-                const seriesSet = new Set(sel.map(b => (b.series || '').trim()).filter(Boolean));
-                const authorSet = new Set(sel.map(b => normAuthorKey(b.author)).filter(Boolean));
-                const suggested =
-                    (seriesSet.size === 1 && sel.every(b => (b.series || '').trim())) ? `${[...seriesSet][0]} - To Read`
-                    : (authorSet.size === 1 && sel.every(b => (b.author || '').trim())) ? `${displayAuthorName(sel[0].author)} - To Read`
-                    : '';
+                // v6.18.0 - Smart default name via the shared helper (same suggestion everywhere).
+                const suggested = suggestBookListName(ids.map(id => books.find(b => b.id === id)).filter(Boolean));
                 // v6.16.0 - If the smart default matches an existing list, be honest: OK adds to it (the common case —
                 // topping up a series/author queue); typing a different name still creates a new one.
                 const suggestedMatch = suggested && bookLists.find(b => (b.name || '').trim().toLowerCase() === suggested.trim().toLowerCase());
@@ -16924,9 +16927,17 @@
                         const handleAddToNewBookList = async () => {
                             const ids = getSelectedBookIds();
                             if (ids.length === 0) return;
-                            const name = await showInputDialog('New Book List', `Add ${ids.length} book${ids.length !== 1 ? 's' : ''} to a new Book List.`, '', 'List name (optional)');
+                            // v6.18.0 - Same smart name as the Auto-Organize path (series/author "- To Read"), from anywhere.
+                            const suggested = suggestBookListName(ids.map(id => books.find(b => b.id === id)).filter(Boolean));
+                            const suggestedMatch = suggested && bookLists.find(b => (b.name || '').trim().toLowerCase() === suggested.trim().toLowerCase());
+                            const n = ids.length, s = n !== 1 ? 's' : '';
+                            const title = suggestedMatch ? 'Add to Book List' : 'New Book List';
+                            const message = suggestedMatch
+                                ? `A Book List named “${suggestedMatch.name}” already exists — press OK to add ${n} book${s} to it, or type a different name to create a new list.`
+                                : `Add ${n} book${s} to a new Book List.`;
+                            const name = await showInputDialog(title, message, suggested, 'List name (e.g. New To Read)');
                             if (name === null) return;
-                            const trimmed = (name || '').trim() || 'Saved results';
+                            const trimmed = (name || '').trim() || 'New To Read';
                             const existing = bookLists.find(b => (b.name || '').trim().toLowerCase() === trimmed.toLowerCase());
                             if (existing) { handleAddToExistingBookList(existing.id); return; }
                             createBookList(trimmed, ids);
