@@ -13,3 +13,22 @@ crons = ["*/30 * * * *", "55 23 * * *"]
 binding = "RELAY_KV"
 id = "4a445b412fb34860a896cfc145a67b9b"
 preview_id = "4a445b412fb34860a896cfc145a67b9b"
+
+# --- Dev environment (Phase 0, relay write redesign) ---
+# Deploy with: npx wrangler deploy --env dev
+# Separate worker + separate KV namespace; production data is never touched.
+# No crons: the crons only send usage-alert emails — dev would double-send them.
+[env.dev]
+name = "readerwrangler-relay-dev"
+
+[env.dev.vars]
+ALLOWED_ORIGINS = "https://www.amazon.com,https://readerwrangler.com,https://ron-l.github.io,http://localhost:8000"
+CF_ACCOUNT_ID = "fd7a55c08920584561205e24b2d7eeae"
+
+[env.dev.triggers]
+crons = []
+
+[[env.dev.kv_namespaces]]
+binding = "RELAY_KV"
+id = "58116108eead40d18a55e59d799472b3"
+preview_id = "58116108eead40d18a55e59d799472b3"
