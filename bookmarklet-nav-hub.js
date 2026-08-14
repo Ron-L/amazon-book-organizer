@@ -15,7 +15,7 @@
 (function() {
     'use strict';
 
-    const NAV_HUB_VERSION = 'v1.8.0';
+    const NAV_HUB_VERSION = 'v1.9.0-alpha.1';
 
     // Read TARGET_ENV from window (injected by bookmarklet)
     // Default to 'PROD' for backwards compatibility with old bookmarklets
@@ -45,11 +45,19 @@
     // Cache-busting for non-PROD environments (developers get fresh code)
     const IS_DEV_MODE = TARGET_ENV !== 'PROD';
 
+    // v1.9.0 - Non-PROD bookmarklets talk to the DEV relay worker (isolated KV namespace),
+    // so fetcher testing can never touch production relay data. relay-client.js reads this
+    // override before falling back to its built-in production URL.
+    if (IS_DEV_MODE) {
+        window._RW_RELAY_WORKER_URL = 'https://readerwrangler-relay-dev.readerwrangler.workers.dev';
+    }
+
     // Debug logging
     console.log(`📚 ReaderWrangler Nav Hub ${NAV_HUB_VERSION}`);
     console.log(`   TARGET_ENV: ${TARGET_ENV} (from ${window._READERWRANGLER_TARGET_ENV ? 'bookmarklet' : 'default'})`);
     console.log(`   baseUrl: ${finalBaseUrl}`);
     console.log(`   Cache-busting: ${IS_DEV_MODE}`);
+    if (IS_DEV_MODE) console.log(`   Relay worker: DEV (${window._RW_RELAY_WORKER_URL})`);
 
     // Detect current page type
     const onLibraryPage = currentUrl.includes('amazon.com/yourbooks') ||

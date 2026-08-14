@@ -5,15 +5,16 @@
 // - Product page: Adds single book
 // - Series page: Adds all unowned books in series (skips books you already own)
 //
-// Flow:
+// Flow (v2.0.0 — relay write redesign Phase 1, see docs/design/RELAY-WRITE-REDESIGN.md):
 // 1. Detect page type (product vs series)
 // 2. Scrape book metadata from page DOM
 // 3. Build book object(s) (onWishlist: true, ownershipType: 'wishlist', addedToWishlist: today)
-// 4. Read existing amazon-library.json
-// 5. Check for duplicates by ASIN, skip if already in library
-// 6. Prepend book(s) to books.items
-// 7. Write file back
-// 8. Show success toast
+// 4. READ canonical library + pending mailbox runs (read-only — for duplicate detection)
+// 5. Check for duplicates by ASIN, skip if already in library or already pending
+// 6. Send new book(s) as ONE self-committing mailbox letter (writeRun 'wishlist-add') —
+//    a single atomic write; this fetcher NEVER rewrites the library (the old
+//    download-modify-upload was the torn-write corruption source)
+// 7. Show success toast (the app folds the letter in on its next Import)
 //
 // Note: Description and reviews NOT available via DOM scraping.
 // These fields can be enriched later via Library Fetcher Pass 3.
@@ -25,7 +26,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.5.0';
+    const FETCHER_VERSION = 'v2.0.0-alpha.1';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -661,57 +662,93 @@ async function addToWishlist() {
     // Relay I/O
     // ============================================================================
 
-    async function loadLibraryFromRelay() {
+    /**
+     * v2.0.0 - READ-ONLY reconstruction of what's already known: canonical library plus
+     * pending (unabsorbed) mailbox runs. Used only for duplicate detection — this fetcher
+     * never writes any of it back. A missing canonical is fine (cold start: letters are
+     * first-class; the app merges them later).
+     * @returns {Map} asin → book (canonical books win; mailbox books fill in)
+     */
+    async function loadKnownBooks() {
         if (!win.RWRelay || !win.RWRelay.isConfigured()) {
             throw new Error('Relay not configured. Please reinstall the bookmarklet from Relay Setup in the app.');
         }
 
-        progressUI.updatePhase('Downloading', 'Loading library from relay...');
-        console.log('[Relay] Loading existing library from relay...');
+        progressUI.updatePhase('Checking Library', 'Downloading your library...');
+        console.log('[Relay] Reading library + pending additions (read-only)...');
 
-        const status = await win.RWRelay.checkStatus();
-        if (!status) {
-            throw new Error('No library data found on relay. Please run Library Fetcher first.');
-        }
-
-        const jsonText = await win.RWRelay.download((phase, detail) => {
-            progressUI.updatePhase('Downloading', detail);
+        const byAsin = new Map();
+        const canonical = await win.RWRelay.readCanonical((phase, detail) => {
+            progressUI.updatePhase('Checking Library', detail);
         });
-        const existingData = JSON.parse(jsonText);
+        if (canonical) {
+            try {
+                const data = JSON.parse(canonical.jsonString);
+                if (data.isBackup !== true && data.books && data.books.items) {
+                    for (const b of data.books.items) byAsin.set(b.asin, b);
+                    console.log(`   ✅ Library: ${data.books.items.length} books (via ${canonical.source})`);
+                }
+            } catch (e) {
+                console.warn('   ⚠️ Could not parse library data:', e.message);
+            }
+        } else {
+            console.log('   ℹ️ No library on relay yet — checking pending additions only');
+        }
 
-        if (existingData.isBackup === true) {
-            throw new Error('Backup data found on relay instead of library data. Please run Library Fetcher first.');
+        // Books sent by any fetcher but not yet merged into the library count as known too
+        // (an add from 5 minutes ago must dedup, even though no merge has happened yet).
+        progressUI.updatePhase('Checking Library', 'Checking recent additions...');
+        const mailbox = await win.RWRelay.readMailbox();
+        const pending = (canonical && canonical.manifest)
+            ? win.RWRelay.unabsorbedRuns(mailbox.runs, canonical.manifest)
+            : mailbox.runs;
+        let pendingBooks = 0;
+        for (const run of pending) {
+            try {
+                const data = JSON.parse(run.jsonString);
+                const items = (data.books && data.books.items) || [];
+                for (const b of items) {
+                    if (b.asin && !byAsin.has(b.asin)) { byAsin.set(b.asin, b); pendingBooks++; }
+                }
+            } catch { /* non-book letter kinds (future tombstone/reset) — not dedup material */ }
         }
-        if (!existingData.schemaVersion?.startsWith('2.')) {
-            throw new Error(`Unsupported schema version: ${existingData.schemaVersion || 'unknown'}. Expected 2.x.`);
-        }
-        if (!existingData.books || !existingData.books.items) {
-            throw new Error('Invalid library data - missing books.items');
-        }
-
-        console.log(`   ✅ Loaded library with ${existingData.books.items.length} books\n`);
-        return existingData;
+        if (pendingBooks > 0) console.log(`   ✅ Plus ${pendingBooks} pending book(s) not yet merged`);
+        console.log('');
+        return byAsin;
     }
 
-    async function uploadLibrary(existingData) {
-        progressUI.updatePhase('Uploading', 'Compressing and encrypting...');
-        console.log('[Relay] Uploading updated library to relay...');
+    /**
+     * v2.0.0 - Send the new wishlist book(s) as ONE mailbox run. Small payloads collapse to
+     * a single self-committing letter (one atomic write) — interrupting it cannot corrupt
+     * anything, and nothing here ever touches the library itself.
+     */
+    async function sendWishlistRun(newBooks) {
+        progressUI.updatePhase('Saving', 'Sending to your library...');
+        console.log('[Relay] Sending wishlist addition (single atomic write)...');
 
-        const jsonData = JSON.stringify(existingData, null, 2);
-        let uploaded = false;
+        const payload = JSON.stringify({
+            schemaVersion: SCHEMA_VERSION,
+            source: 'wishlist-fetcher',
+            fetcherVersion: FETCHER_VERSION,
+            books: {
+                fetchDate: new Date().toISOString(),
+                totalBooks: newBooks.length,
+                items: newBooks
+            }
+        });
 
-        while (!uploaded) {
+        while (true) {
             try {
-                const manifest = await win.RWRelay.upload(jsonData, (phase, detail) => {
-                    progressUI.updatePhase('Uploading', detail);
+                const res = await win.RWRelay.writeRun(payload, 'wishlist-add', (phase, detail) => {
+                    progressUI.updatePhase('Saving', detail);
                 });
-                console.log(`✅ Uploaded to relay (${manifest.bookCount} books, ${(manifest.compressedBytes / 1024).toFixed(0)} KB compressed)`);
-                uploaded = true;
+                console.log(`   ✅ Sent ${newBooks.length} book(s)${res.inline ? ' in a single write' : ` (${res.seqCount} parts)`}`);
+                return;
             } catch (relayError) {
-                console.error('❌ Relay upload failed:', relayError.message);
+                console.error('❌ Send failed:', relayError.message);
                 const choice = await progressUI.showRetryUpload(relayError.message);
                 if (choice === 'cancel') {
-                    throw new Error('Upload cancelled — your fetched data was not saved.');
+                    throw new Error('Cancelled — the book was not saved.');
                 }
             }
         }
@@ -750,17 +787,16 @@ async function addToWishlist() {
                 return;
             }
 
-            // Load library from relay
-            console.log('[3] Loading library from relay...');
-            const existingData = await loadLibraryFromRelay();
+            // Read known books (canonical + pending) for duplicate detection
+            console.log('[3] Checking your library...');
+            const knownBooks = await loadKnownBooks();
 
-            // Dedup: filter out books already in library
-            const existingAsins = new Set(existingData.books.items.map(b => b.asin));
+            // Dedup: filter out books already in library or already pending
             const newBooks = [];
             let skippedDuplicate = 0;
 
             for (const book of books) {
-                if (existingAsins.has(book.asin)) {
+                if (knownBooks.has(book.asin)) {
                     skippedDuplicate++;
                     console.log(`   ⏭️ Skipped (already in library): "${book.title}" (${book.asin})`);
                 } else {
@@ -788,19 +824,13 @@ async function addToWishlist() {
                 return;
             }
 
-            // Add new books to library
+            // Send new books as one mailbox run (never rewrites the library)
             progressUI.updatePhase('Adding to Wishlist', `Adding ${newBooks.length} books...`);
-            console.log(`[4] Adding ${newBooks.length} books to library...`);
-
-            for (const book of newBooks) {
-                existingData.books.items.unshift(book);
+            console.log(`[4] Sending ${newBooks.length} books...`);
+            await sendWishlistRun(newBooks);
+            for (let i = 0; i < newBooks.length; i++) {
                 new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/wishlist-item-added';
             }
-            console.log(`   ✅ Added ${newBooks.length} books\n`);
-
-            // Upload to relay
-            console.log('[5] Uploading to relay...');
-            await uploadLibrary(existingData);
 
             // Success!
             console.log('========================================');
@@ -810,7 +840,7 @@ async function addToWishlist() {
             console.log(`   Added: ${newBooks.length} books`);
             console.log(`   Skipped (owned): ${skippedOwned} books`);
             if (skippedDuplicate > 0) console.log(`   Skipped (already in library): ${skippedDuplicate} books`);
-            console.log(`   Total books in library: ${existingData.books.items.length}`);
+            console.log(`   Library incl. these + pending: ${knownBooks.size + newBooks.length} books`);
             console.log('========================================\n');
 
             // Build skip summary
@@ -841,13 +871,13 @@ async function addToWishlist() {
             console.log(`   Author: ${book.authors}`);
             console.log(`   ASIN: ${book.asin}\n`);
 
-            // Load library from relay
-            console.log('[3] Loading library from relay...');
-            const existingData = await loadLibraryFromRelay();
+            // Read known books (canonical + pending) for duplicate detection
+            console.log('[3] Checking your library...');
+            const knownBooks = await loadKnownBooks();
 
             // Check for duplicate
             console.log('[4] Checking for duplicates...');
-            const existingBook = existingData.books.items.find(b => b.asin === book.asin);
+            const existingBook = knownBooks.get(book.asin);
 
             if (existingBook) {
                 const isWishlist = existingBook.onWishlist && (!existingBook.ownershipType || existingBook.ownershipType === 'wishlist');
@@ -867,17 +897,11 @@ async function addToWishlist() {
                 return;
             }
 
-            // Add book to library
-            progressUI.updatePhase('Adding to Wishlist', 'Updating library...');
-            console.log('[5] Adding book to library...');
-
-            existingData.books.items.unshift(book);
+            // Send the book as one self-committing letter (never rewrites the library)
+            progressUI.updatePhase('Adding to Wishlist', 'Saving...');
+            console.log('[5] Sending book...');
+            await sendWishlistRun([book]);
             new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/wishlist-item-added';
-            console.log(`   ✅ Added "${book.title}"\n`);
-
-            // Upload to relay
-            console.log('[6] Uploading to relay...');
-            await uploadLibrary(existingData);
 
             // Success!
             console.log('========================================');
@@ -885,7 +909,7 @@ async function addToWishlist() {
             console.log('========================================');
             console.log(`   Added: "${book.title}"`);
             console.log(`   By: ${book.authors}`);
-            console.log(`   Total books in library: ${existingData.books.items.length}`);
+            console.log(`   Library incl. this + pending: ${knownBooks.size + 1} books`);
             console.log('========================================\n');
 
             progressUI.showComplete(`<strong>${book.title}</strong><br>by ${book.authors}`);
