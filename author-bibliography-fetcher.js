@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v2.0.0-alpha.1';
+    const FETCHER_VERSION = 'v2.0.0-alpha.2';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -808,7 +808,7 @@ async function importBibliography() {
         const pending = (canonical && canonical.manifest)
             ? win.RWRelay.unabsorbedRuns(mailbox.runs, canonical.manifest)
             : mailbox.runs;
-        let pendingBooks = 0;
+        let pendingBooks = 0, pendingDeletes = 0;
         for (const run of pending) {
             try {
                 const data = JSON.parse(run.jsonString);
@@ -816,9 +816,16 @@ async function importBibliography() {
                 for (const b of items) {
                     if (b.asin && !byAsin.has(b.asin)) { byAsin.set(b.asin, b); pendingBooks++; }
                 }
-            } catch { /* non-book letter kinds — not dedup material */ }
+                // v2.0.0-alpha.2 - Apply pending tombstones too (runs are oldest-first, so a
+                // delete-then-re-add resolves correctly): a book the user just permanently
+                // deleted must not block a deliberate re-add — matches the merge's view exactly.
+                for (const t of (data.tombstones && data.tombstones.items) || []) {
+                    if (t.asin && byAsin.delete(t.asin)) pendingDeletes++;
+                }
+            } catch { /* unparseable letter — not dedup material */ }
         }
         if (pendingBooks > 0) console.log(`   ✅ Plus ${pendingBooks} pending book(s) not yet merged`);
+        if (pendingDeletes > 0) console.log(`   🗑️ Minus ${pendingDeletes} pending deletion(s)`);
         console.log('');
         return { byAsin, canonical, pending };
     }
