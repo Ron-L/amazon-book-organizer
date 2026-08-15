@@ -19,7 +19,7 @@
 async function importBibliography() {
     'use strict';
 
-    const FETCHER_VERSION = 'v1.1.0';
+    const FETCHER_VERSION = 'v2.0.0-alpha.1';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -771,60 +771,100 @@ async function importBibliography() {
     // File I/O
     // ============================================================================
 
-    async function loadLibraryFromRelay() {
+    /**
+     * READ-ONLY reconstruction of what's already known: canonical library plus pending
+     * (unabsorbed) mailbox runs. Used only for duplicate detection — never written back.
+     * (Relay write redesign Phase 1 — see docs/design/RELAY-WRITE-REDESIGN.md.)
+     * @returns {object} { byAsin, canonical, pending }
+     */
+    async function loadKnownBooks() {
         if (!win.RWRelay || !win.RWRelay.isConfigured()) {
             throw new Error('Relay not configured. Please reinstall the bookmarklet from Relay Setup in the app.');
         }
 
-        progressUI.updatePhase('Downloading', 'Loading library from relay...');
-        console.log('[Relay] Loading existing library from relay...');
+        progressUI.updatePhase('Checking Library', 'Downloading your library...');
+        console.log('[Relay] Reading library + pending additions (read-only)...');
 
-        const status = await win.RWRelay.checkStatus();
-        if (!status) {
-            throw new Error('No library data found on relay. Please run Library Fetcher first.');
-        }
-
-        const jsonText = await win.RWRelay.download((phase, detail) => {
-            progressUI.updatePhase('Downloading', detail);
+        const byAsin = new Map();
+        const canonical = await win.RWRelay.readCanonical((phase, detail) => {
+            progressUI.updatePhase('Checking Library', detail);
         });
-        const existingData = JSON.parse(jsonText);
+        if (canonical) {
+            try {
+                const data = JSON.parse(canonical.jsonString);
+                if (data.isBackup !== true && data.books && data.books.items) {
+                    for (const b of data.books.items) byAsin.set(b.asin, b);
+                    console.log(`   ✅ Library: ${data.books.items.length} books (via ${canonical.source})`);
+                }
+            } catch (e) {
+                console.warn('   ⚠️ Could not parse library data:', e.message);
+            }
+        } else {
+            console.log('   ℹ️ No library on relay yet — checking pending additions only');
+        }
 
-        if (existingData.isBackup === true) {
-            throw new Error('Backup data found on relay instead of library data. Please run Library Fetcher first.');
+        progressUI.updatePhase('Checking Library', 'Checking recent additions...');
+        const mailbox = await win.RWRelay.readMailbox();
+        const pending = (canonical && canonical.manifest)
+            ? win.RWRelay.unabsorbedRuns(mailbox.runs, canonical.manifest)
+            : mailbox.runs;
+        let pendingBooks = 0;
+        for (const run of pending) {
+            try {
+                const data = JSON.parse(run.jsonString);
+                const items = (data.books && data.books.items) || [];
+                for (const b of items) {
+                    if (b.asin && !byAsin.has(b.asin)) { byAsin.set(b.asin, b); pendingBooks++; }
+                }
+            } catch { /* non-book letter kinds — not dedup material */ }
         }
-        if (!existingData.schemaVersion?.startsWith('2.')) {
-            throw new Error(`Unsupported schema version: ${existingData.schemaVersion || 'unknown'}. Expected 2.x.`);
-        }
-        if (!existingData.books || !existingData.books.items) {
-            throw new Error('Invalid library data - missing books.items');
-        }
-
-        console.log(`   ✅ Loaded library with ${existingData.books.items.length} books\n`);
-        return existingData;
+        if (pendingBooks > 0) console.log(`   ✅ Plus ${pendingBooks} pending book(s) not yet merged`);
+        console.log('');
+        return { byAsin, canonical, pending };
     }
 
-    async function uploadLibrary(existingData) {
-        progressUI.updatePhase('Uploading', 'Compressing and encrypting...');
-        console.log('[Relay] Uploading updated library to relay...');
+    /**
+     * Send the new wishlist book(s) as ONE atomic mailbox run — this fetcher never
+     * rewrites the library (the old download-modify-upload was the corruption source).
+     */
+    async function sendWishlistRun(newBooks) {
+        progressUI.updatePhase('Saving', 'Sending to your library...');
+        console.log('[Relay] Sending wishlist addition (atomic run)...');
 
-        const jsonData = JSON.stringify(existingData, null, 2);
-        let uploaded = false;
+        const payload = JSON.stringify({
+            schemaVersion: SCHEMA_VERSION,
+            source: 'author-bibliography-fetcher',
+            fetcherVersion: FETCHER_VERSION,
+            books: {
+                fetchDate: new Date().toISOString(),
+                totalBooks: newBooks.length,
+                items: newBooks
+            }
+        });
 
-        while (!uploaded) {
+        while (true) {
             try {
-                const manifest = await win.RWRelay.upload(jsonData, (phase, detail) => {
-                    progressUI.updatePhase('Uploading', detail);
+                const res = await win.RWRelay.writeRun(payload, 'wishlist-add', (phase, detail) => {
+                    progressUI.updatePhase('Saving', detail);
                 });
-                console.log(`✅ Uploaded to relay (${manifest.bookCount} books, ${(manifest.compressedBytes / 1024).toFixed(0)} KB compressed)`);
-                uploaded = true;
+                console.log(`   ✅ Sent ${newBooks.length} book(s)${res.inline ? ' in a single write' : ` (${res.seqCount} parts)`}`);
+                return;
             } catch (relayError) {
-                console.error('❌ Relay upload failed:', relayError.message);
+                console.error('❌ Send failed:', relayError.message);
                 const choice = await progressUI.showRetryUpload(relayError.message);
                 if (choice === 'cancel') {
-                    throw new Error('Upload cancelled — your fetched data was not saved.');
+                    throw new Error('Cancelled — the books were not saved.');
                 }
             }
         }
+    }
+
+    /** Age-cap fallback: consolidate if some pending run has waited >3 days un-merged. */
+    function ageCapCheck(known) {
+        if (!known) return;
+        win.RWRelay.maybeAgeCapMerge({ canonical: known.canonical, pendingRuns: known.pending })
+            .then(acm => { if (acm.merged) console.log(`📦 Age-cap consolidation done (${acm.bookCount} books)`); })
+            .catch(e => console.warn('Age-cap check skipped:', e.message));
     }
 
     // ============================================================================
@@ -898,41 +938,44 @@ async function importBibliography() {
             return;
         }
 
-        // Step 5: Load library from relay
-        console.log('[4] Loading library from relay...');
-        const existingData = await loadLibraryFromRelay();
+        // Step 5: Read known books (canonical + pending) for duplicate detection
+        console.log('[4] Checking your library...');
+        const known = await loadKnownBooks();
 
-        // Step 6: Check for duplicates and add books
+        // Step 6: Dedup against known + pending
         progressUI.updatePhase('Adding to Wishlist', `Processing ${books.length} books...`);
         progressUI.showProgressBar();
-        console.log(`[5] Adding ${books.length} books to library...`);
+        console.log(`[5] Adding ${books.length} books...`);
 
-        const existingAsins = new Set(existingData.books.items.map(b => b.asin));
         let addedCount = 0;
         let duplicateCount = 0;
+        const newBooks = [];
 
         for (let i = 0; i < books.length; i++) {
             const book = books[i];
             progressUI.updateProgress(i + 1, books.length);
 
-            if (existingAsins.has(book.asin)) {
+            if (known.byAsin.has(book.asin)) {
                 duplicateCount++;
                 continue;
             }
 
-            existingData.books.items.unshift(book);
-            existingAsins.add(book.asin);
+            known.byAsin.set(book.asin, book);
+            newBooks.push(book);
             addedCount++;
         }
 
-        console.log(`   ✅ Added ${addedCount} books`);
+        console.log(`   ✅ ${addedCount} new books`);
         if (duplicateCount > 0) {
             console.log(`   ℹ️  Skipped ${duplicateCount} duplicates (already in library)\n`);
         }
 
-        // Step 7: Upload to relay
-        console.log('[6] Uploading to relay...');
-        await uploadLibrary(existingData);
+        // Step 7: Send new books as one atomic run (never rewrites the library)
+        if (newBooks.length > 0) {
+            console.log('[6] Sending to your library...');
+            await sendWishlistRun(newBooks);
+            ageCapCheck(known);
+        }
 
         // Step 8: Show summary
         console.log('========================================');
@@ -946,7 +989,7 @@ async function importBibliography() {
         if (missingPrice > 0) {
             console.log(`   ℹ️  ${missingPrice} books missing price - run Library Fetcher to complete`);
         }
-        console.log(`   Total books in library: ${existingData.books.items.length}`);
+        console.log(`   Library incl. these + pending: ${known.byAsin.size} books`);
         console.log('========================================\n');
 
         // Build summary message
