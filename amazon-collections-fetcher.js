@@ -19,7 +19,7 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v3.0.0-alpha.1';
+    const FETCHER_VERSION = 'v3.0.0-alpha.2';
     const SCHEMA_VERSION = '2.1';
     const PAGE_TITLE = document.title;
 
@@ -776,6 +776,13 @@ async function fetchAmazonCollections() {
     console.log(`     Books without collections: ${processedBooks.length - booksWithCollections}`);
     console.log(`     Read status breakdown:`, readStatusCounts);
     console.log('');
+
+    // v3.0.0-alpha.2 - DIAGNOSTIC: expose processed output for console inspection, e.g.
+    //   _RW_LAST_COLLECTIONS.filter(b => /dungeon crawler|doomsday/i.test(b.title))
+    // Shows exactly what Amazon's API returned per book (collections + readStatus) BEFORE
+    // any relay/merge involvement — splits fetcher-side gaps from merge-side bugs.
+    window._RW_LAST_COLLECTIONS = processedBooks;
+    console.log(`  🔬 Diagnostic: window._RW_LAST_COLLECTIONS (${processedBooks.length} entries) — inspect any book's raw API result in this console`);
 
     // ==========================================
     // Phase 3: Generate JSON and Download
