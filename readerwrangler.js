@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.18.0";  // Build version for this file
+        const ORGANIZER_VERSION = "6.19.0-alpha.1";  // Build version for this file
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -2092,6 +2092,8 @@
                 if (!await showConfirmDialog('Permanently Delete', `Permanently delete ${count} book${count !== 1 ? 's' : ''}? This cannot be undone.${listNote}`)) return;
 
                 // Remove from books state and IndexedDB
+                // v6.19.0 - Capture the doomed books first: their ASINs become the tombstone letter below
+                const deletedBooksForRelay = books.filter(b => bookIdsSet.has(b.id));
                 const updatedBooks = books.filter(b => !bookIdsSet.has(b.id));
                 await saveBooksToIndexedDB(updatedBooks);
                 setBooks(updatedBooks);
@@ -2111,60 +2113,26 @@
                 setExplorerSelectedItems(new Set());
                 showToast(`Permanently deleted ${count} book${count !== 1 ? 's' : ''}`);
 
-                // v6.0.0-alpha.58 - Re-upload library to relay in fetcher format (not backup format)
-                // Fetchers reject isBackup:true, so we build a fetcher-compatible payload
-                // v6.3.0 - Skip relay push if another data op (import/restore) is in progress
+                // v6.19.0 - Relay write redesign Phase 1: the app never rewrites the relay library.
+                // A permanent delete sends a TOMBSTONE LETTER instead (one atomic write); every
+                // future merge honors it, which kills the resurrection race (a concurrent fetch
+                // built from the pre-delete canonical can no longer bring the book back — the old
+                // full re-upload here was exactly that unsafe competing write).
                 if (window.RWRelay && window.RWRelay.isConfigured() && !dataOpInProgressRef.current) {
                     try {
-                        const allBooks = await loadBooksFromIndexedDB();
-                        const bookItems = allBooks.map(book => ({
-                            asin: book.asin, onWishlist: book.onWishlist || false,
-                            ownershipType: book.ownershipType || 'purchased',
-                            isHidden: book.isHidden || false, addedToWishlist: book.addedToWishlist || '',
-                            title: book.title, authors: book.author, coverUrl: book.coverUrl,
-                            rating: book.rating, reviewCount: book.ratingCount,
-                            series: book.series, seriesPosition: book.seriesPosition,
-                            acquisitionDate: book.acquired, description: book.description,
-                            topReviews: book.topReviews, binding: book.binding,
-                            currentPrice: book.currentPrice, listPrice: book.listPrice,
-                            priceAsOf: book.priceAsOf, targetPrice: book.targetPrice,
-                            genres: book.genres, genresAsOf: book.genresAsOf,
-                            tags: book.tags, note: book.userNote,
-                            priceTrigger: book.priceTrigger, myRating: book.myRating || 0,
-                            userEdited: book.userEdited || undefined,
-                            isDeleted: book.isDeleted || false,
-                            deletedAt: book.deletedAt || null,
-                            deletedFromFolderIds: book.deletedFromFolderIds || null,
-                            orphanStatus: book.orphanStatus || null,
-                            orphanCheckedDate: book.orphanCheckedDate || null
-                        }));
-                        const collectionItems = allBooks
-                            .filter(book => book.collections || book.readStatus)
-                            .map(book => ({
-                                asin: book.asin,
-                                readStatus: book.readStatus || 'UNKNOWN',
-                                collections: book.collections || []
-                            }));
-                        const hasRealCollections = collectionsStatus.loadStatus !== 'empty' && collectionsStatus.loadDate;
-                        const libraryPayload = {
-                            schemaVersion: "2.3",
-                            books: {
-                                fetchDate: libraryStatus.loadDate || new Date().toISOString(),
-                                fetcherVersion: "app-permanent-delete",
-                                totalBooks: bookItems.length,
-                                items: bookItems
-                            }
-                        };
-                        if (hasRealCollections && collectionItems.length > 0) {
-                            libraryPayload.collections = {
-                                fetchDate: collectionsStatus.loadDate || new Date().toISOString(),
-                                items: collectionItems
-                            };
+                        const deletedAsins = deletedBooksForRelay.map(b => b.asin).filter(Boolean);
+                        if (deletedAsins.length > 0) {
+                            const deletedAt = new Date().toISOString();
+                            const payload = JSON.stringify({
+                                schemaVersion: '2.3',
+                                source: 'app-permanent-delete',
+                                tombstones: { items: deletedAsins.map(asin => ({ asin, deletedAt })) }
+                            });
+                            await window.RWRelay.writeRun(payload, 'tombstone', () => {});
+                            console.log(`🗑️ Tombstone sent for ${deletedAsins.length} book(s) (merges will honor the delete)`);
                         }
-                        await window.RWRelay.upload(JSON.stringify(libraryPayload), () => {});
-                        console.log(`🗑️ Relay updated after permanent delete (${allBooks.length} books)`);
                     } catch (err) {
-                        console.warn('⚠️ Permanent delete succeeded locally but relay sync failed:', err.message);
+                        console.warn('⚠️ Permanent delete succeeded locally but relay tombstone failed (will not resurrect while local copy lacks it; delete again if it reappears after a fetch):', err.message);
                     }
                 }
             };
@@ -2941,11 +2909,13 @@
             }, []); // Empty dependency array = run once on mount
 
             // v6.0.0 - Check relay for available library data on mount
+            // v6.19.0 - checkForUpdates: pending mailbox letters (new format), falling back to the
+            // legacy manifest for pre-migration channels. Same manifest-shaped result for the banner.
             React.useEffect(() => {
                 if (window.RWRelay) {
                     window.RWRelay.initFromStorage();
                     if (window.RWRelay.isConfigured()) {
-                        window.RWRelay.checkStatus()
+                        window.RWRelay.checkForUpdates()
                             .then(manifest => {
                                 relayLastCheckedRef.current = new Date().toISOString();
                                 if (manifest) {
@@ -2968,17 +2938,19 @@
 
                 const pollRelay = async () => {
                     try {
-                        const manifest = await window.RWRelay.checkStatus();
+                        // v6.19.0 - New-format aware: pending mailbox letters signal an update
+                        // (legacy manifest only for pre-migration channels)
+                        const manifest = await window.RWRelay.checkForUpdates();
                         relayLastCheckedRef.current = new Date().toISOString();
                         if (manifest && manifest.timestamp) {
+                            // Pending letters are by definition not yet imported — show the banner
+                            // unless dismissed. (Legacy manifests still get the newer-than-app check.)
+                            const isPending = manifest.source === 'mailbox';
                             const relayTime = new Date(manifest.timestamp).getTime();
                             const appTime = libraryStatus.loadDate
                                 ? new Date(libraryStatus.loadDate).getTime()
                                 : 0;
-
-                            // Only show banner if relay data is newer than app data
-                            // and not the same timestamp the user already dismissed
-                            if (relayTime > appTime && manifest.timestamp !== dismissedRelayTimestampRef.current) {
+                            if ((isPending || relayTime > appTime) && manifest.timestamp !== dismissedRelayTimestampRef.current) {
                                 setRelayManifest(manifest);
                             }
                         }
@@ -4380,15 +4352,36 @@
                 setRelayImporting(true);
                 const progress = showProgressDialog('Relay Import', 'Importing from relay…');
                 try {
+                    // v6.19.0 - Relay write redesign Phase 1 (docs/design/RELAY-WRITE-REDESIGN.md):
+                    // import = canonical (pointer → fallback → legacy) + pending mailbox letters,
+                    // composed by the shared deterministic merge, then loaded locally as one payload
+                    // (so orphan-preservation, upgrade counting and Inbox placement work unchanged).
                     const importWork = async () => {
-                        // Always check relay status first (manifest may have been dismissed or never fetched)
-                        const manifest = await window.RWRelay.checkStatus();
-                        if (!manifest) {
+                        const canonical = await window.RWRelay.readCanonical();
+                        const mailbox = await window.RWRelay.readMailbox();
+                        const pending = (canonical && canonical.manifest)
+                            ? window.RWRelay.unabsorbedRuns(mailbox.runs, canonical.manifest)
+                            : mailbox.runs;
+                        if (!canonical && pending.length === 0) {
                             return { empty: true };
                         }
-                        const jsonString = await window.RWRelay.download();
-                        const result = await loadLibrary(jsonString);
-                        return result; // { totalBooks, newBookIds }
+                        if (pending.length > 0) console.log(`📬 ${pending.length} pending run(s) in the mailbox`);
+                        const composed = window.RWRelay.composeCanonical(
+                            canonical ? canonical.jsonString : null, pending);
+                        const result = await loadLibrary(composed.jsonString);
+                        // Merge-on-import (design §11 rule 1): consolidate pending letters into a new
+                        // canonical generation. Also fires for a legacy-format canonical (migrates it to
+                        // the generation format, ending its 10-day-TTL exposure).
+                        if (pending.length > 0 || (canonical && canonical.source === 'legacy')) {
+                            result.__consolidate = {
+                                jsonString: composed.jsonString,
+                                absorbedRuns: window.RWRelay.pruneAbsorbedRuns([
+                                    ...((canonical && canonical.manifest && canonical.manifest.absorbedRuns) || []),
+                                    ...pending.map(r => r.runId)
+                                ])
+                            };
+                        }
+                        return result; // { totalBooks, newBookIds, upgradedCount, __consolidate? }
                     };
 
                     const timeout = new Promise((_, reject) =>
@@ -4398,7 +4391,7 @@
                     const result = await Promise.race([importWork(), timeout]);
 
                     if (result.empty) {
-                        await progress.finish('Relay Import', 'No library data found on the relay. This usually means the data has expired (relay data is kept for 10 days after each fetch). Run the fetcher bookmarklet on your Amazon library page to refresh it.\n\nIf you recently regenerated your credentials, update your bookmarklet via File → Relay Setup.');
+                        await progress.finish('Relay Import', 'No library data found on the relay. Run the fetcher bookmarklet on your Amazon library page to send it.\n\nIf you recently regenerated your credentials, update your bookmarklet via File → Relay Setup.');
                         return;
                     }
 
@@ -4418,7 +4411,23 @@
                     }
 
                     setRelayManifest(null); // Clear banner after successful import
-                    console.log('✅ Relay import complete (data remains on relay until next fetch or 10-day TTL)');
+                    console.log('✅ Relay import complete');
+
+                    // v6.19.0 - Background consolidation (never blocks or fails the import: the local
+                    // import already succeeded, and letters stay in the mailbox until a COMMITTED
+                    // generation absorbs them — interrupting this is always safe, it just retries
+                    // on the next import).
+                    if (result.__consolidate) {
+                        const c = result.__consolidate;
+                        (async () => {
+                            try {
+                                const manifest = await window.RWRelay.commitGeneration(c.jsonString, c.absorbedRuns);
+                                console.log(`📦 Canonical consolidated: generation ${manifest.gen} (${manifest.bookCount} books, ${c.absorbedRuns.length} runs absorbed)`);
+                            } catch (err) {
+                                console.warn('⚠️ Consolidation deferred (will retry on next import):', err.message);
+                            }
+                        })();
+                    }
 
                     const totalBooks = result.totalBooks;
                     const newBooks = totalBooks - booksBefore;
@@ -4500,6 +4509,39 @@
                 return bookmarklets;
             };
 
+            // v6.19.0 - Relay write redesign Phase 1: a backup restore is delivered to the relay as a
+            // RESET RUN (new baseline) + an immediate consolidation. Every mailbox run at-or-before
+            // the reset is superseded (absorbed), so pre-restore letters can never re-apply on a later
+            // import; runs arriving AFTER the reset merge normally on top. Background + best-effort:
+            // the local restore already succeeded, and if this is interrupted the reset letter (or a
+            // later import) finishes the job — the commit pattern makes every step safely retryable.
+            const sendRestoreToRelay = async (parsedData) => {
+                if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
+                if (!parsedData.books || !parsedData.books.items) return;
+                try {
+                    const resetPayload = JSON.stringify({
+                        schemaVersion: parsedData.schemaVersion || '2.3',
+                        source: 'app-restore',
+                        books: parsedData.books,
+                        ...(parsedData.collections ? { collections: parsedData.collections } : {})
+                    });
+                    const reset = await window.RWRelay.writeRun(resetPayload, 'reset', () => {});
+                    const resetTs = parseInt(reset.runId, 10) || Date.now();
+                    // Everything in the mailbox from before the reset is superseded — absorb it all
+                    // (incomplete old runs too: even if they finish later, the restore outranks them).
+                    const mailbox = await window.RWRelay.readMailbox();
+                    const superseded = [
+                        ...mailbox.runs.filter(r => r.timestamp <= resetTs).map(r => r.runId),
+                        ...mailbox.incomplete.filter(id => (parseInt(id, 10) || 0) <= resetTs)
+                    ];
+                    const absorbed = window.RWRelay.pruneAbsorbedRuns([...superseded, reset.runId]);
+                    const manifest = await window.RWRelay.commitGeneration(resetPayload, absorbed);
+                    console.log(`📦 Restore pushed to relay: generation ${manifest.gen} (${manifest.bookCount} books, ${absorbed.length} runs superseded)`);
+                } catch (err) {
+                    console.warn('⚠️ Restore succeeded locally but relay push failed (the reset letter/next import will finish it):', err.message);
+                }
+            };
+
             const importBackup = async () => {
                 // Close the dialog immediately when file picker opens
                 setStatusModalOpen(false);
@@ -4573,6 +4615,9 @@
                                 clearTimeout(timeoutId);
                                 // checkManifest removed in v3.6.1 - status updated in loadLibrary
                             }, organizationFromFile);
+
+                            // v6.19.0 - Push the restore to the relay as a reset run (background)
+                            sendRestoreToRelay(parsedData);
 
                             new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/file-imported';
                         } catch (error) {

@@ -385,6 +385,7 @@
   const INLINE_LETTER_MAX = 1 * 1024 * 1024; // encrypted payloads under this go as ONE self-committing letter
   const KEEP_GENS = 2;
   const GC_GRACE_MS = 60 * 60 * 1000;        // never GC a generation younger than 1h (design M2)
+  const LETTER_TTL_MS = 90 * 24 * 60 * 60 * 1000; // mirrors the worker's 90d letter TTL (absorbed-set pruning horizon)
   const DEVICE_KEY = 'readerwrangler-relay-device';
 
   /** Stable per-browser device id (persisted where storage exists; ephemeral otherwise). */
@@ -694,6 +695,160 @@
     await relayFetch(`/mail/${_channelId}/${runId}`, { method: 'DELETE' });
   }
 
+  /**
+   * THE deterministic canonical merge (design §9d) — the single shared implementation for
+   * every client (app AND fetchers), so any two mergers with the same inputs produce the
+   * same output. Pure function: no I/O, no relay writes.
+   *
+   * Rules:
+   *   - baseline = canonical content (books + collections + tombstones), or empty
+   *   - runs apply in ascending timestamp order (readMailbox already sorts them)
+   *   - 'reset' run → new baseline (backup restore); everything older is superseded
+   *   - 'tombstone' run → remove those books, remember compact {asin, deletedAt} records
+   *   - book-bearing runs merge by ASIN, newest fetchDate wins per book (shallow spread, so
+   *     canonical-only fields like tags/note survive an Amazon-data update)
+   *   - a tombstone blocks data fetched BEFORE the delete (the resurrection race); a run
+   *     fetched AFTER the delete revives the book (deliberate re-add / re-scrape — the
+   *     finer revival policy is TOMBSTONE-DELETE.md's, this is the deterministic default)
+   *
+   * @param {string|null} canonicalJsonString - current canonical content (null = cold start)
+   * @param {Array} runs - complete runs from readMailbox (ascending timestamp)
+   * @returns {object} { jsonString, bookCount, tombstoneCount }
+   */
+  function composeCanonical(canonicalJsonString, runs) {
+    const booksByAsin = new Map();   // asin → book object
+    const srcDate = new Map();       // asin → fetchDate that produced the current fields
+    const collByAsin = new Map();    // asin → {asin, readStatus, collections}
+    const tombstones = new Map();    // asin → deletedAt ISO
+    let newestFetch = null;
+    let newestCollFetch = null;
+    const later = (a, b) => (!a ? b : (!b ? a : (a > b ? a : b)));
+
+    const applyContent = (data, fetchDate) => {
+      if (data.books && data.books.items) {
+        const date = data.books.fetchDate || fetchDate || null;
+        newestFetch = later(newestFetch, date);
+        for (const b of data.books.items) {
+          if (!b || !b.asin) continue;
+          const dead = tombstones.get(b.asin);
+          if (dead && (!date || date <= dead)) continue; // fetched before the delete — stays dead
+          if (dead) tombstones.delete(b.asin);           // newer sighting revives
+          const prev = booksByAsin.get(b.asin);
+          const prevDate = srcDate.get(b.asin);
+          if (!prev || !prevDate || !date || date >= prevDate) {
+            booksByAsin.set(b.asin, prev ? { ...prev, ...b } : b);
+            srcDate.set(b.asin, date || prevDate || null);
+          }
+        }
+      }
+      if (data.collections && data.collections.items) {
+        const date = data.collections.fetchDate || fetchDate || null;
+        newestCollFetch = later(newestCollFetch, date);
+        for (const c of data.collections.items) {
+          if (c && c.asin) collByAsin.set(c.asin, c);
+        }
+      }
+      if (data.tombstones && data.tombstones.items) {
+        for (const t of data.tombstones.items) {
+          if (!t || !t.asin) continue;
+          booksByAsin.delete(t.asin);
+          srcDate.delete(t.asin);
+          tombstones.set(t.asin, t.deletedAt || fetchDate || new Date().toISOString());
+        }
+      }
+    };
+
+    if (canonicalJsonString) {
+      try { applyContent(JSON.parse(canonicalJsonString), null); }
+      catch (e) { console.warn('composeCanonical: unparseable canonical ignored:', e.message); }
+    }
+
+    for (const run of runs || []) {
+      let data;
+      try { data = JSON.parse(run.jsonString); }
+      catch (e) { console.warn(`composeCanonical: unparseable run ${run.runId} ignored:`, e.message); continue; }
+      if (run.kind === 'reset') {
+        // New baseline: everything accumulated so far is superseded by the restore
+        booksByAsin.clear(); srcDate.clear(); collByAsin.clear(); tombstones.clear();
+        newestFetch = null; newestCollFetch = null;
+      }
+      applyContent(data, run.fetchDate || null);
+    }
+
+    const items = Array.from(booksByAsin.values());
+    const out = {
+      schemaVersion: '2.3',
+      books: {
+        fetchDate: newestFetch || new Date().toISOString(),
+        fetcherVersion: 'relay-merge',
+        totalBooks: items.length,
+        items
+      }
+    };
+    if (collByAsin.size > 0) {
+      out.collections = { fetchDate: newestCollFetch || newestFetch || new Date().toISOString(),
+                          items: Array.from(collByAsin.values()) };
+    }
+    if (tombstones.size > 0) {
+      // Compact records persist IN the canonical so later merges keep honoring them
+      out.tombstones = { items: Array.from(tombstones, ([asin, deletedAt]) => ({ asin, deletedAt })) };
+    }
+    return { jsonString: JSON.stringify(out), bookCount: items.length, tombstoneCount: tombstones.size };
+  }
+
+  /** Drop absorbedRuns entries whose letters have provably TTL-expired (keeps the set bounded). */
+  function pruneAbsorbedRuns(runIds) {
+    const horizon = Date.now() - LETTER_TTL_MS;
+    return (runIds || []).filter(id => idTimestamp(id) > horizon);
+  }
+
+  /**
+   * Lightweight "is there anything to import?" check for the banner/poll.
+   * New format: pending unabsorbed mailbox runs (1 list + ≤2 GETs). Falls back to the
+   * legacy manifest check only when the channel has no pointer yet (pre-migration).
+   * Returns a manifest-shaped object ({ timestamp, pending?, source }) or null.
+   */
+  async function checkForUpdates() {
+    if (!isConfigured()) return null;
+
+    // Absorbed set from the current generation (pointer → manifest; both cheap GETs)
+    let absorbed = null, hasPointer = false;
+    try {
+      const p = await fetch(`${workerUrl()}/pointer/${_channelId}`);
+      if (p.ok) {
+        hasPointer = true;
+        const gen = (await p.json()).gen;
+        const m = await fetch(`${workerUrl()}/gen/${_channelId}/${gen}/manifest`);
+        if (m.ok) absorbed = new Set((await m.json()).absorbedRuns || []);
+      } else if (p.status === 403) {
+        const err = new Error('Channel revoked'); err.status = 403; throw err;
+      }
+    } catch (e) { if (e && e.status === 403) throw e; /* else: treat as no pointer */ }
+
+    // Any mailbox run not in the absorbed set = something to import.
+    // (One KV list op — fine at solo scale; Phase 2 meters list usage in the worker.)
+    try {
+      const keys = (await (await relayFetch(`/mail/${_channelId}/list`)).json()).keys;
+      const runIds = new Set(keys.map(k => k.slice(0, k.lastIndexOf(':'))));
+      let newestTs = 0, pending = 0;
+      for (const id of runIds) {
+        if (absorbed && absorbed.has(id)) continue;
+        pending++;
+        newestTs = Math.max(newestTs, idTimestamp(id));
+      }
+      if (pending > 0) {
+        return { timestamp: new Date(newestTs).toISOString(), pending, source: 'mailbox' };
+      }
+    } catch { /* list failed — fall through */ }
+
+    // Pre-migration channels: legacy manifest is still the signal. Once a pointer exists,
+    // the legacy manifest is just pre-migration residue (already absorbed) — ignore it.
+    if (!hasPointer) {
+      try { return await checkStatus(); } catch { return null; }
+    }
+    return null;
+  }
+
   // Auto-detect context and initialize
   if (window._RW_RELAY_CHANNEL) {
     initFromGlobals();
@@ -719,7 +874,10 @@
     readCanonical: readCanonical,
     commitGeneration: commitGeneration,
     deleteRun: deleteRun,
-    deviceId: deviceId
+    deviceId: deviceId,
+    composeCanonical: composeCanonical,
+    pruneAbsorbedRuns: pruneAbsorbedRuns,
+    checkForUpdates: checkForUpdates
   };
 
 })();

@@ -739,7 +739,13 @@ async function checkRateLimit(env, channelId) {
     return false; // Rate limited
   }
 
-  await env.RELAY_KV.put(key, JSON.stringify(data), { expirationTtl: 7200 }); // 2hr TTL
+  // Best-effort counter update: Cloudflare KV allows ~1 write/sec PER KEY, and this shared
+  // counter key is written on every request — a rapid multi-letter run (or chunked upload)
+  // trips that per-key limit. The counter is advisory; losing an increment must never fail
+  // the caller's actual write. (Found by the Phase 1 harness: KV PUT 429 → whole request 500.)
+  try {
+    await env.RELAY_KV.put(key, JSON.stringify(data), { expirationTtl: 7200 }); // 2hr TTL
+  } catch { /* count update skipped — approximate counting is fine */ }
   return true; // Allowed
 }
 

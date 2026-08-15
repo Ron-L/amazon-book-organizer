@@ -189,6 +189,131 @@ async function main() {
   }
   await RW.cleanup(); // remove legacy test data
 
+  console.log('\n[11] composeCanonical — the deterministic merge (pure, no network)');
+  {
+    const mkRun = (runId, kind, fetchDate, content) =>
+      ({ runId, kind, fetchDate, timestamp: parseInt(runId), jsonString: JSON.stringify(content) });
+    const canon = JSON.stringify({ schemaVersion: '2.3',
+      books: { fetchDate: '2026-08-01T00:00:00Z', items: [
+        { asin: 'AAA', title: 'Book A', tags: ['keep-me'], currentPrice: '$9.99' }] } });
+
+    // Wishlist add of a new book
+    let r = RW.composeCanonical(canon, [
+      mkRun('100-d-aaaa', 'wishlist-add', '2026-08-10T00:00:00Z',
+        { books: { fetchDate: '2026-08-10T00:00:00Z', items: [{ asin: 'BBB', title: 'Book B', onWishlist: true }] } })
+    ]);
+    let out = JSON.parse(r.jsonString);
+    ok('add: 2 books', out.books.items.length === 2);
+
+    // Newer Amazon-data update of A must NOT lose canonical-only fields (tags)
+    r = RW.composeCanonical(canon, [
+      mkRun('101-d-aaaa', 'books', '2026-08-12T00:00:00Z',
+        { books: { fetchDate: '2026-08-12T00:00:00Z', items: [{ asin: 'AAA', title: 'Book A', currentPrice: '$4.99' }] } })
+    ]);
+    out = JSON.parse(r.jsonString);
+    const a = out.books.items.find(b => b.asin === 'AAA');
+    ok('update: newest price wins, tags survive the spread',
+       a.currentPrice === '$4.99' && Array.isArray(a.tags) && a.tags[0] === 'keep-me');
+
+    // OLDER data must not overwrite newer canonical fields
+    r = RW.composeCanonical(canon, [
+      mkRun('102-d-aaaa', 'books', '2026-07-01T00:00:00Z',
+        { books: { fetchDate: '2026-07-01T00:00:00Z', items: [{ asin: 'AAA', title: 'Old Title', currentPrice: '$99' }] } })
+    ]);
+    ok('stale run loses to newer canonical', JSON.parse(r.jsonString).books.items[0].currentPrice === '$9.99');
+
+    // Tombstone kills, persists, and blocks OLDER re-appearances...
+    const tomb = mkRun('103-d-aaaa', 'tombstone', '2026-08-13T00:00:00Z',
+      { tombstones: { items: [{ asin: 'AAA', deletedAt: '2026-08-13T00:00:00Z' }] } });
+    const staleResurrect = mkRun('104-d-aaaa', 'books', '2026-08-12T00:00:00Z',
+      { books: { fetchDate: '2026-08-12T00:00:00Z', items: [{ asin: 'AAA', title: 'Zombie A' }] } });
+    r = RW.composeCanonical(canon, [tomb, staleResurrect]);
+    out = JSON.parse(r.jsonString);
+    ok('tombstone kills + blocks pre-delete data (resurrection race)',
+       out.books.items.length === 0 && out.tombstones.items[0].asin === 'AAA');
+
+    // ...but a NEWER sighting revives (deliberate re-add)
+    const readd = mkRun('105-d-aaaa', 'wishlist-add', '2026-08-14T00:00:00Z',
+      { books: { fetchDate: '2026-08-14T00:00:00Z', items: [{ asin: 'AAA', title: 'A again', onWishlist: true }] } });
+    r = RW.composeCanonical(canon, [tomb, readd]);
+    out = JSON.parse(r.jsonString);
+    ok('newer sighting revives + clears the tombstone',
+       out.books.items.length === 1 && !out.tombstones);
+
+    // Reset run = new baseline, everything older superseded
+    const reset = mkRun('106-d-aaaa', 'reset', '2026-08-14T01:00:00Z',
+      { books: { fetchDate: '2026-08-05T00:00:00Z', items: [{ asin: 'CCC', title: 'Only C' }] } });
+    r = RW.composeCanonical(canon, [tomb, reset]);
+    out = JSON.parse(r.jsonString);
+    ok('reset: baseline replaced, prior tombstones cleared',
+       out.books.items.length === 1 && out.books.items[0].asin === 'CCC' && !out.tombstones);
+
+    // Idempotence: absorbing the same run twice changes nothing (safe re-merge)
+    const once = RW.composeCanonical(canon, [readd]).jsonString;
+    const twice = RW.composeCanonical(once, [readd]).jsonString;
+    ok('idempotent: re-applying an absorbed run is a no-op',
+       JSON.parse(twice).books.items.length === JSON.parse(once).books.items.length);
+  }
+
+  console.log('\n[12] Full app-import cycle (fresh channel): letter → compose → commit → tombstone → revive');
+  const CH_CYCLE = '44444444-5555-4666-8777-888888888888';
+  window._RW_RELAY_CHANNEL = CH_CYCLE;
+  RW.initFromGlobals();
+  {
+    // Wishlist add lands as a letter; app "imports": compose + commit, carrying absorbedRuns forward
+    const wishBody = { schemaVersion: '2.3', books: { fetchDate: new Date().toISOString(),
+      items: [{ asin: 'CYCLE1', title: 'Cycle Book', onWishlist: true, blob: rand() }] } };
+    const wr = await RW.writeRun(JSON.stringify(wishBody), 'wishlist-add');
+    await eventually('checkForUpdates sees the pending letter', async () => {
+      const u = await RW.checkForUpdates();
+      return u && u.source === 'mailbox' && u.pending >= 1;
+    });
+
+    // App import: read + compose + local-load (simulated) + merge-on-import
+    let canonical = await RW.readCanonical();
+    let mailbox = await RW.readMailbox();
+    let pending = canonical && canonical.manifest ? RW.unabsorbedRuns(mailbox.runs, canonical.manifest) : mailbox.runs;
+    let composed = RW.composeCanonical(canonical ? canonical.jsonString : null, pending);
+    ok('composed library has the wishlist book', JSON.parse(composed.jsonString).books.items.some(b => b.asin === 'CYCLE1'));
+    let absorbed = RW.pruneAbsorbedRuns([
+      ...((canonical && canonical.manifest && canonical.manifest.absorbedRuns) || []),
+      ...pending.map(r => r.runId)]);
+    await RW.commitGeneration(composed.jsonString, absorbed);
+    await eventually('after merge-on-import: nothing pending', async () => (await RW.checkForUpdates()) === null);
+
+    // Permanent delete: tombstone letter, then the next import kills the book in the canonical
+    await RW.writeRun(JSON.stringify({ schemaVersion: '2.3',
+      tombstones: { items: [{ asin: 'CYCLE1', deletedAt: new Date().toISOString() }] } }), 'tombstone');
+    await eventually('tombstone letter shows as pending', async () => {
+      const u = await RW.checkForUpdates();
+      return u && u.source === 'mailbox';
+    });
+    canonical = await RW.readCanonical();
+    mailbox = await RW.readMailbox();
+    pending = RW.unabsorbedRuns(mailbox.runs, canonical.manifest);
+    composed = RW.composeCanonical(canonical.jsonString, pending);
+    {
+      const out = JSON.parse(composed.jsonString);
+      ok('next import: book deleted, tombstone persisted in canonical',
+         !out.books.items.some(b => b.asin === 'CYCLE1') && out.tombstones && out.tombstones.items[0].asin === 'CYCLE1');
+    }
+    absorbed = RW.pruneAbsorbedRuns([...(canonical.manifest.absorbedRuns || []), ...pending.map(r => r.runId)]);
+    await RW.commitGeneration(composed.jsonString, absorbed);
+
+    // Re-add AFTER the delete: newer sighting revives through the persisted tombstone
+    await sleep(1100); // ensure the new letter's fetchDate is strictly after deletedAt
+    await RW.writeRun(JSON.stringify({ schemaVersion: '2.3', books: { fetchDate: new Date().toISOString(),
+      items: [{ asin: 'CYCLE1', title: 'Cycle Book again', onWishlist: true, blob: rand() }] } }), 'wishlist-add');
+    await eventually('re-add revives the tombstoned book on the next compose', async () => {
+      const c = await RW.readCanonical();
+      const mb = await RW.readMailbox();
+      const p = RW.unabsorbedRuns(mb.runs, c.manifest);
+      if (p.length === 0) return false;
+      const out = JSON.parse(RW.composeCanonical(c.jsonString, p).jsonString);
+      return out.books.items.some(b => b.asin === 'CYCLE1') && !out.tombstones;
+    });
+  }
+
   console.log(`\n=== ${pass} passed, ${fail} failed ===`);
   process.exit(fail ? 1 : 0);
 }
