@@ -714,7 +714,18 @@ async function addToWishlist() {
         }
         if (pendingBooks > 0) console.log(`   ✅ Plus ${pendingBooks} pending book(s) not yet merged`);
         console.log('');
-        return byAsin;
+        return { byAsin, canonical, pending };
+    }
+
+    /**
+     * v2.0.0 - Age-cap fallback (design §11 rule 2): if some pending run has waited >3 days
+     * un-merged (user hasn't opened the app), consolidate right here. Fire-and-forget.
+     */
+    function ageCapCheck(known) {
+        if (!known) return;
+        win.RWRelay.maybeAgeCapMerge({ canonical: known.canonical, pendingRuns: known.pending })
+            .then(acm => { if (acm.merged) console.log(`📦 Age-cap consolidation done (${acm.bookCount} books)`); })
+            .catch(e => console.warn('Age-cap check skipped:', e.message));
     }
 
     /**
@@ -789,7 +800,8 @@ async function addToWishlist() {
 
             // Read known books (canonical + pending) for duplicate detection
             console.log('[3] Checking your library...');
-            const knownBooks = await loadKnownBooks();
+            const known = await loadKnownBooks();
+            const knownBooks = known.byAsin;
 
             // Dedup: filter out books already in library or already pending
             const newBooks = [];
@@ -828,6 +840,7 @@ async function addToWishlist() {
             progressUI.updatePhase('Adding to Wishlist', `Adding ${newBooks.length} books...`);
             console.log(`[4] Sending ${newBooks.length} books...`);
             await sendWishlistRun(newBooks);
+            ageCapCheck(known);
             for (let i = 0; i < newBooks.length; i++) {
                 new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/wishlist-item-added';
             }
@@ -873,7 +886,8 @@ async function addToWishlist() {
 
             // Read known books (canonical + pending) for duplicate detection
             console.log('[3] Checking your library...');
-            const knownBooks = await loadKnownBooks();
+            const known = await loadKnownBooks();
+            const knownBooks = known.byAsin;
 
             // Check for duplicate
             console.log('[4] Checking for duplicates...');
@@ -901,6 +915,7 @@ async function addToWishlist() {
             progressUI.updatePhase('Adding to Wishlist', 'Saving...');
             console.log('[5] Sending book...');
             await sendWishlistRun([book]);
+            ageCapCheck(known);
             new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/wishlist-item-added';
 
             // Success!

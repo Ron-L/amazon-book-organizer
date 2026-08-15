@@ -19,7 +19,7 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v2.2.0';
+    const FETCHER_VERSION = 'v3.0.0-alpha.1';
     const SCHEMA_VERSION = '2.1';
     const PAGE_TITLE = document.title;
 
@@ -537,14 +537,15 @@ async function fetchAmazonCollections() {
     }
 
     // ==========================================
-    // Phase 0.5: Load Existing Unified File
+    // Phase 0.5: Relay check
     // ==========================================
-    console.log('[Phase 0.5] Loading existing library file...\n');
-    progressUI.updatePhase('Downloading', 'Loading library from relay...');
-    console.log('[Relay] Loading existing library from relay...');
-
-    let existingBooks = null; // Preserve books section from relay data
-    let existingOrganization = null; // Preserve organization section if present
+    // v3.0.0 - Relay write redesign Phase 1 (docs/design/RELAY-WRITE-REDESIGN.md): this
+    // fetcher no longer downloads the library at all. The old read existed only to CARRY the
+    // books section through a full rewrite — but this fetcher never rewrites the canonical
+    // now; its run carries ONLY collections, and the merge combines them with the books.
+    // What remains is a cheap gate: collections without any library is a user mistake.
+    console.log('[Phase 0.5] Checking relay...\n');
+    progressUI.updatePhase('Checking Relay', 'Looking for your library...');
 
     if (!window.RWRelay || !window.RWRelay.isConfigured()) {
         progressUI.showError('Relay not configured. Please reinstall the bookmarklet from Relay Setup in the app.');
@@ -552,44 +553,18 @@ async function fetchAmazonCollections() {
     }
 
     try {
-        const status = await window.RWRelay.checkStatus();
-        if (!status) {
+        const anyLibrary = await window.RWRelay.hasCanonical() || !!(await window.RWRelay.checkForUpdates());
+        if (!anyLibrary) {
             progressUI.showError('No library data found on relay. Please run Library Fetcher first.');
             return;
         }
-
-        const jsonText = await window.RWRelay.download((phase, detail) => {
-            progressUI.updatePhase('Downloading', detail);
-        });
-        const parsedData = JSON.parse(jsonText);
-
-        if (parsedData.isBackup === true) {
-            progressUI.showError('Backup data found on relay instead of library data. Please run Library Fetcher first.');
-            return;
-        }
-
-        if (!parsedData.schemaVersion?.startsWith('2.')) {
-            throw new Error(`Unsupported schema version: ${parsedData.schemaVersion || 'unknown'}. Expected 2.x.`);
-        }
-
-        if (!parsedData.books) {
-            throw new Error('Invalid library data - Missing books section');
-        }
-
-        existingBooks = parsedData.books;
-        console.log(`   📋 Loaded ${parsedData.schemaVersion} library (${existingBooks.items?.length || 0} books)`);
-
-        if (parsedData.organization) {
-            existingOrganization = parsedData.organization;
-            console.log(`   📋 Preserving existing organization data`);
-        }
     } catch (error) {
-        console.error('   ❌ Failed to load from relay:', error.message);
-        progressUI.showError(`Failed to load from relay: ${error.message}`);
+        console.error('   ❌ Relay check failed:', error.message);
+        progressUI.showError(`Relay check failed: ${error.message}`);
         return;
     }
 
-    console.log('✅ Phase 0.5 complete - Library file loaded\n');
+    console.log('✅ Phase 0.5 complete - Relay reachable, library present\n');
 
     // ==========================================
     // Phase 1: Fetch All Books
@@ -808,24 +783,11 @@ async function fetchAmazonCollections() {
     console.log('[Phase 3] Generating unified JSON file...\n');
     progressUI.updatePhase('Saving Library', 'Generating and downloading unified file');
 
-    // Demo whitelist filter — remove non-whitelisted books from existingBooks before output
-    let filteredExistingBooks = existingBooks;
-    if (whitelistASINs && filteredExistingBooks && filteredExistingBooks.items) {
-        const beforeCount = filteredExistingBooks.items.length;
-        filteredExistingBooks = {
-            ...filteredExistingBooks,
-            items: filteredExistingBooks.items.filter(b => whitelistASINs.has(b.asin))
-        };
-        filteredExistingBooks.totalBooks = filteredExistingBooks.items.length;
-        console.log(`   🔒 Whitelist filtered existing books: ${beforeCount} → ${filteredExistingBooks.items.length}`);
-    }
-
-    // Create output in Schema v2.0 unified format
-    // Collections Fetcher owns: collections
-    // Preserves: schemaVersion, books, organization (from input file)
+    // Create output — v3.0.0: the run carries ONLY collections (no books passthrough, no
+    // organization passthrough — the canonical keeps its own books and the merge combines).
     const outputData = {
         schemaVersion: SCHEMA_VERSION,
-        books: filteredExistingBooks,
+        source: 'collections-fetcher',
         collections: {
             fetchDate: new Date().toISOString(),
             fetcherVersion: FETCHER_VERSION,
@@ -834,27 +796,23 @@ async function fetchAmazonCollections() {
             items: processedBooks
         }
     };
-    // Preserve existing organization section if present
-    if (existingOrganization) {
-        outputData.organization = existingOrganization;
-    }
 
     const jsonString = JSON.stringify(outputData, null, 2);
 
-    // Upload to relay with retry
+    // v3.0.0 - Send as ONE self-committing mailbox run (atomic; never rewrites the library)
     progressUI.updatePhase('Uploading', 'Compressing and encrypting...');
-    console.log('[Relay] Uploading updated library to relay...');
+    console.log('[Relay] Sending collections (atomic run)...');
 
     let uploaded = false;
     while (!uploaded) {
         try {
-            const manifest = await window.RWRelay.upload(jsonString, (phase, detail) => {
+            const res = await window.RWRelay.writeRun(jsonString, 'collections', (phase, detail) => {
                 progressUI.updatePhase('Uploading', detail);
             });
-            console.log(`✅ Uploaded to relay (${manifest.bookCount} books, ${(manifest.compressedBytes / 1024).toFixed(0)} KB compressed)`);
+            console.log(`✅ Sent collections for ${processedBooks.length} books (run ${res.runId}${res.inline ? ', single write' : `, ${res.seqCount} parts`})`);
             uploaded = true;
         } catch (relayError) {
-            console.error('❌ Relay upload failed:', relayError.message);
+            console.error('❌ Relay send failed:', relayError.message);
             const choice = await progressUI.showRetryUpload(relayError.message);
             if (choice === 'cancel') {
                 progressUI.showError('Upload cancelled — your fetched data was not saved.');
@@ -862,6 +820,12 @@ async function fetchAmazonCollections() {
             }
         }
     }
+
+    // v3.0.0 - Age-cap fallback: consolidate if some pending run has waited >3 days un-merged
+    try {
+        const acm = await window.RWRelay.maybeAgeCapMerge();
+        if (acm.merged) console.log(`📦 Age-cap consolidation done (${acm.bookCount} books)`);
+    } catch (e) { console.warn('Age-cap check skipped:', e.message); }
 
     const elapsedMs = Date.now() - startTime;
     const elapsedMin = Math.floor(elapsedMs / 60000);

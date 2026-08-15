@@ -314,6 +314,19 @@ async function main() {
     });
   }
 
+  console.log('\n[13] hasCanonical + age-cap gating (young runs never trigger)');
+  {
+    ok('hasCanonical true where generations exist', await RW.hasCanonical() === true);
+    // Pending run exists on this channel (the re-add from [12]) but it is seconds old:
+    const acm = await RW.maybeAgeCapMerge();
+    ok(`age-cap declines young pending runs (${acm.reason})`, acm.merged === false && acm.reason === 'young');
+    window._RW_RELAY_CHANNEL = '55555555-6666-4777-8888-999999999999'; // untouched channel
+    RW.initFromGlobals();
+    ok('hasCanonical false on an empty channel', await RW.hasCanonical() === false);
+    const acm2 = await RW.maybeAgeCapMerge();
+    ok('age-cap no-ops on an empty channel', acm2.merged === false && acm2.reason === 'nothing-pending');
+  }
+
   console.log(`\n=== ${pass} passed, ${fail} failed ===`);
   process.exit(fail ? 1 : 0);
 }

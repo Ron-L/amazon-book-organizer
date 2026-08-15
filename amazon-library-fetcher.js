@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v4.11.10';
+    const FETCHER_VERSION = 'v5.0.0-alpha.1';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -895,60 +895,69 @@ async function fetchAmazonLibrary() {
             return;
         }
 
+        // v5.0.0 - Relay write redesign Phase 1 (docs/design/RELAY-WRITE-REDESIGN.md):
+        // the skip-hint reference = canonical + pending (unabsorbed) mailbox runs, combined by
+        // the SAME deterministic merge every client uses. READ-ONLY — this reconstruction is
+        // never written back; the fetch result goes out as a mailbox run (below). Books added
+        // 5 minutes ago (e.g. a wishlist letter not yet merged) are already "known" here.
         let existingBooks = [];
-        let existingCollections = null; // Preserve collections section if present
         let mostRecentDate = null;
+        let ageCapInputs = null; // canonical + pending, reused for the age-cap check at the end
 
         progressUI.updatePhase('Checking Relay', 'Looking for existing library data...');
         try {
-            const status = await window.RWRelay.checkStatus();
-            if (status) {
-                progressUI.updatePhase('Downloading', 'Loading existing library from relay...');
-                const existingJson = await window.RWRelay.download((phase, detail) => {
-                    progressUI.updatePhase('Downloading', detail);
-                });
-                const parsedData = JSON.parse(existingJson);
-
+            const canonical = await window.RWRelay.readCanonical((phase, detail) => {
+                progressUI.updatePhase('Downloading', detail);
+            });
+            let canonicalJson = null;
+            if (canonical) {
+                const parsedData = JSON.parse(canonical.jsonString);
                 if (parsedData.isBackup === true) {
                     console.log('   ⚠️ Backup data found on relay - ignoring, will fetch complete library');
                 } else if (parsedData.schemaVersion?.startsWith('2.')) {
-                    if (parsedData.books && parsedData.books.items) {
-                        existingBooks = parsedData.books.items;
-                        console.log(`   📋 Loaded ${parsedData.schemaVersion} library (${existingBooks.length} books)`);
-                        if (parsedData.collections) {
-                            existingCollections = parsedData.collections;
-                            console.log(`   📋 Preserving existing collections data`);
-                        }
-                    }
+                    canonicalJson = canonical.jsonString;
+                    console.log(`   📋 Loaded ${parsedData.schemaVersion} library (via ${canonical.source})`);
                 } else {
                     console.log('   ⚠️ Unrecognized data on relay - will fetch complete library');
                 }
+            }
 
-                // Find most recent acquisition date for incremental fetching
-                for (const book of existingBooks) {
-                    if (book.acquisitionDate) {
-                        const bookDate = parseInt(book.acquisitionDate);
-                        if (!mostRecentDate || bookDate > mostRecentDate) {
-                            mostRecentDate = bookDate;
-                        }
+            progressUI.updatePhase('Checking Relay', 'Checking pending additions...');
+            const mailbox = await window.RWRelay.readMailbox();
+            const pending = (canonical && canonical.manifest)
+                ? window.RWRelay.unabsorbedRuns(mailbox.runs, canonical.manifest)
+                : mailbox.runs;
+            if (pending.length > 0) console.log(`   📬 Including ${pending.length} pending run(s) not yet merged`);
+            ageCapInputs = { canonical, pendingRuns: pending };
+
+            const composed = window.RWRelay.composeCanonical(canonicalJson, pending);
+            const composedData = JSON.parse(composed.jsonString);
+            existingBooks = (composedData.books && composedData.books.items) || [];
+
+            // Find most recent acquisition date for incremental fetching
+            for (const book of existingBooks) {
+                if (book.acquisitionDate) {
+                    const bookDate = parseInt(book.acquisitionDate);
+                    if (!mostRecentDate || bookDate > mostRecentDate) {
+                        mostRecentDate = bookDate;
                     }
                 }
+            }
 
-                // Demo whitelist filter — remove non-whitelisted books from existing data
-                if (whitelistASINs && existingBooks.length > 0) {
-                    const beforeCount = existingBooks.length;
-                    existingBooks = existingBooks.filter(b => whitelistASINs.has(b.asin));
-                    if (existingBooks.length !== beforeCount) {
-                        console.log(`   🔒 Whitelist filtered existing books: ${beforeCount} → ${existingBooks.length}`);
-                    }
+            // Demo whitelist filter — remove non-whitelisted books from existing data
+            if (whitelistASINs && existingBooks.length > 0) {
+                const beforeCount = existingBooks.length;
+                existingBooks = existingBooks.filter(b => whitelistASINs.has(b.asin));
+                if (existingBooks.length !== beforeCount) {
+                    console.log(`   🔒 Whitelist filtered existing books: ${beforeCount} → ${existingBooks.length}`);
                 }
+            }
 
-                if (existingBooks.length > 0) {
-                    console.log(`✅ Loaded ${existingBooks.length} existing books from relay`);
-                    if (mostRecentDate) {
-                        const date = new Date(mostRecentDate);
-                        console.log(`   Most recent: ${date.toLocaleDateString()}`);
-                    }
+            if (existingBooks.length > 0) {
+                console.log(`✅ Loaded ${existingBooks.length} existing books from relay`);
+                if (mostRecentDate) {
+                    const date = new Date(mostRecentDate);
+                    console.log(`   Most recent: ${date.toLocaleDateString()}`);
                 }
             } else {
                 console.log('📂 No existing data on relay - will fetch ALL books');
@@ -2413,9 +2422,9 @@ async function fetchAmazonLibrary() {
         }
 
         // Create output in Schema v2.0 unified format
-        // Library Fetcher owns: schemaVersion, books
-        // Preserves any existing collections section from input file
-        // v4.8.0.b - Removed booksWithoutDescriptionsDetails from JSON (now console-only)
+        // v5.0.0 - The run carries ONLY books: this fetcher never rewrites the canonical, so
+        // there is no collections section to "preserve" — the canonical keeps its own, and the
+        // merge combines them. (The old download-modify-upload passthrough dance is gone.)
         const outputData = {
             schemaVersion: SCHEMA_VERSION,
             books: {
@@ -2425,10 +2434,6 @@ async function fetchAmazonLibrary() {
                 items: finalBooks
             }
         };
-        // Preserve existing collections section if present
-        if (existingCollections) {
-            outputData.collections = existingCollections;
-        }
 
         const jsonData = JSON.stringify(outputData, null, 2);
 
@@ -2510,26 +2515,39 @@ async function fetchAmazonLibrary() {
         }
         console.log('');
 
-        // Upload to relay with retry
+        // v5.0.0 - Send the fetch result as ONE self-committing mailbox run (letters, then a
+        // run-manifest written last). Interrupting it mid-write leaves an incomplete run that
+        // every reader ignores — the torn-write corruption of the old in-place upload is gone.
         progressUI.updatePhase('Uploading', 'Compressing and encrypting...');
-        console.log('[Relay] Uploading library to relay...');
+        console.log('[Relay] Sending fetch results (atomic run)...');
 
         let uploaded = false;
         while (!uploaded) {
             try {
-                const manifest = await window.RWRelay.upload(jsonData, (phase, detail) => {
+                const res = await window.RWRelay.writeRun(jsonData, 'books', (phase, detail) => {
                     progressUI.updatePhase('Uploading', detail);
                 });
-                console.log(`✅ Uploaded to relay (${manifest.bookCount} books, ${(manifest.compressedBytes / 1024).toFixed(0)} KB compressed)`);
+                console.log(`✅ Sent ${finalBooks.length} books to relay (run ${res.runId}, ${res.seqCount} part${res.seqCount !== 1 ? 's' : ''})`);
                 uploaded = true;
             } catch (relayError) {
-                console.error('❌ Relay upload failed:', relayError.message);
+                console.error('❌ Relay send failed:', relayError.message);
                 const choice = await progressUI.showRetryUpload(relayError.message);
                 if (choice === 'cancel') {
                     progressUI.showError('Upload cancelled — your fetched data was not saved.');
                     return;
                 }
             }
+        }
+
+        // v5.0.0 - Age-cap fallback (design §11 rule 2): if some OTHER pending run has waited
+        // >3 days un-merged (user hasn't opened the app), consolidate the canonical right here
+        // so nothing ever nears the letter TTL. Uses the canonical+pending read at fetch start
+        // (our own just-written run is not in that set — it's brand new and doesn't need this).
+        if (ageCapInputs) {
+            try {
+                const acm = await window.RWRelay.maybeAgeCapMerge(ageCapInputs);
+                if (acm.merged) console.log(`📦 Age-cap consolidation done (${acm.bookCount} books)`);
+            } catch (e) { console.warn('Age-cap check skipped:', e.message); }
         }
 
         const totalFetched = newBooks.length + stats.nonBooksFiltered.length;
@@ -2856,7 +2874,8 @@ async function fetchAmazonLibrary() {
                     .map(([type, count]) => `${count} ${type}`)
                     .join(', ');
 
-                // Re-upload with orphan flags
+                // v5.0.0 - Orphan flags go out as a follow-up run (same fetchDate; the later
+                // run wins the per-book merge, so the flags land on top of the main run)
                 const updatedOutputData = {
                     schemaVersion: SCHEMA_VERSION,
                     books: {
@@ -2870,24 +2889,21 @@ async function fetchAmazonLibrary() {
                         items: finalBooks
                     }
                 };
-                if (existingCollections) {
-                    updatedOutputData.collections = existingCollections;
-                }
 
                 const updatedJsonData = JSON.stringify(updatedOutputData, null, 2);
                 progressUI.updateOrphanProgress(orphanPage, orphanPage); // Show 100%
 
-                console.log('[Relay] Re-uploading library with orphan flags...');
-                await window.RWRelay.upload(updatedJsonData, (phase, detail) => {
-                    console.log(`   📡 Orphan re-upload: ${detail}`);
+                console.log('[Relay] Sending orphan flags (follow-up run)...');
+                await window.RWRelay.writeRun(updatedJsonData, 'books', (phase, detail) => {
+                    console.log(`   📡 Orphan update: ${detail}`);
                 });
-                console.log('✅ Library re-uploaded with orphan data');
+                console.log('✅ Orphan data sent');
 
                 progressUI.showOrphanResult(
                     `✅ Orphan scan: <strong>${orphanedBooks.length}</strong> book${orphanedBooks.length === 1 ? '' : 's'} no longer in your Amazon library (${typeSummary}).<br><br>Import from Relay in the app to review.`
                 );
             } else {
-                // No orphans — update metadata and re-upload
+                // No orphans — send verified status as a follow-up run
                 const updatedOutputData = {
                     schemaVersion: SCHEMA_VERSION,
                     books: {
@@ -2901,16 +2917,13 @@ async function fetchAmazonLibrary() {
                         items: finalBooks
                     }
                 };
-                if (existingCollections) {
-                    updatedOutputData.collections = existingCollections;
-                }
 
                 const updatedJsonData = JSON.stringify(updatedOutputData, null, 2);
-                console.log('[Relay] Re-uploading library with verified status...');
-                await window.RWRelay.upload(updatedJsonData, (phase, detail) => {
-                    console.log(`   📡 Orphan re-upload: ${detail}`);
+                console.log('[Relay] Sending verified status (follow-up run)...');
+                await window.RWRelay.writeRun(updatedJsonData, 'books', (phase, detail) => {
+                    console.log(`   📡 Orphan update: ${detail}`);
                 });
-                console.log('✅ Library re-uploaded - all books verified');
+                console.log('✅ Verified status sent - all books verified');
 
                 progressUI.showOrphanResult('✅ All books verified — no orphans.<br><br>Import from Relay in the app to load your updated library.');
             }
@@ -2923,7 +2936,7 @@ async function fetchAmazonLibrary() {
             const partialVerified = finalBooks.filter(b => b.orphanStatus === 'verified');
 
             if (partialVerified.length > 0 || partialOrphans.length > 0) {
-                // We have partial data — upload what we have
+                // We have partial data — send what we have as a follow-up run
                 const partialOutputData = {
                     schemaVersion: SCHEMA_VERSION,
                     books: {
@@ -2936,14 +2949,11 @@ async function fetchAmazonLibrary() {
                         items: finalBooks
                     }
                 };
-                if (existingCollections) {
-                    partialOutputData.collections = existingCollections;
-                }
 
                 try {
                     const partialJsonData = JSON.stringify(partialOutputData, null, 2);
-                    await window.RWRelay.upload(partialJsonData, () => {});
-                    console.log(`✅ Partial orphan data uploaded (${partialVerified.length} verified, ${partialOrphans.length} orphans)`);
+                    await window.RWRelay.writeRun(partialJsonData, 'books', () => {});
+                    console.log(`✅ Partial orphan data sent (${partialVerified.length} verified, ${partialOrphans.length} orphans)`);
 
                     progressUI.showOrphanResult(
                         `⚠️ Orphan scan incomplete. Partial results uploaded.<br>Import from Relay to review what was found so far.`

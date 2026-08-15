@@ -802,6 +802,59 @@
     return (runIds || []).filter(id => idTimestamp(id) > horizon);
   }
 
+  /** Cheap "does any canonical exist?" (pointer GET → gen list → legacy manifest). */
+  async function hasCanonical() {
+    if (!isConfigured()) return false;
+    try {
+      const p = await fetch(`${workerUrl()}/pointer/${_channelId}`);
+      if (p.ok) return true;
+    } catch { /* fall through */ }
+    try {
+      const gens = (await (await relayFetch(`/gen/${_channelId}/list`)).json()).gens;
+      if (gens.length > 0) return true;
+    } catch { /* fall through */ }
+    try { return !!(await checkStatus()); } catch { return false; }
+  }
+
+  const AGE_CAP_MS = 3 * 24 * 60 * 60 * 1000; // design §11 rule 2: durability backstop
+
+  /**
+   * The fetchers' age-cap fallback (design §11 rule 2): if the OLDEST complete unabsorbed
+   * run has waited longer than the age cap, perform a canonical merge right here — so
+   * consolidation is guaranteed even if the user never opens the app. Safe concurrently
+   * (unique generations + absorbed-set); a failure just leaves it for the next client.
+   * @param {object} opts - optional { canonical, pendingRuns } already in hand (skips re-reads)
+   * @returns {object} { merged, reason }
+   */
+  async function maybeAgeCapMerge(opts, onProgress) {
+    if (!isConfigured()) return { merged: false, reason: 'not-configured' };
+    try {
+      let canonical = opts && opts.canonical !== undefined ? opts.canonical : await readCanonical(onProgress);
+      let pending = opts && opts.pendingRuns;
+      if (!pending) {
+        const mailbox = await readMailbox();
+        pending = (canonical && canonical.manifest)
+          ? unabsorbedRuns(mailbox.runs, canonical.manifest)
+          : mailbox.runs;
+      }
+      if (pending.length === 0) return { merged: false, reason: 'nothing-pending' };
+      const oldest = Math.min(...pending.map(r => r.timestamp));
+      if (Date.now() - oldest < AGE_CAP_MS) return { merged: false, reason: 'young' };
+
+      console.log(`⏰ Age cap: oldest pending run is ${((Date.now() - oldest) / 86400000).toFixed(1)}d old — consolidating`);
+      const composed = composeCanonical(canonical ? canonical.jsonString : null, pending);
+      const absorbed = pruneAbsorbedRuns([
+        ...((canonical && canonical.manifest && canonical.manifest.absorbedRuns) || []),
+        ...pending.map(r => r.runId)
+      ]);
+      const manifest = await commitGeneration(composed.jsonString, absorbed, onProgress);
+      return { merged: true, reason: 'age-cap', gen: manifest.gen, bookCount: manifest.bookCount };
+    } catch (e) {
+      console.warn('Age-cap merge skipped:', e.message);
+      return { merged: false, reason: e.message };
+    }
+  }
+
   /**
    * Lightweight "is there anything to import?" check for the banner/poll.
    * New format: pending unabsorbed mailbox runs (1 list + ≤2 GETs). Falls back to the
@@ -877,7 +930,9 @@
     deviceId: deviceId,
     composeCanonical: composeCanonical,
     pruneAbsorbedRuns: pruneAbsorbedRuns,
-    checkForUpdates: checkForUpdates
+    checkForUpdates: checkForUpdates,
+    hasCanonical: hasCanonical,
+    maybeAgeCapMerge: maybeAgeCapMerge
   };
 
 })();
