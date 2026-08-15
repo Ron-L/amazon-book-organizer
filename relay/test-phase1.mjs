@@ -327,6 +327,40 @@ async function main() {
     ok('age-cap no-ops on an empty channel', acm2.merged === false && acm2.reason === 'nothing-pending');
   }
 
+  console.log('\n[14] Bulk-run GC: absorbed multi-letter runs reclaimed, tiny runs ride the TTL');
+  window._RW_RELAY_CHANNEL = CH_CYCLE; // back to the cycle channel
+  RW.initFromGlobals();
+  {
+    const bulkBody = payload('bulkgc', 30);
+    const bulk = await RW.writeRun(bulkBody, 'books', null, { inlineMax: 0, letterSize: 500 });
+    const tiny = await RW.writeRun(payload('tinygc', 1), 'wishlist-add');
+    // App-import shape: read, compose, commit absorbing both, then reclaim
+    let canonical, pending;
+    await eventually('both runs visible as pending', async () => {
+      canonical = await RW.readCanonical();
+      const mb = await RW.readMailbox();
+      pending = RW.unabsorbedRuns(mb.runs, canonical.manifest);
+      return pending.some(r => r.runId === bulk.runId && r.parts > 1)
+          && pending.some(r => r.runId === tiny.runId && r.parts === 1);
+    });
+    const composed = RW.composeCanonical(canonical.jsonString, pending);
+    const absorbed = RW.pruneAbsorbedRuns([...(canonical.manifest.absorbedRuns || []), ...pending.map(r => r.runId)]);
+    await RW.commitGeneration(composed.jsonString, absorbed);
+    const deleted = await RW.deleteAbsorbedBulkRuns(pending.map(r => ({ runId: r.runId, parts: r.parts })));
+    ok('exactly the bulk run was deleted (tiny one left to TTL)', deleted === 1);
+    await eventually('bulk run gone from mailbox; tiny letter still present (absorbed, riding TTL)', async () => {
+      const mb = await RW.readMailbox();
+      const bulkGone = !mb.runs.some(r => r.runId === bulk.runId) && !mb.incomplete.includes(bulk.runId);
+      const tinyThere = mb.runs.some(r => r.runId === tiny.runId);
+      return bulkGone && tinyThere;
+    });
+    // And absorbed-set semantics still retire the tiny run from "pending"
+    const c2 = await RW.readCanonical();
+    const mb2 = await RW.readMailbox();
+    ok('tiny run absorbed (not pending) despite letter still existing',
+       !RW.unabsorbedRuns(mb2.runs, c2.manifest).some(r => r.runId === tiny.runId));
+  }
+
   console.log(`\n=== ${pass} passed, ${fail} failed ===`);
   process.exit(fail ? 1 : 0);
 }

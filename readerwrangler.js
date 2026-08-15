@@ -8,7 +8,21 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.19.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "6.19.0-alpha.2";  // Build version for this file
+
+        // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
+        // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
+        // so a DEV bookmarklet and a localhost app share the same (dev) relay universe.
+        // Escape hatch: run  window._RW_RELAY_WORKER_URL = ''  in the console (then re-import)
+        // to point a dev app at the production worker deliberately.
+        (() => {
+            const isLocal = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+            const isDevRepo = window.location.hostname === 'ron-l.github.io' && window.location.pathname.startsWith('/readerwranglerdev');
+            if ((isLocal || isDevRepo) && window._RW_RELAY_WORKER_URL === undefined) {
+                window._RW_RELAY_WORKER_URL = 'https://readerwrangler-relay-dev.readerwrangler.workers.dev';
+                console.log(`🔧 DEV environment: relay → dev worker (${window._RW_RELAY_WORKER_URL})`);
+            }
+        })();
 
         // v5.0.0-alpha.172.1 - Static column configuration (outside component for performance)
         const COLUMN_CONFIG = {
@@ -4378,7 +4392,9 @@
                                 absorbedRuns: window.RWRelay.pruneAbsorbedRuns([
                                     ...((canonical && canonical.manifest && canonical.manifest.absorbedRuns) || []),
                                     ...pending.map(r => r.runId)
-                                ])
+                                ]),
+                                // For post-commit storage reclamation of big absorbed runs
+                                absorbedPending: pending.map(r => ({ runId: r.runId, parts: r.parts || 1 }))
                             };
                         }
                         return result; // { totalBooks, newBookIds, upgradedCount, __consolidate? }
@@ -4423,6 +4439,9 @@
                             try {
                                 const manifest = await window.RWRelay.commitGeneration(c.jsonString, c.absorbedRuns);
                                 console.log(`📦 Canonical consolidated: generation ${manifest.gen} (${manifest.bookCount} books, ${c.absorbedRuns.length} runs absorbed)`);
+                                // Reclaim big absorbed runs early (letters are only removed AFTER
+                                // the commit that absorbed them — the clearing invariant holds)
+                                await window.RWRelay.deleteAbsorbedBulkRuns(c.absorbedPending);
                             } catch (err) {
                                 console.warn('⚠️ Consolidation deferred (will retry on next import):', err.message);
                             }

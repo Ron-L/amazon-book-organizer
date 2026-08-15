@@ -522,7 +522,7 @@
           let off = 0;
           for (const p of parts) { bytes.set(p, off); off += p.length; }
           if (manifest.checksum && await checksumOf(bytes) !== manifest.checksum) throw new Error('checksum mismatch');
-          runs.push({ runId, kind: manifest.kind, fetchDate: manifest.fetchDate,
+          runs.push({ runId, kind: manifest.kind, fetchDate: manifest.fetchDate, parts: manifest.seqCount,
                       timestamp: idTimestamp(runId), jsonString: await unpack(bytes) });
         } else if (info.seqs.has(0) && info.seqs.size === 1) {
           // Possible inline single letter (self-committing; stored as JSON at seq 0)
@@ -532,7 +532,7 @@
           if (!letter.inline) throw new Error('not inline'); // letters of an uncommitted multi-run
           const bytes = b64ToBytes(letter.payload);
           if (letter.checksum && await checksumOf(bytes) !== letter.checksum) throw new Error('checksum mismatch');
-          runs.push({ runId, kind: letter.kind, fetchDate: letter.fetchDate,
+          runs.push({ runId, kind: letter.kind, fetchDate: letter.fetchDate, parts: 1,
                       timestamp: idTimestamp(runId), jsonString: await unpack(bytes) });
         } else {
           throw new Error('no manifest'); // letters exist but run not committed
@@ -696,6 +696,27 @@
   }
 
   /**
+   * Early storage reclamation after a canonical commit (design §14 mitigation a): delete
+   * ABSORBED multi-letter (bulk) runs — a full-fetch run holds real MBs for up to 90 days
+   * otherwise. Tiny single-letter runs just ride the TTL (not worth the delete ops).
+   * ONLY call with runs a COMMITTED generation has absorbed — unabsorbed letters are sacred
+   * (the clearing invariant). Best-effort: a failed delete just leaves the TTL to do it.
+   * A concurrent reader mid-assembly of a deleted run sees it as incomplete and skips it —
+   * harmless, the data lives in the canonical it was reading toward anyway.
+   * @param {Array} absorbedRuns - run objects ({ runId, parts }) from the absorbed pending set
+   */
+  async function deleteAbsorbedBulkRuns(absorbedRuns) {
+    let deleted = 0;
+    for (const r of absorbedRuns || []) {
+      if ((r.parts || 1) <= 1) continue;
+      try { await deleteRun(r.runId); deleted++; }
+      catch (e) { console.warn(`Bulk-run GC skipped for ${r.runId} (TTL will handle it):`, e.message); }
+    }
+    if (deleted > 0) console.log(`🧹 Reclaimed ${deleted} absorbed bulk run(s)`);
+    return deleted;
+  }
+
+  /**
    * THE deterministic canonical merge (design §9d) — the single shared implementation for
    * every client (app AND fetchers), so any two mergers with the same inputs produce the
    * same output. Pure function: no I/O, no relay writes.
@@ -848,6 +869,7 @@
         ...pending.map(r => r.runId)
       ]);
       const manifest = await commitGeneration(composed.jsonString, absorbed, onProgress);
+      await deleteAbsorbedBulkRuns(pending); // reclaim big absorbed runs early (best-effort)
       return { merged: true, reason: 'age-cap', gen: manifest.gen, bookCount: manifest.bookCount };
     } catch (e) {
       console.warn('Age-cap merge skipped:', e.message);
@@ -927,6 +949,7 @@
     readCanonical: readCanonical,
     commitGeneration: commitGeneration,
     deleteRun: deleteRun,
+    deleteAbsorbedBulkRuns: deleteAbsorbedBulkRuns,
     deviceId: deviceId,
     composeCanonical: composeCanonical,
     pruneAbsorbedRuns: pruneAbsorbedRuns,
