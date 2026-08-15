@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "6.19.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "6.19.0-alpha.3";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -4457,11 +4457,15 @@
                     const parts = [];
                     if (newBooks > 0) parts.push(`${newBooks} new`);
                     if (upgraded > 0) parts.push(`${upgraded} now owned`);
+                    // v6.19.0 - "No new books found", not "up to date": we can only claim what we
+                    // checked — a book added seconds ago can still be in transit (sync listings can
+                    // lag up to ~a minute), and "found nothing" stays true in that window while
+                    // "up to date" reads as a settled fact.
                     const message = booksBefore === 0
                         ? `${totalBooks} books imported.`
                         : parts.length > 0
                             ? `Library updated: ${totalBooks} books (${parts.join(', ')}).`
-                            : `Library up to date (${totalBooks} books).`;
+                            : `No new books found (${totalBooks} books).`;
                     await progress.finish('Relay Import', message);
                 } catch (err) {
                     console.error('❌ Relay import failed:', err);
