@@ -30,6 +30,11 @@
 **Launch economics**
 - [ ] Revisit free-vs-paid launch plan with real relay-write numbers (Cloudflare cap is shared across all users) → see docs/design/RELAY-ECONOMICS.md (spec/data)
 
+## 🔧 7.0.0 follow-ups (relay)
+
+- [ ] **Extract shared fetcher relay helpers into relay-client.js** — `loadKnownBooks` / `sendWishlistRun` / `ageCapCheck` are ~verbatim ×3 (wishlist, series-page, author-bibliography; library fetcher has a variant) — pure refactor, parameterize the progress callback + `source` string, no behavior change, harness-verifiable. (The per-fetcher `progressUI` overlay ~200 lines ×5 is a separate, older duplication — bigger cleanup, fold into MODULE-SPLIT thinking.)
+- [ ] **Worker/client protocol-constant drift note** — `LETTER_TTL` (worker, seconds) and `LETTER_TTL_MS` (client) are mirrored by hand; same for the minted-id format. Fine at 2 constants with cross-reference comments; revisit a shared protocol-constants module if a third appears. (Worker is the same language — JS — different runtime; sharing is possible, low value today.)
+
 ## 🔜 Next (6.12.x follow-ups)
 
 - [ ] **Operations single-source-of-truth — remaining bits** — CORE shipped in **6.13.1**: folder delete (`deleteFolder`), book move/copy (all menu + drag → `moveItems`), folder reparent (menu/cut-paste/drag → `reparentFolder`), Book List create/delete, and forced undo/redo toasts (every action stamped with a label). Still un-consolidated (lower priority, less drift-prone): **tag** delete, **Search** delete, folder/Book-List **rename** (make undoable), the folder-copy **redo** TODO (js~6398, in `COPY_PASTE_FOLDER`), and optionally folding `moveItems`' folder-reparent into `reparentFolder`. → docs/design/OPERATIONS-REFACTOR.md. Feeds MODULE-SPLIT.
