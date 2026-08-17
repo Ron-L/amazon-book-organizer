@@ -25,7 +25,8 @@
   header { padding: 14px 22px 6px; }
   header h1 { margin: 0; font-size: 20px; }
   header p  { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
-  .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 22px; }
+  .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 22px;
+              position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--edge); }
   select, button {
     font: inherit; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--edge);
     background: var(--panel); color: var(--ink); cursor: pointer;
@@ -194,7 +195,7 @@
         <!-- Mailbox -->
         <g id="mailbox"><rect class="store" x="555" y="160" width="260" height="270" rx="10"/>
           <text x="685" y="184" text-anchor="middle" class="t-bold">Mailbox</text>
-          <text x="685" y="200" text-anchor="middle" class="t-tiny">sealed letters, grouped into runs (kept ~90 d)</text>
+          <text x="685" y="200" text-anchor="middle" class="t-tiny">sealed letters; one send = one run (un-merged: kept ~90 d)</text>
           <text id="mailEmpty" x="685" y="310" text-anchor="middle" class="t-small">(empty &#8212; letters appear as they&#8217;re sent)</text></g>
         <g id="runBooks" class="hiddenEl"><rect class="chip body" x="570" y="212" width="230" height="64" rx="8"/>
           <text x="685" y="232" text-anchor="middle" class="t-small t-bold">run: fetch results</text>
@@ -213,8 +214,8 @@
           <text x="405" y="516" text-anchor="middle" class="t-tiny">mobile snapshot (books + organization)</text></g>
         <g id="legacy" class="dim"><rect class="store" x="555" y="470" width="260" height="70" rx="10"/>
           <text x="685" y="494" text-anchor="middle" class="t-bold">Pre-7.0 library copy</text>
-          <text x="685" y="512" text-anchor="middle" class="t-tiny">old format &#8212; read once at migration,</text>
-          <text x="685" y="526" text-anchor="middle" class="t-tiny">then fades out on its own</text></g>
+          <text x="685" y="512" text-anchor="middle" class="t-tiny">old format &#8212; read once at migration, then</text>
+          <text x="685" y="526" text-anchor="middle" class="t-tiny">expires &amp; is auto-deleted (nothing renews it)</text></g>
       </g>
 
       <!-- ========== V6 stores (pre-7.0) ========== -->
@@ -253,30 +254,39 @@
 <!-- ==================== Protocol cheat-sheet ==================== -->
 <details class="proto" open>
   <summary>The messages — our protocol over plain HTTPS</summary>
-  <p class="note">Everything is an ordinary HTTPS request to the worker; the response carries the data. The <em>transport</em> (HTTP verbs, URLs, bodies) is the universal standard — the URL shapes and payload formats below are ours alone. The worker also wakes on a clock (cron: usage-alert emails), which is why it's a “worker,” not just a listener. Every payload it stores is ciphertext; the key never leaves your devices.</p>
+  <p class="note">Everything is an ordinary HTTPS request to the worker; the response carries the data. The <em>transport</em> (HTTP verbs, URLs, bodies) is the universal standard — the URL shapes and payload formats below are ours alone. The worker also wakes on a clock (cron: usage-alert emails), which is why it's a “worker,” not just a listener. <code>{ch}</code> is your <b>channel id</b> — the unique UUID minted at Relay Setup that your app, fetchers, and mobile share (it also feeds the encryption-key derivation). Every payload stored is encrypted; the key stays on your devices, never in Cloudflare.</p>
   <table class="msgs">
     <tr><th>Message</th><th>HTTP</th><th>Sent by</th><th>What it does</th><th>Worker guard</th></tr>
     <tr class="grp gmail"><td colspan="5">Mailbox</td></tr>
     <tr><td><code>/mail/{ch}/run</code></td><td><span class="verb">POST</span></td><td>fetchers, app</td><td>Mint a run id (server-stamped time — client clocks can't cheat)</td><td>id/channel validation</td></tr>
-    <tr><td><code>/mail/{ch}/letter</code></td><td><span class="verb">POST</span></td><td>wishlist-style fetchers, app</td><td>ONE self-committing letter — payload + commit in a single atomic write</td><td>rate limit</td></tr>
-    <tr><td><code>/mail/{ch}/{run}/letter/{n}</code></td><td><span class="verb">POST</span></td><td>library/collections fetchers, app</td><td>One ~5&nbsp;MB part of a multi-part run</td><td>rate limit, size cap</td></tr>
+    <tr><td><code>/mail/{ch}/letter</code></td><td><span class="verb">POST</span></td><td>wishlist-style fetchers, app</td><td>The small-payload fast path: ONE self-committing letter — payload + commit in a single atomic write (no separate manifest needed)</td><td>rate limit</td></tr>
+    <tr><td><code>/mail/{ch}/{run}/letter/{n}</code></td><td><span class="verb">POST</span></td><td>library/collections fetchers, app</td><td>The large-payload path: one ~5&nbsp;MB part of a multi-part run (committed by the run manifest below)</td><td>rate limit, size cap</td></tr>
     <tr><td><code>/mail/{ch}/{run}/manifest</code></td><td><span class="verb">POST</span></td><td>same</td><td><b>The run's commit</b> — written last; without it the run doesn't exist</td><td>rate limit</td></tr>
-    <tr><td><code>/mail/{ch}/list</code> · <code>…/letter/{n}</code> · <code>…/manifest</code></td><td><span class="verb GET">GET</span></td><td>app, fetchers</td><td>Enumerate / read letters (dedup checks, imports)</td><td>—</td></tr>
+    <tr><td><code>/mail/{ch}/list</code><br><code>/mail/{ch}/{run}/letter/{n}</code><br><code>/mail/{ch}/{run}/manifest</code></td><td><span class="verb GET">GET</span></td><td>app, fetchers</td><td>Enumerate / read letters (dedup checks, imports)</td><td>—</td></tr>
     <tr><td><code>/mail/{ch}/{run}</code></td><td><span class="verb DELETE">DELETE</span></td><td>app, fetchers</td><td>Reclaim an <em>absorbed</em> bulk run early (small letters just age out)</td><td>—</td></tr>
     <tr class="grp gcanon"><td colspan="5">Canonical library</td></tr>
     <tr><td><code>/gen/{ch}/begin</code></td><td><span class="verb">POST</span></td><td>whoever merges</td><td>Mint a generation id (server-stamped time)</td><td>id/channel validation</td></tr>
     <tr><td><code>/gen/{ch}/{gen}/chunk/{n}</code></td><td><span class="verb">POST</span></td><td>whoever merges</td><td>One part of a new generation (no expiry — lifecycle is keep-2 + cleanup)</td><td>rate limit, size cap</td></tr>
     <tr><td><code>/gen/{ch}/{gen}/manifest</code></td><td><span class="verb">POST</span></td><td>whoever merges</td><td>The generation's manifest: checksum + <code>absorbedRuns</code> ledger</td><td>rate limit</td></tr>
     <tr><td><code>/pointer/{ch}</code></td><td><span class="verb PUT">PUT</span></td><td>whoever merges</td><td><b>THE atomic commit</b> — flip which generation is live</td><td><b>refuses an uncommitted generation</b></td></tr>
-    <tr><td><code>/pointer/{ch}</code> · <code>/gen/{ch}/list</code> · <code>…/chunk/{n}</code> · <code>…/manifest</code></td><td><span class="verb GET">GET</span></td><td>app, fetchers</td><td>Discover + read the live generation (pointer first; list is the fallback)</td><td>—</td></tr>
+    <tr><td><code>/pointer/{ch}</code><br><code>/gen/{ch}/list</code><br><code>/gen/{ch}/{gen}/chunk/{n}</code><br><code>/gen/{ch}/{gen}/manifest</code></td><td><span class="verb GET">GET</span></td><td>app, fetchers</td><td>Discover + read the live generation (pointer first; list is the fallback)</td><td>—</td></tr>
     <tr><td><code>/gen/{ch}/{gen}</code></td><td><span class="verb DELETE">DELETE</span></td><td>whoever merges</td><td>Clean up an old generation (keep-2)</td><td><b>refuses the pointed generation</b></td></tr>
     <tr class="grp gdev"><td colspan="5">Device-state (mobile)</td></tr>
     <tr><td><code>/device-state/{ch}</code></td><td><span class="verb PUT">PUT</span> / <span class="verb GET">GET</span></td><td>app writes · mobile reads</td><td>One-way snapshot: books + organization for the mobile viewer</td><td>rate limit, size cap</td></tr>
     <tr class="grp gold"><td colspan="5">Pre-7.0 (legacy — still answered, fading out)</td></tr>
-    <tr><td><code>/upload/{ch}/…</code> · <code>/status/{ch}</code> · <code>/download/{ch}/…</code> · <code>/cleanup/{ch}</code></td><td>mixed</td><td>old clients</td><td>The in-place single-copy scheme scenarios 0a/0b break</td><td>rate limit</td></tr>
+    <tr><td><code>/upload/{ch}/…</code><br><code>/status/{ch}</code> · <code>/download/{ch}/…</code><br><code>/cleanup/{ch}</code></td><td>mixed</td><td>old clients</td><td>The in-place single-copy scheme scenarios 0a/0b break</td><td>rate limit</td></tr>
     <tr class="grp gacct"><td colspan="5">Account / safety</td></tr>
     <tr><td><code>/revoke/{ch}</code></td><td><span class="verb">POST</span></td><td>app (owner)</td><td>Proof-of-ownership wipe: deletes ALL channel data, blocklists the channel</td><td>proof hash required</td></tr>
     <tr><td><em>(every write)</em></td><td>—</td><td>—</td><td>—</td><td>200 writes/hour per channel; 10&#215; → auto-blocklist</td></tr>
+  </table>
+  <p class="note" style="margin-top:16px"><b>The letters</b> — every letter carries one <em>kind</em>, so the merge knows what to do with it:</p>
+  <table class="msgs">
+    <tr><th>Kind</th><th>Sent by</th><th>Shape</th><th>What the merge does with it</th></tr>
+    <tr><td><b>books</b></td><td>library fetcher</td><td>multi-part run</td><td>Adds new books, updates existing ones (newest fetch date wins per book)</td></tr>
+    <tr><td><b>collections</b></td><td>collections fetcher</td><td>single or few parts</td><td>Updates collection membership + read status per book</td></tr>
+    <tr><td><b>wishlist-add</b></td><td>wishlist / series / author fetchers</td><td>one self-committing letter</td><td>Adds the new book(s); dedup already happened at send time</td></tr>
+    <tr><td><b>tombstone</b></td><td>app (permanent delete)</td><td>one letter</td><td>Removes the book and keeps a marker so older fetched data can't resurrect it; a NEWER sighting revives it (deliberate re-add)</td></tr>
+    <tr><td><b>reset</b></td><td>app (backup restore)</td><td>multi-part run</td><td>New baseline: everything older is superseded; newer runs merge on top</td></tr>
   </table>
 </details>
 
@@ -294,17 +304,19 @@ const SCENARIOS = [
 { id:'T', layout:'v7', title:'Tour — the pieces of the diagram',
   intro:'What each part is, before any data moves. Step through once; every scenario builds on this vocabulary.',
   steps:[
-    { t:'The Worker is the only door: nothing touches the stored data except by sending it a message (an ordinary HTTPS request — see the cheat-sheet below). It validates, rate-limits, stamps server time into ids, and enforces the commit rules. It also wakes on a clock for housekeeping. Everything it stores is ciphertext — the key to read it never leaves your devices.',
+    { t:'The Worker is the only door: nothing touches the stored data except by sending it a message (an ordinary HTTPS request — see the cheat-sheet below). It validates, rate-limits, stamps server time into ids, and enforces the commit rules. It also wakes on a clock for housekeeping. Everything it stores is encrypted — the key stays on your devices, never in Cloudflare.',
       lit:['worker','admin'] },
-    { t:'The Canonical library is a STACK of complete generations — each one a whole, checksummed copy. The pointer names the live one. To change the library you write a NEW generation beside the old and flip the pointer: one atomic switch, never an edit-in-place. The two newest are kept, so there is always a fallback.',
+    { t:'The Canonical library is a STACK of complete snapshots called generations — each one a whole, checksummed copy of the library (a snapshot of the entire state, no diffs — that is what “canonical” means here). The pointer names the live one. To change the library you write a NEW generation beside the old and flip the pointer: one atomic switch, never an edit-in-place. The two newest are kept, so there is always a fallback.',
       lit:['canon','genA','ghostGen','ptr'] },
-    { t:'Each generation’s manifest carries an absorbedRuns ledger — the list of mailbox runs already folded into it. That set (never a "highest so far" mark) is what lets slow and fast senders finish in any order without anything being lost.',
-      lit:['absA'] },
-    { t:'The Mailbox holds sealed letters, grouped into runs. Fetchers ADD fetch results and wishlist adds; the app ADDS tombstones (deletes) and resets (restores). Nobody edits anything — a letter is retired only when a merge absorbs it into a new generation, and until then it waits up to ~90 days.',
+    { t:'The Mailbox holds sealed letters — each letter one sealed parcel of data. One send = one run: a fetch delivers its results as a run of several letters; a wishlist add is a run of one. Fetchers ADD fetch results and wishlist adds; the app ADDS tombstones (deletes) and resets (restores). Nobody edits anything — un-merged letters wait up to ~90 days.',
       lit:['mailbox'], show:['runBooks','letterWish','letterTomb'], hide:['mailEmpty'] },
+    { t:'Each generation’s manifest carries an absorbedRuns ledger — the list of mailbox runs already merged into that generation. Because it is a set (never a “highest so far” mark), slow and fast senders can finish in any order and nothing is ever lost or double-counted.',
+      lit:['absA'] },
+    { t:'The circle closes at import: the app reads the live generation plus the un-merged runs, merges them into one complete library, and writes THAT back as a new generation on the stack (pointer flip = done). Letters are retired only by the generation that absorbed them — so every piece of data always lives somewhere. Scenario 3 walks this flow.',
+      lit:['app','ptr','genA','mailbox'] },
     { t:'Device-state is the mobile viewer’s snapshot — books AND organization — pushed one-way by the app. Mobile reads it and writes nothing.',
       lit:['devstate','mobile'] },
-    { t:'Leftovers: the pre-7.0 single-copy library is still readable (the first 7.0 import migrates it into a generation), then it fades out on its own. The worker’s own bookkeeping (rate-limit counters, blocklist) lives beside the door.',
+    { t:'Leftovers: the pre-7.0 single-copy library is still readable (the first 7.0 import migrates it into a generation); after that nothing renews it, so it expires and is auto-deleted. The worker’s own bookkeeping (rate-limit counters, blocklist) lives beside the door.',
       lit:['legacy','admin'] }
   ]},
 
