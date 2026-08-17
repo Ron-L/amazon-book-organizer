@@ -195,7 +195,7 @@
         <!-- Mailbox -->
         <g id="mailbox"><rect class="store" x="555" y="160" width="260" height="270" rx="10"/>
           <text x="685" y="184" text-anchor="middle" class="t-bold">Mailbox</text>
-          <text x="685" y="200" text-anchor="middle" class="t-tiny">sealed letters; one send = one run (un-merged: kept ~90 d)</text>
+          <text x="685" y="200" text-anchor="middle" class="t-tiny">sealed letters, delivered in runs (un-merged: ~90 d)</text>
           <text id="mailEmpty" x="685" y="310" text-anchor="middle" class="t-small">(empty &#8212; letters appear as they&#8217;re sent)</text></g>
         <g id="runBooks" class="hiddenEl"><rect class="chip body" x="570" y="212" width="230" height="64" rx="8"/>
           <text x="685" y="232" text-anchor="middle" class="t-small t-bold">run: fetch results</text>
@@ -308,11 +308,11 @@ const SCENARIOS = [
       lit:['worker','admin'] },
     { t:'The Canonical library is a STACK of complete snapshots called generations — each one a whole, checksummed copy of the library (a snapshot of the entire state, no diffs — that is what “canonical” means here). The pointer names the live one. To change the library you write a NEW generation beside the old and flip the pointer: one atomic switch, never an edit-in-place. The two newest are kept, so there is always a fallback.',
       lit:['canon','genA','ghostGen','ptr'] },
-    { t:'The Mailbox holds sealed letters — each letter one sealed parcel of data. One send = one run: a fetch delivers its results as a run of several letters; a wishlist add is a run of one. Fetchers ADD fetch results and wishlist adds; the app ADDS tombstones (deletes) and resets (restores). Nobody edits anything — un-merged letters wait up to ~90 days.',
+    { t:'The Mailbox holds sealed letters — each letter one sealed parcel of data. A fetch delivers its results as a run of several letters; a wishlist add is a run of one. Fetchers ADD fetch results and wishlist adds; the app ADDS tombstones (deletes) and resets (restores). Nobody edits anything — letters left un-merged (because nothing was ever run to merge them) expire and are deleted after ~90 days.',
       lit:['mailbox'], show:['runBooks','letterWish','letterTomb'], hide:['mailEmpty'] },
     { t:'Each generation’s manifest carries an absorbedRuns ledger — the list of mailbox runs already merged into that generation. Because it is a set (never a “highest so far” mark), slow and fast senders can finish in any order and nothing is ever lost or double-counted.',
       lit:['absA'] },
-    { t:'The circle closes at import: the app reads the live generation plus the un-merged runs, merges them into one complete library, and writes THAT back as a new generation on the stack (pointer flip = done). Letters are retired only by the generation that absorbed them — so every piece of data always lives somewhere. Scenario 3 walks this flow.',
+    { t:'The circle closes when the app imports from the relay: it reads the live generation plus the un-merged runs, merges them into one complete library, and writes THAT back as a new generation on the stack (pointer flip = done). Letters are retired only by the generation that absorbed them — so every piece of data always lives somewhere. Scenario 3 walks this flow.',
       lit:['app','ptr','genA','mailbox'] },
     { t:'Device-state is the mobile viewer’s snapshot — books AND organization — pushed one-way by the app. Mobile reads it and writes nothing.',
       lit:['devstate','mobile'] },
@@ -517,6 +517,26 @@ const SCENARIOS = [
       mark:[['runBooks','dim'],['letterWish','dim']] },
     { t:'Runs arriving AFTER the reset merge normally on top. The restore actually stuck — on every device.',
       lit:['ptr','genB'], show:['ptrB'] }
+  ]}
+,
+
+{ id:'6e', layout:'v7', title:'6e · Disaster reel — a letter arrives mid-merge',
+  intro:'The app is consolidating — it has ALREADY read the mailbox — when a fetcher drops a new letter. Does it get lost?',
+  steps:[
+    { t:'The app begins an import: it reads the live generation and the mailbox, and starts merging. Its picture of the mailbox is now frozen.',
+      lit:['ptr','genA','mailbox'], show:['runBooks'], hide:['mailEmpty'],
+      arr:[['genA','worker','','read',-10],['mailbox','worker','','read',10],['worker','app','read (snapshot taken)','read',30]] },
+    { t:'While the merge runs, a wishlist add lands in the mailbox — a letter the app never saw.',
+      lit:['letterWish'], show:['letterWish'],
+      arr:[['fetchers','worker','new letter','write',-30],['worker','letterWish','','write',0]] },
+    { t:'The app commits gen B. Its absorbedRuns ledger lists ONLY the runs it actually read — the new letter is not in it. Pointer flips; done.',
+      lit:['genB','absB','ptr'], show:['genB','ptrB'], hide:['ptrA'], mark:[['runBooks','dim']],
+      arr:[['app','worker','gen B + pointer flip','write',-40],['worker','genB','','write',0]] },
+    { t:'The new letter is therefore still “pending” — visible to every reader, untouched by the flip. Letters are only ever retired by the generation that absorbed them, so a letter can never be stranded by timing.',
+      lit:['letterWish','absB'] },
+    { t:'The update banner (or the next import) picks it up and the next merge absorbs it. Worst case for bad timing: the book appears one import later. Lost: nothing.',
+      lit:['app','letterWish'],
+      arr:[['worker','app','next import absorbs it','read',30]] }
   ]}
 ];
 
