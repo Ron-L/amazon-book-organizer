@@ -1,7 +1,7 @@
 # Relay Write Redesign — Atomic, Mailbox-Delivered, Deterministically Merged Sync
 
-**Status:** Design v2, post external review. Review findings (2 critical, 4 high, 5 medium, plus trims) are incorporated; see the revision note at the end for the mapping.
-**Date:** 2026-08-13 (v2)
+**Status:** Phase 1 IMPLEMENTED and released in 7.0.0 (2026-08-17) — worker endpoints, client commit pattern (`relay-client.js`), all 5 fetchers on mailbox letters, app merge-on-import/tombstones/reset runs, bulk-run GC. Verified by `relay/test-phase1.mjs` (39 checks) + a full live pass on the dev worker. Phases 1b (device-state journal) and 2 (Durable Object/quotas) remain design-only.
+**Date:** 2026-08-13 (design v2, post external review — 2 critical, 4 high, 5 medium findings incorporated; see revision note at end)
 **Scope:** The Cloudflare relay write path (the chunked library store and device-state store). Does **not** change local storage, the UI, or the Amazon scrapers themselves.
 
 > **For a reviewing agent:** This document is self-contained. Sections 1–4 explain how ReaderWrangler works and the platform constraints so you can evaluate the design without reading the codebase. Sections 5–6 state the problems. Sections 7–14 are the proposed design. Claims are marked **[verified in code]**, **[platform fact]**, **[proposed]**, or **[assumption — verify]**.

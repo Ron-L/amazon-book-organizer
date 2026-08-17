@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.0.0-alpha.1';
+    const FETCHER_VERSION = 'v5.0.0';
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');

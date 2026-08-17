@@ -19,7 +19,7 @@
 async function importSeries() {
     'use strict';
 
-    const FETCHER_VERSION = 'v2.0.0-alpha.2';
+    const FETCHER_VERSION = 'v2.0.0';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 

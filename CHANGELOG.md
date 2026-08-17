@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.0.0] - 2026-08-17
+
+Sync, rebuilt to be corruption-proof. Everything that writes to the cloud sync — the app and all five bookmarklet fetchers — now uses a commit-then-publish scheme: updates travel as sealed, self-contained packets, and the synced library is only ever replaced by a complete, verified new copy, never edited in place. Closing a tab mid-sync can no longer corrupt anything. *(Major version: the app and fetchers speak a new sync format. They update together automatically; old and new halves don't mix.)*
+
+### Sync durability (the 7.0 overhaul)
+- **Interruption-proof writes** — a sync that doesn't finish simply never happened; the previous good copy stays live. The "Sync data check failed" recovery procedure should now be a museum piece.
+- **Fetchers never rewrite your library** — Download Library, Download Collections, and wishlist adds each send results as a sealed packet; the app combines them on Import and tidies the synced copy afterward. Fetchers running at the same time can no longer overwrite each other.
+- **Deletes stay deleted** — permanently deleting a book leaves a marker the sync honors, so an in-flight fetch can't resurrect it. Deliberately re-adding it later still works (after emptying it from Trash).
+- **Restores stick** — restoring a backup now resets the synced copy too; previously the next import could quietly merge pre-restore data back in.
+- **Self-healing reads** — if the current synced copy is ever unreadable, the app automatically falls back to the kept previous version.
+- **No more 10-day expiry** — the synced library no longer evaporates after a quiet stretch; pending additions are kept for ~90 days and consolidated automatically.
+
+### Also
+- Import summary says **"No new books found"** rather than "Library up to date" — additions made on Amazon can take up to a minute to arrive, and the new wording stays honest in that window.
+- Wishlist adds are now a single, instant sync write (no more re-uploading the whole library per add).
+- Dev builds (localhost / dev site) automatically use a separate test sync service — development can never touch live data.
+
+### For developers
+- Design doc `docs/design/RELAY-WRITE-REDESIGN.md` (externally reviewed, v2); Node harness `relay/test-phase1.mjs` (39 checks incl. torn-write/concurrency scenarios); dev worker environment + `relay/README.md` ops runbook.
+
 ## [6.18.0] - 2026-08-12
 
 ### Book Lists & tags
