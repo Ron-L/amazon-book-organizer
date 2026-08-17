@@ -9,11 +9,14 @@
     --bg: #f6f7fb; --panel: #ffffff; --ink: #1e2430; --muted: #6b7280;
     --edge: #d3d8e2; --accent: #4f46e5; --ok: #16a34a; --warn: #d97706; --bad: #dc2626;
     --lit: #fde68a; --dim: #c7cbd4;
+    --w1: #2563eb;  /* writer 1 (blue)  */
+    --w2: #e11d48;  /* writer 2 (rose)  */
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #12151c; --panel: #1b2029; --ink: #e6e9f0; --muted: #9aa3b2;
       --edge: #333b49; --accent: #818cf8; --lit: #7c5e0a; --dim: #4a5160;
+      --w1: #60a5fa; --w2: #fb7185;
     }
   }
   * { box-sizing: border-box; }
@@ -27,11 +30,11 @@
     font: inherit; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--edge);
     background: var(--panel); color: var(--ink); cursor: pointer;
   }
-  select { max-width: 460px; }
+  select { max-width: 480px; }
   button:disabled { opacity: .4; cursor: default; }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
   .stepno { font-size: 13px; color: var(--muted); min-width: 90px; text-align: center; }
-  .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; padding: 0 22px 22px; }
+  .wrap { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; padding: 0 22px 14px; }
   @media (max-width: 1100px) { .wrap { grid-template-columns: 1fr; } }
   .stage { background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 8px; }
   svg { width: 100%; height: auto; display: block; }
@@ -45,17 +48,39 @@
   ol.steps li.now::marker { color: var(--accent); }
   .hint { margin-top: 12px; font-size: 12px; color: var(--muted); }
 
-  /* SVG element styling */
-  .box   { fill: var(--panel); stroke: var(--edge); stroke-width: 1.5; rx: 10; }
+  /* ---------- protocol table ---------- */
+  .proto { margin: 0 22px 26px; background: var(--panel); border: 1px solid var(--edge); border-radius: 12px; padding: 6px 18px 16px; }
+  .proto summary { cursor: pointer; font-weight: 700; padding: 10px 0; font-size: 15px; }
+  .proto p.note { color: var(--muted); font-size: 13px; margin: 2px 0 12px; }
+  table.msgs { border-collapse: collapse; width: 100%; font-size: 13px; }
+  table.msgs th { text-align: left; padding: 6px 10px; border-bottom: 2px solid var(--edge); font-size: 12px;
+                  text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  table.msgs td { padding: 6px 10px; border-bottom: 1px solid var(--edge); vertical-align: top; }
+  table.msgs td code { background: var(--bg); padding: 1px 6px; border-radius: 5px; font-size: 12px; white-space: nowrap; }
+  tr.grp td { border-left: 4px solid var(--accent); font-weight: 700; background: var(--bg); }
+  tr.grp.gmail  td { border-left-color: var(--ok); }
+  tr.grp.gcanon td { border-left-color: var(--accent); }
+  tr.grp.gdev   td { border-left-color: var(--warn); }
+  tr.grp.gold   td { border-left-color: var(--dim); }
+  tr.grp.gacct  td { border-left-color: var(--bad); }
+  .verb { font-weight: 700; font-size: 11.5px; padding: 1px 7px; border-radius: 10px; color: #fff; background: var(--accent); }
+  .verb.GET { background: var(--ok); } .verb.DELETE { background: var(--bad); } .verb.PUT { background: var(--warn); }
+
+  /* ---------- SVG ---------- */
+  .box   { fill: var(--panel); stroke: var(--edge); stroke-width: 1.5; }
   .zone  { fill: none; stroke: var(--edge); stroke-width: 1.5; stroke-dasharray: 5 4; }
   .store { fill: var(--bg); stroke: var(--edge); stroke-width: 1.2; }
   .chip  { fill: var(--bg); stroke: var(--edge); stroke-width: 1.2; }
+  .striped rect.body, rect.striped { fill: url(#stripes); }
   text   { fill: var(--ink); font-family: inherit; font-size: 13px; }
   .t-small { font-size: 11px; fill: var(--muted); }
   .t-tiny  { font-size: 10px; fill: var(--muted); }
   .t-bold  { font-weight: 700; }
-  .lit > rect, rect.lit { fill: var(--lit) !important; stroke: var(--warn); stroke-width: 2; }
-  .broken > rect, rect.broken { fill: color-mix(in srgb, var(--bad) 25%, var(--panel)) !important; stroke: var(--bad); }
+  .lit > rect, .lit > rect.body, rect.lit { fill: var(--lit) !important; stroke: var(--warn); stroke-width: 2; }
+  .fresh > rect.body { fill: color-mix(in srgb, var(--accent) 22%, var(--panel)) !important; stroke: var(--accent); }
+  .w1 > rect.body { fill: color-mix(in srgb, var(--w1) 26%, var(--panel)) !important; stroke: var(--w1); }
+  .w2 > rect.body { fill: color-mix(in srgb, var(--w2) 26%, var(--panel)) !important; stroke: var(--w2); }
+  .broken > rect.body { stroke: var(--bad) !important; stroke-width: 2.5; }
   .gone { opacity: .18; }
   .hiddenEl { display: none; }
   .dim { opacity: .55; }
@@ -63,18 +88,24 @@
   path.arrow { fill: none; stroke: var(--accent); stroke-width: 2.4; }
   path.arrow.read  { stroke: var(--ok); }
   path.arrow.fail  { stroke: var(--bad); stroke-dasharray: 6 4; }
-  path.arrow.old   { stroke: var(--dim); stroke-width: 1.8; opacity: .55; }
+  path.arrow.w1    { stroke: var(--w1); }
+  path.arrow.w2    { stroke: var(--w2); }
+  path.arrow.w1r   { stroke: var(--w1); stroke-dasharray: 2 4; }
+  path.arrow.w2r   { stroke: var(--w2); stroke-dasharray: 2 4; }
+  path.arrow.old   { stroke: var(--dim); stroke-width: 1.8; opacity: .5; }
   text.alabel { font-size: 11.5px; font-weight: 600; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; }
   text.alabel.fail { fill: var(--bad); }
   text.alabel.read { fill: var(--ok); }
   text.alabel.write { fill: var(--accent); }
+  text.alabel.w1, text.alabel.w1r { fill: var(--w1); }
+  text.alabel.w2, text.alabel.w2r { fill: var(--w2); }
   text.alabel.old { fill: var(--muted); font-weight: 400; }
 </style>
 </head>
 <body>
 <header>
   <h1>Relay Data Flows — how ReaderWrangler sync moves (7.0)</h1>
-  <p>Companion to <code>RELAY-WRITE-REDESIGN.md</code>. Pick a scenario, then step through it — the diagram animates the flow; scenarios 0a/0b show the pre-7.0 design and why it broke.</p>
+  <p>Companion to <code>RELAY-WRITE-REDESIGN.md</code>. Start with the <b>Tour</b>, then step the scenarios — 0a/0b show the pre-7.0 design and why it broke. A protocol cheat-sheet is at the bottom.</p>
 </header>
 
 <div class="controls">
@@ -89,9 +120,13 @@
   <div class="stage">
     <svg id="svg" viewBox="0 0 1080 640" aria-label="Relay data flow diagram">
       <defs>
-        <marker id="mk"  markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <marker id="mk" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
           <path d="M0,0 L8,4.5 L0,9 z" fill="context-stroke"/>
         </marker>
+        <pattern id="stripes" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+          <rect width="8" height="8" fill="var(--bg)"/>
+          <line x1="1" y1="0" x2="1" y2="8" stroke="var(--edge)" stroke-width="2.5"/>
+        </pattern>
       </defs>
 
       <!-- ==================== Actors (left) ==================== -->
@@ -109,11 +144,17 @@
         <text x="975" y="166" text-anchor="middle" class="t-small">on amazon.com</text>
         <text x="975" y="188" text-anchor="middle" class="t-tiny">library &#183; collections</text>
         <text x="975" y="203" text-anchor="middle" class="t-tiny">wishlist &#183; series &#183; author</text>
-        <text x="975" y="225" text-anchor="middle" class="t-small">scrape, then send &#8212;</text>
-        <text x="975" y="241" text-anchor="middle" class="t-small">never rewrite</text></g>
-      <g id="amazon"><rect class="box" x="895" y="330" width="160" height="64" rx="10"/>
-        <text x="975" y="356" text-anchor="middle" class="t-bold">Amazon</text>
-        <text x="975" y="376" text-anchor="middle" class="t-small">pages &amp; APIs</text></g>
+        <text x="975" y="225" text-anchor="middle" class="t-small">fetch via API, then send</text>
+        <text x="975" y="241" text-anchor="middle" class="t-small">&#8212; never rewrite</text></g>
+      <!-- per-writer "held copy" chips (0b) -->
+      <g id="copyW2" class="hiddenEl"><rect class="chip body" x="895" y="282" width="160" height="30" rx="7"/>
+        <rect class="hiddenEl" width="0" height="0"/>
+        <text x="975" y="301" text-anchor="middle" class="t-tiny">fetch&#8217;s copy &#8212; no new book</text></g>
+      <g id="copyW1" class="hiddenEl"><rect class="chip body" x="895" y="282" width="160" height="30" rx="7"/>
+        <text x="975" y="301" text-anchor="middle" class="t-tiny">wishlist&#8217;s copy + new book</text></g>
+      <g id="amazon"><rect class="box" x="895" y="340" width="160" height="64" rx="10"/>
+        <text x="975" y="366" text-anchor="middle" class="t-bold">Amazon</text>
+        <text x="975" y="386" text-anchor="middle" class="t-small">pages &amp; APIs</text></g>
 
       <!-- ==================== Cloudflare ==================== -->
       <rect class="zone" x="255" y="48" width="580" height="560" rx="14"/>
@@ -122,49 +163,48 @@
       <!-- Worker: the only door -->
       <g id="worker"><rect class="box" x="270" y="80" width="550" height="52" rx="9"/>
         <text x="420" y="102" text-anchor="middle" class="t-bold">Worker &#8212; the only door to the data</text>
-        <text x="420" y="119" text-anchor="middle" class="t-tiny">validates &#183; mints run/gen ids (server time) &#183; guards commits &amp; deletes</text>
-        <g id="admin"><rect class="chip" x="660" y="88" width="146" height="36" rx="7"/>
+        <text x="420" y="119" text-anchor="middle" class="t-tiny">answers messages &#183; runs scheduled tasks &#183; mints ids &#183; guards commits &amp; deletes</text>
+        <g id="admin"><rect class="chip body" x="660" y="88" width="146" height="36" rx="7"/>
           <text x="733" y="103" text-anchor="middle" class="t-tiny">rate limit &#183; blocklist</text>
-          <text x="733" y="116" text-anchor="middle" class="t-tiny">(admin keys)</text></g></g>
+          <text x="733" y="116" text-anchor="middle" class="t-tiny">(worker bookkeeping)</text></g></g>
 
       <!-- ========== V7 stores ========== -->
       <g id="layout-v7">
-        <!-- Canonical library -->
+        <!-- Canonical library: a STACK of generations, pointer at the live one -->
         <g id="canon"><rect class="store" x="275" y="160" width="260" height="270" rx="10"/>
           <text x="405" y="184" text-anchor="middle" class="t-bold">Canonical library</text>
-          <text x="405" y="200" text-anchor="middle" class="t-tiny">whole generations, replaced never edited</text></g>
-        <g id="ptr"><rect class="chip" x="295" y="212" width="96" height="30" rx="7"/>
-          <text x="343" y="231" text-anchor="middle" class="t-small t-bold">pointer</text></g>
-        <path id="ptrA" class="arrow read" d="M 343 242 C 343 262, 345 268, 348 276" marker-end="url(#mk)"/>
-        <path id="ptrB" class="arrow read hiddenEl" d="M 391 227 C 445 232, 465 250, 468 276" marker-end="url(#mk)"/>
-        <g id="genA"><rect class="chip" x="290" y="280" width="115" height="118" rx="8"/>
-          <text x="347" y="300" text-anchor="middle" class="t-bold">gen A</text>
-          <text x="347" y="318" text-anchor="middle" class="t-tiny">part 1 &#183; part 2 &#183; &#8230;</text>
-          <text x="347" y="336" text-anchor="middle" class="t-tiny">manifest (checksum)</text>
-          <g id="absA"><rect class="chip" x="300" y="348" width="95" height="38" rx="6"/>
-            <text x="347" y="363" text-anchor="middle" class="t-tiny">absorbedRuns</text>
-            <text x="347" y="377" text-anchor="middle" class="t-tiny">{&#8230;}</text></g></g>
-        <g id="genB" class="hiddenEl"><rect class="chip" x="415" y="280" width="110" height="118" rx="8"/>
-          <text x="470" y="300" text-anchor="middle" class="t-bold">gen B</text>
-          <text x="470" y="318" text-anchor="middle" class="t-tiny">part 1 &#183; part 2 &#183; &#8230;</text>
-          <text x="470" y="336" text-anchor="middle" class="t-tiny">manifest (checksum)</text>
-          <g id="absB"><rect class="chip" x="425" y="348" width="90" height="38" rx="6"/>
-            <text x="470" y="363" text-anchor="middle" class="t-tiny">absorbedRuns</text>
-            <text x="470" y="377" text-anchor="middle" class="t-tiny">{&#8230;}</text></g></g>
+          <text x="405" y="200" text-anchor="middle" class="t-tiny">a stack of whole generations &#8212; replaced, never edited</text></g>
+        <g id="ghostGen" class="dim"><rect class="chip body" x="330" y="322" width="160" height="96" rx="8"/>
+          <text x="410" y="404" text-anchor="middle" class="t-tiny">&#8230;older generations (cleaned up)</text></g>
+        <g id="genA"><rect class="chip body" x="342" y="300" width="160" height="100" rx="8"/>
+          <text x="422" y="320" text-anchor="middle" class="t-bold">gen A</text>
+          <text x="422" y="338" text-anchor="middle" class="t-tiny">parts 1&#8230;N &#183; manifest &#10003;</text>
+          <g id="absA"><rect class="chip" x="356" y="350" width="132" height="24" rx="6"/>
+            <text x="422" y="366" text-anchor="middle" class="t-tiny">absorbedRuns { &#8230; }</text></g></g>
+        <g id="genB" class="hiddenEl"><rect class="chip body" x="354" y="278" width="160" height="100" rx="8"/>
+          <text x="434" y="298" text-anchor="middle" class="t-bold">gen B</text>
+          <text x="434" y="316" text-anchor="middle" class="t-tiny">parts 1&#8230;N &#183; manifest &#10003;</text>
+          <g id="absB"><rect class="chip" x="368" y="328" width="132" height="24" rx="6"/>
+            <text x="434" y="344" text-anchor="middle" class="t-tiny">absorbedRuns { +new }</text></g></g>
+        <g id="ptr"><rect class="chip body" x="288" y="215" width="96" height="30" rx="7"/>
+          <text x="336" y="234" text-anchor="middle" class="t-small t-bold">pointer</text></g>
+        <path id="ptrA" class="arrow read" d="M 336 245 C 336 268, 350 285, 370 299" marker-end="url(#mk)"/>
+        <path id="ptrB" class="arrow read hiddenEl" d="M 336 245 C 340 260, 355 268, 378 277" marker-end="url(#mk)"/>
 
         <!-- Mailbox -->
         <g id="mailbox"><rect class="store" x="555" y="160" width="260" height="270" rx="10"/>
           <text x="685" y="184" text-anchor="middle" class="t-bold">Mailbox</text>
-          <text x="685" y="200" text-anchor="middle" class="t-tiny">sealed letters, grouped into runs (~90 d)</text></g>
-        <g id="runBooks" class="hiddenEl"><rect class="chip" x="570" y="212" width="230" height="64" rx="8"/>
-          <text x="685" y="232" text-anchor="middle" class="t-small t-bold">run: books (fetch result)</text>
-          <text x="685" y="250" text-anchor="middle" class="t-tiny" id="runBooksParts">part 1 &#183; part 2 &#183; part 3 &#183; part 4</text>
-          <text x="685" y="266" text-anchor="middle" class="t-tiny" id="runBooksMan">run manifest = committed</text></g>
-        <g id="letterWish" class="hiddenEl"><rect class="chip" x="570" y="288" width="230" height="34" rx="8"/>
+          <text x="685" y="200" text-anchor="middle" class="t-tiny">sealed letters, grouped into runs (kept ~90 d)</text>
+          <text id="mailEmpty" x="685" y="310" text-anchor="middle" class="t-small">(empty &#8212; letters appear as they&#8217;re sent)</text></g>
+        <g id="runBooks" class="hiddenEl"><rect class="chip body" x="570" y="212" width="230" height="64" rx="8"/>
+          <text x="685" y="232" text-anchor="middle" class="t-small t-bold">run: fetch results</text>
+          <text x="685" y="250" text-anchor="middle" class="t-tiny">part 1 &#183; part 2 &#183; part 3 &#183; part 4</text>
+          <text x="685" y="266" text-anchor="middle" class="t-tiny">run manifest = committed</text></g>
+        <g id="letterWish" class="hiddenEl"><rect class="chip body" x="570" y="288" width="230" height="34" rx="8"/>
           <text x="685" y="309" text-anchor="middle" class="t-small">letter: wishlist add (self-committing)</text></g>
-        <g id="letterTomb" class="hiddenEl"><rect class="chip" x="570" y="332" width="230" height="34" rx="8"/>
+        <g id="letterTomb" class="hiddenEl"><rect class="chip body" x="570" y="332" width="230" height="34" rx="8"/>
           <text x="685" y="353" text-anchor="middle" class="t-small">letter: tombstone (book deleted)</text></g>
-        <g id="letterReset" class="hiddenEl"><rect class="chip" x="570" y="376" width="230" height="34" rx="8"/>
+        <g id="letterReset" class="hiddenEl"><rect class="chip body" x="570" y="376" width="230" height="34" rx="8"/>
           <text x="685" y="397" text-anchor="middle" class="t-small">run: reset (backup restore baseline)</text></g>
 
         <!-- Device-state -->
@@ -172,22 +212,24 @@
           <text x="405" y="498" text-anchor="middle" class="t-bold">Device-state</text>
           <text x="405" y="516" text-anchor="middle" class="t-tiny">mobile snapshot (books + organization)</text></g>
         <g id="legacy" class="dim"><rect class="store" x="555" y="470" width="260" height="70" rx="10"/>
-          <text x="685" y="498" text-anchor="middle" class="t-bold">Legacy keys</text>
-          <text x="685" y="516" text-anchor="middle" class="t-tiny">pre-7.0 copy &#8212; read once, then fades out</text></g>
+          <text x="685" y="494" text-anchor="middle" class="t-bold">Pre-7.0 library copy</text>
+          <text x="685" y="512" text-anchor="middle" class="t-tiny">old format &#8212; read once at migration,</text>
+          <text x="685" y="526" text-anchor="middle" class="t-tiny">then fades out on its own</text></g>
       </g>
 
       <!-- ========== V6 stores (pre-7.0) ========== -->
       <g id="layout-v6" class="hiddenEl">
         <g id="v6lib"><rect class="store" x="275" y="160" width="540" height="270" rx="10"/>
           <text x="545" y="184" text-anchor="middle" class="t-bold">The one library copy (pre-7.0)</text>
-          <text x="545" y="200" text-anchor="middle" class="t-tiny">fixed keys, overwritten in place &#8212; no fallback copy</text></g>
-        <g id="v6c0"><rect class="chip" x="305" y="230" width="130" height="70" rx="8"/>
+          <text x="545" y="200" text-anchor="middle" class="t-tiny">fixed slots, overwritten in place &#8212; no fallback copy</text>
+          <text x="545" y="420" text-anchor="middle" class="t-tiny">striped = existing data &#183; solid = written this scenario</text></g>
+        <g id="v6c0" class="striped"><rect class="chip body striped" x="305" y="230" width="130" height="70" rx="8"/>
           <text x="370" y="270" text-anchor="middle" class="t-small t-bold">chunk 0</text></g>
-        <g id="v6c1"><rect class="chip" x="475" y="230" width="130" height="70" rx="8"/>
+        <g id="v6c1" class="striped"><rect class="chip body striped" x="475" y="230" width="130" height="70" rx="8"/>
           <text x="540" y="270" text-anchor="middle" class="t-small t-bold">chunk 1</text></g>
-        <g id="v6c2"><rect class="chip" x="645" y="230" width="130" height="70" rx="8"/>
+        <g id="v6c2" class="striped"><rect class="chip body striped" x="645" y="230" width="130" height="70" rx="8"/>
           <text x="710" y="270" text-anchor="middle" class="t-small t-bold">chunk 2</text></g>
-        <g id="v6man"><rect class="chip" x="475" y="330" width="130" height="60" rx="8"/>
+        <g id="v6man" class="striped"><rect class="chip body striped" x="475" y="330" width="130" height="60" rx="8"/>
           <text x="540" y="356" text-anchor="middle" class="t-small t-bold">manifest</text>
           <text x="540" y="374" text-anchor="middle" class="t-tiny">checksum</text></g>
         <g id="v6dev"><rect class="store" x="275" y="470" width="260" height="70" rx="10"/>
@@ -204,132 +246,184 @@
     <h2 id="title"></h2>
     <p class="intro" id="intro"></p>
     <ol class="steps" id="steps"></ol>
-    <p class="hint">Step with the buttons or &#8592;/&#8594; arrow keys. Green arrows = reads, purple = writes, red dashed = a failure or a refusal. Yellow glow = touched this step.</p>
+    <p class="hint">Step with the buttons or &#8592;/&#8594; keys. Green = read, purple = write, red dashed = failure/refusal; in 0b each writer has its own color. Striped fill = pre-existing data, solid = written during this scenario. Yellow glow = touched this step.</p>
   </div>
 </div>
+
+<!-- ==================== Protocol cheat-sheet ==================== -->
+<details class="proto" open>
+  <summary>The messages — our protocol over plain HTTPS</summary>
+  <p class="note">Everything is an ordinary HTTPS request to the worker; the response carries the data. The <em>transport</em> (HTTP verbs, URLs, bodies) is the universal standard — the URL shapes and payload formats below are ours alone. The worker also wakes on a clock (cron: usage-alert emails), which is why it's a “worker,” not just a listener. Every payload it stores is ciphertext; the key never leaves your devices.</p>
+  <table class="msgs">
+    <tr><th>Message</th><th>HTTP</th><th>Sent by</th><th>What it does</th><th>Worker guard</th></tr>
+    <tr class="grp gmail"><td colspan="5">Mailbox</td></tr>
+    <tr><td><code>/mail/{ch}/run</code></td><td><span class="verb">POST</span></td><td>fetchers, app</td><td>Mint a run id (server-stamped time — client clocks can't cheat)</td><td>id/channel validation</td></tr>
+    <tr><td><code>/mail/{ch}/letter</code></td><td><span class="verb">POST</span></td><td>wishlist-style fetchers, app</td><td>ONE self-committing letter — payload + commit in a single atomic write</td><td>rate limit</td></tr>
+    <tr><td><code>/mail/{ch}/{run}/letter/{n}</code></td><td><span class="verb">POST</span></td><td>library/collections fetchers, app</td><td>One ~5&nbsp;MB part of a multi-part run</td><td>rate limit, size cap</td></tr>
+    <tr><td><code>/mail/{ch}/{run}/manifest</code></td><td><span class="verb">POST</span></td><td>same</td><td><b>The run's commit</b> — written last; without it the run doesn't exist</td><td>rate limit</td></tr>
+    <tr><td><code>/mail/{ch}/list</code> · <code>…/letter/{n}</code> · <code>…/manifest</code></td><td><span class="verb GET">GET</span></td><td>app, fetchers</td><td>Enumerate / read letters (dedup checks, imports)</td><td>—</td></tr>
+    <tr><td><code>/mail/{ch}/{run}</code></td><td><span class="verb DELETE">DELETE</span></td><td>app, fetchers</td><td>Reclaim an <em>absorbed</em> bulk run early (small letters just age out)</td><td>—</td></tr>
+    <tr class="grp gcanon"><td colspan="5">Canonical library</td></tr>
+    <tr><td><code>/gen/{ch}/begin</code></td><td><span class="verb">POST</span></td><td>whoever merges</td><td>Mint a generation id (server-stamped time)</td><td>id/channel validation</td></tr>
+    <tr><td><code>/gen/{ch}/{gen}/chunk/{n}</code></td><td><span class="verb">POST</span></td><td>whoever merges</td><td>One part of a new generation (no expiry — lifecycle is keep-2 + cleanup)</td><td>rate limit, size cap</td></tr>
+    <tr><td><code>/gen/{ch}/{gen}/manifest</code></td><td><span class="verb">POST</span></td><td>whoever merges</td><td>The generation's manifest: checksum + <code>absorbedRuns</code> ledger</td><td>rate limit</td></tr>
+    <tr><td><code>/pointer/{ch}</code></td><td><span class="verb PUT">PUT</span></td><td>whoever merges</td><td><b>THE atomic commit</b> — flip which generation is live</td><td><b>refuses an uncommitted generation</b></td></tr>
+    <tr><td><code>/pointer/{ch}</code> · <code>/gen/{ch}/list</code> · <code>…/chunk/{n}</code> · <code>…/manifest</code></td><td><span class="verb GET">GET</span></td><td>app, fetchers</td><td>Discover + read the live generation (pointer first; list is the fallback)</td><td>—</td></tr>
+    <tr><td><code>/gen/{ch}/{gen}</code></td><td><span class="verb DELETE">DELETE</span></td><td>whoever merges</td><td>Clean up an old generation (keep-2)</td><td><b>refuses the pointed generation</b></td></tr>
+    <tr class="grp gdev"><td colspan="5">Device-state (mobile)</td></tr>
+    <tr><td><code>/device-state/{ch}</code></td><td><span class="verb PUT">PUT</span> / <span class="verb GET">GET</span></td><td>app writes · mobile reads</td><td>One-way snapshot: books + organization for the mobile viewer</td><td>rate limit, size cap</td></tr>
+    <tr class="grp gold"><td colspan="5">Pre-7.0 (legacy — still answered, fading out)</td></tr>
+    <tr><td><code>/upload/{ch}/…</code> · <code>/status/{ch}</code> · <code>/download/{ch}/…</code> · <code>/cleanup/{ch}</code></td><td>mixed</td><td>old clients</td><td>The in-place single-copy scheme scenarios 0a/0b break</td><td>rate limit</td></tr>
+    <tr class="grp gacct"><td colspan="5">Account / safety</td></tr>
+    <tr><td><code>/revoke/{ch}</code></td><td><span class="verb">POST</span></td><td>app (owner)</td><td>Proof-of-ownership wipe: deletes ALL channel data, blocklists the channel</td><td>proof hash required</td></tr>
+    <tr><td><em>(every write)</em></td><td>—</td><td>—</td><td>—</td><td>200 writes/hour per channel; 10&#215; → auto-blocklist</td></tr>
+  </table>
+</details>
 
 <script>
 'use strict';
 /* ============================================================================
-   Scenario data. Each step is applied cumulatively from the start on every
-   render (deterministic — no incremental state). Step fields:
-     t:     step text (also shown in the side list)
-     lit:   element ids glowing during this step
-     arr:   arrows [[fromId, toId, label, cls, bend]]  cls: write|read|fail
-     show/hide: element ids to reveal / conceal from this step onward
-     mark:  [[id, class]] add a class from this step onward (e.g. 'broken','gone')
-   Scenario fields: layout ('v6'|'v7'), title, intro, steps[].
+   Scenario data. Steps are applied cumulatively from the start on every render
+   (deterministic). Step fields:
+     t: text · lit: glowing ids · arr: [[from,to,label,cls,bend]] ·
+     show/hide: ids revealed/concealed from this step on · mark: [[id,cls]]
+   cls values: write | read | fail | w1 | w2 (writer colors; w1r/w2r = reads)
    ==========================================================================*/
 const SCENARIOS = [
-{ id:'0a', layout:'v6', title:'0a · Pre-7.0 — the original corruption',
-  intro:'How one closed tab corrupted the synced library — the bug that motivated 7.0. The library is a set of fixed keys, edited in place.',
+
+{ id:'T', layout:'v7', title:'Tour — the pieces of the diagram',
+  intro:'What each part is, before any data moves. Step through once; every scenario builds on this vocabulary.',
   steps:[
-    { t:'You click Add to Wishlist on Amazon. The fetcher must rewrite the whole library, so first it downloads all of it.',
+    { t:'The Worker is the only door: nothing touches the stored data except by sending it a message (an ordinary HTTPS request — see the cheat-sheet below). It validates, rate-limits, stamps server time into ids, and enforces the commit rules. It also wakes on a clock for housekeeping. Everything it stores is ciphertext — the key to read it never leaves your devices.',
+      lit:['worker','admin'] },
+    { t:'The Canonical library is a STACK of complete generations — each one a whole, checksummed copy. The pointer names the live one. To change the library you write a NEW generation beside the old and flip the pointer: one atomic switch, never an edit-in-place. The two newest are kept, so there is always a fallback.',
+      lit:['canon','genA','ghostGen','ptr'] },
+    { t:'Each generation’s manifest carries an absorbedRuns ledger — the list of mailbox runs already folded into it. That set (never a "highest so far" mark) is what lets slow and fast senders finish in any order without anything being lost.',
+      lit:['absA'] },
+    { t:'The Mailbox holds sealed letters, grouped into runs. Fetchers ADD fetch results and wishlist adds; the app ADDS tombstones (deletes) and resets (restores). Nobody edits anything — a letter is retired only when a merge absorbs it into a new generation, and until then it waits up to ~90 days.',
+      lit:['mailbox'], show:['runBooks','letterWish','letterTomb'], hide:['mailEmpty'] },
+    { t:'Device-state is the mobile viewer’s snapshot — books AND organization — pushed one-way by the app. Mobile reads it and writes nothing.',
+      lit:['devstate','mobile'] },
+    { t:'Leftovers: the pre-7.0 single-copy library is still readable (the first 7.0 import migrates it into a generation), then it fades out on its own. The worker’s own bookkeeping (rate-limit counters, blocklist) lives beside the door.',
+      lit:['legacy','admin'] }
+  ]},
+
+{ id:'0a', layout:'v6', title:'0a · Pre-7.0 — the original corruption',
+  intro:'How one closed tab corrupted the synced library — the bug that motivated 7.0. The library is a set of fixed slots, edited in place. Striped = existing data.',
+  steps:[
+    { t:'You click Add to Wishlist on Amazon. To add ONE book, the fetcher must rewrite the whole library — so first it downloads all of it.',
       lit:['fetchers','v6c0','v6c1','v6c2','v6man'],
-      arr:[['worker','fetchers','download library','read',30]] },
-    { t:'The fetcher inserts the one new book, then starts re-uploading everything — overwriting chunk 0 in place. The old copy is now partially destroyed.',
-      lit:['v6c0'], mark:[['v6c0','lit']],
-      arr:[['fetchers','worker','overwrite chunk 0','write',-30]] },
-    { t:'Chunk 1 overwritten…', lit:['v6c1'],
-      arr:[['fetchers','worker','overwrite chunk 1','write',-10]] },
-    { t:'💥 The tab closes before chunk 2 and the manifest are written. The keys now hold a MIX of new (0, 1) and old (2, manifest) — and there is no other copy.',
+      arr:[['v6lib','worker','','read',0],['worker','fetchers','download library','read',30]] },
+    { t:'It fetches the book’s details from the Amazon product page (via API) and inserts it into its downloaded copy.',
+      lit:['fetchers'], arr:[['amazon','fetchers','fetch book details','read',0]] },
+    { t:'Re-upload begins: chunk 0 is overwritten IN PLACE (solid = new data). The old copy is now partially destroyed — there is no other copy.',
+      lit:['v6c0'], mark:[['v6c0','fresh']],
+      arr:[['fetchers','worker','overwrite chunk 0','write',-30],['worker','v6c0','','write',0]] },
+    { t:'Chunk 1 overwritten…', lit:['v6c1'], mark:[['v6c1','fresh']],
+      arr:[['fetchers','worker','overwrite chunk 1','write',-10],['worker','v6c1','','write',0]] },
+    { t:'💥 The tab closes before chunk 2 and the manifest. Look at the library: chunks 0–1 solid (new), chunk 2 + manifest striped (old) — a mix no checksum can bless.',
       lit:['v6c2','v6man'], mark:[['v6c0','broken'],['v6c1','broken'],['v6c2','broken'],['v6man','broken']],
       arr:[['fetchers','worker','✖ interrupted','fail',-30]] },
-    { t:'Days later the app imports: the checksum fails — “Sync data check failed.” The synced copy is unusable; recovery is a full manual rebuild (backup, re-fetch library + collections, re-import).',
+    { t:'Later the app imports: the checksum fails — “Sync data check failed.” The synced copy is unusable; recovery is a full manual rebuild (backup, re-download library + collections, re-import).',
       lit:['app'],
-      arr:[['worker','app','✖ checksum mismatch','fail',30]] }
+      arr:[['v6man','worker','','fail',0],['worker','app','✖ checksum mismatch','fail',30]] }
   ]},
 
 { id:'0b', layout:'v6', title:'0b · Pre-7.0 — the clobber race',
-  intro:'Two writers, one shared copy, no coordination: the last upload silently erases the other’s work.',
+  intro:'Two writers, one shared copy, no coordination: last upload wins, silently. Blue = the wishlist add, rose = the library fetch.',
   steps:[
-    { t:'A library fetch starts: downloads the library, then scrapes Amazon for a long time.',
-      lit:['fetchers'],
-      arr:[['worker','fetchers','download library','read',30],['amazon','fetchers','scrape (minutes…)','read',0]] },
-    { t:'Meanwhile, in another tab, a wishlist add downloads the library, inserts a book, and re-uploads the whole thing. The synced copy now includes the new book.',
+    { t:'A library fetch starts: it downloads the library (its private copy — rose chip appears by the Fetchers box) and begins fetching from Amazon. This runs for a long time.',
+      lit:['fetchers'], show:['copyW2'], mark:[['copyW2','w2']],
+      arr:[['v6lib','worker','','w2r',0],['worker','fetchers','download','w2r',30],['amazon','fetchers','fetching (minutes…)','w2r',0]] },
+    { t:'Meanwhile, in another tab, a wishlist add downloads the library too — and inserts the new book into ITS copy (blue chip).',
+      lit:['fetchers'], show:['copyW1'], hide:['copyW2'], mark:[['copyW1','w1']],
+      arr:[['v6lib','worker','','w1r',10],['worker','fetchers','download','w1r',45]] },
+    { t:'The wishlist add uploads its blue copy. The shared library now contains the new book — every slot turns blue.',
+      lit:['v6c0','v6c1','v6c2','v6man'], hide:['copyW1'], show:['copyW2'],
+      mark:[['v6c0','w1'],['v6c1','w1'],['v6c2','w1'],['v6man','w1']],
+      arr:[['fetchers','worker','upload (with new book)','w1',-30],['worker','v6lib','','w1',0]] },
+    { t:'The fetch finishes and uploads ITS rose copy — built from the library as it was BEFORE the add. Every slot turns rose. The blue write is erased.',
       lit:['v6c0','v6c1','v6c2','v6man'],
-      arr:[['fetchers','worker','upload (with new book)','write',-30]] },
-    { t:'The fetch finishes and uploads ITS version — built from the copy it downloaded BEFORE the wishlist add. It overwrites everything.',
-      lit:['v6c0','v6c1','v6c2','v6man'],
-      arr:[['fetchers','worker','upload (without it)','write',-50]] },
-    { t:'The wishlist book is gone — no error, no trace. A “lost update”: the app can only import what the last writer left behind.',
-      lit:['app'], arr:[['worker','app','import (book missing)','fail',30]] }
+      mark:[['v6c0','w2'],['v6c1','w2'],['v6c2','w2'],['v6man','w2']],
+      arr:[['fetchers','worker','upload (no new book)','w2',-50],['worker','v6lib','','w2',10]] },
+    { t:'The wishlist book is gone — no error, no trace. A classic lost update: the app can only import what the last writer left behind.',
+      lit:['app'], arr:[['v6lib','worker','','fail',0],['worker','app','import — book missing','fail',30]] }
   ]},
 
 { id:'1', layout:'v7', title:'1 · Wishlist add (7.0)',
   intro:'The simplest write in the new design: one sealed, self-committing letter. The library itself is never touched.',
   steps:[
-    { t:'The fetcher reads what’s already known — the canonical library (via the pointer) plus any pending letters — purely to detect duplicates. Read-only.',
+    { t:'The fetcher reads what’s already known: the live generation (found via the pointer) plus any pending letters in the mailbox — purely for duplicate detection. Read-only; the data flows store → worker → fetcher.',
       lit:['ptr','genA','mailbox'],
-      arr:[['worker','fetchers','known books (read-only)','read',30]] },
-    { t:'It scrapes the book’s details from the Amazon product page.',
-      lit:['fetchers'], arr:[['amazon','fetchers','scrape product page','read',0]] },
-    { t:'It sends ONE sealed letter to the mailbox — payload and commit in a single atomic write. Closing the tab a millisecond earlier = the letter simply never existed. Nothing can tear.',
-      lit:['letterWish','mailbox'], show:['letterWish'],
-      arr:[['fetchers','worker','1 letter (atomic)','write',-30]] },
-    { t:'Done. The canonical library is untouched; the letter waits (up to ~90 days) for the next app import to absorb it.',
+      arr:[['genA','worker','','read',-10],['mailbox','worker','','read',10],['worker','fetchers','known books (read-only)','read',30]] },
+    { t:'It fetches the book’s details from the Amazon product page (via API).',
+      lit:['fetchers'], arr:[['amazon','fetchers','fetch book details','read',0]] },
+    { t:'It sends ONE sealed letter to the mailbox — payload and commit in a single atomic write. Close the tab a millisecond earlier and the letter simply never existed; nothing can tear.',
+      lit:['letterWish','mailbox'], show:['letterWish'], hide:['mailEmpty'],
+      arr:[['fetchers','worker','1 letter (atomic)','write',-30],['worker','letterWish','','write',0]] },
+    { t:'Done. The canonical library is untouched; the letter waits (up to ~90 days) for a merge to absorb it. What happens then → Scenario 3.',
       lit:['letterWish','genA'] }
   ]},
 
 { id:'2', layout:'v7', title:'2 · Library fetch (7.0)',
   intro:'A big fetch delivers its results as a multi-part run — letters first, run manifest last. The manifest IS the commit.',
   steps:[
-    { t:'Skip-hint read: canonical (pointer → gen A) + pending letters, combined with the same merge the app uses. Books added 5 minutes ago are already “known” — no re-scraping them.',
+    { t:'Skip-hint read: live generation (via pointer) + pending letters, combined with the SAME merge the app uses. Books added five minutes ago are already “known” — nothing gets fetched twice.',
       lit:['ptr','genA','mailbox'],
-      arr:[['worker','fetchers','skip-hint (read-only)','read',30]] },
-    { t:'The fetcher scrapes Amazon — new books, enrichment, tags, prices. This can run for many minutes.',
-      lit:['fetchers'], arr:[['amazon','fetchers','scrape (minutes…)','read',0]] },
+      arr:[['genA','worker','','read',-10],['mailbox','worker','','read',10],['worker','fetchers','skip-hint (read-only)','read',30]] },
+    { t:'The fetcher pulls new books, enrichment, tags, and prices from Amazon’s APIs. This can run for many minutes.',
+      lit:['fetchers'], arr:[['amazon','fetchers','fetching (minutes…)','read',0]] },
     { t:'Results go out as letters — ~5 MB parts under one run id.',
-      lit:['runBooks','mailbox'], show:['runBooks'],
-      arr:[['fetchers','worker','letters: parts 1…4','write',-30]] },
+      lit:['runBooks','mailbox'], show:['runBooks'], hide:['mailEmpty'],
+      arr:[['fetchers','worker','letters: parts 1…4','write',-30],['worker','runBooks','','write',0]] },
     { t:'The run manifest is written LAST. Its presence is the commit: only now does the run exist to any reader. Die before this and the parts are ignored — retried next fetch, nothing corrupted.',
       lit:['runBooks'],
-      arr:[['fetchers','worker','run manifest = commit','write',-50]] },
-    { t:'Age-cap check: if some OTHER run has waited un-merged for more than ~3 days (the app never opened), the fetcher consolidates the canonical itself. Usually: nothing to do.',
+      arr:[['fetchers','worker','run manifest = commit','write',-50],['worker','runBooks','','write',12]] },
+    { t:'Age-cap check: if some OTHER run has waited un-merged for ~3 days (the app never opened), the fetcher consolidates the canonical itself. Usually: nothing to do. The normal path to absorption → Scenario 3.',
       lit:['fetchers','mailbox'] }
   ]},
 
 { id:'3', layout:'v7', title:'3 · App import + consolidation (7.0)',
-  intro:'Import is a read; consolidation afterwards writes a NEW generation and flips the pointer — the atomic commit.',
+  intro:'Import is a read; consolidation afterwards writes a NEW generation onto the stack and flips the pointer — the atomic commit.',
   steps:[
-    { t:'Read the canonical: pointer → gen A → parts → checksum verified.',
-      lit:['ptr','genA'], show:['runBooks','letterWish'],
-      arr:[['worker','app','canonical (gen A)','read',30]] },
-    { t:'Read the mailbox; keep only runs NOT in gen A’s absorbedRuns set.',
+    { t:'Read the canonical: pointer → gen A → parts → checksum verified. (If gen A were ever unreadable, the reader falls back to the next-newest complete generation automatically.)',
+      lit:['ptr','genA'], show:['runBooks','letterWish'], hide:['mailEmpty'],
+      arr:[['genA','worker','','read',-10],['worker','app','canonical (gen A)','read',30]] },
+    { t:'Read the mailbox; keep only runs NOT already in gen A’s absorbedRuns ledger.',
       lit:['mailbox','runBooks','letterWish','absA'],
-      arr:[['worker','app','pending runs','read',50]] },
-    { t:'Compose: one deterministic merge (canonical ⊕ pending runs, newest wins per book) → loaded into the local library. Your tags, edits, and organization are preserved locally.',
+      arr:[['mailbox','worker','','read',10],['worker','app','pending runs','read',50]] },
+    { t:'Compose: one deterministic merge (canonical ⊕ pending runs, newest wins per book) → loaded into the local library. Tags, edits, and organization are preserved locally.',
       lit:['app'] },
-    { t:'Consolidation (background): the merged result is written as gen B — parts first…',
+    { t:'Consolidation (background): the merged result is written as gen B — a new card on the stack. Parts first…',
       lit:['genB'], show:['genB'],
-      arr:[['app','worker','gen B parts','write',-30]] },
-    { t:'…then gen B’s manifest, carrying the updated absorbedRuns set (everything gen A had absorbed, plus the runs just merged).',
+      arr:[['app','worker','gen B parts','write',-30],['worker','genB','','write',0]] },
+    { t:'…then gen B’s manifest, whose absorbedRuns ledger = everything gen A had absorbed PLUS the runs just merged.',
       lit:['genB','absB'],
-      arr:[['app','worker','gen B manifest','write',-45]] },
-    { t:'THE COMMIT: the pointer flips from gen A to gen B — one atomic key write. Every reader now sees gen B; interrupt anything before this and gen A was still perfectly live.',
+      arr:[['app','worker','gen B manifest','write',-45],['worker','genB','','write',10]] },
+    { t:'THE COMMIT: the pointer flips from gen A to gen B — one atomic write. Every reader now sees gen B. Interrupt anything before this and gen A was still perfectly live.',
       lit:['ptr','genB'], hide:['ptrA'], show:['ptrB'],
-      arr:[['app','worker','pointer flip (atomic)','write',-60]] },
+      arr:[['app','worker','pointer flip (atomic)','write',-60],['worker','ptr','','write',0]] },
     { t:'Cleanup: generations beyond keep-2 are deleted, and absorbed BULK runs are reclaimed early (small letters just age out on their own).',
       lit:['runBooks'], mark:[['runBooks','gone']],
       arr:[['app','worker','GC + reclaim','write',-70]] },
     { t:'Finally the app pushes a fresh device-state snapshot for mobile.',
       lit:['devstate'],
-      arr:[['app','worker','device-state push','write',20]] }
+      arr:[['app','worker','device-state push','write',20],['worker','devstate','','write',0]] }
   ]},
 
 { id:'4', layout:'v7', title:'4 · Worker guardrails',
   intro:'The worker is in every flow — it is the only door. This scenario shows the refusals that keep even a buggy client from doing damage.',
   steps:[
-    { t:'A client tries to flip the pointer to a generation whose manifest doesn’t exist (not committed). The worker refuses: commit-before-flip is enforced server-side.',
+    { t:'A client tries to flip the pointer to a generation whose manifest doesn’t exist (not committed). Refused: commit-before-flip is enforced server-side, not just by client discipline.',
       lit:['worker','ptr'],
       arr:[['app','worker','✖ flip to uncommitted gen → 409','fail',-20]] },
     { t:'A client tries to DELETE the generation the pointer currently names. Refused — a client bug can’t torch the live library.',
       lit:['worker','genA'],
       arr:[['app','worker','✖ delete pointed gen → 409','fail',-40]] },
-    { t:'A runaway client exceeds the per-channel write rate. Refused with 429 (and auto-blocklisted at 10× the limit). The counter itself is best-effort — it can never fail an honest write.',
+    { t:'A runaway client exceeds the per-channel write rate (200/hour). Refused with 429; at 10× the limit the channel is auto-blocklisted. The counter itself is best-effort — it can never fail an honest write.',
       lit:['worker','admin'],
       arr:[['fetchers','worker','✖ too many writes → 429','fail',-30]] },
-    { t:'Everything else passes through: the worker validates ids and channels, stamps server time into run/gen ids (client clocks can’t cheat “newest”), and stores only ciphertext it cannot read.',
+    { t:'Everything else passes: the worker validates channels and ids, stamps SERVER time into run/gen ids (a device with a wrong clock can’t win “newest”), and stores only ciphertext it cannot read.',
       lit:['worker'],
       arr:[['fetchers','worker','normal writes','write',-30],['worker','app','normal reads','read',30]] }
   ]},
@@ -337,13 +431,13 @@ const SCENARIOS = [
 { id:'5', layout:'v7', title:'5 · Mobile',
   intro:'Mobile is a one-way reader of its own snapshot — it never touches the canonical or the mailbox.',
   steps:[
-    { t:'After an import (or the idle timer), the app serializes a full snapshot — books AND organization — and pushes it to device-state.',
+    { t:'After an import (or on the idle timer), the app serializes a full snapshot — books AND organization — and pushes it to device-state.',
       lit:['devstate'],
-      arr:[['app','worker','device-state push','write',20]] },
-    { t:'Mobile opens: it fetches the snapshot through the worker…',
+      arr:[['app','worker','device-state push','write',20],['worker','devstate','','write',0]] },
+    { t:'Mobile opens: it requests the snapshot; the response carries the (encrypted) data.',
       lit:['mobile','devstate'],
-      arr:[['worker','mobile','device-state','read',20]] },
-    { t:'…decrypts it locally (the passphrase never leaves your devices) and renders your organized library. That’s the whole flow — mobile writes nothing.',
+      arr:[['devstate','worker','','read',0],['worker','mobile','device-state','read',20]] },
+    { t:'Mobile decrypts locally (the passphrase never leaves your devices) and renders your organized library. That’s the whole flow — mobile writes nothing.',
       lit:['mobile'] }
   ]},
 
@@ -351,14 +445,14 @@ const SCENARIOS = [
   intro:'The same interruption that corrupted the library in 0a, replayed under 7.0.',
   steps:[
     { t:'A library fetch is sending its multi-part run: part 1, part 2…',
-      lit:['runBooks','mailbox'], show:['runBooks'],
-      arr:[['fetchers','worker','parts 1, 2…','write',-30]] },
+      lit:['runBooks','mailbox'], show:['runBooks'], hide:['mailEmpty'],
+      arr:[['fetchers','worker','parts 1, 2…','write',-30],['worker','runBooks','','write',0]] },
     { t:'💥 The tab closes before the remaining parts and the run manifest.',
       lit:['fetchers'],
       arr:[['fetchers','worker','✖ interrupted','fail',-50]] },
-    { t:'The run has no manifest → it does not exist to any reader. The canonical library never noticed anything. Compare 0a: same event, zero damage.',
+    { t:'The run has no manifest → it does not exist to any reader. The canonical library never noticed anything. Compare 0a: the same event, zero damage.',
       lit:['genA','ptr'], mark:[['runBooks','dim']] },
-    { t:'The next fetch simply re-sends (the incomplete parts age out on their own). Nothing to recover, nothing to rebuild.',
+    { t:'The next fetch simply re-sends (the orphaned parts age out on their own). Nothing to recover, nothing to rebuild.',
       lit:['fetchers'] }
   ]},
 
@@ -366,31 +460,31 @@ const SCENARIOS = [
   intro:'The app and a fetcher (or two tabs) both consolidate simultaneously. Pre-7.0 this was the clobber race (0b). Now:',
   steps:[
     { t:'Both writers read the same starting state (gen A + pending runs).',
-      lit:['ptr','genA','mailbox'], show:['runBooks','letterWish'],
-      arr:[['worker','app','read','read',30],['worker','fetchers','read','read',30]] },
-    { t:'Each writes its own COMPLETE generation under a unique id — disjoint keys, so they cannot tear each other. Two commits now exist.',
+      lit:['ptr','genA','mailbox'], show:['runBooks','letterWish'], hide:['mailEmpty'],
+      arr:[['genA','worker','','read',-10],['worker','app','read','read',30],['worker','fetchers','read','read',30]] },
+    { t:'Each writes its own COMPLETE generation under a unique id — disjoint storage, so they cannot tear each other. Two committed generations now sit on the stack.',
       lit:['genB'], show:['genB'],
       arr:[['app','worker','gen B (commit)','write',-30],['fetchers','worker','gen B′ (commit)','write',-30]] },
-    { t:'Both flip the pointer; the LAST flip wins — one atomic key, exactly one winner. The loser’s generation is orphaned and garbage-collected. No torn state ever existed.',
+    { t:'Both flip the pointer; the LAST flip wins — one atomic slot, exactly one winner. The loser’s generation is orphaned and cleaned up. At no moment did a torn state exist.',
       lit:['ptr','genB'], hide:['ptrA'], show:['ptrB'],
-      arr:[['app','worker','flip','write',-45],['fetchers','worker','flip (wins)','write',-60]] },
-    { t:'Anything the winner did NOT absorb is still in the mailbox (letters are only retired by the generation that absorbed them) — the next merge sweeps it up. Total cost of the race: one wasted write. Lost data: none.',
+      arr:[['app','worker','flip','write',-45],['fetchers','worker','flip (wins)','write',-60],['worker','ptr','','write',0]] },
+    { t:'Anything the winner did NOT absorb is still in the mailbox — letters are only retired by the generation that absorbed them — so the next merge sweeps it up. Total cost of the race: one wasted write. Lost data: none.',
       lit:['mailbox','letterWish','absB'] }
   ]},
 
 { id:'6c', layout:'v7', title:'6c · Disaster reel — delete vs. in-flight fetch',
   intro:'The resurrection race: you permanently delete a book while a fetch that started before the delete is still running.',
   steps:[
-    { t:'A library fetch is in flight — it read the canonical (book included) and is scraping.',
+    { t:'A library fetch is in flight — it read the canonical (book included) and is fetching from Amazon.',
       lit:['fetchers','genA'],
-      arr:[['worker','fetchers','read (book included)','read',30]] },
-    { t:'Meanwhile you permanently delete the book (empty it from Trash). The app sends a tombstone letter — it does NOT rewrite the library (that rewrite was the race).',
-      lit:['letterTomb'], show:['letterTomb'],
-      arr:[['app','worker','tombstone letter','write',-20]] },
-    { t:'The fetch finishes and sends its run — which still contains the deleted book (it was scraped from pre-delete state).',
+      arr:[['genA','worker','','read',-10],['worker','fetchers','read (book included)','read',30]] },
+    { t:'Meanwhile you permanently delete the book (empty it from Trash). The app sends a tombstone letter — it does NOT rewrite the library (that rewrite WAS the race, pre-7.0).',
+      lit:['letterTomb'], show:['letterTomb'], hide:['mailEmpty'],
+      arr:[['app','worker','tombstone letter','write',-20],['worker','letterTomb','','write',0]] },
+    { t:'The fetch finishes and sends its run — which still contains the deleted book (fetched from pre-delete state).',
       lit:['runBooks'], show:['runBooks'],
-      arr:[['fetchers','worker','run (book included)','write',-40]] },
-    { t:'Next import merges BOTH: the tombstone blocks any data fetched BEFORE the delete. The book stays dead, and the tombstone persists in the canonical to keep blocking stale copies.',
+      arr:[['fetchers','worker','run (book included)','write',-40],['worker','runBooks','','write',10]] },
+    { t:'The next import (Scenario 3’s merge) sees BOTH: the tombstone blocks any data fetched BEFORE the delete. The book stays dead, and the tombstone persists in the new generation to keep blocking stale copies.',
       lit:['app','letterTomb','runBooks'],
       arr:[['worker','app','merge: tombstone wins','read',30]] },
     { t:'A DELIBERATE re-add later (newer than the delete) still works — a fresh sighting revives the book and clears the tombstone. Deletes stay deleted; intent stays honored.',
@@ -402,12 +496,13 @@ const SCENARIOS = [
   steps:[
     { t:'You restore a backup. Locally the library and organization are replaced — same as always.',
       lit:['app'] },
-    { t:'The app sends the restored library as a RESET run: a new baseline that outranks everything older.',
-      lit:['letterReset'], show:['letterReset','runBooks','letterWish'],
-      arr:[['app','worker','reset run','write',-20]] },
-    { t:'It immediately consolidates: a new generation built from the reset, whose absorbedRuns marks every older run as superseded — pre-restore letters can never re-apply.',
+    { t:'The app sends the restored library as a RESET run: a new baseline that outranks everything older in the mailbox.',
+      lit:['letterReset'], show:['letterReset','runBooks','letterWish'], hide:['mailEmpty'],
+      arr:[['app','worker','reset run','write',-20],['worker','letterReset','','write',0]] },
+    { t:'It immediately consolidates: a new generation built from the reset, whose absorbedRuns ledger marks every older run as superseded — pre-restore letters can never re-apply.',
       lit:['genB','absB'], show:['genB'], hide:['ptrA'],
-      arr:[['app','worker','gen B + pointer flip','write',-40]] , mark:[['runBooks','dim'],['letterWish','dim']]},
+      arr:[['app','worker','gen B + pointer flip','write',-40],['worker','genB','','write',0]],
+      mark:[['runBooks','dim'],['letterWish','dim']] },
     { t:'Runs arriving AFTER the reset merge normally on top. The restore actually stuck — on every device.',
       lit:['ptr','genB'], show:['ptrB'] }
   ]}
@@ -418,6 +513,9 @@ const svg = document.getElementById('svg');
 const arrowsG = document.getElementById('arrows');
 const sel = document.getElementById('scenario');
 const stepsOl = document.getElementById('steps');
+const DYN = ['lit','broken','gone','fresh','w1','w2'];        // classes stripped on reset
+const DYN_HIDE = ['genB','ptrB','runBooks','letterWish','letterTomb','letterReset','copyW1','copyW2'];
+const DYN_DIM = ['runBooks','letterWish'];                     // may get 'dim' during scenarios
 let cur = 0, step = 0;   // step = number of steps applied (0 = overview)
 
 SCENARIOS.forEach((s, i) => {
@@ -433,7 +531,6 @@ function centerOf(id){
   return { x: b.x + b.width/2, y: b.y + b.height/2, b };
 }
 function edgeTowards(from, to){
-  // point on `from` box edge in the direction of `to` (simple axis pick)
   const dx = to.x - from.x, dy = to.y - from.y;
   if (Math.abs(dx) * from.b.height > Math.abs(dy) * from.b.width) {
     return { x: from.x + Math.sign(dx) * from.b.width/2, y: from.y };
@@ -445,39 +542,37 @@ function drawArrow(fromId, toId, label, cls, bend, dimmed){
   const p1 = edgeTowards(a, b), p2 = edgeTowards(b, a);
   const mx = (p1.x + p2.x)/2, my = (p1.y + p2.y)/2;
   const dx = p2.x - p1.x, dy = p2.y - p1.y, len = Math.hypot(dx, dy) || 1;
-  const nx = -dy/len, ny = dx/len;                  // normal
+  const nx = -dy/len, ny = dx/len;
   const cx = mx + nx * (bend||0), cy = my + ny * (bend||0);
   const path = document.createElementNS('http://www.w3.org/2000/svg','path');
   path.setAttribute('d', `M ${p1.x} ${p1.y} Q ${cx} ${cy} ${p2.x} ${p2.y}`);
   path.setAttribute('class', 'arrow ' + (dimmed ? 'old' : (cls||'write')));
   path.setAttribute('marker-end','url(#mk)');
   arrowsG.appendChild(path);
-  const t = document.createElementNS('http://www.w3.org/2000/svg','text');
-  t.setAttribute('x', cx); t.setAttribute('y', cy - 4);
-  t.setAttribute('text-anchor','middle');
-  t.setAttribute('class','alabel ' + (dimmed ? 'old' : (cls||'write')));
-  t.textContent = label;
-  arrowsG.appendChild(t);
+  if (label) {
+    const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+    t.setAttribute('x', cx); t.setAttribute('y', cy - 4);
+    t.setAttribute('text-anchor','middle');
+    t.setAttribute('class','alabel ' + (dimmed ? 'old' : (cls||'write')));
+    t.textContent = label;
+    arrowsG.appendChild(t);
+  }
 }
 
 function resetDiagram(layout){
   arrowsG.innerHTML = '';
-  // layouts
   el('layout-v7').classList.toggle('hiddenEl', layout !== 'v7');
   el('layout-v6').classList.toggle('hiddenEl', layout !== 'v6');
-  // clear all dynamic classes
-  svg.querySelectorAll('.lit').forEach(n => n.classList.remove('lit'));
-  svg.querySelectorAll('.broken').forEach(n => n.classList.remove('broken'));
-  svg.querySelectorAll('.gone').forEach(n => n.classList.remove('gone'));
-  ['runBooks','letterWish','letterTomb','letterReset','genB','ptrB'].forEach(id => el(id) && el(id).classList.add('hiddenEl'));
+  DYN.forEach(c => svg.querySelectorAll('.' + c).forEach(n => n.classList.remove(c)));
+  DYN_HIDE.forEach(id => el(id) && el(id).classList.add('hiddenEl'));
+  DYN_DIM.forEach(id => el(id) && el(id).classList.remove('dim'));
   if (el('ptrA')) el('ptrA').classList.remove('hiddenEl');
-  ['runBooks','letterWish'].forEach(id => el(id) && el(id).classList.remove('dim'));
+  if (el('mailEmpty')) el('mailEmpty').classList.remove('hiddenEl');
 }
 
 function render(){
   const sc = SCENARIOS[cur];
   resetDiagram(sc.layout);
-  // apply steps 0..step-1 cumulatively; only the last applied step is "current"
   for (let i = 0; i < step; i++){
     const st = sc.steps[i], isCurrent = (i === step - 1);
     (st.show||[]).forEach(id => el(id) && el(id).classList.remove('hiddenEl'));
@@ -486,7 +581,6 @@ function render(){
     (st.arr ||[]).forEach(([f, to, label, cls, bend]) => drawArrow(f, to, label, cls, bend, !isCurrent));
     if (isCurrent) (st.lit||[]).forEach(id => el(id) && el(id).classList.add('lit'));
   }
-  // side panel
   el('title').textContent = sc.title;
   el('intro').textContent = sc.intro;
   stepsOl.innerHTML = '';
@@ -510,8 +604,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowLeft')  el('prev').click();
 });
 
-// Default to scenario 1 (the new-world wishlist add)
-cur = 2; sel.value = 2; render();
+// Start on the Tour
+cur = 0; sel.value = 0; render();
 </script>
 </body>
 </html>
