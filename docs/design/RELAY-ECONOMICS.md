@@ -8,3 +8,16 @@ _Moved verbatim from TODO.md during the 6.12.0 TODO restructure (2026-08-03). **
 - **Root cause (fixed):** the device-state push (readerwrangler.js ~L3100) was debounced only **15s**, so active organizing (natural >15s pauses) fired `putDeviceState` ~3–4×/min → ~500 writes/session. Not per-action — per-pause.
 - **Fix (shipped, alpha.58):** raised the debounce to 60s AND flush on **tab blur / visibilitychange / beforeunload** instead of periodic ticking — cuts writes ~15–50×. (Optional future: a manual "Sync now.")
 - **Still TODO — revisit the free-vs-paid launch plan** with real numbers (Workers Paid ~$5/mo ≈ ~1M writes/month — *verify current limits*). Also consider trimming the device-state payload size if it carries full book data it doesn't need.
+
+---
+
+## Idea log — size-scaled per-channel quotas (Ron, 2026-08-17)
+
+Post-7.0 (mailbox/generational sync), when Phase 2 fairness gets built: instead of one flat
+per-channel allowance, **scale size-based limits (mailbox bytes, storage share) to the user's
+library size**. Feasible even with end-to-end encryption — the worker can't read content but it
+CAN meter **byte counts** per channel. Time-based limits (TTLs, rate windows) stay flat.
+
+**Cold-start special case:** a brand-new user has library size 0, but their initial full fetch
+is their largest-ever write — so size-0 channels get the MAX allowance; after the first merge,
+calibrate the channel's limits from the observed canonical size.
