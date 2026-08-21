@@ -32,6 +32,8 @@
 
 ## 🔧 7.0.0 follow-ups (relay)
 
+- [ ] **Checkpoint the cold (first-time) fetch** — a ~3,000-book initial enrichment has no resume; die at book 2,800, start over. 7.0 makes it natural: send enrichment progress as mailbox letters in stages so a resumed run's skip-hint already knows what's done. Bites each user exactly once — low priority, pre-launch nice-to-have. (From the 2026-08-21 external sync review, item 1's salvageable kernel.)
+
 - [ ] **Extract shared fetcher relay helpers into relay-client.js** — `loadKnownBooks` / `sendWishlistRun` / `ageCapCheck` are ~verbatim ×3 (wishlist, series-page, author-bibliography; library fetcher has a variant) — pure refactor, parameterize the progress callback + `source` string, no behavior change, harness-verifiable. (The per-fetcher `progressUI` overlay ~200 lines ×5 is a separate, older duplication — bigger cleanup, fold into MODULE-SPLIT thinking.)
 - [ ] **Worker/client protocol-constant drift note** — `LETTER_TTL` (worker, seconds) and `LETTER_TTL_MS` (client) are mirrored by hand; same for the minted-id format. Fine at 2 constants with cross-reference comments; revisit a shared protocol-constants module if a third appears. (Worker is the same language — JS — different runtime; sharing is possible, low value today.)
 
