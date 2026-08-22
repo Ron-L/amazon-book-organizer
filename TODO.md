@@ -26,6 +26,7 @@
 - [ ] "Rebuild library from Amazon (full re-fetch)" affordance (6g) — clear the relay library without DevTools; pairs with the demo-whitelist guard
 - [ ] Pin remaining CDN deps (6h) — React/ReactDOM to an exact 18.x; audit all HTML entry points (Tailwind's durable fix is the precompile step below)
 - [ ] `integrity-homeless` investigation — real user event in v6.11.5; books in IndexedDB with no folder refs
+- [ ] **Mid-sweep challenge detection** — classify challenge-shaped responses (HTML where JSON expected, validate-captcha redirect, robot-check 503) in the fetchers' retry path and halt with an honest message: "Amazon is asking for a human check. Open any Amazon page, complete it, then re-run — everything fetched so far is safe." (That last clause is TRUE post-7.0: a halted run is uncommitted and invisible.) Phase 0 already guards startup; this covers a challenge appearing mid-run, which today reads as generic API errors. Never observed yet — cheap pre-launch hardening. (External review item 7 kernel.)
 
 **Launch economics**
 - [ ] Revisit free-vs-paid launch plan with real relay-write numbers (Cloudflare cap is shared across all users) → see docs/design/RELAY-ECONOMICS.md (spec/data)
