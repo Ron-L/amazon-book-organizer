@@ -107,7 +107,7 @@
 <body>
 <header>
   <h1>Relay Data Flows — how ReaderWrangler sync moves (7.0)</h1>
-  <p>Companion to <code>RELAY-WRITE-REDESIGN.md</code>. Start with the <b>Tour</b>, then step the scenarios — 0a/0b show the pre-7.0 design and why it broke. A protocol cheat-sheet is at the bottom.</p>
+  <p>Companion to <code>RELAY-WRITE-REDESIGN.md</code>. Start with the <b>Tour</b>, then step the scenarios — 0a/0b show the pre-7.0 design and why it broke (torn write, RMW race). A protocol cheat-sheet is at the bottom.</p>
 </header>
 
 <div class="controls">
@@ -342,8 +342,8 @@ const SCENARIOS = [
       arr:[['v6man','worker','','fail',0],['worker','app','✖ checksum mismatch','fail',30]] }
   ]},
 
-{ id:'0b', layout:'v6', title:'0b · Pre-7.0 — the clobber race',
-  intro:'Two writers, one shared copy, no coordination: last upload wins, silently. Blue = the wishlist add, rose = the library fetch.',
+{ id:'0b', layout:'v6', title:'0b · Pre-7.0 — the classic RMW race',
+  intro:'The classic read-modify-write race: two writers each read the shared copy, modify their private copy, and write it back — last upload wins, silently. Blue = the wishlist add, rose = the library fetch.',
   steps:[
     { t:'A library fetch starts: it downloads the library (its private copy — rose chip appears by the Fetchers box) and begins fetching from Amazon. This runs for a long time.',
       lit:['fetchers'], show:['copyW2'], mark:[['copyW2','w2']],
@@ -470,7 +470,7 @@ const SCENARIOS = [
   ]},
 
 { id:'6b', layout:'v7', title:'6b · Disaster reel — two merges at once',
-  intro:'The app and a fetcher (or two tabs) both consolidate simultaneously. Pre-7.0 this was the clobber race (0b). Now:',
+  intro:'The app and a fetcher (or two tabs) both consolidate simultaneously. Pre-7.0 this was the classic RMW race (0b). Now:',
   steps:[
     { t:'Both writers read the same starting state (gen A + pending runs).',
       lit:['ptr','genA','mailbox'], show:['runBooks','letterWish'], hide:['mailEmpty'],
