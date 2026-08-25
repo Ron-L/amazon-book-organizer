@@ -181,12 +181,12 @@
           <text x="422" y="320" text-anchor="middle" class="t-bold">gen A</text>
           <text x="422" y="338" text-anchor="middle" class="t-tiny">parts 1&#8230;N &#183; manifest &#10003;</text>
           <g id="absA"><rect class="chip" x="356" y="350" width="132" height="24" rx="6"/>
-            <text x="422" y="366" text-anchor="middle" class="t-tiny">absorbedRuns { &#8230; }</text></g></g>
+            <text x="422" y="366" text-anchor="middle" class="t-tiny">list of absorbed runs</text></g></g>
         <g id="genB" class="hiddenEl"><rect class="chip body" x="354" y="278" width="160" height="100" rx="8"/>
           <text x="434" y="298" text-anchor="middle" class="t-bold">gen B</text>
           <text x="434" y="316" text-anchor="middle" class="t-tiny">parts 1&#8230;N &#183; manifest &#10003;</text>
           <g id="absB"><rect class="chip" x="368" y="328" width="132" height="24" rx="6"/>
-            <text x="434" y="344" text-anchor="middle" class="t-tiny">absorbedRuns { +new }</text></g></g>
+            <text x="434" y="344" text-anchor="middle" class="t-tiny">list of absorbed runs (+new)</text></g></g>
         <g id="ptr"><rect class="chip body" x="288" y="215" width="96" height="30" rx="7"/>
           <text x="336" y="234" text-anchor="middle" class="t-small t-bold">pointer</text></g>
         <path id="ptrA" class="arrow read" d="M 336 245 C 336 268, 350 285, 370 299" marker-end="url(#mk)"/>
@@ -310,7 +310,7 @@ const SCENARIOS = [
       lit:['canon','genA','ghostGen','ptr'] },
     { t:'The Mailbox holds sealed letters — each letter one sealed parcel of data. A fetch delivers its results as a run of several letters; a wishlist add is a run of one. Fetchers ADD fetch results and wishlist adds; the app ADDS tombstones (deletes) and resets (restores). Nobody edits anything — letters left un-merged (because nothing was ever run to merge them) expire and are deleted after ~90 days.',
       lit:['mailbox'], show:['runBooks','letterWish','letterTomb'], hide:['mailEmpty'] },
-    { t:'Each generation’s manifest carries an absorbedRuns ledger — the list of mailbox runs already merged into that generation. Because it is a set (never a “highest so far” mark), slow and fast senders can finish in any order and nothing is ever lost or double-counted.',
+    { t:'Each generation’s manifest carries its list of absorbed runs (code name: absorbedRuns) — a RECEIPT, not a container: “these mailbox runs are already merged into me; readers, skip their letters.” Because it is a complete list (never a “highest so far” mark), slow and fast senders can finish in any order and nothing is ever lost or double-counted.',
       lit:['absA'] },
     { t:'The circle closes when the app imports from the relay: it reads the live generation plus the un-merged runs, merges them into one complete library, and writes THAT back as a new generation on the stack (pointer flip = done). Letters are retired only by the generation that absorbed them — so every piece of data always lives somewhere. Scenario 3 walks this flow.',
       lit:['app','ptr','genA','mailbox'] },
