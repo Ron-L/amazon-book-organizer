@@ -392,7 +392,7 @@ const SCENARIOS = [
     { t:'The run manifest is written LAST. Its presence is the commit: only now does the run exist to any reader. Die before this and the parts are ignored — retried next fetch, nothing corrupted.',
       lit:['runBooks'],
       arr:[['fetchers','worker','run manifest = commit','write',-50],['worker','runBooks','','write',12]] },
-    { t:'Age-cap check: if some OTHER run has waited un-merged for ~3 days (the app never opened), the fetcher consolidates the canonical itself. Usually: nothing to do. The normal path to absorption → Scenario 3.',
+    { t:'Age-cap check: if some OTHER run has waited un-merged for ~3 days (the app never opened), the fetcher consolidates the canonical itself. Usually: nothing to do. The normal path to absorption → Scenario 3. And if the app wakes up and merges at the same moment the fetcher does → that race is Scenario 6b (one winner, nothing lost).',
       lit:['fetchers','mailbox'] }
   ]},
 
