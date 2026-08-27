@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.2.0] - 2026-08-27
+
+### Under the hood
+- **Groundwork for unlimited mobile sync.** The mobile snapshot was measured at 68% of its hard size ceiling (16.98 of 25 MB) — a growing library would eventually hit it and mobile would silently stop updating. This release adds a chunked, atomically-committed journal format for the snapshot (same corruption-proof commit scheme as 7.0's library sync) and teaches **every reader** to understand both formats. Nothing writes the new format yet: readers first, writer next release — so no device, however stale its cached session, can ever meet a format it doesn't know.
+
 ## [7.1.0] - 2026-08-27
 
 ### Smarter price updates
