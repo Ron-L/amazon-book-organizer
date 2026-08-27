@@ -19,7 +19,23 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v3.0.0';
+    const FETCHER_VERSION = 'v3.0.1-alpha.1';
+    // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
+    // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
+    // RTT (~400ms), which is their engineering decision and can change without notice.
+    // This floor is set at/just below the observed RTT with light jitter, so it is a
+    // NO-OP today by construction — it only activates if Amazon ships a faster path,
+    // keeping our request rate where it has always been.
+    const MIN_REQUEST_INTERVAL_MS = 350;
+    let _lastAmazonCall = 0;
+    async function amazonFetch(url, options) {
+        const floor = MIN_REQUEST_INTERVAL_MS * (0.9 + Math.random() * 0.2); // light jitter
+        const wait = _lastAmazonCall + floor - Date.now();
+        if (wait > 0) await new Promise(r => setTimeout(r, wait));
+        _lastAmazonCall = Date.now();
+        return fetch(url, options);
+    }
+
     const SCHEMA_VERSION = '2.1';
     const PAGE_TITLE = document.title;
 
@@ -376,7 +392,7 @@ async function fetchAmazonCollections() {
             csrfToken: csrfToken
         });
 
-        const testResponse = await fetch(ENDPOINT, {
+        const testResponse = await amazonFetch(ENDPOINT, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -625,7 +641,7 @@ async function fetchAmazonCollections() {
                 csrfToken: csrfToken
             });
 
-            const response = await fetch(ENDPOINT, {
+            const response = await amazonFetch(ENDPOINT, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',

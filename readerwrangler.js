@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.0.0";  // Build version for this file
+        const ORGANIZER_VERSION = "7.0.1-alpha.1";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -4372,7 +4372,10 @@
                     // (so orphan-preservation, upgrade counting and Inbox placement work unchanged).
                     const importWork = async () => {
                         const canonical = await window.RWRelay.readCanonical();
-                        const mailbox = await window.RWRelay.readMailbox();
+                        // 7.0.1 - Skip absorbed runs BEFORE downloading (their ids are visible in the
+                        // listing; the ledger already retired them — no need to fetch/decrypt)
+                        const absorbed = (canonical && canonical.manifest && canonical.manifest.absorbedRuns) || [];
+                        const mailbox = await window.RWRelay.readMailbox(null, { skipRunIds: new Set(absorbed) });
                         const pending = (canonical && canonical.manifest)
                             ? window.RWRelay.unabsorbedRuns(mailbox.runs, canonical.manifest)
                             : mailbox.runs;

@@ -361,6 +361,33 @@ async function main() {
        !RW.unabsorbedRuns(mb2.runs, c2.manifest).some(r => r.runId === tiny.runId));
   }
 
+  console.log('\n[15] skip-absorbed-before-download + shared loadKnownBooks (7.0.1)');
+  {
+    // Cycle channel state: canonical has absorbed runs; the tiny letter from [14] still
+    // physically exists in the mailbox (riding TTL) but is in the ledger.
+    const c = await RW.readCanonical();
+    const absorbed = new Set(c.manifest.absorbedRuns || []);
+    ok('precondition: ledger is non-empty', absorbed.size > 0);
+    const full = await RW.readMailbox();
+    const skipped = await RW.readMailbox(null, { skipRunIds: absorbed });
+    const absorbedStillPhysical = full.runs.filter(r => absorbed.has(r.runId)).length;
+    ok(`skip omits absorbed-but-physical runs (${absorbedStillPhysical} skipped pre-download)`,
+       skipped.runs.every(r => !absorbed.has(r.runId))
+       && skipped.runs.length === full.runs.length - absorbedStillPhysical);
+    ok('skip result identical to post-filter (same pending set)',
+       JSON.stringify(skipped.runs.map(r => r.runId).sort())
+       === JSON.stringify(RW.unabsorbedRuns(full.runs, c.manifest).map(r => r.runId).sort()));
+
+    // Shared fetcher helper smoke test: known-books map built from canonical + pending
+    const phases = [];
+    const known = await RW.loadKnownBooks((p, d) => phases.push(p));
+    ok('loadKnownBooks: canonical books present (CYCLE1 revived in [12/14])',
+       known.byAsin.has('CYCLE1') && known.byAsin.size > 0);
+    ok('loadKnownBooks: progress callback fired', phases.length > 0);
+    ok('loadKnownBooks: pending excludes absorbed runs',
+       known.pending.every(r => !absorbed.has(r.runId)));
+  }
+
   console.log(`\n=== ${pass} passed, ${fail} failed ===`);
   process.exit(fail ? 1 : 0);
 }

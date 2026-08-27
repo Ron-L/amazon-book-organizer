@@ -18,7 +18,23 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.0.0';
+    const FETCHER_VERSION = 'v5.0.1-alpha.1';
+    // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
+    // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
+    // RTT (~400ms), which is their engineering decision and can change without notice.
+    // This floor is set at/just below the observed RTT with light jitter, so it is a
+    // NO-OP today by construction — it only activates if Amazon ships a faster path,
+    // keeping our request rate where it has always been.
+    const MIN_REQUEST_INTERVAL_MS = 350;
+    let _lastAmazonCall = 0;
+    async function amazonFetch(url, options) {
+        const floor = MIN_REQUEST_INTERVAL_MS * (0.9 + Math.random() * 0.2); // light jitter
+        const wait = _lastAmazonCall + floor - Date.now();
+        if (wait > 0) await new Promise(r => setTimeout(r, wait));
+        _lastAmazonCall = Date.now();
+        return fetch(url, options);
+    }
+
     const SCHEMA_VERSION = '2.1';
 
     console.log('========================================');
@@ -1017,7 +1033,7 @@ async function fetchAmazonLibrary() {
 
         try {
             const result = await fetchWithRetry(async () => {
-                const testLibraryResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
+                const testLibraryResponse = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                     method: 'POST',
                     headers: apiHeaders(),
                     credentials: 'include',
@@ -1073,7 +1089,7 @@ async function fetchAmazonLibrary() {
         let testAsin = 'B000FC0U6Q'; // Default fallback ASIN
 
         try {
-            const testLibraryResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
+            const testLibraryResponse = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                 method: 'POST',
                 headers: apiHeaders(),
                 credentials: 'include',
@@ -1183,7 +1199,7 @@ async function fetchAmazonLibrary() {
 
         try {
             const enrichResult = await fetchWithRetry(async () => {
-                const testEnrichResponse = await fetch('https://www.amazon.com/kindle-reader-api', {
+                const testEnrichResponse = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                     method: 'POST',
                     headers: apiHeaders(),
                     credentials: 'include',
@@ -1335,7 +1351,7 @@ async function fetchAmazonLibrary() {
             const CANARY_ASIN = 'B0CVS92TRQ'; // Gideon Sable #5 — owned, hash-dependent (its edition lacks PSLD)
             const leanHeaders = { 'accept': 'application/json, text/plain, */*', 'content-type': 'application/json', 'anti-csrftoken-a2z': csrfToken, 'x-client-id': 'your-books' };
             const probe = async (asin, headers) => {
-                const resp = await fetch('https://www.amazon.com/kindle-reader-api', {
+                const resp = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                     method: 'POST', headers, credentials: 'include',
                     body: JSON.stringify({ query: `query enrichBook { getProducts(input: [{asin: "${asin}"}]) { asin title { displayString } } }`, operationName: 'enrichBook' })
                 });
@@ -1484,7 +1500,7 @@ async function fetchAmazonLibrary() {
             
             try {
                 const result = await fetchWithRetry(async () => {
-                    const response = await fetch('https://www.amazon.com/kindle-reader-api', {
+                    const response = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                         method: 'POST',
                         headers: apiHeaders(),
                         credentials: 'include',
@@ -1708,7 +1724,7 @@ async function fetchAmazonLibrary() {
                     let sweepResult;
                     try {
                         sweepResult = await fetchWithRetry(async () => {
-                            const resp = await fetch('https://www.amazon.com/kindle-reader-api', {
+                            const resp = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                                 method: 'POST',
                                 headers: apiHeaders(),
                                 credentials: 'include',
@@ -1772,7 +1788,7 @@ async function fetchAmazonLibrary() {
                     let recResult;
                     try {
                         recResult = await fetchWithRetry(async () => {
-                            const resp = await fetch('https://www.amazon.com/kindle-reader-api', {
+                            const resp = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                                 method: 'POST',
                                 headers: apiHeaders(),
                                 credentials: 'include',
@@ -1962,7 +1978,7 @@ async function fetchAmazonLibrary() {
                         }
                     }`;
 
-                    const response = await fetch('https://www.amazon.com/kindle-reader-api', {
+                    const response = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                         method: 'POST',
                         headers: apiHeaders(),
                         credentials: 'include',
@@ -2169,7 +2185,7 @@ async function fetchAmazonLibrary() {
                     }`;
 
                     const result = await fetchWithRetry(async () => {
-                        const response = await fetch('https://www.amazon.com/kindle-reader-api', {
+                        const response = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                             method: 'POST',
                             headers: apiHeaders(),
                             credentials: 'include',
@@ -2290,7 +2306,7 @@ async function fetchAmazonLibrary() {
                     }`;
 
                     const result = await fetchWithRetry(async () => {
-                        const response = await fetch('https://www.amazon.com/kindle-reader-api', {
+                        const response = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                             method: 'POST',
                             headers: apiHeaders(),
                             credentials: 'include',
@@ -2774,7 +2790,7 @@ async function fetchAmazonLibrary() {
                 }`;
 
                 const result = await fetchWithRetry(async () => {
-                    const response = await fetch('https://www.amazon.com/kindle-reader-api', {
+                    const response = await amazonFetch('https://www.amazon.com/kindle-reader-api', {
                         method: 'POST',
                         headers: apiHeaders(),
                         credentials: 'include',

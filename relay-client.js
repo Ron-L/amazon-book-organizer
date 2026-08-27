@@ -486,11 +486,15 @@
    * Read the whole mailbox. Returns complete runs (decrypted) + ids of incomplete ones.
    * Completeness is proven by GETting every part — a run seen incomplete is "retry later",
    * NEVER "broken" (its producer may still be writing, or KV is still propagating).
-   * @returns {object} { runs: [{runId, kind, fetchDate, timestamp, jsonString}], incomplete: [runId] }
+   * @param {object} opts - optional { skipRunIds: Set } — runs already absorbed by the live
+   *   generation are skipped BEFORE any letter download (their run ids are visible in the
+   *   listing keys; no need to fetch/decrypt letters the ledger says to ignore).
+   * @returns {object} { runs: [{runId, kind, fetchDate, timestamp, parts, jsonString}], incomplete: [runId] }
    */
-  async function readMailbox(onProgress) {
+  async function readMailbox(onProgress, opts) {
     if (!isConfigured()) throw new Error('Relay not configured');
     const notify = onProgress || (() => {});
+    const skip = (opts && opts.skipRunIds) || null;
 
     notify('checking', 'Checking mailbox...');
     const listRes = await relayFetch(`/mail/${_channelId}/list`);
@@ -500,6 +504,7 @@
     for (const k of keys) {
       const sep = k.lastIndexOf(':');
       const runId = k.slice(0, sep), part = k.slice(sep + 1);
+      if (skip && skip.has(runId)) continue; // absorbed — the ledger says to ignore it
       if (!byRun.has(runId)) byRun.set(runId, { seqs: new Set(), hasManifest: false });
       if (part === 'manifest') byRun.get(runId).hasManifest = true;
       else byRun.get(runId).seqs.add(parseInt(part, 10));
@@ -853,7 +858,8 @@
       let canonical = opts && opts.canonical !== undefined ? opts.canonical : await readCanonical(onProgress);
       let pending = opts && opts.pendingRuns;
       if (!pending) {
-        const mailbox = await readMailbox();
+        const absorbed = (canonical && canonical.manifest && canonical.manifest.absorbedRuns) || [];
+        const mailbox = await readMailbox(null, { skipRunIds: new Set(absorbed) });
         pending = (canonical && canonical.manifest)
           ? unabsorbedRuns(mailbox.runs, canonical.manifest)
           : mailbox.runs;
@@ -924,6 +930,126 @@
     return null;
   }
 
+  // === Shared fetcher helpers ===
+  // ONE implementation of the read-dedup-send-agecap cycle the wishlist-style fetchers
+  // (wishlist, series-page, author-bibliography) previously carried as three near-identical
+  // copies. UI stays with the caller via callbacks; console narration lives here (it was
+  // identical across the copies).
+
+  /**
+   * READ-ONLY reconstruction of what's already known: canonical library plus pending
+   * (unabsorbed) mailbox runs. Used for duplicate detection — never written back.
+   * A missing canonical is fine (cold start: letters are first-class; the app merges later).
+   * Applies pending tombstones too (runs are oldest-first, so delete-then-re-add resolves
+   * correctly): a book the user just permanently deleted must not block a deliberate re-add.
+   * @param {function} onPhase - (phase, detail) => void — caller's progress UI
+   * @returns {object} { byAsin: Map(asin → book), canonical, pending }
+   */
+  async function loadKnownBooks(onPhase) {
+    if (!isConfigured()) {
+      throw new Error('Relay not configured. Please reinstall the bookmarklet from Relay Setup in the app.');
+    }
+    const phase = onPhase || (() => {});
+
+    phase('Checking Library', 'Downloading your library...');
+    console.log('[Relay] Reading library + pending additions (read-only)...');
+
+    const byAsin = new Map();
+    const canonical = await readCanonical((p, detail) => phase('Checking Library', detail));
+    if (canonical) {
+      try {
+        const data = JSON.parse(canonical.jsonString);
+        if (data.isBackup !== true && data.books && data.books.items) {
+          for (const b of data.books.items) byAsin.set(b.asin, b);
+          console.log(`   ✅ Library: ${data.books.items.length} books (via ${canonical.source})`);
+        }
+      } catch (e) {
+        console.warn('   ⚠️ Could not parse library data:', e.message);
+      }
+    } else {
+      console.log('   ℹ️ No library on relay yet — checking pending additions only');
+    }
+
+    // Books sent by any fetcher but not yet merged into the library count as known too
+    // (an add from 5 minutes ago must dedup, even though no merge has happened yet).
+    // Absorbed runs are skipped BEFORE download — the ledger already retired them.
+    phase('Checking Library', 'Checking recent additions...');
+    const absorbed = (canonical && canonical.manifest && canonical.manifest.absorbedRuns) || [];
+    const mailbox = await readMailbox(null, { skipRunIds: new Set(absorbed) });
+    const pending = (canonical && canonical.manifest)
+      ? unabsorbedRuns(mailbox.runs, canonical.manifest)
+      : mailbox.runs;
+    let pendingBooks = 0, pendingDeletes = 0;
+    for (const run of pending) {
+      try {
+        const data = JSON.parse(run.jsonString);
+        const items = (data.books && data.books.items) || [];
+        for (const b of items) {
+          if (b.asin && !byAsin.has(b.asin)) { byAsin.set(b.asin, b); pendingBooks++; }
+        }
+        for (const t of (data.tombstones && data.tombstones.items) || []) {
+          if (t.asin && byAsin.delete(t.asin)) pendingDeletes++;
+        }
+      } catch { /* unparseable letter — not dedup material */ }
+    }
+    if (pendingBooks > 0) console.log(`   ✅ Plus ${pendingBooks} pending book(s) not yet merged`);
+    if (pendingDeletes > 0) console.log(`   🗑️ Minus ${pendingDeletes} pending deletion(s)`);
+    console.log('');
+    return { byAsin, canonical, pending };
+  }
+
+  /**
+   * Send new wishlist book(s) as ONE mailbox run. Small payloads collapse to a single
+   * self-committing letter (one atomic write) — interrupting it cannot corrupt anything,
+   * and nothing here ever touches the library itself.
+   * @param {Array} newBooks - full book objects
+   * @param {object} meta - { schemaVersion, source, fetcherVersion, cancelMessage }
+   * @param {function} onPhase - (phase, detail) => void — caller's progress UI
+   * @param {function} onRetry - async (errorMessage) => 'retry'|'cancel' — caller's retry dialog
+   */
+  async function sendWishlistRun(newBooks, meta, onPhase, onRetry) {
+    const phase = onPhase || (() => {});
+    phase('Saving', 'Sending to your library...');
+    console.log('[Relay] Sending wishlist addition (atomic run)...');
+
+    const payload = JSON.stringify({
+      schemaVersion: meta.schemaVersion,
+      source: meta.source,
+      fetcherVersion: meta.fetcherVersion,
+      books: {
+        fetchDate: new Date().toISOString(),
+        totalBooks: newBooks.length,
+        items: newBooks
+      }
+    });
+
+    while (true) {
+      try {
+        const res = await writeRun(payload, 'wishlist-add', (p, detail) => phase('Saving', detail));
+        console.log(`   ✅ Sent ${newBooks.length} book(s)${res.inline ? ' in a single write' : ` (${res.seqCount} parts)`}`);
+        return res;
+      } catch (relayError) {
+        console.error('❌ Send failed:', relayError.message);
+        const choice = onRetry ? await onRetry(relayError.message) : 'cancel';
+        if (choice === 'cancel') {
+          throw new Error(meta.cancelMessage || 'Cancelled — nothing was saved.');
+        }
+      }
+    }
+  }
+
+  /**
+   * Age-cap fallback (design §11 rule 2), fire-and-forget: if some pending run has waited
+   * >3 days un-merged (the user hasn't opened the app), consolidate right here.
+   * @param {object} known - the result of loadKnownBooks()
+   */
+  function ageCapCheck(known) {
+    if (!known) return;
+    maybeAgeCapMerge({ canonical: known.canonical, pendingRuns: known.pending })
+      .then(acm => { if (acm.merged) console.log(`📦 Age-cap consolidation done (${acm.bookCount} books)`); })
+      .catch(e => console.warn('Age-cap check skipped:', e.message));
+  }
+
   // Auto-detect context and initialize
   if (window._RW_RELAY_CHANNEL) {
     initFromGlobals();
@@ -955,7 +1081,11 @@
     pruneAbsorbedRuns: pruneAbsorbedRuns,
     checkForUpdates: checkForUpdates,
     hasCanonical: hasCanonical,
-    maybeAgeCapMerge: maybeAgeCapMerge
+    maybeAgeCapMerge: maybeAgeCapMerge,
+    // Shared fetcher helpers (one copy instead of three — see the fetchers' Relay I/O sections)
+    loadKnownBooks: loadKnownBooks,
+    sendWishlistRun: sendWishlistRun,
+    ageCapCheck: ageCapCheck
   };
 
 })();

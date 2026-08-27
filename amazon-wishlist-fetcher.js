@@ -26,7 +26,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v2.0.0';
+    const FETCHER_VERSION = 'v2.0.1-alpha.1';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 
@@ -659,118 +659,21 @@ async function addToWishlist() {
     }
 
     // ============================================================================
-    // Relay I/O
+    // Relay I/O — shared implementations live in relay-client.js (one copy for all
+    // wishlist-style fetchers; UI stays here via callbacks)
     // ============================================================================
 
-    /**
-     * v2.0.0 - READ-ONLY reconstruction of what's already known: canonical library plus
-     * pending (unabsorbed) mailbox runs. Used only for duplicate detection — this fetcher
-     * never writes any of it back. A missing canonical is fine (cold start: letters are
-     * first-class; the app merges them later).
-     * @returns {Map} asin → book (canonical books win; mailbox books fill in)
-     */
-    async function loadKnownBooks() {
-        if (!win.RWRelay || !win.RWRelay.isConfigured()) {
-            throw new Error('Relay not configured. Please reinstall the bookmarklet from Relay Setup in the app.');
-        }
+    const loadKnownBooks = () =>
+        win.RWRelay.loadKnownBooks((phase, detail) => progressUI.updatePhase(phase, detail));
 
-        progressUI.updatePhase('Checking Library', 'Downloading your library...');
-        console.log('[Relay] Reading library + pending additions (read-only)...');
+    const sendWishlistRun = (newBooks) =>
+        win.RWRelay.sendWishlistRun(newBooks,
+            { schemaVersion: SCHEMA_VERSION, source: 'wishlist-fetcher',
+              fetcherVersion: FETCHER_VERSION, cancelMessage: 'Cancelled — the book was not saved.' },
+            (phase, detail) => progressUI.updatePhase(phase, detail),
+            (errMsg) => progressUI.showRetryUpload(errMsg));
 
-        const byAsin = new Map();
-        const canonical = await win.RWRelay.readCanonical((phase, detail) => {
-            progressUI.updatePhase('Checking Library', detail);
-        });
-        if (canonical) {
-            try {
-                const data = JSON.parse(canonical.jsonString);
-                if (data.isBackup !== true && data.books && data.books.items) {
-                    for (const b of data.books.items) byAsin.set(b.asin, b);
-                    console.log(`   ✅ Library: ${data.books.items.length} books (via ${canonical.source})`);
-                }
-            } catch (e) {
-                console.warn('   ⚠️ Could not parse library data:', e.message);
-            }
-        } else {
-            console.log('   ℹ️ No library on relay yet — checking pending additions only');
-        }
-
-        // Books sent by any fetcher but not yet merged into the library count as known too
-        // (an add from 5 minutes ago must dedup, even though no merge has happened yet).
-        progressUI.updatePhase('Checking Library', 'Checking recent additions...');
-        const mailbox = await win.RWRelay.readMailbox();
-        const pending = (canonical && canonical.manifest)
-            ? win.RWRelay.unabsorbedRuns(mailbox.runs, canonical.manifest)
-            : mailbox.runs;
-        let pendingBooks = 0, pendingDeletes = 0;
-        for (const run of pending) {
-            try {
-                const data = JSON.parse(run.jsonString);
-                const items = (data.books && data.books.items) || [];
-                for (const b of items) {
-                    if (b.asin && !byAsin.has(b.asin)) { byAsin.set(b.asin, b); pendingBooks++; }
-                }
-                // v2.0.0-alpha.2 - Apply pending tombstones too (runs are oldest-first, so a
-                // delete-then-re-add resolves correctly): a book the user just permanently
-                // deleted must not block a deliberate re-add — matches the merge's view exactly.
-                for (const t of (data.tombstones && data.tombstones.items) || []) {
-                    if (t.asin && byAsin.delete(t.asin)) pendingDeletes++;
-                }
-            } catch { /* unparseable letter — not dedup material */ }
-        }
-        if (pendingBooks > 0) console.log(`   ✅ Plus ${pendingBooks} pending book(s) not yet merged`);
-        if (pendingDeletes > 0) console.log(`   🗑️ Minus ${pendingDeletes} pending deletion(s)`);
-        console.log('');
-        return { byAsin, canonical, pending };
-    }
-
-    /**
-     * v2.0.0 - Age-cap fallback (design §11 rule 2): if some pending run has waited >3 days
-     * un-merged (user hasn't opened the app), consolidate right here. Fire-and-forget.
-     */
-    function ageCapCheck(known) {
-        if (!known) return;
-        win.RWRelay.maybeAgeCapMerge({ canonical: known.canonical, pendingRuns: known.pending })
-            .then(acm => { if (acm.merged) console.log(`📦 Age-cap consolidation done (${acm.bookCount} books)`); })
-            .catch(e => console.warn('Age-cap check skipped:', e.message));
-    }
-
-    /**
-     * v2.0.0 - Send the new wishlist book(s) as ONE mailbox run. Small payloads collapse to
-     * a single self-committing letter (one atomic write) — interrupting it cannot corrupt
-     * anything, and nothing here ever touches the library itself.
-     */
-    async function sendWishlistRun(newBooks) {
-        progressUI.updatePhase('Saving', 'Sending to your library...');
-        console.log('[Relay] Sending wishlist addition (single atomic write)...');
-
-        const payload = JSON.stringify({
-            schemaVersion: SCHEMA_VERSION,
-            source: 'wishlist-fetcher',
-            fetcherVersion: FETCHER_VERSION,
-            books: {
-                fetchDate: new Date().toISOString(),
-                totalBooks: newBooks.length,
-                items: newBooks
-            }
-        });
-
-        while (true) {
-            try {
-                const res = await win.RWRelay.writeRun(payload, 'wishlist-add', (phase, detail) => {
-                    progressUI.updatePhase('Saving', detail);
-                });
-                console.log(`   ✅ Sent ${newBooks.length} book(s)${res.inline ? ' in a single write' : ` (${res.seqCount} parts)`}`);
-                return;
-            } catch (relayError) {
-                console.error('❌ Send failed:', relayError.message);
-                const choice = await progressUI.showRetryUpload(relayError.message);
-                if (choice === 'cancel') {
-                    throw new Error('Cancelled — the book was not saved.');
-                }
-            }
-        }
-    }
+    const ageCapCheck = (known) => win.RWRelay.ageCapCheck(known);
 
     // ============================================================================
     // Main Flow
