@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.0.1] - 2026-08-27
+
+### Under the hood
+- **One shared implementation of the fetchers' sync code** — the wishlist, series, and author fetchers previously carried three near-identical copies of their sync logic; it now lives in one place. No behavior change.
+- **Imports skip already-merged packets before downloading them** — the sync ledger is checked first, so letters that are already in your library aren't pointlessly re-downloaded and re-decrypted on every import.
+- **A minimum-spacing floor on Amazon requests** — today a no-op by construction (Amazon's own response time already provides the spacing); pure insurance so our request rate stays put even if Amazon's backend gets faster someday.
+
 ## [7.0.0] - 2026-08-17
 
 Sync, rebuilt to be corruption-proof. Everything that writes to the cloud sync — the app and all five bookmarklet fetchers — now uses a commit-then-publish scheme: updates travel as sealed, self-contained packets, and the synced library is only ever replaced by a complete, verified new copy, never edited in place. Closing a tab mid-sync can no longer corrupt anything. *(Major version: the app and fetchers speak a new sync format. They update together automatically; old and new halves don't mix.)*

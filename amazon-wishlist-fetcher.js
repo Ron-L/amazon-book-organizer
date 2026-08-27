@@ -26,7 +26,7 @@
 async function addToWishlist() {
     'use strict';
 
-    const FETCHER_VERSION = 'v2.0.1-alpha.1';
+    const FETCHER_VERSION = 'v2.0.1';
     const SCHEMA_VERSION = '2.1';
     const LIBRARY_FILENAME = 'amazon-library.json';
 

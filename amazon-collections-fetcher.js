@@ -19,7 +19,7 @@
 //         by pressing Up Arrow (to recall the function call) or typing: fetchAmazonCollections()
 
 async function fetchAmazonCollections() {
-    const FETCHER_VERSION = 'v3.0.1-alpha.1';
+    const FETCHER_VERSION = 'v3.0.1';
     // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
     // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
     // RTT (~400ms), which is their engineering decision and can change without notice.
