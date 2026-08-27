@@ -272,7 +272,7 @@ device-state must be **planned for chunking** — do not assume 25 MB holds for 
 
 ## 15. Open questions / to verify
 
-- **[verify]** measure a realistic large-library device-state payload size (is the 25 MB risk near-term or theoretical?).
+- **[verify]** ~~measure a realistic large-library device-state payload size~~ **MEASURED 2026-08-27 (3,119 books): stored 16.98 MB = 67.9% of the 25 MB cap; raw JSON 46.67 MB, compression only 2.7× (dense text/URLs — gzip won't save us). ~1,400-1,500 books of headroom. Verdict: near-term — Phase 1b promoted to the active queue.**
 - **[verify]** does any fetcher consume RW-only per-book fields from the canonical (e.g., `targetPrice` for price alerts)? Gates the Section 4 "Option B" schema diet (not this phase).
 - **[decide]** exact numbers: age cap (3 d?), letter TTL (90 d?), staleness window (24 h?), grace age (1 h?), letter batch size (5 MB?).
 - **[decide]** tombstone revival policy (fetch re-finds a permanently-deleted owned book) — owned by `TOMBSTONE-DELETE.md`; this design only requires that tombstones exist and are honored by merges.
