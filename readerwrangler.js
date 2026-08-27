@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.0.1";  // Build version for this file
+        const ORGANIZER_VERSION = "7.1.0-alpha.1";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -42,6 +42,16 @@
             asin: { label: 'ASIN', sortKey: 'asin', defaultDir: 'asc', cssVar: '--col-asin' }, // v6.12.0
             amazon: { label: 'Amazon', sortKey: null, cssVar: '--col-amazon', textCenter: true, noResize: true }
         };
+
+        // v7.1.0 - Price staleness. Sale prices can turn in a day, so a price older than this
+        // renders dimmed with an "as of" tooltip — honest about what we actually know. Global
+        // constant by design; promote to a user setting only if the default proves annoying.
+        const PRICE_STALE_MS = 24 * 60 * 60 * 1000;
+        const priceIsStale = (book) =>
+            !book.priceFetchedAt || (Date.now() - new Date(book.priceFetchedAt).getTime()) > PRICE_STALE_MS;
+        const priceAsOfLabel = (book) => book.priceFetchedAt
+            ? `Price as of ${new Date(book.priceFetchedAt).toLocaleString()}`
+            : 'Price from an older fetch (date unknown)';
 
         // v6.12.0 - Single source of truth for acquisition/ownership type (label + dialog badge color).
         // Cover view keeps its own short labels (KU/COMIX) for the tiny tile badge.
@@ -4460,6 +4470,10 @@
                     const parts = [];
                     if (newBooks > 0) parts.push(`${newBooks} new`);
                     if (upgraded > 0) parts.push(`${upgraded} now owned`);
+                    // v7.1.0 - Goal preservation on upgrade is deliberate (since v5), but surface it:
+                    // a bought book still carrying a goal is usually a goal the user forgot to clear.
+                    const goalsKept = result.upgradedGoalCount || 0;
+                    if (goalsKept > 0) parts.push(`${goalsKept} kept ${goalsKept === 1 ? 'its price goal' : 'their price goals'} — clear if no longer wanted`);
                     // v6.19.0 - "No new books found", not "up to date": we can only claim what we
                     // checked — a book added seconds ago can still be in transit (sync listings can
                     // lag up to ~a minute), and "found nothing" stays true in that window while
@@ -4782,7 +4796,7 @@
                     binding: book.binding,
                     currentPrice: book.currentPrice,
                     listPrice: book.listPrice,
-                    priceAsOf: book.priceAsOf,
+                    priceAsOf: book.priceFetchedAt || book.priceAsOf, // v7.1.0 - real sweep date (legacy wire name kept)
                     targetPrice: book.targetPrice,
                     genres: book.genres,
                     genresAsOf: book.genresAsOf,
@@ -4892,7 +4906,7 @@
                         // v4.18.0.d - Price data and user metadata
                         currentPrice: book.currentPrice,
                         listPrice: book.listPrice,
-                        priceAsOf: book.priceAsOf,
+                        priceAsOf: book.priceFetchedAt || book.priceAsOf, // v7.1.0 - real sweep date (legacy wire name kept)
                         targetPrice: book.targetPrice,
                         genres: book.genres,
                         genresAsOf: book.genresAsOf,
@@ -5298,7 +5312,7 @@
                             // Price data (v4.17.0.a, v4.18.0.a - parse string prices to numbers)
                             currentPrice: parsePrice(item.currentPrice),
                             listPrice: parsePrice(item.listPrice),
-                            priceFetchedAt: item.priceFetchedAt || null,
+                            priceFetchedAt: item.priceFetchedAt || item.priceAsOf || null, // v7.1.0 - wishlist adds stamp priceAsOf
                             priceTrigger: item.priceTrigger ?? null,
                             // Genre data (v4.17.0.a)
                             genres: item.genres || [],
@@ -5360,7 +5374,7 @@
                             // Price data (v4.17.0.a, v4.18.0.a - parse string prices to numbers)
                             currentPrice: parsePrice(item.currentPrice),
                             listPrice: parsePrice(item.listPrice),
-                            priceFetchedAt: item.priceFetchedAt || null,
+                            priceFetchedAt: item.priceFetchedAt || item.priceAsOf || null, // v7.1.0 - wishlist adds stamp priceAsOf
                             priceTrigger: item.priceTrigger ?? null,
                             // Genre data (v4.17.0.a)
                             genres: item.genres || [],
@@ -5613,7 +5627,7 @@
                     setLastSyncTime(Date.now());
                     setSyncStatus('fresh');
                     if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
-                    return { totalBooks: mergedBooks.length, newBookIds, upgradedCount: mergedBooks.wishlistToOwnedCount || 0 };
+                    return { totalBooks: mergedBooks.length, newBookIds, upgradedCount: mergedBooks.wishlistToOwnedCount || 0, upgradedGoalCount: mergedBooks.wishlistToOwnedGoalCount || 0 };
                 }
 
                 // No organization found, start fresh
@@ -5621,7 +5635,7 @@
                 setLastSyncTime(Date.now());
                 setSyncStatus('fresh');
                 if (onComplete) setTimeout(() => onComplete(metadata.totalBooks), 0);
-                return { totalBooks: mergedBooks.length, newBookIds, upgradedCount: mergedBooks.wishlistToOwnedCount || 0 };
+                return { totalBooks: mergedBooks.length, newBookIds, upgradedCount: mergedBooks.wishlistToOwnedCount || 0, upgradedGoalCount: mergedBooks.wishlistToOwnedGoalCount || 0 };
             };
 
             const checkIfBlankImage = (img, bookId) => {
@@ -9246,6 +9260,28 @@
                                         )}
                                     </div>
 
+                                    {/* v7.1.0 - Price freshness (prices sweep on their own scope; coverage varies per fetch) */}
+                                    {(() => {
+                                        const priced = activeBooks.filter(b => b.currentPrice != null).length;
+                                        const lastSweep = activeBooks.reduce((m, b) =>
+                                            b.priceFetchedAt && (!m || b.priceFetchedAt > m) ? b.priceFetchedAt : m, null);
+                                        const sweepStale = !lastSweep || (Date.now() - new Date(lastSweep).getTime()) > PRICE_STALE_MS;
+                                        return (
+                                            <div className="border-b border-gray-200 pb-3">
+                                                <p className="text-sm text-gray-700">
+                                                    💲 <strong>Prices:</strong> {priced > 0
+                                                        ? `${priced} books with prices`
+                                                        : <span className="text-red-600 font-medium">None yet</span>}
+                                                </p>
+                                                {lastSweep && (
+                                                    <p className={`text-xs mt-1 ${sweepStale ? 'text-orange-500' : 'text-gray-500'}`}>
+                                                        Last swept: {new Date(lastSweep).toLocaleString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
+
                                     {/* v6.10.0-alpha.29 - Relay freshness section */}
                                     {window.RWRelay && window.RWRelay.isConfigured() && (
                                     <div className="border-b border-gray-200 pb-3">
@@ -12340,13 +12376,19 @@
                                                         <span className="font-semibold text-gray-700">Current Price:</span>
                                                         {modalBook.currentPrice != null ? (
                                                             <>
-                                                                <span className={`text-lg font-bold ${modalBook.priceTrigger && modalBook.currentPrice <= modalBook.priceTrigger ? 'text-green-600' : 'text-gray-900'}`}>
+                                                                <span className={`text-lg font-bold ${modalBook.priceTrigger && modalBook.currentPrice <= modalBook.priceTrigger ? 'text-green-600' : 'text-gray-900'} ${priceIsStale(modalBook) ? 'italic opacity-70' : ''}`}>
                                                                     ${modalBook.currentPrice.toFixed(2)}
                                                                 </span>
                                                                 {modalBook.listPrice && modalBook.listPrice > modalBook.currentPrice && (
                                                                     <span className="text-sm text-gray-500">
                                                                         <span className="line-through">${modalBook.listPrice.toFixed(2)}</span>
                                                                         {' '}(Save ${(modalBook.listPrice - modalBook.currentPrice).toFixed(2)})
+                                                                    </span>
+                                                                )}
+                                                                {/* v7.1.0 - Print the price date where deliberate evaluation happens */}
+                                                                {modalBook.priceFetchedAt && (
+                                                                    <span className={`text-xs ${priceIsStale(modalBook) ? 'text-orange-500' : 'text-gray-400'}`}>
+                                                                        as of {new Date(modalBook.priceFetchedAt).toLocaleString()}
                                                                     </span>
                                                                 )}
                                                             </>
@@ -15190,7 +15232,7 @@
                                                             {columnOrder.filter(colKey => colKey === 'title' || visibleColumns[colKey]).map(colKey => {
                                                                 const cfg = COLUMN_CONFIG[colKey];
                                                                 // Inline cell rendering - avoids function call overhead
-                                                                let content, cellClass = 'p-2';
+                                                                let content, cellClass = 'p-2', cellTitle;
                                                                 switch (colKey) {
                                                                     case 'title':
                                                                         content = book.title;
@@ -15240,6 +15282,11 @@
                                                                         cellClass += book.priceTrigger && book.currentPrice <= book.priceTrigger
                                                                             ? ' text-xs text-green-600 font-semibold'
                                                                             : ' text-xs text-gray-600';
+                                                                        // v7.1.0 - Staleness: dim prices older than PRICE_STALE_MS; hover shows the date
+                                                                        if (book.currentPrice != null) {
+                                                                            cellTitle = priceAsOfLabel(book);
+                                                                            if (priceIsStale(book)) cellClass += ' italic opacity-60';
+                                                                        }
                                                                         break;
                                                                     case 'priceGoal':
                                                                         content = book.priceTrigger != null ? `$${book.priceTrigger.toFixed(2)}` : '-';
@@ -15283,7 +15330,7 @@
                                                                         content = '-';
                                                                 }
                                                                 return (
-                                                                    <td key={colKey} className={cellClass}
+                                                                    <td key={colKey} className={cellClass} title={cellTitle}
                                                                         style={{ width: `var(${cfg.cssVar}, ${columnWidths[colKey]}px)` }}>
                                                                         {content}
                                                                     </td>
@@ -15810,9 +15857,9 @@
                                                                         clipPath: 'polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%)',
                                                                         padding: '3px 14px 3px 6px'
                                                                     }}
-                                                                    title={book.priceTrigger ? `Goal: $${book.priceTrigger.toFixed(2)} or less` : 'Current price'}
+                                                                    title={`${book.priceTrigger ? `Goal: $${book.priceTrigger.toFixed(2)} or less — ` : ''}${priceAsOfLabel(book)}`}
                                                                 >
-                                                                    ${book.currentPrice.toFixed(2)}
+                                                                    <span className={priceIsStale(book) ? 'italic opacity-70' : ''}>${book.currentPrice.toFixed(2)}</span>
                                                                 </div>
                                                             ) : book.ownershipType && book.ownershipType !== 'purchased' && (() => {
                                                                 const badgeConfig = {

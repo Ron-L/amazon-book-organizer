@@ -18,7 +18,7 @@
 
 async function fetchAmazonLibrary() {
     const PAGE_TITLE = document.title;
-    const FETCHER_VERSION = 'v5.0.1';
+    const FETCHER_VERSION = 'v5.1.0-alpha.1';
     // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
     // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
     // RTT (~400ms), which is their engineering decision and can change without notice.
@@ -2244,15 +2244,24 @@ async function fetchAmazonLibrary() {
         stats.timing.phase4Start = Date.now();
         console.log('[6/7] Fetching prices for all books...');
 
-        // Combine new books with existing to get all books
-        const allBooksForPrices = [...newBooks, ...existingBooks];
         const PRICE_BATCH_SIZE = 30; // Same as enrichment batch size
         const TEMP_OWNERSHIP = ['sample', 'borrowed', 'prime', 'kindleUnlimited', 'koll', 'wishlist', 'unknown']; // v4.11.8 - upgradeable
+
+        // v5.1.0 - Scope the price sweep to books whose price answers a real question:
+        //   - every NEW book (needs its initial price),
+        //   - every BUYABLE book (wishlist / temporary ownership — purchase decisions),
+        //   - any owned book still carrying a price goal (the forgot-to-clear case).
+        // Owned-no-goal books are skipped: "what would I pay for a book I own?" is a
+        // question nobody asks. Cuts ~104 batched calls/fetch to ~10-12 on a big library.
+        const isBuyable = (b) => b.onWishlist || TEMP_OWNERSHIP.includes(b.ownershipType || 'unknown');
+        const hasGoal = (b) => b.targetPrice != null || !!b.priceTrigger;
+        const skippedOwnedNoGoal = existingBooks.filter(b => !isBuyable(b) && !hasGoal(b)).length;
+        const allBooksForPrices = [...newBooks, ...existingBooks.filter(b => isBuyable(b) || hasGoal(b))];
 
         if (allBooksForPrices.length === 0) {
             console.log('   ✅ No books to price\n');
         } else {
-            console.log(`   Found ${allBooksForPrices.length} books`);
+            console.log(`   Found ${allBooksForPrices.length} books to price (${skippedOwnedNoGoal} owned-without-goal skipped)`);
             progressUI.updatePhase('Fetching Prices', `Processing ${allBooksForPrices.length} books`);
 
             const priceBatches = Math.ceil(allBooksForPrices.length / PRICE_BATCH_SIZE);

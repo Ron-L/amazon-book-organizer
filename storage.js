@@ -189,6 +189,12 @@ const saveBooksToIndexedDB = async (books, preserveUserData = false) => {
         // v6.17.1 - Surface the ownership-upgrade count (wishlist/sample → owned this import) so the import
         // summary can report it separately — upgrades don't change the total, so "N new" alone hid them.
         uniqueBooks.wishlistToOwnedCount = wishlistToOwned.length;
+        // v7.1.0 - Of those upgrades, how many still carry a price goal (deliberately preserved since v5):
+        // the import summary nudges the user to clear goals on books they've now bought.
+        uniqueBooks.wishlistToOwnedGoalCount = wishlistToOwned.filter(asin => {
+            const b = booksByAsin.get(asin);
+            return b && (b.targetPrice != null || b.priceTrigger != null);
+        }).length;
 
         if (duplicates.length > 0) {
             console.warn(`⚠️  Found ${duplicates.length} duplicate ASINs, owned books take priority`);
