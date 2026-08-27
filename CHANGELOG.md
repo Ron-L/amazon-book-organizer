@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.1.0] - 2026-08-27
+
+### Smarter price updates
+- **Price checks now focus on books you might actually buy** — wishlist items, samples, borrowed/Prime/KU books, and any owned book still carrying a price goal. Owned books without a goal are no longer re-priced (their price answers a question nobody asks) — cutting each fetch's price traffic by roughly 90%.
+- **Prices show their age.** A price older than 24 hours renders dimmed — sale prices can turn in a day, and an old number shouldn't look authoritative. Hover any price for the exact "as of" time; the book details dialog prints the date beside the price; and Data Status gains a **Prices: last swept** line.
+- **"N kept their price goals — clear if no longer wanted"** — when an import upgrades wishlist books you've since bought, the summary now mentions any that still carry a price goal (the goal is deliberately preserved; now it's also surfaced).
+
 ## [7.0.1] - 2026-08-27
 
 ### Under the hood
