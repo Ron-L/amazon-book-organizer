@@ -374,7 +374,7 @@
     const mint = await relayFetch(`/dstate/${_channelId}/begin?device=${deviceId()}`, { method: 'POST' });
     const gen = (await mint.json()).gen;
 
-    const packed = await pack(jsonString, notify);
+    const packed = (opts && opts.prePacked) || await pack(jsonString, notify);
     const chunkCount = Math.ceil(packed.bytes.length / chunkSize);
     for (let i = 0; i < chunkCount; i++) {
       notify('uploading', `Uploading part ${i + 1} of ${chunkCount}...`);
@@ -419,20 +419,45 @@
 
   /**
    * Update device state on relay (used by app after successful import).
+   * v7.3.0 (Phase 1b writer switch) - The JOURNAL is now the primary write: chunked
+   * generations + atomic pointer commit, no 25 MB ceiling. The legacy single key is
+   * still DOUBLE-WRITTEN during the transition (free while the payload fits under the
+   * old cap) so a phone session cached from before 7.2.0 keeps working; the legacy
+   * write gets dropped in a later release. Payload is packed once, used by both.
+   * Journal failure throws (callers' error handling incl. 403-revoked preserved);
+   * legacy failure only warns — the journal is authoritative.
    * @param {string} jsonString - Full library state as JSON string
    */
   async function putDeviceState(jsonString) {
     if (!isConfigured()) throw new Error('Relay not configured');
 
-    const compressed = await window.RWCompress.compress(jsonString);
-    const key = await getKey();
-    const encrypted = await window.RWCrypto.encryptPacked(key, compressed);
+    const packed = await pack(jsonString);
+    const manifest = await putDeviceStateJournal(jsonString, null, { prePacked: packed });
 
+    try {
+      if (packed.bytes.length <= MAX_LEGACY_DEVICE_STATE) {
+        const response = await fetch(`${workerUrl()}/device-state/${_channelId}`, {
+          method: 'PUT',
+          body: packed.bytes.buffer
+        });
+        if (!response.ok) console.warn('Legacy device-state double-write failed (journal is authoritative):', response.status);
+      } else {
+        console.warn('Legacy device-state skipped: payload exceeds the old 25 MB ceiling (the journal carries it — pre-7.2.0 cached sessions must reload)');
+      }
+    } catch (e) {
+      console.warn('Legacy device-state double-write failed (journal is authoritative):', e.message);
+    }
+    return manifest;
+  }
+
+  /** Legacy single-key writer — transition/test helper (the pre-7.3.0 sole write path). */
+  async function putDeviceStateLegacy(jsonString) {
+    if (!isConfigured()) throw new Error('Relay not configured');
+    const packed = await pack(jsonString);
     const response = await fetch(`${workerUrl()}/device-state/${_channelId}`, {
       method: 'PUT',
-      body: encrypted
+      body: packed.bytes.buffer
     });
-
     if (!response.ok) {
       const err = new Error(response.status === 403 ? 'Channel revoked' : 'Failed to update device state');
       err.status = response.status;
@@ -485,6 +510,7 @@
   const KEEP_GENS = 2;
   const GC_GRACE_MS = 60 * 60 * 1000;        // never GC a generation younger than 1h (design M2)
   const LETTER_TTL_MS = 90 * 24 * 60 * 60 * 1000; // mirrors the worker's 90d letter TTL (absorbed-set pruning horizon)
+  const MAX_LEGACY_DEVICE_STATE = 25 * 1024 * 1024; // old single-key ceiling (transition double-write skips beyond it)
   const DEVICE_KEY = 'readerwrangler-relay-device';
 
   /** Stable per-browser device id (persisted where storage exists; ephemeral otherwise). */
@@ -1167,6 +1193,7 @@
     getDeviceState: getDeviceState,
     putDeviceState: putDeviceState,
     putDeviceStateJournal: putDeviceStateJournal,
+    putDeviceStateLegacy: putDeviceStateLegacy,
     revokeChannel: revokeChannel,
     // Relay write redesign Phase 1 (docs/design/RELAY-WRITE-REDESIGN.md)
     writeRun: writeRun,
