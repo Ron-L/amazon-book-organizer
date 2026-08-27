@@ -17,6 +17,9 @@
  *   relay:{channelId}:gen:{gen}:chunk:{i}     → generation chunk, encrypted (NO TTL — GC'd by keep-2)
  *   relay:{channelId}:gen:{gen}:manifest      → generation manifest JSON incl. absorbedRuns (NO TTL)
  *   relay:{channelId}:pointer                 → JSON { gen } naming the current generation (NO TTL)
+ *   relay:{channelId}:dstate:{gen}:chunk:{i}  → device-state journal chunk (TTL: 90 days) — Phase 1b
+ *   relay:{channelId}:dstate:{gen}:manifest   → device-state generation manifest (TTL: 90 days)
+ *   relay:{channelId}:dstate-pointer          → JSON { gen } naming the live device-state (TTL: 90 days)
  *   runId/gen format: {workerTimestampMs}-{deviceId}-{rand4hex} — minted server-side so
  *   timestamps can't be skewed by client clocks; '-' internal separator, ':' reserved for key layout.
  *
@@ -38,6 +41,15 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const MINTED_ID_REGEX = /^\d{13}-[A-Za-z0-9_]{1,32}-[0-9a-f]{4}$/;
 const DEVICE_ID_REGEX = /^[A-Za-z0-9_]{1,32}$/;
 const LIST_PAGE_CAP = 10; // safety cap on KV list pagination loops (10 × 1000 keys)
+
+// Phase 1b: generational stores share ONE implementation — the canonical library and the
+// device-state journal differ only in key segment, pointer key, and TTL policy.
+//   canonical: no TTL (lifecycle = keep-2 + GC; a rarely-rewritten library must never expire)
+//   dstate:    90d TTL, refreshed by every push (mobile snapshot; old single-key behavior kept)
+const GEN_STORES = {
+  canonical: { seg: 'gen',    ptr: 'pointer',        ttl: null },
+  dstate:    { seg: 'dstate', ptr: 'dstate-pointer', ttl: PERSISTENT_TTL }
+};
 const RATE_LIMIT_WINDOW_MS = 3600000; // 1 hour
 const RATE_LIMIT_MAX_WRITES = 200;    // per channelId per hour (normal: ~10-20)
 const RATE_LIMIT_AUTO_BLOCK = 2000;   // 10x limit → permanent blocklist
@@ -196,58 +208,61 @@ async function route(request, path, env) {
 
   // --- Relay write redesign Phase 1: generations + pointer ---
 
-  // POST /gen/{channelId}/begin — mint a generation id (no KV write)
-  match = path.match(/^\/gen\/([^/]+)\/begin$/);
-  if (match && request.method === 'POST') {
-    return handleMintId(request, env, match[1], 'gen');
+  // Generational stores: /gen + /pointer = canonical library; /dstate + /dstate-pointer =
+  // device-state journal (Phase 1b). Same handlers, different GEN_STORES config.
+  for (const [route, store] of [['gen', GEN_STORES.canonical], ['dstate', GEN_STORES.dstate]]) {
+    // POST /{route}/{channelId}/begin — mint a generation id (no KV write)
+    match = path.match(new RegExp(`^/${route}/([^/]+)/begin$`));
+    if (match && request.method === 'POST') {
+      return handleMintId(request, env, match[1], 'gen');
+    }
+
+    // POST /{route}/{channelId}/{gen}/chunk/{i}
+    match = path.match(new RegExp(`^/${route}/([^/]+)/([^/]+)/chunk/([0-9]+)$`));
+    if (match && request.method === 'POST') {
+      return handlePutGenChunk(request, env, store, match[1], match[2], parseInt(match[3]));
+    }
+
+    // POST /{route}/{channelId}/{gen}/manifest — the atomic commit (written last)
+    match = path.match(new RegExp(`^/${route}/([^/]+)/([^/]+)/manifest$`));
+    if (match && request.method === 'POST') {
+      return handlePutGenManifest(request, env, store, match[1], match[2]);
+    }
+
+    // GET /{route}/{channelId}/list — enumerate generation manifests (fallback discovery/GC)
+    match = path.match(new RegExp(`^/${route}/([^/]+)/list$`));
+    if (match && request.method === 'GET') {
+      return handleGenList(env, store, match[1]);
+    }
+
+    // GET /{route}/{channelId}/{gen}/chunk/{i}
+    match = path.match(new RegExp(`^/${route}/([^/]+)/([^/]+)/chunk/([0-9]+)$`));
+    if (match && request.method === 'GET') {
+      return handleGetGenChunk(env, store, match[1], match[2], parseInt(match[3]));
+    }
+
+    // GET /{route}/{channelId}/{gen}/manifest
+    match = path.match(new RegExp(`^/${route}/([^/]+)/([^/]+)/manifest$`));
+    if (match && request.method === 'GET') {
+      return handleGetGenManifest(env, store, match[1], match[2]);
+    }
+
+    // DELETE /{route}/{channelId}/{gen} — GC (refuses the currently-pointed generation)
+    match = path.match(new RegExp(`^/${route}/([^/]+)/([^/]+)$`));
+    if (match && request.method === 'DELETE') {
+      return handleDeleteGen(env, store, match[1], match[2]);
+    }
   }
 
-  // POST /gen/{channelId}/{gen}/chunk/{i}
-  match = path.match(/^\/gen\/([^/]+)\/([^/]+)\/chunk\/(\d+)$/);
-  if (match && request.method === 'POST') {
-    return handlePutGenChunk(request, env, match[1], match[2], parseInt(match[3]));
-  }
-
-  // POST /gen/{channelId}/{gen}/manifest — the atomic commit (written last)
-  match = path.match(/^\/gen\/([^/]+)\/([^/]+)\/manifest$/);
-  if (match && request.method === 'POST') {
-    return handlePutGenManifest(request, env, match[1], match[2]);
-  }
-
-  // GET /gen/{channelId}/list — enumerate generation manifests (fallback discovery/GC)
-  match = path.match(/^\/gen\/([^/]+)\/list$/);
-  if (match && request.method === 'GET') {
-    return handleGenList(env, match[1]);
-  }
-
-  // GET /gen/{channelId}/{gen}/chunk/{i}
-  match = path.match(/^\/gen\/([^/]+)\/([^/]+)\/chunk\/(\d+)$/);
-  if (match && request.method === 'GET') {
-    return handleGetGenChunk(env, match[1], match[2], parseInt(match[3]));
-  }
-
-  // GET /gen/{channelId}/{gen}/manifest
-  match = path.match(/^\/gen\/([^/]+)\/([^/]+)\/manifest$/);
-  if (match && request.method === 'GET') {
-    return handleGetGenManifest(env, match[1], match[2]);
-  }
-
-  // DELETE /gen/{channelId}/{gen} — GC (refuses the currently-pointed generation)
-  match = path.match(/^\/gen\/([^/]+)\/([^/]+)$/);
-  if (match && request.method === 'DELETE') {
-    return handleDeleteGen(env, match[1], match[2]);
-  }
-
-  // PUT /pointer/{channelId} — flip the current-generation pointer
-  match = path.match(/^\/pointer\/([^/]+)$/);
-  if (match && request.method === 'PUT') {
-    return handlePutPointer(request, env, match[1]);
-  }
-
-  // GET /pointer/{channelId}
-  match = path.match(/^\/pointer\/([^/]+)$/);
-  if (match && request.method === 'GET') {
-    return handleGetPointer(env, match[1]);
+  // PUT|GET /pointer/{channelId} and /dstate-pointer/{channelId} — the atomic flips
+  for (const [route, store] of [['pointer', GEN_STORES.canonical], ['dstate-pointer', GEN_STORES.dstate]]) {
+    match = path.match(new RegExp(`^/${route}/([^/]+)$`));
+    if (match && request.method === 'PUT') {
+      return handlePutPointer(request, env, store, match[1]);
+    }
+    if (match && request.method === 'GET') {
+      return handleGetPointer(env, store, match[1]);
+    }
   }
 
   // POST /test-alert?key={TEST_ALERT_KEY} — send a test email alert
@@ -509,7 +524,7 @@ async function handleDeleteRun(env, channelId, runId) {
   return jsonResponse({ ok: true, deleted: res.keys.length });
 }
 
-async function handlePutGenChunk(request, env, channelId, gen, chunkNum) {
+async function handlePutGenChunk(request, env, store, channelId, gen, chunkNum) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
   if (!MINTED_ID_REGEX.test(gen)) return badRequest('Invalid generation id');
   if (await isBlocked(env, channelId)) return jsonResponse({ error: 'Channel revoked' }, 403);
@@ -518,14 +533,15 @@ async function handlePutGenChunk(request, env, channelId, gen, chunkNum) {
   const body = await request.arrayBuffer();
   if (body.byteLength > MAX_CHUNK_SIZE) return badRequest('Chunk too large');
 
-  // NO TTL: generation lifecycle is keep-2 + GC, never expiry (a canonical that is no
-  // longer rewritten on every fetch must not evaporate during a vacation — design H1).
-  await env.RELAY_KV.put(`relay:${channelId}:gen:${gen}:chunk:${chunkNum}`, body);
+  // TTL per store: canonical = none (lifecycle is keep-2 + GC — a rarely-rewritten library
+  // must never expire, design H1); device-state = 90d, refreshed by every push.
+  await env.RELAY_KV.put(`relay:${channelId}:${store.seg}:${gen}:chunk:${chunkNum}`, body,
+    store.ttl ? { expirationTtl: store.ttl } : undefined);
   return jsonResponse({ ok: true, gen, chunk: chunkNum, bytes: body.byteLength });
 }
 
 // The generation manifest is the ATOMIC COMMIT: written last, single-key put.
-async function handlePutGenManifest(request, env, channelId, gen) {
+async function handlePutGenManifest(request, env, store, channelId, gen) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
   if (!MINTED_ID_REGEX.test(gen)) return badRequest('Invalid generation id');
   if (await isBlocked(env, channelId)) return jsonResponse({ error: 'Channel revoked' }, 403);
@@ -534,7 +550,8 @@ async function handlePutGenManifest(request, env, channelId, gen) {
   const manifest = await request.text();
   try { JSON.parse(manifest); } catch { return badRequest('Manifest must be valid JSON'); }
 
-  await env.RELAY_KV.put(`relay:${channelId}:gen:${gen}:manifest`, manifest);
+  await env.RELAY_KV.put(`relay:${channelId}:${store.seg}:${gen}:manifest`, manifest,
+    store.ttl ? { expirationTtl: store.ttl } : undefined);
 
   // Lifecycle telemetry: first successful commit per channel (mirrors legacy manifest upload)
   const usedKey = `lifecycle:${channelId}:used`;
@@ -546,11 +563,11 @@ async function handlePutGenManifest(request, env, channelId, gen) {
   return jsonResponse({ ok: true, gen });
 }
 
-async function handleGenList(env, channelId) {
+async function handleGenList(env, store, channelId) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
   if (await isBlocked(env, channelId)) return jsonResponse({ error: 'Channel revoked' }, 403);
 
-  const prefix = `relay:${channelId}:gen:`;
+  const prefix = `relay:${channelId}:${store.seg}:`;
   const gens = [];
   let cursor;
   for (let page = 0; page < LIST_PAGE_CAP; page++) {
@@ -565,22 +582,22 @@ async function handleGenList(env, channelId) {
   return jsonResponse({ ok: true, gens });
 }
 
-async function handleGetGenChunk(env, channelId, gen, chunkNum) {
+async function handleGetGenChunk(env, store, channelId, gen, chunkNum) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
   if (!MINTED_ID_REGEX.test(gen)) return badRequest('Invalid generation id');
   if (await isBlocked(env, channelId)) return jsonResponse({ error: 'Channel revoked' }, 403);
 
-  const chunk = await env.RELAY_KV.get(`relay:${channelId}:gen:${gen}:chunk:${chunkNum}`, 'arrayBuffer');
+  const chunk = await env.RELAY_KV.get(`relay:${channelId}:${store.seg}:${gen}:chunk:${chunkNum}`, 'arrayBuffer');
   if (!chunk) return new Response('Chunk not found', { status: 404 });
   return new Response(chunk, { headers: { 'Content-Type': 'application/octet-stream' } });
 }
 
-async function handleGetGenManifest(env, channelId, gen) {
+async function handleGetGenManifest(env, store, channelId, gen) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
   if (!MINTED_ID_REGEX.test(gen)) return badRequest('Invalid generation id');
   if (await isBlocked(env, channelId)) return jsonResponse({ error: 'Channel revoked' }, 403);
 
-  const manifest = await env.RELAY_KV.get(`relay:${channelId}:gen:${gen}:manifest`);
+  const manifest = await env.RELAY_KV.get(`relay:${channelId}:${store.seg}:${gen}:manifest`);
   if (!manifest) return new Response('Generation manifest not found', { status: 404 });
   return new Response(manifest, { headers: { 'Content-Type': 'application/json' } });
 }
@@ -588,12 +605,12 @@ async function handleGetGenManifest(env, channelId, gen) {
 // DELETE /gen/{ch}/{gen} — GC. The one server-side guard: never delete the generation the
 // pointer currently names (a client bug must not be able to torch the live canonical).
 // Keep-2 and the 1h grace age are client discipline.
-async function handleDeleteGen(env, channelId, gen) {
+async function handleDeleteGen(env, store, channelId, gen) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
   if (!MINTED_ID_REGEX.test(gen)) return badRequest('Invalid generation id');
   if (await isBlocked(env, channelId)) return jsonResponse({ error: 'Channel revoked' }, 403);
 
-  const pointerStr = await env.RELAY_KV.get(`relay:${channelId}:pointer`);
+  const pointerStr = await env.RELAY_KV.get(`relay:${channelId}:${store.ptr}`);
   if (pointerStr) {
     try {
       if (JSON.parse(pointerStr).gen === gen) {
@@ -602,7 +619,7 @@ async function handleDeleteGen(env, channelId, gen) {
     } catch { /* unparseable pointer — fall through, deletion allowed */ }
   }
 
-  const manifestKey = `relay:${channelId}:gen:${gen}:manifest`;
+  const manifestKey = `relay:${channelId}:${store.seg}:${gen}:manifest`;
   const manifestStr = await env.RELAY_KV.get(manifestKey);
   const deletes = [env.RELAY_KV.delete(manifestKey)];
   let chunkCount = 1;
@@ -610,7 +627,7 @@ async function handleDeleteGen(env, channelId, gen) {
     try { chunkCount = JSON.parse(manifestStr).chunkCount || 1; } catch { /* best effort */ }
   }
   for (let i = 0; i < chunkCount; i++) {
-    deletes.push(env.RELAY_KV.delete(`relay:${channelId}:gen:${gen}:chunk:${i}`));
+    deletes.push(env.RELAY_KV.delete(`relay:${channelId}:${store.seg}:${gen}:chunk:${i}`));
   }
   await Promise.all(deletes);
   return jsonResponse({ ok: true, gen, deleted: deletes.length });
@@ -618,7 +635,7 @@ async function handleDeleteGen(env, channelId, gen) {
 
 // PUT /pointer/{ch} — the pointer flip. Single-key put = atomic; a race between two
 // writers is benign (worst case: points at an older COMPLETE generation; self-heals).
-async function handlePutPointer(request, env, channelId) {
+async function handlePutPointer(request, env, store, channelId) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
   if (await isBlocked(env, channelId)) return jsonResponse({ error: 'Channel revoked' }, 403);
   if (!await checkRateLimit(env, channelId)) return jsonResponse({ error: 'Rate limit exceeded. Try again later.' }, 429);
@@ -628,18 +645,19 @@ async function handlePutPointer(request, env, channelId) {
   if (!gen || !MINTED_ID_REGEX.test(gen)) return badRequest('Invalid generation id');
 
   // Guard: only ever point at a generation whose manifest exists (commit-before-flip).
-  const manifest = await env.RELAY_KV.get(`relay:${channelId}:gen:${gen}:manifest`);
+  const manifest = await env.RELAY_KV.get(`relay:${channelId}:${store.seg}:${gen}:manifest`);
   if (!manifest) return jsonResponse({ error: 'Generation not committed (no manifest)' }, 409);
 
-  await env.RELAY_KV.put(`relay:${channelId}:pointer`, JSON.stringify({ gen, flippedAt: Date.now() }));
+  await env.RELAY_KV.put(`relay:${channelId}:${store.ptr}`, JSON.stringify({ gen, flippedAt: Date.now() }),
+    store.ttl ? { expirationTtl: store.ttl } : undefined);
   return jsonResponse({ ok: true, gen });
 }
 
-async function handleGetPointer(env, channelId) {
+async function handleGetPointer(env, store, channelId) {
   if (!validateChannelId(channelId)) return badRequest('Invalid channel ID');
   if (await isBlocked(env, channelId)) return jsonResponse({ error: 'Channel revoked' }, 403);
 
-  const pointer = await env.RELAY_KV.get(`relay:${channelId}:pointer`);
+  const pointer = await env.RELAY_KV.get(`relay:${channelId}:${store.ptr}`);
   if (!pointer) return new Response('No pointer', { status: 404 });
   return new Response(pointer, { headers: { 'Content-Type': 'application/json' } });
 }
@@ -690,7 +708,7 @@ async function handleRevoke(request, env, channelId) {
 
   // New-format keys (mailbox letters, generations, pointer) — enumerate by prefix and wipe.
   // Revocation's promise is "all data deleted"; it must cover the redesign layout too.
-  for (const prefix of [`relay:${channelId}:mail:`, `relay:${channelId}:gen:`]) {
+  for (const prefix of [`relay:${channelId}:mail:`, `relay:${channelId}:gen:`, `relay:${channelId}:dstate:`]) {
     let cursor;
     for (let page = 0; page < LIST_PAGE_CAP; page++) {
       const res = await env.RELAY_KV.list({ prefix, cursor });
@@ -700,6 +718,7 @@ async function handleRevoke(request, env, channelId) {
     }
   }
   await env.RELAY_KV.delete(`relay:${channelId}:pointer`);
+  await env.RELAY_KV.delete(`relay:${channelId}:dstate-pointer`);
 
   // Add to blocklist
   await env.RELAY_KV.put(`blocklist:${channelId}`,
