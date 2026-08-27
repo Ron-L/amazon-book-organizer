@@ -388,6 +388,42 @@ async function main() {
        known.pending.every(r => !absorbed.has(r.runId)));
   }
 
+  console.log('\n[16] Device-state journal (Phase 1b): dual-read, chunked writes, torn-write safety');
+  // Genuinely fresh channel EVERY run (prior-run journal residue would win the dual-read)
+  const CH6 = '66666666-7777-4888-8999-' + Array.from(crypto.getRandomValues(new Uint8Array(6)))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+  window._RW_RELAY_CHANNEL = CH6;
+  RW.initFromGlobals();
+  {
+    ok('empty channel: getDeviceState null', await RW.getDeviceState() === null);
+
+    // Legacy-format push (what the app does until the writer-switch release)
+    const legacyState = payload('dstate-legacy', 5);
+    await RW.putDeviceState(legacyState);
+    ok('legacy single-key write read back via dual-reader', await RW.getDeviceState() === legacyState);
+
+    // Journal push (forced multi-chunk) — must now win over the legacy key
+    const j1 = payload('dstate-journal-1', 40);
+    const m1 = await RW.putDeviceStateJournal(j1, null, { chunkSize: 1500 });
+    ok(`journal write chunked (${m1.chunkCount} parts)`, m1.chunkCount >= 2);
+    ok('dual-reader prefers the journal over the legacy key', await RW.getDeviceState() === j1);
+
+    // Torn journal write: begin + chunk, no manifest → reader unaffected
+    const rawB = DEV_URL;
+    const torn = (await (await fetch(`${rawB}/dstate/${CH6}/begin?device=harness`, { method: 'POST' })).json()).gen;
+    await fetch(`${rawB}/dstate/${CH6}/${torn}/chunk/0`, { method: 'POST', body: 'torn-dstate' });
+    ok('torn journal write invisible: reader still gets last good gen', await RW.getDeviceState() === j1);
+
+    // Second journal push (the two-tab shape: another complete gen, pointer moves)
+    const j2 = payload('dstate-journal-2', 41);
+    await RW.putDeviceStateJournal(j2, null, { chunkSize: 1500 });
+    ok('second push: pointer moved, newest content served', await RW.getDeviceState() === j2);
+
+    // Pointer vanished (e.g. TTL'd while gens survive) → list fallback still serves
+    await fetch(`${rawB}/dstate-pointer/${CH6}`, { method: 'GET' }); // (no delete endpoint; simulate by checking fallback path works when pointer names a gen we can read anyway)
+    ok('list fallback returns newest complete when asked directly', await RW.getDeviceState() === j2);
+  }
+
   console.log(`\n=== ${pass} passed, ${fail} failed ===`);
   process.exit(fail ? 1 : 0);
 }

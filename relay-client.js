@@ -303,11 +303,50 @@
 
   /**
    * Get device state from relay (used by mobile on open).
+   * v7.2.0 (Phase 1b) - DUAL-FORMAT READER, shipped before any writer switches: try the
+   * chunked journal first (pointer → newest complete generation), fall back to the legacy
+   * single key. Mobile needs zero code changes — it calls this and becomes bilingual.
    * @returns {string|null} Decrypted JSON string or null if none exists
    */
   async function getDeviceState() {
     if (!isConfigured()) return null;
 
+    // 1. Journal format: pointer → generation → parts → verify (self-heals via list fallback)
+    const tryDstateGen = async (gen) => {
+      const manifest = await (await relayFetch(`/dstate/${_channelId}/${gen}/manifest`)).json();
+      const parts = [];
+      for (let i = 0; i < manifest.chunkCount; i++) {
+        const r = await fetch(`${workerUrl()}/dstate/${_channelId}/${gen}/chunk/${i}`);
+        if (!r.ok) throw new Error(`chunk ${i} missing`);
+        parts.push(new Uint8Array(await r.arrayBuffer()));
+      }
+      const total = parts.reduce((s, p) => s + p.length, 0);
+      const bytes = new Uint8Array(total);
+      let off = 0;
+      for (const p of parts) { bytes.set(p, off); off += p.length; }
+      if (manifest.checksum && await checksumOf(bytes) !== manifest.checksum) throw new Error('checksum mismatch');
+      return unpack(bytes);
+    };
+    let pointedGen = null;
+    try {
+      const p = await fetch(`${workerUrl()}/dstate-pointer/${_channelId}`);
+      if (p.ok) pointedGen = (await p.json()).gen;
+    } catch { /* fall through */ }
+    if (pointedGen) {
+      try { return await tryDstateGen(pointedGen); }
+      catch { /* corrupt/missing — try list fallback */ }
+    }
+    try {
+      const gens = (await (await relayFetch(`/dstate/${_channelId}/list`)).json()).gens
+        .sort((a, b) => idTimestamp(b) - idTimestamp(a));
+      for (const gen of gens) {
+        if (gen === pointedGen) continue;
+        try { return await tryDstateGen(gen); }
+        catch { /* next-newest */ }
+      }
+    } catch { /* fall through to legacy */ }
+
+    // 2. Legacy single key (pre-journal pushes)
     const response = await fetch(`${workerUrl()}/device-state/${_channelId}`);
     if (response.status === 404) return null;
     if (!response.ok) throw new Error('Failed to get device state');
@@ -316,6 +355,66 @@
     const key = await getKey();
     const compressed = await window.RWCrypto.decryptPacked(key, encrypted);
     return window.RWCompress.decompress(compressed);
+  }
+
+  /**
+   * v7.2.0 (Phase 1b) - Journaled device-state writer: the same commit pattern as the
+   * canonical (chunks → manifest-last → pointer flip → keep-2 GC), under the dstate
+   * keyspace with 90d TTLs. Removes the 25 MB single-value ceiling (measured 67.9% full
+   * at 3,119 books). Present-but-unused until the writer-switch release; putDeviceState
+   * still writes the legacy key.
+   * @param {string} jsonString - full device-state payload
+   * @returns {object} the generation manifest
+   */
+  async function putDeviceStateJournal(jsonString, onProgress, opts) {
+    if (!isConfigured()) throw new Error('Relay not configured');
+    const notify = onProgress || (() => {});
+    const chunkSize = (opts && opts.chunkSize) || CHUNK_SIZE;
+
+    const mint = await relayFetch(`/dstate/${_channelId}/begin?device=${deviceId()}`, { method: 'POST' });
+    const gen = (await mint.json()).gen;
+
+    const packed = await pack(jsonString, notify);
+    const chunkCount = Math.ceil(packed.bytes.length / chunkSize);
+    for (let i = 0; i < chunkCount; i++) {
+      notify('uploading', `Uploading part ${i + 1} of ${chunkCount}...`);
+      const part = packed.bytes.slice(i * chunkSize, Math.min((i + 1) * chunkSize, packed.bytes.length));
+      await relayFetch(`/dstate/${_channelId}/${gen}/chunk/${i}`, { method: 'POST', body: part.buffer });
+    }
+
+    const manifest = {
+      gen, chunkCount,
+      checksum: await checksumOf(packed.bytes),
+      totalBytes: new TextEncoder().encode(jsonString).length,
+      encryptedBytes: packed.bytes.length,
+      timestamp: new Date().toISOString()
+    };
+    await relayFetch(`/dstate/${_channelId}/${gen}/manifest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(manifest)
+    });
+    await relayFetch(`/dstate-pointer/${_channelId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gen })
+    });
+
+    // GC: keep-2 (incl. this one), never the pointed gen (server guards too), grace for
+    // slow readers mid-assembly. Best-effort; TTL is the ultimate backstop for dstate.
+    try {
+      const graceMs = (opts && opts.gcGraceMs != null) ? opts.gcGraceMs : GC_GRACE_MS;
+      const listed = (await (await relayFetch(`/dstate/${_channelId}/list`)).json()).gens;
+      const gens = Array.from(new Set([gen, ...listed]))
+        .sort((a, b) => idTimestamp(b) - idTimestamp(a));
+      for (const old of gens.slice(KEEP_GENS)) {
+        if (old === gen) continue;
+        if (Date.now() - idTimestamp(old) < graceMs) continue;
+        try { await relayFetch(`/dstate/${_channelId}/${old}`, { method: 'DELETE' }); } catch { /* pointed or racing */ }
+      }
+    } catch { /* GC is best-effort */ }
+
+    return manifest;
   }
 
   /**
@@ -1067,6 +1166,7 @@
     cleanup: cleanup,
     getDeviceState: getDeviceState,
     putDeviceState: putDeviceState,
+    putDeviceStateJournal: putDeviceStateJournal,
     revokeChannel: revokeChannel,
     // Relay write redesign Phase 1 (docs/design/RELAY-WRITE-REDESIGN.md)
     writeRun: writeRun,
