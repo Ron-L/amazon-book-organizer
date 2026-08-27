@@ -37,7 +37,7 @@
 
 ## 🔧 7.0.0 follow-ups (relay)
 
-- [ ] **⚠️ Phase 1b — device-state journal (PROMOTED 2026-08-27: measured 16.98 MB stored = 67.9% of the 25 MB cap at 3,119 books; compression only 2.7×; ~1,400 books of headroom).** Apply the 7.0 commit pattern to the mobile snapshot: chunked generations + manifest-last + pointer, keep-2 GC, 90d TTL kept; writers = app tabs only; serialize from IndexedDB at push time. STRICT ORDER: mobile ships its dual-format reader FIRST (new format, fall back to old single key), then the app switches its writer — no flag-day for an open mobile session. Design: RELAY-WRITE-REDESIGN §13. Failure mode if ignored: pushes start rejecting at 25 MB and mobile silently stops updating.
+- [ ] **Drop the legacy device-state double-write** — once 7.3.0 (journal-primary writer) has been live long enough that no cached pre-7.2.0 mobile session plausibly survives (weeks, or after Ron's phone provably reloaded), remove the transition double-write in putDeviceState + retire putDeviceStateLegacy; the old single key then TTLs away on its own (90d). Saves one ~17 MB KV write per push.
 
 - [ ] **Checkpoint the cold (first-time) fetch** — a ~3,000-book initial enrichment has no resume; die at book 2,800, start over. 7.0 makes it natural: send enrichment progress as mailbox letters in stages so a resumed run's skip-hint already knows what's done. Bites each user exactly once — low priority, pre-launch nice-to-have. (From the 2026-08-21 external sync review, item 1's salvageable kernel.)
 
