@@ -142,6 +142,19 @@
     <script src="relay-crypto.js?v=7.0.0"></script>
     <script src="relay-compress.js?v=7.0.0"></script>
     <script src="relay-client.js?v=7.3.0"></script>
+    <!-- v7.4.0 - Capture the first load error so the emergency screen can SHOW it on localhost
+         (a dev's 'Something went wrong' is usually a syntax error, not corrupted data) -->
+    <script>
+        window.addEventListener('error', function(e) {
+            if (window._lastLoadError) return; // first error is the story
+            if (e && e.message) {
+                window._lastLoadError = e.message + (e.filename ? '
+' + e.filename.split('/').pop() + ':' + e.lineno : '');
+            } else if (e && e.target && e.target.src) {
+                window._lastLoadError = 'Failed to load: ' + e.target.src.split('/').pop().split('?')[0];
+            }
+        }, true);
+    </script>
     <!-- v6.0.0 - QR code generation for mobile pairing (desktop only, ~4KB) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
@@ -272,6 +285,10 @@
                         'ReaderWrangler failed to load. This may be caused by corrupted data. ' +
                         'You can reset the app to fix this. Your files on disk are safe.' +
                     '</div>' +
+                    ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') && window._lastLoadError
+                        ? '<pre style="text-align:left; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px 12px; font-size:0.78em; color:#991b1b; white-space:pre-wrap; word-break:break-word; margin-bottom:20px;">' +
+                          String(window._lastLoadError).replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</pre>'
+                        : '') +
                     '<button id="emergencyResetBtn" style="padding:12px 24px; background:#dc2626; color:white; border:none; border-radius:8px; font-size:1em; font-weight:600; cursor:pointer; margin-bottom:12px;">Reset App</button>' +
                     '<div style="color:var(--text-muted,#64748b); font-size:0.8em; margin-top:8px;">Import your backup file after reset to restore everything.</div>' +
                 '</div>';

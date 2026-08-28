@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.4.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "7.4.0-alpha.4";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -4587,7 +4587,7 @@
             // directly on an empty system). Restore is a pure TIME MACHINE: exact state from
             // the backup, no merging — see docs/design/RESTORE-SAFEGUARD.md for why the
             // keep/merge option was considered and rejected.
-            const performRestore = async (text, parsedData) => {
+            const performRestore = async (text, parsedData, restoreOpts) => {
                 if (dataOpInProgressRef.current) {
                     console.warn('⚠️ Data operation already in progress, skipping restore');
                     return;
@@ -4601,7 +4601,23 @@
                     // Extract organization from backup file
                     if (parsedData.organization) {
                         organizationFromFile = parsedData.organization;
-                        console.log('📋 Restoring organization from backup file');
+                        // v7.4.0 - Presentation cluster (view mode, cover columns, pane width, column
+                        // visibility/widths) restores ONLY onto an empty system (new machine / post-reset
+                        // — the "give me my setup back" case). A rollback on a live system keeps the
+                        // CURRENT presentation: your organization is rolling back, your eyes aren't.
+                        // folderSortSettings rides with curation — losing "Manual" mode would hide
+                        // drag-ordered work. Convention: full-device restores bring settings;
+                        // data-level restores never touch app preferences (game saves vs video options).
+                        if (!(restoreOpts && restoreOpts.includePresentation)) {
+                            const es = organizationFromFile.explorerSettings;
+                            organizationFromFile = {
+                                ...organizationFromFile,
+                                explorerSettings: es ? { folderSortSettings: es.folderSortSettings } : undefined
+                            };
+                            console.log('📋 Restoring organization from backup file (keeping current view settings)');
+                        } else {
+                            console.log('📋 Restoring organization from backup file (full, incl. view settings)');
+                        }
                     } else {
                         console.log('⚠️ Backup file has no organization section - will start fresh');
                     }
@@ -4677,9 +4693,10 @@
                             return;
                         }
 
-                        // Empty system (post-reset / first run): nothing to lose, restore directly
+                        // Empty system (post-reset / first run): nothing to lose, restore EVERYTHING
+                        // including presentation settings — this is the give-me-my-setup-back case
                         if (books.length === 0) {
-                            await performRestore(text, parsedData);
+                            await performRestore(text, parsedData, { includePresentation: true });
                             return;
                         }
 
