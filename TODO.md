@@ -17,6 +17,7 @@
 
 **Docs & onboarding**
 - [ ] USER-GUIDE.md + GPT manual — rewrite around the new mental model (All Books / Searches / Book Lists / Folders; custodial vs supplemental; "when to use which"), **including the Book List ↔ Folder workflow pattern** (structure lives in Folders; to-read queues live in Book Lists) and "get books out of Inbox → use a folder, not a Book List". Draw the backlog-wrangling examples from **docs/design/WORKFLOW-PATTERNS.md** (running collection of real usage patterns)
+- [ ] **Rename user-facing "Relay" → "Cloud Sync"** (Cloud Sync Setup / Import from Cloud; status section, tooltips, fetcher overlays, recovery steps) — kills the engineering term that leaked into the UI; "Cloud Relay" considered and rejected as jargon-plus-clunk (2026-08-28). Internal names (`RWRelay`, filenames, worker) unchanged. Pure copy-pass, ~20-40 strings + README/features/tutorials. **Fold into the USER-GUIDE rewrite** so the new names bake into the docs in one motion. Renames are free pre-launch and expensive forever after.
 - [ ] Sizzle reel — update the script for Book Lists/Searches, then record + produce
 - [ ] Add "Watch Tutorials" to the app Help menu
 - [ ] Refresh the landing-page before/after screenshot (post-redesign "after")
