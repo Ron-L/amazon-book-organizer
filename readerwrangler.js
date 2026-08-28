@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.3.0";  // Build version for this file
+        const ORGANIZER_VERSION = "7.4.0-alpha.1";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -710,6 +710,7 @@
             const [autoOrgPreview, setAutoOrgPreview] = useState(null); // v6.13.0-alpha.7 - Right-click Auto-Organize confirm/preview: { mode, authorGroups, opts, label, dryPlan } or null
             const [autoOrgSel, setAutoOrgSel] = useState(new Set());    // v6.13.0-alpha.9 (D2) - selected cover ids within the preview
             const [corruptionRecovery, setCorruptionRecovery] = useState(false); // v6.17.1 - show the sync-corruption recovery dialog
+            const [restoreConfirm, setRestoreConfirm] = useState(null); // v7.4.0 - informed restore confirm { text, parsedData, lostLists, lostSearches, backupDate }
             const [autoOrgExcludedMembers, setAutoOrgExcludedMembers] = useState(new Set()); // v6.17.0 (B) - consolidate: deselected "folderId::bookId" copies (default all-in) for a multi-folder book
             const [autoOrgAnchor, setAutoOrgAnchor] = useState(null);  // v6.16.0 - shift-range pivot (last plain/ctrl-clicked cover) in the preview
             const [autoOrgMenu, setAutoOrgMenu] = useState(null);       // v6.13.0-alpha.9 (D2) - preview cover right-click menu: { x, y, bookIds } or null
@@ -4582,6 +4583,75 @@
                 }
             };
 
+            // v7.4.0 - The actual restore execution (called after the informed confirm, or
+            // directly on an empty system). Restore is a pure TIME MACHINE: exact state from
+            // the backup, no merging — see docs/design/RESTORE-SAFEGUARD.md for why the
+            // keep/merge option was considered and rejected.
+            const performRestore = async (text, parsedData) => {
+                if (dataOpInProgressRef.current) {
+                    console.warn('⚠️ Data operation already in progress, skipping restore');
+                    return;
+                }
+                dataOpInProgressRef.current = true;
+                try {
+                    let organizationFromFile = null;
+                    // Extract organization from backup file
+                    if (parsedData.organization) {
+                        organizationFromFile = parsedData.organization;
+                        console.log('📋 Restoring organization from backup file');
+                    } else {
+                        console.log('⚠️ Backup file has no organization section - will start fresh');
+                    }
+                    // v6.0.0 - Restore relay credentials from backup
+                    if (parsedData.relay && parsedData.relay.channelId) {
+                        relayOp('setKeys', parsedData.relay);
+                    }
+
+                    const syncTime = Date.now();
+                    setLastSyncTime(syncTime);
+
+                    // Show loading status while waiting
+                    setSyncStatus('loading');
+
+                    let timeoutId;
+                    let callbackFired = false;
+
+                    // Setup timeout (60 seconds for large libraries)
+                    timeoutId = setTimeout(() => {
+                        if (!callbackFired) {
+                            console.error('⚠️ Status check timed out after 60 seconds');
+                            setSyncStatus('unknown');
+                            showInfoDialog('Import Warning', 'Library loaded but status check timed out. Please refresh the page.');
+                        }
+                    }, 60000);
+
+                    // Load data with callback (pass organization for backup restore)
+                    await loadLibrary(text, () => {
+                        callbackFired = true;
+                        clearTimeout(timeoutId);
+                        // checkManifest removed in v3.6.1 - status updated in loadLibrary
+                    }, organizationFromFile);
+
+                    // v6.19.0 - Push the restore to the relay as a reset run (background)
+                    sendRestoreToRelay(parsedData);
+
+                    new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/file-imported';
+                } catch (error) {
+                    console.error('Failed to sync:', error);
+                    setSyncStatus('none'); // Clear loading spinner (v3.9.0.l)
+                    if (error && error.message) {
+                        console.error('Error details:', error.message, error.stack);
+                        showInfoDialog('Import Error', `Failed to load backup file: ${error.message}`);
+                    } else {
+                        console.error('Error details: Unknown error (null or no message)');
+                        showInfoDialog('Import Error', 'Failed to load backup file: Unknown error');
+                    }
+                } finally {
+                    dataOpInProgressRef.current = false;
+                    setIntegrityCheckPending(true); // v6.3.0 - triggers integrity check after state settles
+                }
+            };
+
             const importBackup = async () => {
                 // Close the dialog immediately when file picker opens
                 setStatusModalOpen(false);
@@ -4591,89 +4661,37 @@
                 input.accept = '.json';
                 input.onchange = async (e) => {
                     const file = e.target.files[0];
-                    if (file) {
-                        if (dataOpInProgressRef.current) {
-                            console.warn('⚠️ Data operation already in progress, skipping restore');
+                    if (!file) return;
+                    try {
+                        const text = await file.text();
+                        const parsedData = JSON.parse(text);
+
+                        // v6.0.0: Only accept backup files — library data syncs via relay
+                        if (parsedData.isBackup !== true) {
+                            showInfoDialog('Not a Backup File', 'This is not a backup file. Library data now syncs automatically through the relay.');
                             return;
                         }
-                        dataOpInProgressRef.current = true;
-                        try {
-                            const text = await file.text();
-                            const parsedData = JSON.parse(text);
 
-                            // v6.0.0: Only accept backup files — library data syncs via relay
-                            if (parsedData.isBackup !== true) {
-                                showInfoDialog('Not a Backup File', 'This is not a backup file. Library data now syncs automatically through the relay.');
-                                return;
-                            }
-
-                            let organizationFromFile = null;
-                            // Backup file - skip warning if system is empty (e.g. after reset or first-time user)
-                            if (books.length > 0) {
-                                const confirmed = await showConfirmDialog(
-                                    'Restore backup?',
-                                    'This will replace your current organization with the organization from the backup file.'
-                                );
-                                if (!confirmed) {
-                                    console.log('📋 Backup restore cancelled by user');
-                                    return;
-                                }
-                            }
-                            // Extract organization from backup file
-                            if (parsedData.organization) {
-                                organizationFromFile = parsedData.organization;
-                                console.log('📋 Restoring organization from backup file');
-                            } else {
-                                console.log('⚠️ Backup file has no organization section - will start fresh');
-                            }
-                            // v6.0.0 - Restore relay credentials from backup
-                            if (parsedData.relay && parsedData.relay.channelId) {
-                                relayOp('setKeys', parsedData.relay);
-                            }
-
-                            const syncTime = Date.now();
-                            setLastSyncTime(syncTime);
-
-                            // Show loading status while waiting
-                            setSyncStatus('loading');
-
-                            let timeoutId;
-                            let callbackFired = false;
-
-                            // Setup timeout (60 seconds for large libraries)
-                            timeoutId = setTimeout(() => {
-                                if (!callbackFired) {
-                                    console.error('⚠️ Status check timed out after 60 seconds');
-                                    setSyncStatus('unknown');
-                                    showInfoDialog('Import Warning', 'Library loaded but status check timed out. Please refresh the page.');
-                                }
-                            }, 60000);
-
-                            // Load data with callback (pass organization for backup restore)
-                            await loadLibrary(text, () => {
-                                callbackFired = true;
-                                clearTimeout(timeoutId);
-                                // checkManifest removed in v3.6.1 - status updated in loadLibrary
-                            }, organizationFromFile);
-
-                            // v6.19.0 - Push the restore to the relay as a reset run (background)
-                            sendRestoreToRelay(parsedData);
-
-                            new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/file-imported';
-                        } catch (error) {
-                            console.error('Failed to sync:', error);
-                            setSyncStatus('none'); // Clear loading spinner (v3.9.0.l)
-                            if (error && error.message) {
-                                console.error('Error details:', error.message, error.stack);
-                                showInfoDialog('Import Error', `Failed to load backup file: ${error.message}`);
-                            } else {
-                                console.error('Error details: Unknown error (null or no message)');
-                                showInfoDialog('Import Error', 'Failed to load backup file: Unknown error');
-                            }
-                        } finally {
-                            dataOpInProgressRef.current = false;
-                            setIntegrityCheckPending(true); // v6.3.0 - triggers integrity check after state settles
+                        // Empty system (post-reset / first run): nothing to lose, restore directly
+                        if (books.length === 0) {
+                            await performRestore(text, parsedData);
+                            return;
                         }
+
+                        // v7.4.0 - INFORMED confirm (docs/design/RESTORE-SAFEGUARD.md): show the
+                        // backup's age and name exactly what restoring would remove — Book Lists
+                        // and Searches that exist now but aren't in the backup. Never silent.
+                        const backupOrg = parsedData.organization || {};
+                        const inBackupLists = new Set((backupOrg.bookLists || []).map(l => l.id));
+                        const inBackupSearches = new Set((backupOrg.savedSearches || []).map(s => s.id));
+                        setRestoreConfirm({
+                            text, parsedData,
+                            lostLists: bookLists.filter(l => !inBackupLists.has(l.id)),
+                            lostSearches: savedSearches.filter(s => !inBackupSearches.has(s.id)),
+                            backupDate: backupOrg.exportDate || (parsedData.books && parsedData.books.fetchDate) || null
+                        });
+                    } catch (error) {
+                        showInfoDialog('Import Error', `Could not read backup file: ${error.message || 'Unknown error'}`);
                     }
                 };
                 input.click();
@@ -10558,6 +10576,65 @@
                             </div>
                         </div>
                     )}
+                    {/* v7.4.0 - Informed restore confirm: backup age + exactly what restoring removes.
+                        Restore is a pure time machine (no merge — RESTORE-SAFEGUARD.md); the safety
+                        hatch is capturing the PRESENT (back up current first), not merging the past. */}
+                    {restoreConfirm && (() => {
+                        const { lostLists, lostSearches, backupDate } = restoreConfirm;
+                        const ageDays = backupDate ? Math.floor((Date.now() - new Date(backupDate).getTime()) / 86400000) : null;
+                        const ageLabel = ageDays == null ? '' : ageDays <= 0 ? 'today' : ageDays === 1 ? 'yesterday'
+                            : ageDays < 14 ? `${ageDays} days ago` : `${Math.round(ageDays / 7)} weeks ago`;
+                        const nameList = (arr) => {
+                            const names = arr.map(x => `“${x.name || '(unnamed)'}”`);
+                            return names.length > 5 ? `${names.slice(0, 5).join(', ')} and ${names.length - 5} more` : names.join(', ');
+                        };
+                        const losses = lostLists.length + lostSearches.length;
+                        return (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+                            <div className="bg-white rounded-lg shadow-2xl w-full" style={{ maxWidth: '560px' }} onClick={(e) => e.stopPropagation()}>
+                                <div className="p-4 bg-amber-100 rounded-t-lg border-b border-amber-300">
+                                    <h2 className="text-lg font-bold text-gray-900">Restore backup?</h2>
+                                </div>
+                                <div className="p-4">
+                                    <p className="text-sm text-gray-700 mb-2">
+                                        This backup is from <strong>{backupDate ? new Date(backupDate).toLocaleString() : 'an unknown date'}</strong>{ageLabel ? ` — ${ageLabel}` : ''}.
+                                    </p>
+                                    <p className="text-sm text-gray-700 mb-3">
+                                        Restoring takes your library and organization back <strong>exactly</strong> as they were then.
+                                    </p>
+                                    {losses > 0 ? (
+                                        <>
+                                            <p className="text-sm font-semibold text-amber-700 mb-1">Not in this backup — restoring removes:</p>
+                                            {lostLists.length > 0 && (
+                                                <p className="text-sm text-gray-700 mb-1">• {lostLists.length} Book List{lostLists.length !== 1 ? 's' : ''}: {nameList(lostLists)}</p>
+                                            )}
+                                            {lostSearches.length > 0 && (
+                                                <p className="text-sm text-gray-700 mb-1">• {lostSearches.length} Search{lostSearches.length !== 1 ? 'es' : ''}: {nameList(lostSearches)}</p>
+                                            )}
+                                            <p className="text-xs text-gray-500 mt-3">Want to keep a copy of today's state? Save a backup first — then this restore is fully reversible.</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-sm text-green-700">✓ All of your current Book Lists and Searches are in this backup.</p>
+                                    )}
+                                </div>
+                                <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+                                    <button onClick={async () => { await exportBackup(); showToast('Current state backed up'); }}
+                                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">
+                                        Back up current first…
+                                    </button>
+                                    <button onClick={() => { console.log('📋 Backup restore cancelled by user'); setRestoreConfirm(null); }}
+                                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors">
+                                        Cancel
+                                    </button>
+                                    <button onClick={() => { const rc = restoreConfirm; setRestoreConfirm(null); performRestore(rc.text, rc.parsedData); }}
+                                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-colors">
+                                        Restore
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        );
+                    })()}
                     {/* v6.13.0-alpha.7 (D1) - Auto-Organize confirm/preview: hierarchical Author→Series→covers before commit */}
                     {autoOrgPreview && (() => {
                         const { mode, authorGroups, dryPlan, sourceName, sourceFolderId, opts = {}, alreadyFiled = [], isConsolidate = false, narrowSourceId } = autoOrgPreview;
