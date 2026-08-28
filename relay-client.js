@@ -377,7 +377,7 @@
     const packed = (opts && opts.prePacked) || await pack(jsonString, notify);
     const chunkCount = Math.ceil(packed.bytes.length / chunkSize);
     for (let i = 0; i < chunkCount; i++) {
-      notify('uploading', `Uploading part ${i + 1} of ${chunkCount}...`);
+      notify('uploading', `Uploading to the cloud — part ${i + 1} of ${chunkCount}...`);
       const part = packed.bytes.slice(i * chunkSize, Math.min((i + 1) * chunkSize, packed.bytes.length));
       await relayFetch(`/dstate/${_channelId}/${gen}/chunk/${i}`, { method: 'POST', body: part.buffer });
     }
