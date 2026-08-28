@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.4.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "7.4.0-alpha.6";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -72,7 +72,11 @@
                 ? 'wishlist'
                 : (book.ownershipType || 'purchased');
         const getOwnershipLabel = (book) => (OWNERSHIP_META[getOwnershipType(book)] || OWNERSHIP_META.unknown).label;
-        document.title = "ReaderWrangler";
+        // v7.4.0 - Badge local instances (tab title + header chip): two identical-looking tabs,
+        // one production and one localhost, is how restores land on the wrong instance. Subtle
+        // by intent — users legitimately run local clones; this is a label, not a warning.
+        const IS_LOCAL_HOST = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+        document.title = IS_LOCAL_HOST ? "ReaderWrangler (local)" : "ReaderWrangler";
         // Constants and helper functions moved to uiHelpers.js and storage.js (v5.0.0)
         // saveBooksToIndexedDB, loadBooksFromIndexedDB, clearIndexedDB - see storage.js
         // normalizeBook, parsePrice, getAmazonUrl, calculateFreshness, formatRelativeTime - see uiHelpers.js
@@ -5505,7 +5509,7 @@
                 // v6.10.0-alpha.19 - Backup restore uses false (clean replacement, no orphan merge)
                 // v6.3.0 - Capture existing IDs before merge so we can report new books to caller
                 const isBackupRestore = organizationFromFile !== null;
-                phase(`Saving ${processedBooks.length.toLocaleString()} books…`);
+                phase(`Restoring ${processedBooks.length.toLocaleString()} books…`);
                 const existingIds = new Set((await loadBooksFromIndexedDB()).map(b => b.id));
                 const mergedBooks = await saveBooksToIndexedDB(processedBooks, !isBackupRestore);
                 const newBookIds = mergedBooks.filter(b => !existingIds.has(b.id) && !b.isDeleted).map(b => b.id);
@@ -7719,6 +7723,13 @@
                             <span style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
                                 ReaderWrangler<span style={{ fontSize: '9px', verticalAlign: 'super', color: 'var(--text-muted)' }}>™</span>
                             </span>
+                            {IS_LOCAL_HOST && (
+                                <span title="This is your local instance (localhost) — not readerwrangler.com" style={{
+                                    fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', padding: '1px 6px',
+                                    borderRadius: '8px', border: '1px solid var(--text-accent-strong, #4f46e5)',
+                                    color: 'var(--text-accent-strong, #4f46e5)', marginLeft: '2px'
+                                }}>LOCAL</span>
+                            )}
                         </a>
                         {/* v5.0.0-alpha.175.2 - File/View/Help menus */}
                         {['File', 'View', 'Help'].map(menuName => (
