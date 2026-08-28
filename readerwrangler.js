@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.4.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "7.4.0-alpha.2";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -4593,6 +4593,10 @@
                     return;
                 }
                 dataOpInProgressRef.current = true;
+                // v7.4.0 - Visible progress: restoring a large library takes seconds, and a
+                // dismissed dialog with nothing on screen reads as "done" or "dead".
+                const progress = showProgressDialog('Restoring Backup', 'Taking your library back to the backup’s state…
+This can take a little while for a large library.');
                 try {
                     let organizationFromFile = null;
                     // Extract organization from backup file
@@ -4621,6 +4625,7 @@
                         if (!callbackFired) {
                             console.error('⚠️ Status check timed out after 60 seconds');
                             setSyncStatus('unknown');
+                            progress.close();
                             showInfoDialog('Import Warning', 'Library loaded but status check timed out. Please refresh the page.');
                         }
                     }, 60000);
@@ -4629,7 +4634,7 @@
                     await loadLibrary(text, () => {
                         callbackFired = true;
                         clearTimeout(timeoutId);
-                        // checkManifest removed in v3.6.1 - status updated in loadLibrary
+                        progress.close(); // the "Backup Restored" dialog takes over from here
                     }, organizationFromFile);
 
                     // v6.19.0 - Push the restore to the relay as a reset run (background)
@@ -4637,6 +4642,7 @@
 
                     new Image().src = 'https://readerwrangler.goatcounter.com/count?p=/event/file-imported';
                 } catch (error) {
+                    progress.close();
                     console.error('Failed to sync:', error);
                     setSyncStatus('none'); // Clear loading spinner (v3.9.0.l)
                     if (error && error.message) {
@@ -10601,6 +10607,7 @@
                                     </p>
                                     <p className="text-sm text-gray-700 mb-3">
                                         Restoring takes your library and organization back <strong>exactly</strong> as they were then.
+                                        Anything changed since — folder moves, Book List contents, tags, notes — will be undone.
                                     </p>
                                     {losses > 0 ? (
                                         <>
@@ -10614,7 +10621,7 @@
                                             <p className="text-xs text-gray-500 mt-3">Want to keep a copy of today's state? Save a backup first — then this restore is fully reversible.</p>
                                         </>
                                     ) : (
-                                        <p className="text-sm text-green-700">✓ All of your current Book Lists and Searches are in this backup.</p>
+                                        <p className="text-sm text-green-700">✓ No Book Lists or Searches will be removed — all that exist now are also in this backup.</p>
                                     )}
                                 </div>
                                 <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
