@@ -9,10 +9,6 @@
 
 ---
 
-## ⏰ Time-boxed check (delete after doing it)
-
-- [ ] **2026-08-28 after ~17:00 — verify price dimming kicked in** (7.1.0-alpha.1 test, localhost): all prices should now render dimmed/italic (last full sweep was 2026-08-27 ~16:50, older than PRICE_STALE_MS=24h). Then run a scoped fetch → buyable books un-dim, owned-no-goal stay dimmed permanently. Judge with UX eyes whether permanently-dimmed owned prices read as honesty or noise (fallback options: dim buyable-only, or hide owned-no-goal prices).
-
 ## 🚦 Pre-Launch (must-do before public launch)
 
 **Docs & onboarding**

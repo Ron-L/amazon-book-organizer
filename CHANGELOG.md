@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.4.0] - 2026-08-28
+
+### Restore, made trustworthy
+- **The restore confirm now tells you everything** — the backup's date and age ("from June 20 — 5 weeks ago"), and exactly which of your current Book Lists and Searches aren't in it, by name. Never a silent removal. A new **Back up current first…** button captures today's state before you roll back — making any restore fully reversible.
+- **Restore is a pure time machine.** An option to merge/keep interim work was considered and rejected — it resurrects deliberate deletions and double-places moved books; the design doc records the full reasoning.
+- **Your view settings stay put on a rollback** — restoring onto a live library no longer flips your view mode, columns, or pane width (your organization rolls back; your eyes don't). A restore onto an **empty** system (new machine, after a reset) brings back everything — now including your theme.
+- **Live progress** — restores narrate every step ("Restoring 3,125 books… Uploading to the cloud — part 1 of 2…") with a motion bar, instead of going silent for the long stretch.
+
+### Also
+- **Local instances are badged** — tab title "(local)" plus a small LOCAL chip — so a localhost tab can't masquerade as readerwrangler.com.
+- **The emergency screen grew up**: its Reset confirm is now an app-styled dialog (no more browser "localhost says…" box), and on localhost it shows the actual load error.
+- **Copy audit**: "relay" is now reserved for the named feature surfaces (Relay Setup, Relay Import); everywhere else says "cloud."
+- **Price staleness display tuned** (from 7.1.0): dimmed prices are now clearly dimmed in list and cover views; the book-detail dialog relies on its orange "as of" date instead of a dim that bold text swallowed.
+
 ## [7.3.0] - 2026-08-27
 
 ### Under the hood
