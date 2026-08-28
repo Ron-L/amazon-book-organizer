@@ -9,6 +9,14 @@
 
 ---
 
+## 🔥 KV write-budget levers (agreed 2026-08-28 — tackle next session)
+
+Context: 25%/50% usage alerts fired two days running. Free tier (1,000 combined writes+lists/day, SHARED across all users) supports only ~3-5 active users; Workers Paid ($5/mo flat) includes 1M combined ops/month ≈ ~100 Ron-like users (~6-10k ops/user-month). These three levers roughly DOUBLE that to ~250 users on the flat $5 — and stretch the free tier meanwhile. Fold the resulting numbers into RELAY-ECONOMICS.md (this largely IS the "revisit free-vs-paid with real numbers" item).
+
+- [ ] **Sample the rate-limit counter** — the worker writes `ratelimit:{ch}` on EVERY authenticated write, so the counter is ~HALF of all KV writes. Sample it (e.g. write every 5th request, count ×5) or defer to the Phase-2 Durable Object. Biggest single lever (~-45% total writes). Counter is already best-effort/approximate by design, so sampling changes nothing semantically.
+- [ ] **Drop the legacy device-state double-write** — remove the transition double-write in putDeviceState + retire putDeviceStateLegacy; the old single key TTLs away on its own (90d). Precondition (no cached pre-7.2.0 mobile session) is ALREADY satisfied for the solo phase: Ron's phone loaded the site post-7.2.0. Saves one ~17 MB write per push (~-25% of push cost).
+- [ ] **Stretch the update poll** — checkForUpdates every 10 min = ~144 list ops/day/user from the SAME 1M pool as writes. Lengthen to 20-30 min and/or gate on tab visibility (a background tab doesn't need fresh banners). Halves list burn; banner latency cost is minutes on a feature whose data arrives on human timescales.
+
 ## 🚦 Pre-Launch (must-do before public launch)
 
 **Docs & onboarding**
@@ -32,8 +40,6 @@
 - [ ] Revisit free-vs-paid launch plan with real relay-write numbers (Cloudflare cap is shared across all users) → see docs/design/RELAY-ECONOMICS.md (spec/data)
 
 ## 🔧 7.0.0 follow-ups (relay)
-
-- [ ] **Drop the legacy device-state double-write** — once 7.3.0 (journal-primary writer) has been live long enough that no cached pre-7.2.0 mobile session plausibly survives (weeks, or after Ron's phone provably reloaded), remove the transition double-write in putDeviceState + retire putDeviceStateLegacy; the old single key then TTLs away on its own (90d). Saves one ~17 MB KV write per push.
 
 - [ ] **Checkpoint the cold (first-time) fetch** — a ~3,000-book initial enrichment has no resume; die at book 2,800, start over. 7.0 makes it natural: send enrichment progress as mailbox letters in stages so a resumed run's skip-hint already knows what's done. Bites each user exactly once — low priority, pre-launch nice-to-have. (From the 2026-08-21 external sync review, item 1's salvageable kernel.)
 
