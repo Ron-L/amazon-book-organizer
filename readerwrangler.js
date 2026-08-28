@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.4.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "7.4.0-alpha.9";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -4631,6 +4631,7 @@
                             const es = organizationFromFile.explorerSettings;
                             organizationFromFile = {
                                 ...organizationFromFile,
+                                theme: undefined, // v7.4.0 - theme rides the presentation cluster too
                                 explorerSettings: es ? { folderSortSettings: es.folderSortSettings } : undefined
                             };
                             console.log('📋 Restoring organization from backup file (keeping current view settings)');
@@ -5031,6 +5032,7 @@
                             savedSearches, // v6.10.0-alpha.16 - Saved searches (live filters)
                             bookLists: bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] })), // v6.12.0 - Curated Book Lists (deny-list spread)
                             hiddenInstances: Array.from(hiddenInstances), // v4.16.0.z
+                            theme: themePreference, // v7.4.0 - Presentation cluster: applied only on empty-system restores
                             appVersion: ORGANIZER_VERSION
                         }
                     };
@@ -5683,6 +5685,13 @@
                     } else {
                         // No explorer settings in backup - preserve existing from localStorage (backward compatibility)
                         console.log('📁 No explorer settings in backup - keeping existing preferences');
+                    }
+
+                    // v7.4.0 - Theme (presentation cluster): present only on empty-system restores
+                    // (performRestore strips it for rollbacks); old backups simply lack it
+                    if (orgToRestore.theme) {
+                        applyTheme(orgToRestore.theme);
+                        console.log(`🎨 Restored theme preference: ${orgToRestore.theme}`);
                     }
 
                     console.log(`✅ Restored organization from ${orgSource}`);
