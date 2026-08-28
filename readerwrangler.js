@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.4.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "7.4.0-alpha.10";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -12515,7 +12515,7 @@
                                                         <span className="font-semibold text-gray-700">Current Price:</span>
                                                         {modalBook.currentPrice != null ? (
                                                             <>
-                                                                <span className={`text-lg font-bold ${modalBook.priceTrigger && modalBook.currentPrice <= modalBook.priceTrigger ? 'text-green-600' : 'text-gray-900'} ${priceIsStale(modalBook) ? 'italic opacity-70' : ''}`}>
+                                                                <span className={`text-lg font-bold ${modalBook.priceTrigger && modalBook.currentPrice <= modalBook.priceTrigger ? 'text-green-600' : 'text-gray-900'}`}>
                                                                     ${modalBook.currentPrice.toFixed(2)}
                                                                 </span>
                                                                 {modalBook.listPrice && modalBook.listPrice > modalBook.currentPrice && (
@@ -15424,7 +15424,7 @@
                                                                         // v7.1.0 - Staleness: dim prices older than PRICE_STALE_MS; hover shows the date
                                                                         if (book.currentPrice != null) {
                                                                             cellTitle = priceAsOfLabel(book);
-                                                                            if (priceIsStale(book)) cellClass += ' italic opacity-60';
+                                                                            if (priceIsStale(book)) cellClass += ' italic opacity-40';
                                                                         }
                                                                         break;
                                                                     case 'priceGoal':
@@ -15998,7 +15998,7 @@
                                                                     }}
                                                                     title={`${book.priceTrigger ? `Goal: $${book.priceTrigger.toFixed(2)} or less — ` : ''}${priceAsOfLabel(book)}`}
                                                                 >
-                                                                    <span className={priceIsStale(book) ? 'italic opacity-70' : ''}>${book.currentPrice.toFixed(2)}</span>
+                                                                    <span className={priceIsStale(book) ? 'italic opacity-50' : ''}>${book.currentPrice.toFixed(2)}</span>
                                                                 </div>
                                                             ) : book.ownershipType && book.ownershipType !== 'purchased' && (() => {
                                                                 const badgeConfig = {
