@@ -4709,7 +4709,7 @@
 
                         // v6.0.0: Only accept backup files — library data syncs via relay
                         if (parsedData.isBackup !== true) {
-                            showInfoDialog('Not a Backup File', 'This is not a backup file. Library data now syncs automatically through the relay.');
+                            showInfoDialog('Not a Backup File', 'This is not a backup file. Library data now syncs automatically through the cloud.');
                             return;
                         }
 
@@ -5526,9 +5526,9 @@
                     } catch (err) {
                         console.warn('⚠️ Backup restored locally but relay sync failed:', err.message);
                     }
-                    showInfoDialog('Backup Restored', `${mergedBooks.length} books restored and synced to the relay.`);
+                    showInfoDialog('Backup Restored', `${mergedBooks.length} books restored and synced to the cloud.`);
                 } else if (organizationFromFile !== null) {
-                    showInfoDialog('Backup Restored', `${mergedBooks.length} books restored.\n\nSet up the relay (File → Relay Setup) to keep your library in sync.`);
+                    showInfoDialog('Backup Restored', `${mergedBooks.length} books restored.\n\nSet up cloud sync (File → Relay Setup) to keep your library in sync.`);
                 }
 
                 // Reset all filters when loading new library (v3.8.0.g, updated v3.8.0.k, v6.10.0-alpha.18)
@@ -7090,8 +7090,8 @@
                 if (relayManifest) {
                     const isEmpty = libraryStatus.loadStatus === 'empty';
                     return isEmpty
-                        ? { icon: '📡', text: 'Data waiting', color: 'text-purple-600', tooltip: 'Library data is ready to import from relay' }
-                        : { icon: '📡', text: 'Update available', color: 'text-purple-600', tooltip: 'Newer library data available on relay' };
+                        ? { icon: '📡', text: 'Data waiting', color: 'text-purple-600', tooltip: 'Library data is ready to import from the cloud' }
+                        : { icon: '📡', text: 'Update available', color: 'text-purple-600', tooltip: 'Newer library data available in the cloud' };
                 }
 
                 // Stage 1: Age-based freshness (what's in the app right now)
@@ -7787,7 +7787,7 @@
                                                     return (
                                                         <button onClick={() => { if (relayReady) { importFromRelay(); setOpenMenuBar(null); } }}
                                                             disabled={isDisabled}
-                                                            title={!relayReady ? 'Set up relay first — File > Relay Setup' : ''}
+                                                            title={!relayReady ? 'Set up cloud sync first — File > Relay Setup' : ''}
                                                             style={{
                                                                 width: '100%', textAlign: 'left', padding: '8px 16px', fontSize: '13px',
                                                                 border: 'none', background: 'var(--bg-surface)',
@@ -8087,9 +8087,9 @@
                                         <li>Fetch your books and collections from Amazon:
                                             <ul style={{ paddingLeft: '18px', listStyleType: 'circle', marginTop: '2px', marginBottom: '4px' }}>
                                                 <li>Click the bookmarklet and select "Go to Amazon Library Page"</li>
-                                                <li title="Securely sends to relay">Click the bookmarklet again and select "Download Library"</li>
+                                                <li title="Securely sends to the cloud">Click the bookmarklet again and select "Download Library"</li>
                                                 <li>Click the bookmarklet and select "Go to Amazon Collections Page"</li>
-                                                <li title="Securely sends to relay">Click the bookmarklet again and select "Download Collections"</li>
+                                                <li title="Securely sends to the cloud">Click the bookmarklet again and select "Download Collections"</li>
                                                 <li>Click the bookmarklet and select "Launch App"</li>
                                             </ul>
                                         </li>
