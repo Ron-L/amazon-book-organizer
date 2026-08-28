@@ -22,7 +22,6 @@
 - [ ] Disaster Recovery documentation (relay credential recovery paths; backups include creds)
 
 **Safety / data-integrity guards**
-- [ ] Restore safeguard — never silently drop Book Lists/Searches on restore; per-category keep/discard/cancel, additive-preserve → see docs/design/RESTORE-SAFEGUARD.md (spec)
 - [ ] Demo-whitelist footgun guard (6f) — warn/confirm before uploading a library dramatically smaller than the relay's; make the active-whitelist banner unmissable; ensure no demo state can ship
 - [ ] "Rebuild library from Amazon (full re-fetch)" affordance (6g) — clear the relay library without DevTools; pairs with the demo-whitelist guard
 - [ ] Pin remaining CDN deps (6h) — React/ReactDOM to an exact 18.x; audit all HTML entry points (Tailwind's durable fix is the precompile step below)
