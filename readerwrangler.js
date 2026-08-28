@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.4.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "7.4.0-alpha.3";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -4595,8 +4595,7 @@
                 dataOpInProgressRef.current = true;
                 // v7.4.0 - Visible progress: restoring a large library takes seconds, and a
                 // dismissed dialog with nothing on screen reads as "done" or "dead".
-                const progress = showProgressDialog('Restoring Backup', 'Taking your library back to the backup’s state…
-This can take a little while for a large library.');
+                const progress = showProgressDialog('Restoring Backup', 'Taking your library back to the backup’s state…\nThis can take a little while for a large library.');
                 try {
                     let organizationFromFile = null;
                     // Extract organization from backup file
