@@ -428,11 +428,11 @@
    * legacy failure only warns — the journal is authoritative.
    * @param {string} jsonString - Full library state as JSON string
    */
-  async function putDeviceState(jsonString) {
+  async function putDeviceState(jsonString, onProgress) {
     if (!isConfigured()) throw new Error('Relay not configured');
 
-    const packed = await pack(jsonString);
-    const manifest = await putDeviceStateJournal(jsonString, null, { prePacked: packed });
+    const packed = await pack(jsonString, onProgress);
+    const manifest = await putDeviceStateJournal(jsonString, onProgress, { prePacked: packed });
 
     try {
       if (packed.bytes.length <= MAX_LEGACY_DEVICE_STATE) {

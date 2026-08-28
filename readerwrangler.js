@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.4.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "7.4.0-alpha.5";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -154,8 +154,22 @@
             const buttonContainer = document.createElement('div');
             buttonContainer.style.cssText = `text-align: right;`;
 
+            // v7.4.0 - Indeterminate motion bar: long phases with a static dialog read as hung
+            if (!document.getElementById('rw-progress-anim')) {
+                const st = document.createElement('style');
+                st.id = 'rw-progress-anim';
+                st.textContent = '@keyframes rwProgressSlide { 0% { left: -35%; } 100% { left: 100%; } }';
+                document.head.appendChild(st);
+            }
+            const barTrack = document.createElement('div');
+            barTrack.style.cssText = 'position:relative; height:6px; border-radius:3px; overflow:hidden; background: var(--border-default, #e2e8f0); margin-bottom: 20px;';
+            const barFill = document.createElement('div');
+            barFill.style.cssText = 'position:absolute; top:0; height:100%; width:35%; border-radius:3px; background: var(--bg-accent, #4f46e5); animation: rwProgressSlide 1.2s ease-in-out infinite;';
+            barTrack.appendChild(barFill);
+
             dialog.appendChild(titleEl);
             dialog.appendChild(messageEl);
+            dialog.appendChild(barTrack);
             dialog.appendChild(buttonContainer);
             overlay.appendChild(dialog);
             document.body.appendChild(overlay);
@@ -168,6 +182,7 @@
                     return new Promise((resolve) => {
                         titleEl.textContent = newTitle;
                         messageEl.textContent = msg;
+                        barTrack.style.display = 'none';
                         const button = document.createElement('button');
                         button.textContent = 'OK';
                         button.style.cssText = `
@@ -4645,12 +4660,13 @@
                         }
                     }, 60000);
 
-                    // Load data with callback (pass organization for backup restore)
+                    // Load data with callback (pass organization for backup restore);
+                    // live phase text + motion bar ride the progress dialog throughout
                     await loadLibrary(text, () => {
                         callbackFired = true;
                         clearTimeout(timeoutId);
                         progress.close(); // the "Backup Restored" dialog takes over from here
-                    }, organizationFromFile);
+                    }, organizationFromFile, (msg) => progress.update(msg));
 
                     // v6.19.0 - Push the restore to the relay as a reset run (background)
                     sendRestoreToRelay(parsedData);
@@ -5189,7 +5205,8 @@
                 return mergedBooks;
             };
 
-            const loadLibrary = async (content, onComplete = null, organizationFromFile = null) => {
+            const loadLibrary = async (content, onComplete = null, organizationFromFile = null, onPhase = null) => {
+                const phase = (msg) => { if (onPhase) onPhase(msg); };
                 const parsedData = JSON.parse(content);
 
                 // Check if user selected legacy collections file (v3.9.0.k)
@@ -5488,6 +5505,7 @@
                 // v6.10.0-alpha.19 - Backup restore uses false (clean replacement, no orphan merge)
                 // v6.3.0 - Capture existing IDs before merge so we can report new books to caller
                 const isBackupRestore = organizationFromFile !== null;
+                phase(`Saving ${processedBooks.length.toLocaleString()} books…`);
                 const existingIds = new Set((await loadBooksFromIndexedDB()).map(b => b.id));
                 const mergedBooks = await saveBooksToIndexedDB(processedBooks, !isBackupRestore);
                 const newBookIds = mergedBooks.filter(b => !existingIds.has(b.id) && !b.isDeleted).map(b => b.id);
@@ -5496,9 +5514,10 @@
                 // v6.0.0 - Upload restored library to relay so fetchers can find it
                 if (organizationFromFile !== null && window.RWRelay && window.RWRelay.isConfigured()) {
                     try {
+                        phase('Preparing cloud sync…');
                         const payload = await buildDeviceStatePayload();
                         const jsonString = JSON.stringify(payload);
-                        await window.RWRelay.putDeviceState(jsonString);
+                        await window.RWRelay.putDeviceState(jsonString, (p, detail) => phase(detail));
                         console.log(`✅ Backup restored and synced to relay (${mergedBooks.length} books)`);
                     } catch (err) {
                         console.warn('⚠️ Backup restored locally but relay sync failed:', err.message);
