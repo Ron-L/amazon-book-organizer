@@ -43,3 +43,30 @@ Refinements agreed while organizing a growing library:
 - **Reaching the far end** is served by **jump-to-top / jump-to-bottom** chevrons at the two ends of the scrollbar (jump-to-bottom shipped as "F", alpha.57; jump-to-top is a TODO), not by flipping to descending.
 
 These sharpen the **Auto-Organize right-click** design: placement is *free* (inherited from the list mode), so its menu stays just **By Author / By Series** — no ordering sub-levels.
+
+## Decisions — Phase 2/3 build kickoff (2026-08-29)
+
+- **Date sort key: REJECTED.** Nobody needs it: Manual-with-new-at-top *is* recency order, and if a
+  folder-date sort is ever truly wanted it can be **derived retroactively** from `max(book.dateAdded)`
+  of the contents — so there's no "stamp `createdAt` now or lose the history" pressure either. No
+  stamping, no key. Phase 2/3 key set: **Manual / Name / Count**.
+- **Manual-mode insertion point = TOP (below the pinned zone).** New folders visible without
+  scrolling; doubles as free recency ordering. (The current sink-to-bottom behavior is the placement
+  bug, not a design.)
+- **Mobile mirrors the app's order, pins included.** Mobile has no reorder affordance, so the app is
+  the ordering surface and mobile is a faithful mirror. Known live gap: mobile.js reads
+  `childFolderIds` but ignores root `sortIndex` — root order on mobile already diverges from the app.
+  Implementation (mobile applies the same rules vs. app bakes display order into the device-state
+  push) chosen during build for simplicity.
+- **New arrivals land at TOP of the stored manual order** (below pins), regardless of the active
+  display mode — months of Name-mode organizing must not rot the Manual order; flipping back to
+  Manual shows recency, not a bottom clump. A drag to an explicit position always wins.
+- **Batch arrivals** (one Auto-Organize pass minting several folders): land at top **as a block,
+  alphabetized within the block** — strict newest-first would stack in reverse creation order,
+  which reads as random.
+- **The pin boundary is a wall for drags, in BOTH directions** (Chrome pinned-tabs / Slack
+  convention): dragging an unpinned folder into the pinned zone snaps it to just below the zone
+  (caret only ever shown at the boundary); dragging a pinned folder below the boundary snaps it
+  back to the bottom of the zone. Within the zone, drag reorders pins freely (a small manual list
+  in every sort mode). **Pinning is a state, position is a consequence — drags move position,
+  menus change state** (right-click Pin / Unpin only).
