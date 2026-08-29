@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.5.0] - 2026-08-29
+
+### Smarter update checks, leaner cloud usage
+- **The "new library data" banner now appears the moment you return to the tab.** Instead of a fixed 10-minute timer, the app checks for updates right when the tab regains focus — exactly the moment you come back from an Amazon fetch — with a short guard against rapid tab-flipping. While you stay in the tab it heartbeats every 20 minutes (hourly if the window isn't focused), and a hidden tab doesn't check at all: nobody's there to see the banner. Faster where it matters, ~90% fewer background checks. The console logs each check and its result.
+- **Mobile sync sheds its training wheels.** The classic single-copy write that rode alongside the new chunked journal during the 7.2/7.3 transition is retired — every device has read the journal for weeks. Each sync push now writes roughly half as much to the cloud.
+- **Under the hood**: the cloud worker's rate-limit bookkeeping now samples its counter (1-in-5, counting by 5) instead of writing it on every request — enforcement is unchanged, at half the write cost. Together the three changes roughly double how many users fit in the cloud service's operations budget.
+
 ## [7.4.0] - 2026-08-28
 
 ### Restore, made trustworthy

@@ -9,14 +9,6 @@
 
 ---
 
-## 🔥 KV write-budget levers (agreed 2026-08-28 — tackle next session)
-
-Context: 25%/50% usage alerts fired two days running. Free tier (1,000 combined writes+lists/day, SHARED across all users) supports only ~3-5 active users; Workers Paid ($5/mo flat) includes 1M combined ops/month ≈ ~100 Ron-like users (~6-10k ops/user-month). These three levers roughly DOUBLE that to ~250 users on the flat $5 — and stretch the free tier meanwhile. Fold the resulting numbers into RELAY-ECONOMICS.md (this largely IS the "revisit free-vs-paid with real numbers" item).
-
-- [ ] **Sample the rate-limit counter** — the worker writes `ratelimit:{ch}` on EVERY authenticated write, so the counter is ~HALF of all KV writes. Sample it (e.g. write every 5th request, count ×5) or defer to the Phase-2 Durable Object. Biggest single lever (~-45% total writes). Counter is already best-effort/approximate by design, so sampling changes nothing semantically.
-- [ ] **Drop the legacy device-state double-write** — remove the transition double-write in putDeviceState + retire putDeviceStateLegacy; the old single key TTLs away on its own (90d). Precondition (no cached pre-7.2.0 mobile session) is ALREADY satisfied for the solo phase: Ron's phone loaded the site post-7.2.0. Saves one ~17 MB write per push (~-25% of push cost).
-- [ ] **Stretch the update poll** — checkForUpdates every 10 min = ~144 list ops/day/user from the SAME 1M pool as writes. Lengthen to 20-30 min and/or gate on tab visibility (a background tab doesn't need fresh banners). Halves list burn; banner latency cost is minutes on a feature whose data arrives on human timescales.
-
 ## 🚦 Pre-Launch (must-do before public launch)
 
 **Docs & onboarding**
