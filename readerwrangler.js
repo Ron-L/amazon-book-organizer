@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.5.0";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.1";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -2223,6 +2223,48 @@
                 return children; // No custom order, return as-is (will be sorted alphabetically later)
             };
 
+            // v7.6.0-alpha.1 (folder-ordering wave A) - Stored MANUAL order of siblings, independent of the
+            // active display sort. Placement writes (reparent, and later create/pin) must compute against
+            // this, never against getChildFolders — whose result follows the display sort.
+            const manualOrderOf = (parentId) => {
+                const children = folders.filter(f => f.parentId === parentId);
+                if (parentId === null) {
+                    return [...children].sort((a, b) => {
+                        const idxA = a.sortIndex ?? Infinity;
+                        const idxB = b.sortIndex ?? Infinity;
+                        if (idxA !== idxB) return idxA - idxB;
+                        return a.name.localeCompare(b.name);
+                    });
+                }
+                const parentFolder = folders.find(f => f.id === parentId);
+                const orderMap = new Map((parentFolder?.childFolderIds || []).map((id, i) => [id, i]));
+                return [...children].sort((a, b) => {
+                    const posA = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+                    const posB = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+                    if (posA !== posB) return posA - posB;
+                    return a.name.localeCompare(b.name);
+                });
+            };
+
+            // v7.6.0-alpha.1 (wave A) - Apply an order-field snapshot to one folder record.
+            // Snapshot shape: { sortIndex: {folderId: valueOrNull}, childIds: {folderId: arrayOrNull} }
+            // (null = field absent). Used by REPARENT_FOLDER undo/redo to restore order state verbatim.
+            const applyOrderFields = (folder, snap) => {
+                if (!snap) return folder;
+                let nf = folder;
+                if (snap.sortIndex && Object.prototype.hasOwnProperty.call(snap.sortIndex, folder.id)) {
+                    if (nf === folder) nf = { ...folder };
+                    const v = snap.sortIndex[folder.id];
+                    if (v === null || v === undefined) delete nf.sortIndex; else nf.sortIndex = v;
+                }
+                if (snap.childIds && Object.prototype.hasOwnProperty.call(snap.childIds, folder.id)) {
+                    if (nf === folder) nf = { ...folder };
+                    const v = snap.childIds[folder.id];
+                    if (v === null || v === undefined) delete nf.childFolderIds; else nf.childFolderIds = v;
+                }
+                return nf;
+            };
+
             // v6.12.0-alpha.83 (1c) - Shared ordering for the Move/Copy folder trees: mirror the sidebar
             // (folderListSort via getChildFolders), Inbox pinned first at root, special __all__ excluded.
             const orderedChildFolders = (parentId) => {
@@ -2331,7 +2373,9 @@
                     });
                 }
                 return sorted;
-            }, [selectedFolderId, folders, explorerSort, hasActiveFilters, showAllFoldersOverride]);
+            // v7.6.0-alpha.1 (wave A) - folderListSort added: the memo consumes it via getChildFolders but
+            // never listed it — a sort-mode change only re-rendered by luck (folders changing too).
+            }, [selectedFolderId, folders, explorerSort, folderListSort, hasActiveFilters, showAllFoldersOverride]);
 
             // v6.11.2-alpha.1 - Unified display list: folders first, then books (for unified selection)
             const explorerUnifiedItems = useMemo(() => [
@@ -2529,6 +2573,17 @@
                 console.log(`🔄 Reordered ${folderIdsToMove.length} folder(s) in parent ${parentId || 'root'}`);
             };
 
+            // v7.6.0-alpha.1 (wave A, spec item D) - Move a folder to the top/bottom of its sibling list.
+            // Thin wrapper over the canonical reorder (which guards non-Manual sort with its toast).
+            const moveFolderToEdge = (folderId, edge) => {
+                const f = folders.find(x => x.id === folderId);
+                if (!f) return;
+                const sibs = getChildFolders(f.parentId).filter(s => s.id !== folderId);
+                if (!sibs.length) return;
+                if (edge === 'top') reorderFoldersInParent(f.parentId, [folderId], sibs[0].id, 'before');
+                else reorderFoldersInParent(f.parentId, [folderId], sibs[sibs.length - 1].id, 'after');
+            };
+
             // v5.0.0-alpha.78 - Phase D: Reparent folder (move into another folder) with undo
             // v6.11.2 - Extracted from reparentFolder for reuse by moveItems
             const isDescendantFolder = (folderId, targetId) => {
@@ -2566,11 +2621,60 @@
                     return { folderId: id, oldParentId: folder?.parentId };
                 });
 
-                setFolders(prev => prev.map(folder => {
-                    if (folderIds.includes(folder.id)) {
-                        return { ...folder, parentId: newParentId };
+                // v7.6.0-alpha.1 (folder-ordering wave A) - Reparent now MANAGES ORDER FIELDS instead of
+                // leaving them stale (the root cause of the drag-to-root landing bug and its "teleports to
+                // an old slot" variant): moved folders leave their old parent's childFolderIds, and are
+                // PLACED in the destination's stored manual order — at the drop position when dragged to
+                // one (Manual display mode only; sorted-mode carets are display positions, meaningless to
+                // store), else at the TOP (new-arrivals-at-top decision, 2026-08-29). Root placement
+                // renumbers sortIndex over the full root order (bakes the unpositioned tail, same as
+                // reorderFoldersInParent); leaving root clears the stale sortIndex.
+                const moveSet = new Set(folderIds);
+                const nameOf = (id) => folders.find(f => f.id === id)?.name || '';
+                // Batch order: an explicit drag keeps the dragged order; default placement alphabetizes the batch
+                const movedOrdered = opts.targetFolderId
+                    ? folderIds.slice()
+                    : folderIds.slice().sort((a, b) => nameOf(a).localeCompare(nameOf(b)));
+
+                const destIds = manualOrderOf(newParentId).map(f => f.id).filter(id => !moveSet.has(id));
+                let insertAt = 0;
+                if (opts.targetFolderId && folderListSort.column === 'custom') {
+                    const ti = destIds.indexOf(opts.targetFolderId);
+                    if (ti !== -1) insertAt = opts.position === 'after' ? ti + 1 : ti;
+                }
+                destIds.splice(insertAt, 0, ...movedOrdered);
+
+                // Order-field snapshots: undo/redo restore these verbatim (see applyOrderFields)
+                const sortIndexBefore = {}, sortIndexAfter = {}, childIdsBefore = {}, childIdsAfter = {};
+                const oldNestedParents = new Set(oldParentIds.map(o => o.oldParentId).filter(pid => pid && pid !== newParentId));
+                for (const pid of oldNestedParents) {
+                    const p = folders.find(f => f.id === pid);
+                    if (!p || !p.childFolderIds || !p.childFolderIds.some(id => moveSet.has(id))) continue;
+                    childIdsBefore[pid] = p.childFolderIds;
+                    childIdsAfter[pid] = p.childFolderIds.filter(id => !moveSet.has(id));
+                }
+                if (newParentId) {
+                    const p = folders.find(f => f.id === newParentId);
+                    childIdsBefore[newParentId] = p?.childFolderIds ?? null;
+                    childIdsAfter[newParentId] = destIds;
+                    for (const id of folderIds) { // leaving root: clear the stale root index
+                        const f = folders.find(x => x.id === id);
+                        if (f && f.sortIndex !== undefined) { sortIndexBefore[id] = f.sortIndex; sortIndexAfter[id] = null; }
                     }
-                    return folder;
+                } else {
+                    destIds.forEach((id, idx) => {
+                        const f = folders.find(x => x.id === id);
+                        const before = (f && f.sortIndex !== undefined) ? f.sortIndex : null;
+                        if (before !== idx) { sortIndexBefore[id] = before; sortIndexAfter[id] = idx; }
+                    });
+                }
+                const orderBefore = { sortIndex: sortIndexBefore, childIds: childIdsBefore };
+                const orderAfter = { sortIndex: sortIndexAfter, childIds: childIdsAfter };
+
+                setFolders(prev => prev.map(folder => {
+                    let nf = folder;
+                    if (moveSet.has(folder.id)) nf = { ...nf, parentId: newParentId };
+                    return applyOrderFields(nf, orderAfter);
                 }));
 
                 const folderNames = folderIds.map(id => folders.find(f => f.id === id)?.name || id).join(', ');
@@ -2580,6 +2684,8 @@
                     folderIds,
                     oldParentIds,
                     newParentId,
+                    orderBefore,
+                    orderAfter,
                     label: `Move "${folderNames}" into "${targetName}"`,
                     description: `Move "${folderNames}" into "${targetName}"`
                 });
@@ -6359,12 +6465,12 @@
                     }
                     case 'REPARENT_FOLDER':
                         // v5.0.0-alpha.78 - Undo reparent: restore old parentIds
+                        // v7.6.0-alpha.1 (wave A) - and the order-field snapshot (reparent now places folders)
                         setFolders(prev => prev.map(folder => {
+                            let nf = folder;
                             const oldData = action.oldParentIds.find(o => o.folderId === folder.id);
-                            if (oldData) {
-                                return { ...folder, parentId: oldData.oldParentId };
-                            }
-                            return folder;
+                            if (oldData) nf = { ...nf, parentId: oldData.oldParentId };
+                            return applyOrderFields(nf, action.orderBefore);
                         }));
                         break;
                     case 'COPY_PASTE_FOLDER':
@@ -6783,11 +6889,11 @@
                     }
                     case 'REPARENT_FOLDER':
                         // v5.0.0-alpha.78 - Redo reparent: apply the new parentId again
+                        // v7.6.0-alpha.1 (wave A) - and the order-field snapshot (reparent now places folders)
                         setFolders(prev => prev.map(folder => {
-                            if (action.folderIds.includes(folder.id)) {
-                                return { ...folder, parentId: action.newParentId };
-                            }
-                            return folder;
+                            let nf = folder;
+                            if (action.folderIds.includes(folder.id)) nf = { ...nf, parentId: action.newParentId };
+                            return applyOrderFields(nf, action.orderAfter);
                         }));
                         break;
                     case 'COPY_PASTE_FOLDER':
@@ -13647,64 +13753,17 @@
                                                                     if (target?.type === 'reparent') {
                                                                         reparentFolder(folderIds, folder.id);
                                                                     } else if (target?.type === 'reorder') {
-                                                                        // v6.12.0-alpha.72 - Manual order only; a sort is active so this positional reorder
-                                                                        // (writes sortIndex/childFolderIds from getChildFolders order) would clobber the stored manual order.
-                                                                        if (folderListSort.column !== 'custom') {
-                                                                            showToast('Switch folder sort to Manual (⇅ in the FOLDERS header) to rearrange by hand.');
-                                                                            setFolderDropHighlight(null);
-                                                                            setExplorerSelectedItems(new Set());
-                                                                            return;
-                                                                        }
-                                                                        // Reorder among siblings
+                                                                        // v7.6.0-alpha.1 (wave A) - Consolidated onto the canonical operations. The old inline
+                                                                        // reorder recorded a REORDER_FOLDER payload the undo reducer couldn't read (sidebar
+                                                                        // reorders were silently not undoable) and its cross-parent path read stale state.
                                                                         const draggedFolder = folders.find(f => f.id === folderIds[0]);
                                                                         if (!draggedFolder) return;
-
-                                                                        // Only reorder if same parent level
                                                                         if (draggedFolder.parentId !== folder.parentId) {
-                                                                            // Different parent - reparent to this folder's parent first
-                                                                            reparentFolder(folderIds, folder.parentId);
-                                                                        }
-
-                                                                        // Get siblings at this level
-                                                                        const siblings = getChildFolders(folder.parentId);
-                                                                        const fromIndex = siblings.findIndex(f => f.id === folderIds[0]);
-                                                                        let toIndex = siblings.findIndex(f => f.id === folder.id);
-                                                                        if (target.position === 'after') toIndex++;
-                                                                        if (fromIndex < toIndex) toIndex--;
-
-                                                                        if (fromIndex !== -1 && fromIndex !== toIndex) {
-                                                                            // Build new order
-                                                                            const newOrder = siblings.filter(f => f.id !== folderIds[0]);
-                                                                            newOrder.splice(toIndex, 0, draggedFolder);
-
-                                                                            // Update sortIndex or childFolderIds
-                                                                            if (folder.parentId === null) {
-                                                                                // Root level - update sortIndex
-                                                                                setFolders(prev => prev.map(f => {
-                                                                                    const idx = newOrder.findIndex(s => s.id === f.id);
-                                                                                    if (idx !== -1) {
-                                                                                        return { ...f, sortIndex: idx };
-                                                                                    }
-                                                                                    return f;
-                                                                                }));
-                                                                            } else {
-                                                                                // Nested - update parent's childFolderIds
-                                                                                const newChildIds = newOrder.map(f => f.id);
-                                                                                setFolders(prev => prev.map(f =>
-                                                                                    f.id === folder.parentId
-                                                                                        ? { ...f, childFolderIds: newChildIds }
-                                                                                        : f
-                                                                                ));
-                                                                            }
-
-                                                                            recordAction({
-                                                                                type: 'REORDER_FOLDER',
-                                                                                folderId: folderIds[0],
-                                                                                fromIndex,
-                                                                                toIndex,
-                                                                                parentId: folder.parentId
-                                                                            });
-                                                                            console.log(`📁 Reordered folder in sidebar`);
+                                                                            // Cross-parent drag to a position: reparent places at the drop target (Manual mode)
+                                                                            reparentFolder(folderIds, folder.parentId, { targetFolderId: folder.id, position: target.position });
+                                                                        } else {
+                                                                            // Same-parent: canonical reorder (guards non-Manual sort with its own toast)
+                                                                            reorderFoldersInParent(folder.parentId, folderIds, folder.id, target.position);
                                                                         }
                                                                     }
                                                                 } catch (err) {
@@ -16951,6 +17010,22 @@
                                         </div>
                                     )
                                 )}
+
+                                {/* v7.6.0-alpha.1 (wave A, spec item D) - Move to Top / Bottom within siblings (Manual order) */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
+                                    onClick={() => { moveFolderToEdge(folder.id, 'top'); setFolderContextMenu(null); }}>
+                                    <span>⬆️</span>
+                                    <span>Move to Top</span>
+                                </div>
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
+                                    onClick={() => { moveFolderToEdge(folder.id, 'bottom'); setFolderContextMenu(null); }}>
+                                    <span>⬇️</span>
+                                    <span>Move to Bottom</span>
+                                </div>
 
                                 {/* Create Subfolder */}
                                 <div
