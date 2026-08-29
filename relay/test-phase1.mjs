@@ -397,10 +397,11 @@ async function main() {
   {
     ok('empty channel: getDeviceState null', await RW.getDeviceState() === null);
 
-    // Legacy-format push (the pre-7.3.0 sole write path, kept as an explicit helper)
+    // Legacy-format push (kept as a test helper; no production caller since 7.5.0)
     const legacyState = payload('dstate-legacy', 5);
     await RW.putDeviceStateLegacy(legacyState);
     ok('legacy single-key write read back via dual-reader', await RW.getDeviceState() === legacyState);
+    const legacySeedBytes = (await (await fetch(`${DEV_URL}/device-state/${CH6}`)).arrayBuffer()).byteLength;
 
     // Journal push (forced multi-chunk) — must now win over the legacy key
     const j1 = payload('dstate-journal-1', 40);
@@ -423,14 +424,15 @@ async function main() {
     await fetch(`${rawB}/dstate-pointer/${CH6}`, { method: 'GET' }); // (no delete endpoint; simulate by checking fallback path works when pointer names a gen we can read anyway)
     ok('list fallback returns newest complete when asked directly', await RW.getDeviceState() === j2);
 
-    // Writer switch (7.3.0): putDeviceState = journal primary + legacy double-write
-    const j3 = payload('dstate-double', 8);
+    // Writer (7.5.0): putDeviceState = journal ONLY (double-write dropped)
+    const j3 = payload('dstate-solo', 8);
     const m3 = await RW.putDeviceState(j3);
     ok('putDeviceState returns a journal manifest (journal is primary)', !!(m3 && m3.gen && m3.chunkCount >= 1));
     ok('reader serves the new push via the journal', await RW.getDeviceState() === j3);
     const legacyRaw = await fetch(`${DEV_URL}/device-state/${CH6}`);
-    ok('legacy key double-written during transition (raw GET 200, non-empty)',
-       legacyRaw.ok && (await legacyRaw.arrayBuffer()).byteLength > 0);
+    const legacyNowBytes = legacyRaw.ok ? (await legacyRaw.arrayBuffer()).byteLength : 0;
+    ok('legacy key UNTOUCHED by putDeviceState (double-write is gone; old seed intact, will TTL away)',
+       legacyNowBytes === legacySeedBytes);
   }
 
   console.log(`\n=== ${pass} passed, ${fail} failed ===`);

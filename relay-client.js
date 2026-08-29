@@ -419,38 +419,20 @@
 
   /**
    * Update device state on relay (used by app after successful import).
-   * v7.3.0 (Phase 1b writer switch) - The JOURNAL is now the primary write: chunked
-   * generations + atomic pointer commit, no 25 MB ceiling. The legacy single key is
-   * still DOUBLE-WRITTEN during the transition (free while the payload fits under the
-   * old cap) so a phone session cached from before 7.2.0 keeps working; the legacy
-   * write gets dropped in a later release. Payload is packed once, used by both.
-   * Journal failure throws (callers' error handling incl. 403-revoked preserved);
-   * legacy failure only warns — the journal is authoritative.
+   * v7.3.0 made the JOURNAL the primary write (chunked generations + atomic pointer
+   * commit, no 25 MB ceiling) with a transition double-write of the legacy single key.
+   * v7.5.0 drops the double-write: every reader has been journal-literate since 7.2.0
+   * and the cached-session window has passed — the old key now just TTLs away (90d).
+   * Saves one full-payload KV write (~17 MB at current library size) per push.
    * @param {string} jsonString - Full library state as JSON string
    */
   async function putDeviceState(jsonString, onProgress) {
     if (!isConfigured()) throw new Error('Relay not configured');
-
-    const packed = await pack(jsonString, onProgress);
-    const manifest = await putDeviceStateJournal(jsonString, onProgress, { prePacked: packed });
-
-    try {
-      if (packed.bytes.length <= MAX_LEGACY_DEVICE_STATE) {
-        const response = await fetch(`${workerUrl()}/device-state/${_channelId}`, {
-          method: 'PUT',
-          body: packed.bytes.buffer
-        });
-        if (!response.ok) console.warn('Legacy device-state double-write failed (journal is authoritative):', response.status);
-      } else {
-        console.warn('Legacy device-state skipped: payload exceeds the old 25 MB ceiling (the journal carries it — pre-7.2.0 cached sessions must reload)');
-      }
-    } catch (e) {
-      console.warn('Legacy device-state double-write failed (journal is authoritative):', e.message);
-    }
-    return manifest;
+    return putDeviceStateJournal(jsonString, onProgress);
   }
 
-  /** Legacy single-key writer — transition/test helper (the pre-7.3.0 sole write path). */
+  /** Legacy single-key writer — kept ONLY as a harness/test helper (exercises the
+   *  dual-reader's fallback path); no production caller since v7.5.0. */
   async function putDeviceStateLegacy(jsonString) {
     if (!isConfigured()) throw new Error('Relay not configured');
     const packed = await pack(jsonString);
@@ -510,7 +492,6 @@
   const KEEP_GENS = 2;
   const GC_GRACE_MS = 60 * 60 * 1000;        // never GC a generation younger than 1h (design M2)
   const LETTER_TTL_MS = 90 * 24 * 60 * 60 * 1000; // mirrors the worker's 90d letter TTL (absorbed-set pruning horizon)
-  const MAX_LEGACY_DEVICE_STATE = 25 * 1024 * 1024; // old single-key ceiling (transition double-write skips beyond it)
   const DEVICE_KEY = 'readerwrangler-relay-device';
 
   /** Stable per-browser device id (persisted where storage exists; ephemeral otherwise). */
