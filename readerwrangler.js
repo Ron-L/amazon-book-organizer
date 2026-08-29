@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.4.0";  // Build version for this file
+        const ORGANIZER_VERSION = "7.5.0-alpha.1";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -2975,10 +2975,20 @@
             }, []);
 
             // v6.10.0-alpha.29 - Poll relay for new data (two-level freshness)
+            // v7.5.0 - Visibility/focus-aware (KV diet lever 3): each poll costs a KV list op
+            // from the same shared pool as writes. Hidden tab: NEVER polls (the banner is
+            // invisible there). The moment the tab becomes visible/focused again: prompt check
+            // (the return-from-the-Amazon-fetch-tab moment is when the banner actually matters
+            // — this beats the old 10-min timer). While visible: slow heartbeat, slower still
+            // when the window isn't focused (glanceable second-monitor tab keeps working).
+            // Net: ~144 list ops/day/user → ~10-30, with FASTER perceived updates.
             React.useEffect(() => {
                 if (!window.RWRelay || !window.RWRelay.isConfigured()) return;
 
-                const POLL_INTERVAL = 10 * 60 * 1000; // 10 minutes
+                const FOCUSED_POLL_MS = 20 * 60 * 1000;   // visible + focused heartbeat
+                const UNFOCUSED_POLL_MS = 60 * 60 * 1000; // visible, window unfocused (2nd monitor)
+                const RETURN_DEDUPE_MS = 90 * 1000;       // rapid tab-flipping guard
+                const lastPollAt = { current: Date.now() }; // mount-effect just checked; start from now
 
                 const pollRelay = async () => {
                     try {
@@ -3004,8 +3014,30 @@
                     }
                 };
 
-                const intervalId = setInterval(pollRelay, POLL_INTERVAL);
-                return () => clearInterval(intervalId);
+                // One local 60s tick decides whether a poll is DUE — the relay is only
+                // touched when one fires. Hidden tabs never fire.
+                const maybePoll = (minGapMs) => {
+                    if (document.visibilityState !== 'visible') return;
+                    if (Date.now() - lastPollAt.current < minGapMs) return;
+                    lastPollAt.current = Date.now();
+                    pollRelay();
+                };
+
+                // Coming back to the tab (or refocusing the window) = the moment the
+                // banner matters most — check right away, deduped for rapid flipping.
+                const onReturn = () => maybePoll(RETURN_DEDUPE_MS);
+                document.addEventListener('visibilitychange', onReturn);
+                window.addEventListener('focus', onReturn);
+
+                const tickId = setInterval(() => {
+                    maybePoll(document.hasFocus() ? FOCUSED_POLL_MS : UNFOCUSED_POLL_MS);
+                }, 60 * 1000);
+
+                return () => {
+                    clearInterval(tickId);
+                    document.removeEventListener('visibilitychange', onReturn);
+                    window.removeEventListener('focus', onReturn);
+                };
             }, [libraryStatus.loadDate]);
 
             // Save filters to localStorage whenever they change (v3.8.0.f, updated v3.8.0.k, v4.1.0.d, v4.15.6)
