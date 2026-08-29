@@ -72,6 +72,7 @@
 - [ ] Fetcher follow-ups: ownership-**upgrade** live positive test; recovery-sweep Stage 2 (fold into orphan scan); un-trash on ownership upgrade (storage.js); fix the "772%" enriched ratio
 - [ ] Book detail dialog tooltips (esp. Collections = read-only-from-Amazon)
 - [ ] Wishlist fetcher — capture real binding on add (product-page `bindingInformation`), not only after enrichment
+- [ ] **Format-blind duplicate/ownership check blocks wishlisting the Kindle edition of a print-owned book** (Ron, 2026-08-29, live case: series #13 owned as PB, can't wishlist the Kindle edition — "shows as a duplicate"). Two suspects, diagnosis pending Ron's answers: (a) series-page fetcher trusts Amazon's `hasOwnership` flag (series-page-fetcher.js:357), which may be format-blind on Amazon's side; (b) known-books byAsin check hit an RW record under the KINDLE ASIN wrongly marked owned (PB≠Kindle ASINs, so a collision implies bad data — suspect the v4.11.10 ownership-upgrade/sweep). Fix is format-aware dedup/ownership + possible data cleanup for the affected record(s).
 - [ ] Metadata import (paste-list / CSV) + matching → see docs/design/Metadata-Import.md
 
 - [ ] Comma-separated series-position multi-edit ("2, 4" mapped to selected books in display order) — **needed for David Drake / Raj Whitehall** (ownership gaps that "renumber by current order" can't handle)
