@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.5.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "7.5.0-alpha.2";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -2996,6 +2996,9 @@
                         // (legacy manifest only for pre-migration channels)
                         const manifest = await window.RWRelay.checkForUpdates();
                         relayLastCheckedRef.current = new Date().toISOString();
+                        console.log(`[Relay] Poll result: ${manifest && manifest.timestamp
+                            ? (manifest.source === 'mailbox' ? 'pending letters waiting' : 'canonical manifest found')
+                            : 'nothing new'}`);
                         if (manifest && manifest.timestamp) {
                             // Pending letters are by definition not yet imported — show the banner
                             // unless dismissed. (Legacy manifests still get the newer-than-app check.)
@@ -3016,21 +3019,22 @@
 
                 // One local 60s tick decides whether a poll is DUE — the relay is only
                 // touched when one fires. Hidden tabs never fire.
-                const maybePoll = (minGapMs) => {
+                const maybePoll = (minGapMs, reason) => {
                     if (document.visibilityState !== 'visible') return;
                     if (Date.now() - lastPollAt.current < minGapMs) return;
                     lastPollAt.current = Date.now();
+                    console.log(`[Relay] Polling for updates (${reason})...`);
                     pollRelay();
                 };
 
                 // Coming back to the tab (or refocusing the window) = the moment the
                 // banner matters most — check right away, deduped for rapid flipping.
-                const onReturn = () => maybePoll(RETURN_DEDUPE_MS);
+                const onReturn = () => maybePoll(RETURN_DEDUPE_MS, 'tab return');
                 document.addEventListener('visibilitychange', onReturn);
                 window.addEventListener('focus', onReturn);
 
                 const tickId = setInterval(() => {
-                    maybePoll(document.hasFocus() ? FOCUSED_POLL_MS : UNFOCUSED_POLL_MS);
+                    maybePoll(document.hasFocus() ? FOCUSED_POLL_MS : UNFOCUSED_POLL_MS, 'heartbeat');
                 }, 60 * 1000);
 
                 return () => {
