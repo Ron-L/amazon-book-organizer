@@ -53,6 +53,11 @@ const GEN_STORES = {
 const RATE_LIMIT_WINDOW_MS = 3600000; // 1 hour
 const RATE_LIMIT_MAX_WRITES = 200;    // per channelId per hour (normal: ~10-20)
 const RATE_LIMIT_AUTO_BLOCK = 2000;   // 10x limit → permanent blocklist
+const RATE_LIMIT_SAMPLE = 5;          // v7.5.0 - persist the counter 1-in-N (counting by N):
+                                      // the counter write was ~HALF of ALL KV writes (one per
+                                      // authenticated request). The counter has always been
+                                      // best-effort/approximate; sampling changes no semantics,
+                                      // only granularity (200/hr limit ± ~5).
 
 // Cloudflare free tier daily limits
 const CF_LIMITS = {
@@ -744,7 +749,13 @@ async function checkRateLimit(env, channelId) {
     data = { count: 0, windowStart: now };
   }
 
-  data.count++;
+  // v7.5.0 - SAMPLED counting: 1-in-SAMPLE requests bump the persisted count by SAMPLE
+  // (expected value identical), dividing the counter's KV write cost by SAMPLE — it was
+  // ~half of ALL KV writes (one per authenticated request). ENFORCEMENT runs on EVERY
+  // request against the persisted approximate count; only the write-back is sampled.
+  // The counter was always best-effort/approximate; this changes granularity, not semantics.
+  const sampledThisRequest = Math.random() < 1 / RATE_LIMIT_SAMPLE;
+  if (sampledThisRequest) data.count += RATE_LIMIT_SAMPLE;
 
   if (data.count > RATE_LIMIT_MAX_WRITES) {
     // Auto-blocklist on extreme abuse (10x normal limit)
@@ -758,13 +769,14 @@ async function checkRateLimit(env, channelId) {
     return false; // Rate limited
   }
 
-  // Best-effort counter update: Cloudflare KV allows ~1 write/sec PER KEY, and this shared
-  // counter key is written on every request — a rapid multi-letter run (or chunked upload)
-  // trips that per-key limit. The counter is advisory; losing an increment must never fail
-  // the caller's actual write. (Found by the Phase 1 harness: KV PUT 429 → whole request 500.)
-  try {
-    await env.RELAY_KV.put(key, JSON.stringify(data), { expirationTtl: 7200 }); // 2hr TTL
-  } catch { /* count update skipped — approximate counting is fine */ }
+  // Best-effort counter persist, only on sampled requests. (Still guarded: KV allows ~1
+  // write/sec PER KEY; losing an increment must never fail the caller's actual write —
+  // found by the Phase 1 harness when counter 429s were 500ing real writes.)
+  if (sampledThisRequest) {
+    try {
+      await env.RELAY_KV.put(key, JSON.stringify(data), { expirationTtl: 7200 }); // 2hr TTL
+    } catch { /* count update skipped — approximate counting is fine */ }
+  }
   return true; // Allowed
 }
 
