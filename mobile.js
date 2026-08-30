@@ -1,7 +1,17 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.6.10';
+const MOBILE_VERSION = '1.7.0';
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
+
+// v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
+// installed app inherits the answer from wherever it was installed — which is the whole point
+// (the installed-PWA-was-dev hunt, 2026-08-30). Prod stays unbadged; oddballs announce themselves.
+const SERVER_ENV = (() => {
+    const h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1') return { label: 'Localhost', chip: 'LOCAL' };
+    if (h === 'readerwrangler.com' || h === 'www.readerwrangler.com') return { label: 'readerwrangler.com', chip: null };
+    return { label: `Dev (${h})`, chip: 'DEV' };
+})();
 
 // Clear emergency reset timer — app code loaded successfully
 if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
@@ -41,7 +51,7 @@ function mapBackupBook(item) {
         series: item.series || '',
         seriesPosition: item.seriesPosition || '',
         acquired: item.acquisitionDate || '',
-        dateAdded: item.dateAdded || item.acquisitionDate || '',
+        dateAdded: item.dateAdded || item.acquisitionDate || item.addedToWishlist || '', // v1.7.0 - real field from the wire (app 7.6.0+); fallbacks for stale payloads
         description: item.description || '',
         binding: item.binding || '',
         currentPrice: item.currentPrice,
@@ -241,7 +251,11 @@ function sortBooks(books, sortKey) {
             case 'authorAZ': return a.author.localeCompare(b.author);
             case 'rating': return (b.rating || 0) - (a.rating || 0);
             case 'dateAdded':
-            default: return parseBookDate(b.acquired || b.dateAdded) - parseBookDate(a.acquired || a.dateAdded);
+            // v1.7.0 - Date Added now MEANS date added: dateAdded first (the wire carries it as of
+            // app 7.6.0), acquisition date only as fallback for stale payloads. The old
+            // `acquired || dateAdded` made acquisition win under the Date Added label, and wishlist
+            // books (never acquired) sank to the bottom of every date sort.
+            default: return parseBookDate(b.dateAdded || b.acquired) - parseBookDate(a.dateAdded || a.acquired);
         }
     });
 }
@@ -551,6 +565,14 @@ function Header({ currentNav, navStack, folders, books, tagRegistry, bookLists, 
                 fontWeight: isDashboard ? 700 : 600,
                 flex: 1, textAlign: 'center', padding: '0 8px'
             }}>
+                {/* v1.7.0 - Non-prod copies wear a chip (mobile twin of the desktop LOCAL badge) */}
+                {SERVER_ENV.chip && (
+                    <span style={{
+                        fontSize: '9px', fontWeight: 700, letterSpacing: '0.5px',
+                        padding: '1px 5px', borderRadius: '4px', marginRight: '6px',
+                        background: '#6366f1', color: '#ffffff', verticalAlign: 'middle'
+                    }}>{SERVER_ENV.chip}</span>
+                )}
                 {centerText}
             </span>
             <div className="flex items-center gap-1">
@@ -586,7 +608,7 @@ function Backdrop({ onClick }) {
 
 // --- Folder Drawer ---
 
-function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists, savedSearches, onSelectFolder, onSelectSearch, onClose, collapsed, toggleSection }) {
+function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showHidden, onSelectFolder, onSelectSearch, onClose, collapsed, toggleSection }) {
     const inbox = folders.find(f => f.id === '__inbox__');
     const inboxCount = inbox ? (inbox.bookIds || []).length : 0;
     // User folders: top-level (parentId === null), excluding Inbox
@@ -682,7 +704,17 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
             >
                 <span style={{ fontSize: '16px' }}>📚</span>
                 <span className="flex-1">All Books</span>
-                <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}>({books.length})</span>
+                {/* v1.7.0 - Count honesty: this raw count silently disagreed with the (hidden-filtered) grid view */}
+                {(() => {
+                    const hidden = showHidden ? 0 : books.filter(b => b.isHidden).length;
+                    const shown = books.length - hidden;
+                    return (
+                        <span className="text-xs" style={{ color: 'var(--text-muted, #64748b)' }}
+                            title={hidden > 0 ? `${hidden} book${hidden !== 1 ? 's' : ''} hidden by user` : undefined}>
+                            ({shown.toLocaleString()}{hidden > 0 ? ` of ${books.length.toLocaleString()}` : ''})
+                        </span>
+                    );
+                })()}
             </button>
 
             {/* Searches — saved filter presets, applied to All Books. v1.6.6 - left spine matches the Dashboard. */}
@@ -941,6 +973,7 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
                     <p className="font-semibold mb-1" style={{ color: 'var(--text-primary, #1e293b)' }}>Help &amp; About</p>
                     <p><a href="changelog.html" style={{ color: 'var(--text-link, #2563eb)', textDecoration: 'none' }}>App v{APP_VERSION}</a></p>
                     <p>Mobile v{MOBILE_VERSION}</p>
+                    <p>Server: {SERVER_ENV.label}</p>
                 </div>
             </div>
         </div>
@@ -1437,9 +1470,11 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
     const shelves = useMemo(() => {
         const result = [];
 
-        // All Books shelf (all books sorted by acquisition date, expandable)
+        // All Books shelf (newest first, expandable)
+        // v1.7.0 - By Date Added (matches desktop's column and the sort picker's corrected key);
+        // acquisition date only as fallback for stale payloads.
         const allByDate = [...filteredBooks]
-            .sort((a, b) => parseBookDate(b.acquired || b.dateAdded) - parseBookDate(a.acquired || a.dateAdded));
+            .sort((a, b) => parseBookDate(b.dateAdded || b.acquired) - parseBookDate(a.dateAdded || a.acquired));
 
         if (allByDate.length > 0) {
             const isExpanded = expandedShelves.has('__recent__');
@@ -1708,7 +1743,7 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
 
 // --- FolderView component ---
 
-function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, sortOption, onCycleSort, viewMode,
+function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, onToggleHidden, sortOption, onCycleSort, viewMode,
                       coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapSubfolder }) {
     const isAllBooks = folderId === '__recent__';
     const isTagView = folderId?.startsWith('__tag_') && folderId?.endsWith('__');
@@ -1785,7 +1820,30 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, b
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     marginBottom: '10px', fontSize: '13px', color: 'var(--text-secondary, #475569)'
                 }}>
-                    <span>{folderBooks.length} book{folderBooks.length !== 1 ? 's' : ''}</span>
+                    {/* v1.7.0 - Count honesty: in All Books, admit the filtered view ("X of Y") and name the
+                        cause — the clause is the affordance: tapping it flips Show Hidden. */}
+                    {(() => {
+                        const hiddenExcluded = (isAllBooks && !showHidden && !showDealsOnly)
+                            ? books.filter(b => b.isHidden).length : 0;
+                        if (hiddenExcluded === 0) {
+                            return <span>{folderBooks.length.toLocaleString()} book{folderBooks.length !== 1 ? 's' : ''}</span>;
+                        }
+                        const total = folderBooks.length + hiddenExcluded;
+                        return (
+                            <span>
+                                {folderBooks.length.toLocaleString()} of {total.toLocaleString()} books{' '}
+                                <button onClick={onToggleHidden}
+                                    title={`${hiddenExcluded} book${hiddenExcluded !== 1 ? 's' : ''} hidden by user — tap to show`}
+                                    style={{
+                                        background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                                        color: 'var(--text-link, #2563eb)', fontSize: 'inherit',
+                                        touchAction: 'manipulation', textDecoration: 'underline dotted'
+                                    }}>
+                                    ({hiddenExcluded} hidden by user)
+                                </button>
+                            </span>
+                        );
+                    })()}
                     <button onClick={onCycleSort} title="Tap to change sort order" style={{
                         display: 'flex', alignItems: 'center', gap: '4px',
                         padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-default, #e2e8f0)',
@@ -2813,6 +2871,7 @@ function MobileApp() {
                     toggleSection={toggleSection}
                     folders={folders}
                     books={books}
+                    showHidden={showHidden}
                     pinnedTagFolders={pinnedTagFolders}
                     tagRegistry={tagRegistry}
                     bookLists={bookLists}
@@ -2873,7 +2932,7 @@ function MobileApp() {
                     <FolderView
                         folderId={currentNav.folderId}
                         books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists} savedSearches={savedSearches}
-                        showDealsOnly={showDealsOnly} showHidden={showHidden}
+                        showDealsOnly={showDealsOnly} showHidden={showHidden} onToggleHidden={handleToggleHidden}
                         sortOption={sortOption} onCycleSort={cycleSortOption}
                         viewMode={viewMode}
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}

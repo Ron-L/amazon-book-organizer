@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.2";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.3";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -4994,6 +4994,7 @@
                     series: book.series,
                     seriesPosition: book.seriesPosition,
                     acquisitionDate: book.acquired,
+                    dateAdded: book.dateAdded, // v7.6.0 - mobile's "Date Added" sort was fabricating this from acquisitionDate (empty for wishlist)
                     description: book.description,
                     topReviews: book.topReviews,
                     binding: book.binding,
@@ -14199,10 +14200,10 @@
                                                             : getChildFolders(selectedFolderId);
                                                 const folderCount = childFolders.length;
                                                 const allBookIds = getFolderBookIds(selectedFolderId);
-                                                const filteredCount = allBookIds
-                                                    .map(id => books.find(b => b.id === id))
-                                                    .filter(book => filterBookForExplorer(book))
-                                                    .length;
+                                                const bookObjs = allBookIds.map(id => books.find(b => b.id === id));
+                                                const filteredCount = bookObjs.filter(book => filterBookForExplorer(book)).length;
+                                                // v7.6.0-alpha.3 - Name the invisible cause: filters are on-screen, hidden books aren't
+                                                const hiddenExcluded = bookObjs.filter(book => book && book.isHidden && !filterBookForExplorer(book)).length;
                                                 const totalCount = allBookIds.length;
                                                 if (selectedFolderId === '__library__') {
                                                     return `(${folderCount} folders)`;
@@ -14213,7 +14214,7 @@
                                                 }
                                                 const bookPart = filteredCount === totalCount
                                                     ? `${totalCount} books`
-                                                    : `${filteredCount} of ${totalCount} books`;
+                                                    : `${filteredCount} of ${totalCount} books${hiddenExcluded > 0 ? ` (${hiddenExcluded} hidden by user)` : ''}`;
                                                 return folderCount > 0
                                                     ? `(${folderCount} folders, ${bookPart})`
                                                     : `(${bookPart})`;
