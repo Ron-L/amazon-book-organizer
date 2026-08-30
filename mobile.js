@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.0-alpha.4'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.7.0-alpha.6'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -76,7 +76,7 @@ function mapBackupBook(item) {
     };
 }
 
-function restoreOrganization(org, bookIds) {
+function restoreOrganization(org, bookIds, sourceStamp) {
     if (!org) return;
 
     let folders = org.folders || [];
@@ -86,13 +86,12 @@ function restoreOrganization(org, bookIds) {
         folders.push({ id: '__inbox__', name: 'Inbox', bookIds: [], parentId: null });
     }
 
+    // v1.7.0-alpha.6 - Deny-list spread (MULTI-INSTANCE.md §3): the old allow-list field map
+    // STRIPPED sortIndex (and isInbox/description/future pinned) — on a dev machine sharing the
+    // address with desktop, this was the folder-order scrambler (the 2026-08-15/08-30 ghost).
     folders = folders.map(f => ({
-        id: f.id,
-        name: f.name,
-        bookIds: (f.bookIds || []).filter(id => validIds.has(id)),
-        parentId: f.parentId,
-        collapsed: f.collapsed,
-        childFolderIds: f.childFolderIds
+        ...f,
+        bookIds: (f.bookIds || []).filter(id => validIds.has(id))
     }));
 
     // v6.12.0 Phase 8 - Book Lists (curated, supplemental). Filter each list's bookIds to books
@@ -114,8 +113,11 @@ function restoreOrganization(org, bookIds) {
             savedSearches: org.savedSearches || [], // v6.12.0 Phase 8 - listed in drawer; results wired in 8b
             dataSource: 'enriched'
         },
-        lastSyncTime: Date.now(),
-        savedAt: Date.now()
+        // v1.7.0-alpha.6 - Re-stamp with the payload's SOURCE stamp, never Date.now() (MULTI-INSTANCE.md
+        // §3): a wall-clock stamp here would exceed every later payload's source stamp and freeze the
+        // phone's cache. One clock lineage (the desktop's) keeps the guard comparison monotone.
+        lastSyncTime: sourceStamp || Date.now(),
+        savedAt: sourceStamp || Date.now()
     }));
 
     return folders;
@@ -2455,9 +2457,23 @@ function MobileApp() {
                                 b.collections = c.collections || [];
                             }
                         });
-                        await saveBooksToIndexedDB(mappedBooks, false);
-                        restoreOrganization(data.organization, mappedBooks.map(b => b.id));
-                        console.log('✅ Device-state applied to local storage');
+                        // v1.7.0-alpha.6 - Guest guard (MULTI-INSTANCE.md §3): cache the payload (org keys
+                        // AND IndexedDB books — gated together) only when it's NEWER than this browser's
+                        // own organization blob. Phone: mobile is the only resident, a fresh push always
+                        // wins — unchanged. Dev machine sharing the address with desktop: local truth is
+                        // newer, the write would clobber it (the folder-order scrambler). Mobile renders
+                        // from the cache either way, so a skip DISPLAYS the fresher local data.
+                        // Transition: unstamped payload (pre-alpha.6 push) = stamp 0 → never overwrites an
+                        // existing blob; a truly empty universe (new phone pairing) accepts it anyway.
+                        const localSavedAt = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}').savedAt || 0; } catch { return 0; } })();
+                        const payloadSavedAt = data.organization?.savedAt || 0;
+                        if (payloadSavedAt > localSavedAt || !localSavedAt) {
+                            await saveBooksToIndexedDB(mappedBooks, false);
+                            restoreOrganization(data.organization, mappedBooks.map(b => b.id), payloadSavedAt);
+                            console.log('✅ Device-state applied to local storage');
+                        } else {
+                            console.log(`🛡️ Cache write skipped — local data is newer (guest guard; payload ${payloadSavedAt ? new Date(payloadSavedAt).toLocaleString() : 'unstamped'} vs local ${new Date(localSavedAt).toLocaleString()})`);
+                        }
                     }
                 } else {
                     console.log('📡 No device-state on relay (404) — using local data');

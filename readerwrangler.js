@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.5";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.6";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -5058,6 +5058,11 @@
                         items: bookItems
                     },
                     organization: {
+                        // v7.6.0-alpha.6 - Source-stamp (MULTI-INSTANCE.md §3): the savedAt of the state this
+                        // payload serializes — NOT the send time (a wall-clock stamp would be newer than the
+                        // blob it was built from and mobile's guest guard would misfire). Same clock lineage
+                        // as the blob, so the guard's comparison is exact.
+                        savedAt: (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}').savedAt || Date.now(); } catch { return Date.now(); } })(),
                         blankImageBooks: Array.from(blankImageBooks),
                         // v6.12.0 - Deny-list serialization: spread the whole object so a newly-added field
                         // persists automatically. The old allow-list silently dropped sortIndex (bug #3).
