@@ -64,6 +64,14 @@ These sharpen the **Auto-Organize right-click** design: placement is *free* (inh
 - **Batch arrivals** (one Auto-Organize pass minting several folders): land at top **as a block,
   alphabetized within the block** — strict newest-first would stack in reverse creation order,
   which reads as random.
+- **Pin UX ratified (2026-08-30)**: pin/unpin via the right-click menu ("Pin to top" / "Unpin") —
+  pinning is rare and deliberate, and *menus change state*; a **📌 indicator on pinned rows** that is
+  itself clickable to unpin (VS Code tab-pin convention — the indicator doubles as the undo
+  affordance). No always-visible toggle next to +/✕ (clutter on every row for an almost-never
+  action). ALSO ratified: Move to Top/Bottom stay OUT of the Move to submenu (Move to = reparenting,
+  destinations only; Top/Bottom = reordering — "Move to → Bottom" would read as a container), and
+  the submenu's "Root" entry gets set apart as a *place*, not a folder: italic, separator below it,
+  renamed **"Top level"** (kills the Root-vs-Move-to-Top near-synonym confusion + the no-jargon rule).
 - **The pin boundary is a wall for drags, in BOTH directions** (Chrome pinned-tabs / Slack
   convention): dragging an unpinned folder into the pinned zone snaps it to just below the zone
   (caret only ever shown at the boundary); dragging a pinned folder below the boundary snaps it

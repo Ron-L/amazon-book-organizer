@@ -66,6 +66,7 @@
 - [ ] **Folder double-store (audit F1)** — folders live in both FOLDERS_KEY and the blob; consolidate to the single guarded source (needs a load reorder). Same class as the 6.12.0 Book-List data-loss.
 - [ ] **Folder-ordering Phase 2/3** — Count sort (Date REJECTED 2026-08-29, derivable later if ever wanted) + "bake to Manual" + **pin-to-top** (Ron-approved 2026-08-29: pinned specials stay put while the rest live-sorts by Name — dissolves the recurring re-bake-and-rescue cycle during the 1000+-book Inbox backlog grind; see spec's Pinned folders section) → see docs/design/FOLDER-ORDERING.md (spec)
 - [ ] **Book Lists management view** + generic orderable-left-pane-section ordering (Folders/Views/Book Lists uniform) → see docs/design/FOLDER-ORDERING.md (spec)
+- [ ] **Mobile server indicator** (Ron, 2026-08-30, after the installed-PWA-was-dev hunt) — Help/About always names the server explicitly (readerwrangler.com / Dev / Localhost); non-prod additionally wears a small DEV/LOCAL header chip (mobile twin of the 7.4.0 desktop LOCAL badge; same recorded lesson: labels are cheaper than recovery). Derive from the page's own address; installed apps inherit it, which is the whole point.
 - [ ] Mobile nested collapsible sub-shelves (Dashboard) — deferred pending real-world use of per-shelf collapse
 - [ ] Delete from All Books — soft-delete to Trash, removing from ALL folders + Book Lists at once (reuse membership snapshot; confirm dialog discloses count)
 - [ ] Rectangle/Lasso selection in cover view (extends `explorerSelectedItems`)
