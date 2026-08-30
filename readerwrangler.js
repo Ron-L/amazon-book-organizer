@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.4";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.5";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -3428,6 +3428,13 @@
                                 setColumnOrder([...savedOrder, ...missing]);
                             } // v5.0.0-alpha.172
                             if (explorerData.explorerGroupOn) setExplorerGroupOn(true); // v5.4.5
+                            // v7.6.0-alpha.5 - Left-pane section collapse states were never persisted
+                            // (plain useState — reset on every reload; Ron kept re-collapsing Book Lists)
+                            if (explorerData.sectionsCollapsed) {
+                                setViewsSectionCollapsed(!!explorerData.sectionsCollapsed.searches);
+                                setBookListsSectionCollapsed(!!explorerData.sectionsCollapsed.bookLists);
+                                setFoldersSectionCollapsed(!!explorerData.sectionsCollapsed.folders);
+                            }
                         }
                         // v5.0.0-alpha.169.10 - Mark settings loaded (even if no saved data)
                         explorerSettingsLoadedRef.current = true;
@@ -3824,6 +3831,9 @@
 
             // v5.0.0 - Save Explorer settings to localStorage
             useEffect(() => {
+                // v7.6.0-alpha.5 - Load guard (the Book-List-killer pattern: an unguarded mount-run
+                // stamps defaults over saved settings; a mid-boot death makes the stamp permanent)
+                if (!explorerSettingsLoadedRef.current) return;
                 // v5.0.3-alpha.1 - Filter out null column widths before saving
                 const defaultWidths = {
                     title: 200, author: 150, series: 150, seriesNum: 50, rating: 96,
@@ -3848,10 +3858,12 @@
                     visibleColumns, // v5.0.0-alpha.104 - Column visibility
                     columnWidths: sanitizedColumnWidths, // v5.0.0-alpha.109 - Column widths (sanitized)
                     columnOrder, // v5.0.0-alpha.172 - Column display order
-                    explorerGroupOn // v5.4.5 - Group toggle
+                    explorerGroupOn, // v5.4.5 - Group toggle
+                    // v7.6.0-alpha.5 - Left-pane section collapse (viewsSectionCollapsed = the Searches section)
+                    sectionsCollapsed: { searches: viewsSectionCollapsed, bookLists: bookListsSectionCollapsed, folders: foldersSectionCollapsed }
                 };
                 localStorage.setItem(EXPLORER_KEY, JSON.stringify(explorerData));
-            }, [selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, folderListSort, visibleColumns, columnWidths, columnOrder, explorerGroupOn]);
+            }, [selectedFolderId, explorerView, explorerSort, explorerCoverCols, leftPaneWidth, folderSortSettings, folderListSort, visibleColumns, columnWidths, columnOrder, explorerGroupOn, viewsSectionCollapsed, bookListsSectionCollapsed, foldersSectionCollapsed]);
 
             // v5.0.0 - Save folders to localStorage
             useEffect(() => {
