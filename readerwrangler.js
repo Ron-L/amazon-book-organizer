@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.1";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.2";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -16797,9 +16797,6 @@
                         if (!folder) return null;
 
                         const isSpecialFolder = ['__all__', '__inbox__', '__my__'].includes(folder.id);
-                        // v5.0.0-alpha.166.2 - Check if viewing special folder in right panel (can't move folders from virtual views)
-                        const isInSpecialFolderView = folderContextMenu.source === 'right' &&
-                            ['__all__', '__library__', '__inbox__'].includes(selectedFolderId);
                         const hasChildren = folders.some(f => f.parentId === folder.id);
                         const hasBooks = folder.bookIds && folder.bookIds.length > 0;
 
@@ -16893,18 +16890,13 @@
                                 <div className="border-t border-gray-200 my-1" role="separator"></div>
 
                                 {/* Move to - v5.0.0-alpha.137 */}
-                                {/* v5.0.0-alpha.166.2 - Disabled when viewing special folders in right panel */}
+                                {/* v7.6.0-alpha.2 - The alpha.166.2 view-based disable removed: it checked which VIEW you
+                                    were standing in (right pane + __library__ etc.), not what you clicked — right-clicking a
+                                    real folder in the Folders management view wrongly disabled Move to, while drag-reparent
+                                    and Move to Top/Bottom in the same view worked. Real folders are movable everywhere;
+                                    isSpecialFolder still protects the actual virtual folders. */}
                                 {!isSpecialFolder && (
-                                    isInSpecialFolderView ? (
-                                        <div
-                                            className="px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3 relative"
-                                            role="menuitem" aria-disabled="true"
-                                            title="Cannot move folders from virtual folder views">
-                                            <span>➡️</span>
-                                            <span>Move to</span>
-                                            <span className="ml-auto">▶</span>
-                                        </div>
-                                    ) : (
+                                    (
                                         <div
                                             className="submenu-trigger px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3 relative"
                                             role="menuitem" aria-haspopup="true"
@@ -17012,20 +17004,34 @@
                                 )}
 
                                 {/* v7.6.0-alpha.1 (wave A, spec item D) - Move to Top / Bottom within siblings (Manual order) */}
-                                <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
-                                    role="menuitem"
-                                    onClick={() => { moveFolderToEdge(folder.id, 'top'); setFolderContextMenu(null); }}>
-                                    <span>⬆️</span>
-                                    <span>Move to Top</span>
-                                </div>
-                                <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
-                                    role="menuitem"
-                                    onClick={() => { moveFolderToEdge(folder.id, 'bottom'); setFolderContextMenu(null); }}>
-                                    <span>⬇️</span>
-                                    <span>Move to Bottom</span>
-                                </div>
+                                {/* v7.6.0-alpha.2 - Disabled-with-tooltip in sorted modes (consistent with Move to's pattern) */}
+                                {(() => {
+                                    const canRearrange = folderListSort.column === 'custom';
+                                    const itemClass = canRearrange
+                                        ? 'px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3'
+                                        : 'px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3';
+                                    const disabledTitle = 'Switch folder sort to Manual (⇅ in the FOLDERS header) to rearrange';
+                                    return (
+                                        <React.Fragment>
+                                            <div
+                                                className={itemClass}
+                                                role="menuitem" aria-disabled={!canRearrange}
+                                                title={canRearrange ? undefined : disabledTitle}
+                                                onClick={canRearrange ? () => { moveFolderToEdge(folder.id, 'top'); setFolderContextMenu(null); } : undefined}>
+                                                <span>⬆️</span>
+                                                <span>Move to Top</span>
+                                            </div>
+                                            <div
+                                                className={itemClass}
+                                                role="menuitem" aria-disabled={!canRearrange}
+                                                title={canRearrange ? undefined : disabledTitle}
+                                                onClick={canRearrange ? () => { moveFolderToEdge(folder.id, 'bottom'); setFolderContextMenu(null); } : undefined}>
+                                                <span>⬇️</span>
+                                                <span>Move to Bottom</span>
+                                            </div>
+                                        </React.Fragment>
+                                    );
+                                })()}
 
                                 {/* Create Subfolder */}
                                 <div
