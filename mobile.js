@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.0';
+const MOBILE_VERSION = '1.7.0-alpha.4'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -245,18 +245,30 @@ const SORT_OPTIONS = [
 
 function sortBooks(books, sortKey) {
     if (sortKey === 'manual') return books; // Preserve folder.bookIds / bookOrder array order
+    // v1.7.0-alpha.4 - Universal deterministic tiebreak, IDENTICAL to desktop's (ratified: reading
+    // order beats dictionary order — a same-day batch is usually one series). Both surfaces now
+    // produce byte-identical order for the same data; ties are never left to array order again.
+    // (Infinity - Infinity is NaN, which is falsy, so the || chain skips it.)
+    const tiebreak = (a, b) =>
+        (a.author || '').localeCompare(b.author || '')
+        || (a.series || '').localeCompare(b.series || '')
+        || ((parseFloat(a.seriesPosition) || Infinity) - (parseFloat(b.seriesPosition) || Infinity))
+        || (a.title || '').localeCompare(b.title || '')
+        || (a.asin || '').localeCompare(b.asin || '');
     return [...books].sort((a, b) => {
+        let c = 0;
         switch (sortKey) {
-            case 'titleAZ': return a.title.localeCompare(b.title);
-            case 'authorAZ': return a.author.localeCompare(b.author);
-            case 'rating': return (b.rating || 0) - (a.rating || 0);
+            case 'titleAZ': c = a.title.localeCompare(b.title); break;
+            case 'authorAZ': c = a.author.localeCompare(b.author); break;
+            case 'rating': c = (b.rating || 0) - (a.rating || 0); break;
             case 'dateAdded':
             // v1.7.0 - Date Added now MEANS date added: dateAdded first (the wire carries it as of
             // app 7.6.0), acquisition date only as fallback for stale payloads. The old
             // `acquired || dateAdded` made acquisition win under the Date Added label, and wishlist
             // books (never acquired) sank to the bottom of every date sort.
-            default: return parseBookDate(b.dateAdded || b.acquired) - parseBookDate(a.dateAdded || a.acquired);
+            default: c = parseBookDate(b.dateAdded || b.acquired) - parseBookDate(a.dateAdded || a.acquired);
         }
+        return c || tiebreak(a, b);
     });
 }
 
@@ -1471,10 +1483,9 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
         const result = [];
 
         // All Books shelf (newest first, expandable)
-        // v1.7.0 - By Date Added (matches desktop's column and the sort picker's corrected key);
-        // acquisition date only as fallback for stale payloads.
-        const allByDate = [...filteredBooks]
-            .sort((a, b) => parseBookDate(b.dateAdded || b.acquired) - parseBookDate(a.dateAdded || a.acquired));
+        // v1.7.0-alpha.4 - Consolidated onto sortBooks so the shelf, the grid view, and desktop
+        // all share one Date Added ordering (incl. the universal tiebreak).
+        const allByDate = sortBooks(filteredBooks, 'dateAdded');
 
         if (allByDate.length > 0) {
             const isExpanded = expandedShelves.has('__recent__');
@@ -1820,27 +1831,37 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, b
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     marginBottom: '10px', fontSize: '13px', color: 'var(--text-secondary, #475569)'
                 }}>
-                    {/* v1.7.0 - Count honesty: in All Books, admit the filtered view ("X of Y") and name the
-                        cause — the clause is the affordance: tapping it flips Show Hidden. */}
+                    {/* v1.7.0 - Count honesty: in All Books, admit hidden books and name the cause.
+                        v1.7.0-alpha.4 - Symmetric: the clause exists whenever hidden-flagged books exist,
+                        names the current truth, and is always the toggle (show <-> re-hide). */}
                     {(() => {
-                        const hiddenExcluded = (isAllBooks && !showHidden && !showDealsOnly)
+                        const hiddenCount = (isAllBooks && !showDealsOnly)
                             ? books.filter(b => b.isHidden).length : 0;
-                        if (hiddenExcluded === 0) {
+                        if (hiddenCount === 0) {
                             return <span>{folderBooks.length.toLocaleString()} book{folderBooks.length !== 1 ? 's' : ''}</span>;
                         }
-                        const total = folderBooks.length + hiddenExcluded;
+                        const clauseBtn = (text, title) => (
+                            <button onClick={onToggleHidden} title={title}
+                                style={{
+                                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                                    color: 'var(--text-link, #2563eb)', fontSize: 'inherit',
+                                    touchAction: 'manipulation', textDecoration: 'underline dotted'
+                                }}>{text}</button>
+                        );
+                        const plural = hiddenCount !== 1 ? 's' : '';
+                        if (!showHidden) {
+                            const total = folderBooks.length + hiddenCount;
+                            return (
+                                <span>
+                                    {folderBooks.length.toLocaleString()} of {total.toLocaleString()} books{' '}
+                                    {clauseBtn(`(${hiddenCount} hidden by user)`, `${hiddenCount} book${plural} hidden by user — tap to show`)}
+                                </span>
+                            );
+                        }
                         return (
                             <span>
-                                {folderBooks.length.toLocaleString()} of {total.toLocaleString()} books{' '}
-                                <button onClick={onToggleHidden}
-                                    title={`${hiddenExcluded} book${hiddenExcluded !== 1 ? 's' : ''} hidden by user — tap to show`}
-                                    style={{
-                                        background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-                                        color: 'var(--text-link, #2563eb)', fontSize: 'inherit',
-                                        touchAction: 'manipulation', textDecoration: 'underline dotted'
-                                    }}>
-                                    ({hiddenExcluded} hidden by user)
-                                </button>
+                                {folderBooks.length.toLocaleString()} books{' '}
+                                {clauseBtn(`(including ${hiddenCount} hidden by user)`, `Tap to hide ${hiddenCount === 1 ? 'it' : 'them'} again`)}
                             </span>
                         );
                     })()}

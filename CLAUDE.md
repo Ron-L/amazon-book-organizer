@@ -66,6 +66,8 @@ Standard semver with pre-release suffix for test iterations:
 
 **ORGANIZER_VERSION** (readerwrangler.js): Update in the same commit as each alpha iteration.
 
+**MOBILE_VERSION** (mobile.js): Own X.Y.Z scheme, but any alpha commit that modifies mobile.js appends the SAME `-alpha.N` suffix as that commit's ORGANIZER_VERSION (so Help/About proves which build is running — invisible changes + no build marker = guaranteed update-failure mystery). Drop the suffix at release.
+
 **CSS cache-buster** (readerwrangler.html): `readerwrangler.css?v=X.Y.Z` must match ORGANIZER_VERSION on every commit that modifies readerwrangler.css. Update in the same commit as the CSS change.
 
 ---

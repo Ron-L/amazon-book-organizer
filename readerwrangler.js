@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.3";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.4";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -1697,8 +1697,11 @@
                                 else if (ratingB === 0 && ratingA > 0) comparison = -1;
                                 else comparison = ratingA - ratingB;
                             } else if (sort.column === 'dateAdded') {
-                                const dateA = parseBookDate(a.acquired || a.addedToWishlist);
-                                const dateB = parseBookDate(b.acquired || b.addedToWishlist);
+                                // v7.6.0-alpha.4 - Sort by the field the column DISPLAYS. The old
+                                // `acquired || addedToWishlist` was the same mislabeling mobile had —
+                                // it usually coincides with dateAdded, which is why nobody noticed.
+                                const dateA = parseBookDate(a.dateAdded || a.acquired || a.addedToWishlist);
+                                const dateB = parseBookDate(b.dateAdded || b.acquired || b.addedToWishlist);
                                 comparison = dateA - dateB;
                             } else if (sort.column === 'publicationDate') {
                                 comparison = parseBookDate(a.publicationDate) - parseBookDate(b.publicationDate);
@@ -1719,7 +1722,15 @@
                             }
                             if (comparison !== 0) return dir * comparison;
                         }
-                        return 0;
+                        // v7.6.0-alpha.4 - Universal deterministic tiebreak (ratified: reading order
+                        // beats dictionary order — a same-day batch is usually one series). Mobile
+                        // applies the IDENTICAL chain, so both surfaces produce byte-identical order.
+                        // (Infinity - Infinity is NaN, which is falsy, so the || chain skips it.)
+                        return (a.author || '').localeCompare(b.author || '')
+                            || (a.series || '').localeCompare(b.series || '')
+                            || ((parseFloat(a.seriesPosition) || Infinity) - (parseFloat(b.seriesPosition) || Infinity))
+                            || (a.title || '').localeCompare(b.title || '')
+                            || (a.asin || '').localeCompare(b.asin || '');
                     });
                 // Group: build flat display items (headers + books via sequential scan)
                 if (!explorerGroupOn || explorerSort[0].column === 'custom') {
