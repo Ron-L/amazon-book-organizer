@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.11";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.12";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -17800,9 +17800,12 @@
                                                 onMouseLeave={() => setContextSubmenu(null)}
                                                 onClick={(e) => e.stopPropagation()}>
                                                 {submenuFilterBox('Filter folders…')}
-                                                {/* v6.12.0-alpha.60 (E) - New top-level folder, then move the books there */}
+                                                {/* v6.12.0-alpha.60 (E) - New folder, then move the books there.
+                                                    v7.6.0-alpha.12 - "here" now MEANS here: created inside the folder you're standing
+                                                    in (top-level only from virtual views) — the code always passed null while the
+                                                    label promised otherwise (Ron, wave C testing). */}
                                                 <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 font-medium text-blue-700"
-                                                    role="menuitem" onClick={() => handleNewFolderThenPlace(null, false)}>
+                                                    role="menuitem" onClick={() => handleNewFolderThenPlace((selectedFolderId && !selectedFolderId.startsWith('__')) ? selectedFolderId : null, false)}>
                                                     <span>＋</span><span>New folder here…</span>
                                                 </div>
                                                 <div className="border-t border-gray-200 my-1" role="separator"></div>
@@ -17838,9 +17841,10 @@
                                             onMouseLeave={() => setContextSubmenu(null)}
                                             onClick={(e) => e.stopPropagation()}>
                                             {submenuFilterBox('Filter folders…')}
-                                            {/* v6.12.0-alpha.60 (E) - New top-level folder, then copy the books there */}
+                                            {/* v6.12.0-alpha.60 (E) - New folder, then copy the books there.
+                                                v7.6.0-alpha.12 - "here" means here (see the Move to twin) */}
                                             <div className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2 font-medium text-blue-700"
-                                                role="menuitem" onClick={() => handleNewFolderThenPlace(null, true)}>
+                                                role="menuitem" onClick={() => handleNewFolderThenPlace((selectedFolderId && !selectedFolderId.startsWith('__')) ? selectedFolderId : null, true)}>
                                                 <span>＋</span><span>New folder here…</span>
                                             </div>
                                             <div className="border-t border-gray-200 my-1" role="separator"></div>
