@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.12";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.13";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -5172,6 +5172,7 @@
                         bookLists: bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] })), // v6.12.0 - Curated Book Lists (mobile consumes in Phase 8)
                         explorerSettings: {
                             folderSortSettings,
+                            folderListSort, // v7.6.0-alpha.13 - folder-tree sort mode: mobile's order mirror needs it
                             explorerView,
                             explorerCoverCols,
                             leftPaneWidth,

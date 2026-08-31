@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.0-alpha.6'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.7.0-alpha.13'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -111,6 +111,7 @@ function restoreOrganization(org, bookIds, sourceStamp) {
             pinnedTagFolders: org.pinnedTagFolders || [],
             bookLists: bookLists, // v6.12.0 Phase 8 - curated lists (rendered as shelves + drawer)
             savedSearches: org.savedSearches || [], // v6.12.0 Phase 8 - listed in drawer; results wired in 8b
+            folderListSort: (org.explorerSettings && org.explorerSettings.folderListSort) || null, // v1.7.0-alpha.13 - folder-tree sort mode (order mirror)
             dataSource: 'enriched'
         },
         // v1.7.0-alpha.6 - Re-stamp with the payload's SOURCE stamp, never Date.now() (MULTI-INSTANCE.md
@@ -272,6 +273,36 @@ function sortBooks(books, sortKey) {
         }
         return c || tiebreak(a, b);
     });
+}
+
+// v1.7.0-alpha.13 - Mirror of desktop's folder ordering (FOLDER-ORDERING.md: "mobile mirrors the
+// app's order, pins included"): pinned folders float above the active sort in their stored manual
+// order; Manual = sortIndex (root) / parent's childFolderIds (nested) with name tiebreak; Name = A-Z.
+// listSort (the desktop folder-tree sort mode) rides the device-state push; default Manual.
+function orderedChildFolders(allFolders, parentId, listSort) {
+    const children = allFolders.filter(f => (f.parentId || null) === (parentId || null));
+    const parentFolder = parentId ? allFolders.find(f => f.id === parentId) : null;
+    const orderMap = new Map(((parentFolder && parentFolder.childFolderIds) || []).map((id, i) => [id, i]));
+    const manualCmp = parentId
+        ? (a, b) => {
+            const pa = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+            const pb = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+            return pa !== pb ? pa - pb : a.name.localeCompare(b.name);
+        }
+        : (a, b) => {
+            const ia = a.sortIndex ?? Infinity;
+            const ib = b.sortIndex ?? Infinity;
+            return ia !== ib ? ia - ib : a.name.localeCompare(b.name);
+        };
+    const pinned = children.filter(f => f.pinned).sort(manualCmp);
+    const rest = children.filter(f => !f.pinned);
+    if (listSort && listSort.column === 'title') {
+        const dir = listSort.direction === 'desc' ? -1 : 1;
+        rest.sort((a, b) => dir * a.name.localeCompare(b.name));
+    } else {
+        rest.sort(manualCmp);
+    }
+    return [...pinned, ...rest];
 }
 
 // v6.12.0 Phase 8b - Saved Search matcher. Ported from desktop bookMatchesFilters so a Search (saved
@@ -622,12 +653,13 @@ function Backdrop({ onClick }) {
 
 // --- Folder Drawer ---
 
-function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showHidden, onSelectFolder, onSelectSearch, onClose, collapsed, toggleSection }) {
+function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showHidden, folderListSort, onSelectFolder, onSelectSearch, onClose, collapsed, toggleSection }) {
     const inbox = folders.find(f => f.id === '__inbox__');
     const inboxCount = inbox ? (inbox.bookIds || []).length : 0;
     // User folders: top-level (parentId === null), excluding Inbox
-    const topLevel = folders.filter(f => !f.parentId && f.id !== '__inbox__');
-    const childrenOf = (parentId) => folders.filter(f => f.parentId === parentId);
+    // v1.7.0-alpha.13 - Desktop's order (pins + sortIndex/Name), not raw array order
+    const topLevel = orderedChildFolders(folders, null, folderListSort).filter(f => f.id !== '__inbox__');
+    const childrenOf = (parentId) => orderedChildFolders(folders, parentId, folderListSort);
 
     // v1.6.9 - per-folder collapse in the drawer tree (drawer-local, persisted)
     const [collapsedFolders, setCollapsedFolders] = useState(() => {
@@ -1456,7 +1488,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
 
 // --- Dashboard component ---
 
-function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves, collapsed, toggleSection }) {
+function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, folderListSort, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves, collapsed, toggleSection }) {
     // v1.6.10 - per-shelf collapse on the Dashboard (folder shelves), Dashboard-local + persisted
     const [collapsedShelves, setCollapsedShelves] = useState(() => {
         try { return JSON.parse(localStorage.getItem('rw_mobile_shelves_collapsed')) || {}; } catch (e) { return {}; }
@@ -1605,8 +1637,8 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
         }
 
         // Folder shelves with sections (standalone books + series subfolders)
-        const topLevelFolders = folders
-            .filter(f => !f.parentId && f.id !== '__inbox__');
+        // v1.7.0-alpha.13 - Desktop's order (pins + sortIndex/Name), not raw array order
+        const topLevelFolders = orderedChildFolders(folders, null, folderListSort).filter(f => f.id !== '__inbox__');
 
         for (const folder of topLevelFolders) {
             const sections = [];
@@ -1630,10 +1662,8 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
                 remaining -= capped.length;
             }
 
-            // Series subfolders in desktop manual order (childFolderIds) or folder array order
-            const childFolders = folder.childFolderIds
-                ? folder.childFolderIds.map(id => folders.find(f => f.id === id)).filter(Boolean)
-                : folders.filter(f => f.parentId === folder.id);
+            // v1.7.0-alpha.13 - Series subfolders in desktop's full order (pins + manual/Name mirror)
+            const childFolders = orderedChildFolders(folders, folder.id, folderListSort);
 
             for (const child of childFolders) {
                 if (remaining <= 0) break;
@@ -1756,7 +1786,7 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
 
 // --- FolderView component ---
 
-function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, onToggleHidden, sortOption, onCycleSort, viewMode,
+function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, onToggleHidden, folderListSort, sortOption, onCycleSort, viewMode,
                       coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapSubfolder }) {
     const isAllBooks = folderId === '__recent__';
     const isTagView = folderId?.startsWith('__tag_') && folderId?.endsWith('__');
@@ -1766,7 +1796,7 @@ function FolderView({ folderId, books, folders, pinnedTagFolders, tagRegistry, b
 
     const subfolders = useMemo(() => {
         if (isAllBooks || isTagView || isBookList || isSearch) return [];
-        return folders.filter(f => f.parentId === folderId).sort((a, b) => a.name.localeCompare(b.name));
+        return orderedChildFolders(folders, folderId, folderListSort); // v1.7.0-alpha.13 - desktop's order, not alphabetical
     }, [folders, folderId, isAllBooks, isTagView, isBookList, isSearch]);
 
     const folderBooks = useMemo(() => {
@@ -2411,6 +2441,7 @@ function MobileApp() {
     const [viewMode, setViewMode] = useState(savedPrefs.viewMode || 'covers');
     const [showDealsOnly, setShowDealsOnly] = useState(savedPrefs.showDealsOnly || false);
     const [showHidden, setShowHidden] = useState(savedPrefs.showHidden || false);
+    const [folderListSort, setFolderListSort] = useState(null); // v1.7.0-alpha.13 - desktop folder-tree sort mode (order mirror)
 
     const savePrefs = (updates) => {
         const current = JSON.parse(localStorage.getItem(MOBILE_PREFS_KEY) || '{}');
@@ -2498,6 +2529,12 @@ function MobileApp() {
         setSavedSearches(org.savedSearches || []); // v6.12.0 Phase 8
         setHiddenInstances(new Set(org.hiddenInstances || []));
         setBlankImageBooks(new Set(org.blankImageBooks || []));
+        // v1.7.0-alpha.13 - Folder-tree sort mode for the order mirror: cached org (phone) ->
+        // same-origin EXPLORER_KEY (dev machine, where the guest guard skips the cache and the
+        // freshest value is the desktop's own) -> default Manual (null).
+        let fls = org.folderListSort || null;
+        if (!fls) { try { fls = JSON.parse(localStorage.getItem(EXPLORER_KEY) || '{}').folderListSort || null; } catch (e) {} }
+        setFolderListSort(fls);
 
         if (loadedBooks.length > 0) {
             const urlMap = await buildCoverUrlMap(loadedBooks);
@@ -2909,6 +2946,7 @@ function MobileApp() {
                     folders={folders}
                     books={books}
                     showHidden={showHidden}
+                    folderListSort={folderListSort}
                     pinnedTagFolders={pinnedTagFolders}
                     tagRegistry={tagRegistry}
                     bookLists={bookLists}
@@ -2969,7 +3007,7 @@ function MobileApp() {
                     <FolderView
                         folderId={currentNav.folderId}
                         books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists} savedSearches={savedSearches}
-                        showDealsOnly={showDealsOnly} showHidden={showHidden} onToggleHidden={handleToggleHidden}
+                        showDealsOnly={showDealsOnly} showHidden={showHidden} onToggleHidden={handleToggleHidden} folderListSort={folderListSort}
                         sortOption={sortOption} onCycleSort={cycleSortOption}
                         viewMode={viewMode}
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
@@ -3001,7 +3039,7 @@ function MobileApp() {
                     <Dashboard
                         collapsed={drawerCollapsed} toggleSection={toggleSection}
                         books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists} savedSearches={savedSearches}
-                        showDealsOnly={showDealsOnly} showHidden={showHidden}
+                        showDealsOnly={showDealsOnly} showHidden={showHidden} folderListSort={folderListSort}
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
                         setBlankImageBooks={setBlankImageBooks}
                         onTapBook={(bookId) => navigateTo('detail', { bookId })}

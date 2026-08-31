@@ -75,8 +75,12 @@ Two separate ordering systems, asymmetric ON PURPOSE:
 - **Mobile mirrors the app's order, pins included.** Mobile has no reorder affordance, so the app is
   the ordering surface and mobile is a faithful mirror. Known live gap: mobile.js reads
   `childFolderIds` but ignores root `sortIndex` — root order on mobile already diverges from the app.
-  Implementation (mobile applies the same rules vs. app bakes display order into the device-state
-  push) chosen during build for simplicity.
+  Implementation RULING (2026-08-31, built in 7.6.0-alpha.13): **mobile applies the same rules** —
+  sortIndex/pinned already ride the push (deny-list spread); `folderListSort` added to the payload's
+  explorerSettings; mobile mirrors the comparator + pins-first partition in one helper feeding the
+  drawer tree, Dashboard shelves, and FolderView subfolders. Rejected: baking display order into
+  the pushed array (flattened per-sibling order is ambiguous; a mode flip still wouldn't update
+  without a re-push — no advantage, more magic).
 - **New arrivals land at TOP of the stored manual order** (below pins), regardless of the active
   display mode — months of Name-mode organizing must not rot the Manual order; flipping back to
   Manual shows recency, not a bottom clump. A drag to an explicit position always wins.
