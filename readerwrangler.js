@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.9";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.10";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -17118,27 +17118,6 @@
                                     )
                                 )}
 
-                                {/* v7.6.0-alpha.7 (wave B) - Pin to top / Unpin (state change lives in the menu;
-                                    the row's 📌 indicator is the one-click unpin) */}
-                                {/* v7.6.0-alpha.8 - Multi-select aware: when the clicked folder is part of a right-pane
-                                    selection, the clicked folder's direction applies to the WHOLE selection */}
-                                {(() => {
-                                    const selFolderIds = folderContextMenu.source === 'right'
-                                        ? [...explorerSelectedItems].filter(id => folders.some(fl => fl.id === id))
-                                        : [];
-                                    const pinTargets = (selFolderIds.length > 1 && selFolderIds.includes(folder.id))
-                                        ? selFolderIds : [folder.id];
-                                    return (
-                                        <div
-                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
-                                            role="menuitem"
-                                            onClick={() => { setFoldersPinned(pinTargets, !folder.pinned); setFolderContextMenu(null); }}>
-                                            <span>📌</span>
-                                            <span>{folder.pinned ? 'Unpin' : 'Pin to top'}{pinTargets.length > 1 ? ` (${pinTargets.length})` : ''}</span>
-                                        </div>
-                                    );
-                                })()}
-
                                 {/* v7.6.0-alpha.1 (wave A, spec item D) - Move to Top / Bottom within siblings (Manual order) */}
                                 {/* v7.6.0-alpha.2 - Disabled-with-tooltip in sorted modes (consistent with Move to's pattern) */}
                                 {/* v7.6.0-alpha.7 (wave B) - Pinned folders stay enabled in sorted modes: the pinned
@@ -17168,6 +17147,29 @@
                                                 <span>Move to Bottom</span>
                                             </div>
                                         </React.Fragment>
+                                    );
+                                })()}
+
+                                {/* v7.6.0-alpha.7 (wave B) - Pin to top / Unpin (state change lives in the menu;
+                                    the row's 📌 indicator is the one-click unpin) */}
+                                {/* v7.6.0-alpha.8 - Multi-select aware: when the clicked folder is part of a right-pane
+                                    selection, the clicked folder's direction applies to the WHOLE selection */}
+                                {/* v7.6.0-alpha.10 - Placed AFTER the move block: moves grouped together (movement verbs),
+                                    then the state change — the 6.15.0 group-by-what-it-does principle (Ron) */}
+                                {(() => {
+                                    const selFolderIds = folderContextMenu.source === 'right'
+                                        ? [...explorerSelectedItems].filter(id => folders.some(fl => fl.id === id))
+                                        : [];
+                                    const pinTargets = (selFolderIds.length > 1 && selFolderIds.includes(folder.id))
+                                        ? selFolderIds : [folder.id];
+                                    return (
+                                        <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                            role="menuitem"
+                                            onClick={() => { setFoldersPinned(pinTargets, !folder.pinned); setFolderContextMenu(null); }}>
+                                            <span>📌</span>
+                                            <span>{folder.pinned ? 'Unpin' : 'Pin to top'}{pinTargets.length > 1 ? ` (${pinTargets.length})` : ''}</span>
+                                        </div>
                                     );
                                 })()}
 
