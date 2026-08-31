@@ -44,6 +44,25 @@ Refinements agreed while organizing a growing library:
 
 These sharpen the **Auto-Organize right-click** design: placement is *free* (inherited from the list mode), so its menu stays just **By Author / By Series** — no ordering sub-levels.
 
+## Decision — the deliberate ordering asymmetry (ratified 2026-08-31, wave C testing)
+
+Two separate ordering systems, asymmetric ON PURPOSE:
+- **The folder TREE has ONE global order** (`folderListSort`) mirrored everywhere it appears —
+  the 2026-07-07 "one list, one order" decision. The tree is one structure viewed from many
+  windows; fragments that disagree make you doubt your memory.
+- **Each folder's BOOK contents have their own remembered sort** (`folderSortSettings`, default
+  Manual) — the **Finder convention**, kept because different folders have conflicting natural
+  orders (author folder → series order; Wishlist → price/delta; All Books → Date Added; Book List
+  → manual queue) and one global book sort would make every one a compromise.
+- **The predictability property that makes Finder's version work and Windows' fail**: a folder's
+  order changes ONLY when the user changes it, standing in that folder. Windows' sin is the
+  invisible auto-classifier (content-sniffed templates), not per-folder memory — RW has NO
+  classifier; every folder is born Manual.
+- The pickers differ in size because the DATA differs: folders have one sortable attribute today
+  (Name; Count in Phase 2/3), books have a dozen. Not a philosophy difference.
+- **Focus-jump on create kept for now** (create → navigate into it, rename armed): serves the
+  common case, self-explanatory once noticed; revisit only if it grates during the Inbox grind.
+
 ## Decisions — Phase 2/3 build kickoff (2026-08-29)
 
 - **Date sort key: REJECTED.** Nobody needs it: Manual-with-new-at-top *is* recency order, and if a
