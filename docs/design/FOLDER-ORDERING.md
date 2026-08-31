@@ -72,6 +72,12 @@ These sharpen the **Auto-Organize right-click** design: placement is *free* (inh
   destinations only; Top/Bottom = reordering — "Move to → Bottom" would read as a container), and
   the submenu's "Root" entry gets set apart as a *place*, not a folder: italic, separator below it,
   renamed **"Top level"** (kills the Root-vs-Move-to-Top near-synonym confusion + the no-jargon rule).
+- **Pinning keeps the folders' relative MANUAL order — it does not append to the zone's bottom**
+  (ratified after live testing 2026-08-31). Ron expected Chrome-style append; observed behavior
+  (pin #1, #2, #7, #4 in random order → zone shows #1, #2, #4, #7) was judged "not wrong, probably
+  good, a trifle surprising — very discoverable." Practical consequence: arrange first, then pin in
+  any order — the arrangement is preserved. Pin/Unpin is multi-select aware (clicked folder's
+  direction applies to the whole selection).
 - **The pin boundary is a wall for drags, in BOTH directions** (Chrome pinned-tabs / Slack
   convention): dragging an unpinned folder into the pinned zone snaps it to just below the zone
   (caret only ever shown at the boundary); dragging a pinned folder below the boundary snaps it

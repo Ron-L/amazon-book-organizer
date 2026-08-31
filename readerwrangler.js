@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.7";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.8";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -2617,17 +2617,26 @@
             // (FOLDER-ORDERING.md: "pinning is a state, position is a consequence"). The zone shows its
             // members in manual order; unpinning returns the folder to its sort-appropriate spot
             // automatically. Fully reversible, so undo/redo just flip the flag back.
+            // v7.6.0-alpha.8 - Multi-folder capable: one action, one undo, one toast.
+            const setFoldersPinned = (folderIds, pinned) => {
+                const targets = folderIds.filter(id => {
+                    const f = folders.find(x => x.id === id);
+                    return f && !!f.pinned !== pinned;
+                });
+                if (!targets.length) return;
+                setFolders(prev => prev.map(x => targets.includes(x.id) ? { ...x, pinned } : x));
+                const firstName = folders.find(f => f.id === targets[0])?.name || targets[0];
+                const label = targets.length === 1 ? `"${firstName}"` : `${targets.length} folders`;
+                recordAction({
+                    type: 'TOGGLE_PIN', folderIds: targets, pinned,
+                    label: `${pinned ? 'Pin' : 'Unpin'} ${label}`,
+                    description: `${pinned ? 'Pin' : 'Unpin'} ${label}`
+                });
+                showToast(pinned ? `📌 Pinned ${label} to the top` : `Unpinned ${label}`);
+            };
             const toggleFolderPin = (folderId) => {
                 const f = folders.find(x => x.id === folderId);
-                if (!f) return;
-                const next = !f.pinned;
-                setFolders(prev => prev.map(x => x.id === folderId ? { ...x, pinned: next } : x));
-                recordAction({
-                    type: 'TOGGLE_PIN', folderId, pinned: next,
-                    label: `${next ? 'Pin' : 'Unpin'} "${f.name}"`,
-                    description: `${next ? 'Pin' : 'Unpin'} "${f.name}"`
-                });
-                showToast(next ? `📌 Pinned "${f.name}" to the top` : `Unpinned "${f.name}"`);
+                if (f) setFoldersPinned([folderId], !f.pinned);
             };
 
             // v5.0.0-alpha.78 - Phase D: Reparent folder (move into another folder) with undo
@@ -6573,10 +6582,12 @@
                             return folder;
                         }));
                         break;
-                    case 'TOGGLE_PIN':
-                        // v7.6.0-alpha.7 (wave B) - Undo pin toggle: flip the flag back
-                        setFolders(prev => prev.map(f => f.id === action.folderId ? { ...f, pinned: !action.pinned } : f));
+                    case 'TOGGLE_PIN': {
+                        // v7.6.0-alpha.7 (wave B) - Undo pin toggle: flip the flag back (alpha.8: multi-folder)
+                        const ids = action.folderIds || [action.folderId];
+                        setFolders(prev => prev.map(f => ids.includes(f.id) ? { ...f, pinned: !action.pinned } : f));
                         break;
+                    }
                     case 'REORDER_FOLDER':
                         // v5.0.0-alpha.79 - Undo folder reorder: restore old order
                         if (action.parentId) {
@@ -7007,10 +7018,12 @@
                             return folder;
                         }));
                         break;
-                    case 'TOGGLE_PIN':
-                        // v7.6.0-alpha.7 (wave B) - Redo pin toggle: re-apply the flag
-                        setFolders(prev => prev.map(f => f.id === action.folderId ? { ...f, pinned: action.pinned } : f));
+                    case 'TOGGLE_PIN': {
+                        // v7.6.0-alpha.7 (wave B) - Redo pin toggle: re-apply the flag (alpha.8: multi-folder)
+                        const ids = action.folderIds || [action.folderId];
+                        setFolders(prev => prev.map(f => ids.includes(f.id) ? { ...f, pinned: action.pinned } : f));
                         break;
+                    }
                     case 'REORDER_FOLDER':
                         // v5.0.0-alpha.79 - Redo folder reorder: apply new order
                         if (action.parentId) {
@@ -13997,15 +14010,15 @@
                                                         )}
                                                         {/* v7.6.0-alpha.7 (wave B) - Pin indicator: always visible on pinned rows; clicking it
                                                             unpins (VS Code tab-pin convention — the indicator doubles as the undo affordance) */}
-                                                        {folder.pinned && (
-                                                            <span
-                                                                className="text-xs cursor-pointer select-none"
-                                                                style={{ pointerEvents: 'auto' }}
-                                                                title={`Pinned to top — click to unpin "${folder.name}"`}
-                                                                onClick={(e) => { e.stopPropagation(); toggleFolderPin(folder.id); }}>
-                                                                📌
-                                                            </span>
-                                                        )}
+                                                        {/* v7.6.0-alpha.8 - Fixed-width slot on EVERY row so the pins form a straight column
+                                                            (empty for unpinned; hover +/× swap can still shift it — accepted) */}
+                                                        <span
+                                                            className={`w-4 text-center text-xs select-none ${folder.pinned ? 'cursor-pointer' : ''}`}
+                                                            style={{ pointerEvents: folder.pinned ? 'auto' : 'none' }}
+                                                            title={folder.pinned ? `Pinned to top — click to unpin "${folder.name}"` : undefined}
+                                                            onClick={folder.pinned ? (e) => { e.stopPropagation(); toggleFolderPin(folder.id); } : undefined}>
+                                                            {folder.pinned ? '📌' : ''}
+                                                        </span>
                                                         {/* v6.13.2-alpha.2 - Count + action buttons live OUTSIDE the edit ternary, so ×/＋ stay reachable while naming a new folder (like Book Lists — delete a mis-created folder without hitting Enter first). */}
                                                                 {/* v6.3.0 - Count hidden on hover; buttons shown in its place (no overlap) */}
                                                                 <span className="group-hover:hidden">
@@ -15308,9 +15321,10 @@
                                                                             onClick={(e) => e.stopPropagation()}
                                                                         />
                                                                     ) : (
-                                                                        <span className="flex items-center gap-1">
+                                                                        <span className="flex items-center justify-between w-full">
                                                                             <span>{folder.name}</span>
                                                                             {/* v7.6.0-alpha.7 (wave B) - Pin indicator (click to unpin) */}
+                                                                            {/* v7.6.0-alpha.8 - Right edge of the Name column: straight column, matches left pane */}
                                                                             {folder.pinned && (
                                                                                 <span className="text-xs cursor-pointer select-none"
                                                                                     title={`Pinned to top — click to unpin "${folder.name}"`}
@@ -17106,13 +17120,24 @@
 
                                 {/* v7.6.0-alpha.7 (wave B) - Pin to top / Unpin (state change lives in the menu;
                                     the row's 📌 indicator is the one-click unpin) */}
-                                <div
-                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
-                                    role="menuitem"
-                                    onClick={() => { toggleFolderPin(folder.id); setFolderContextMenu(null); }}>
-                                    <span>📌</span>
-                                    <span>{folder.pinned ? 'Unpin' : 'Pin to top'}</span>
-                                </div>
+                                {/* v7.6.0-alpha.8 - Multi-select aware: when the clicked folder is part of a right-pane
+                                    selection, the clicked folder's direction applies to the WHOLE selection */}
+                                {(() => {
+                                    const selFolderIds = folderContextMenu.source === 'right'
+                                        ? [...explorerSelectedItems].filter(id => folders.some(fl => fl.id === id))
+                                        : [];
+                                    const pinTargets = (selFolderIds.length > 1 && selFolderIds.includes(folder.id))
+                                        ? selFolderIds : [folder.id];
+                                    return (
+                                        <div
+                                            className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                            role="menuitem"
+                                            onClick={() => { setFoldersPinned(pinTargets, !folder.pinned); setFolderContextMenu(null); }}>
+                                            <span>📌</span>
+                                            <span>{folder.pinned ? 'Unpin' : 'Pin to top'}{pinTargets.length > 1 ? ` (${pinTargets.length})` : ''}</span>
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* v7.6.0-alpha.1 (wave A, spec item D) - Move to Top / Bottom within siblings (Manual order) */}
                                 {/* v7.6.0-alpha.2 - Disabled-with-tooltip in sorted modes (consistent with Move to's pattern) */}
