@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.8";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.9";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -14008,17 +14008,6 @@
                                                         ) : (
                                                             <span className="flex-1 pointer-events-none">{folder.name}</span>
                                                         )}
-                                                        {/* v7.6.0-alpha.7 (wave B) - Pin indicator: always visible on pinned rows; clicking it
-                                                            unpins (VS Code tab-pin convention — the indicator doubles as the undo affordance) */}
-                                                        {/* v7.6.0-alpha.8 - Fixed-width slot on EVERY row so the pins form a straight column
-                                                            (empty for unpinned; hover +/× swap can still shift it — accepted) */}
-                                                        <span
-                                                            className={`w-4 text-center text-xs select-none ${folder.pinned ? 'cursor-pointer' : ''}`}
-                                                            style={{ pointerEvents: folder.pinned ? 'auto' : 'none' }}
-                                                            title={folder.pinned ? `Pinned to top — click to unpin "${folder.name}"` : undefined}
-                                                            onClick={folder.pinned ? (e) => { e.stopPropagation(); toggleFolderPin(folder.id); } : undefined}>
-                                                            {folder.pinned ? '📌' : ''}
-                                                        </span>
                                                         {/* v6.13.2-alpha.2 - Count + action buttons live OUTSIDE the edit ternary, so ×/＋ stay reachable while naming a new folder (like Book Lists — delete a mis-created folder without hitting Enter first). */}
                                                                 {/* v6.3.0 - Count hidden on hover; buttons shown in its place (no overlap) */}
                                                                 <span className="group-hover:hidden">
@@ -14113,6 +14102,17 @@
                                                                     ×
                                                                 </button>
                                                                 </div>
+                                                        {/* v7.6.0-alpha.7 (wave B) - Pin indicator: click to unpin (VS Code tab-pin convention).
+                                                            v7.6.0-alpha.8.1 - FLUSH RIGHT, after count/buttons: anchored to the pane edge, the pins
+                                                            form a true straight column and the hover +/× swap can't shift them. Fixed-width slot
+                                                            on every row keeps counts aligned too. */}
+                                                        <span
+                                                            className={`w-4 text-center text-xs select-none flex-shrink-0 ${folder.pinned ? 'cursor-pointer' : ''}`}
+                                                            style={{ pointerEvents: folder.pinned ? 'auto' : 'none' }}
+                                                            title={folder.pinned ? `Pinned to top — click to unpin "${folder.name}"` : undefined}
+                                                            onClick={folder.pinned ? (e) => { e.stopPropagation(); toggleFolderPin(folder.id); } : undefined}>
+                                                            {folder.pinned ? '📌' : ''}
+                                                        </span>
                                                     </div>
                                                     {/* Render children if expanded */}
                                                     {hasChildren && isExpanded && children.map(child => renderFolder(child, depth + 1))}
