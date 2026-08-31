@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.10";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.11";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -2256,6 +2256,58 @@
                 return [...children].sort(manualComparatorFor(parentId));
             };
 
+            // v7.6.0-alpha.11 (wave C) - Placement for newly-arriving folders (create / copy / Auto-Organize).
+            // PURE transform over a folders array (run it inside setFolders). Stamps the STORED manual order:
+            // new folders land at the TOP of their sibling list (below the pinned zone — pins float by flag,
+            // so manual index 0 displays right under them), batches alphabetized as a block (2026-08-29
+            // decisions). Recorded regardless of the active display mode (stored-manual-top rule): in Name
+            // mode the visible position is derived, but Manual keeps meaning something.
+            // First-placement subtlety: if a sibling list has NO stored order yet (raw-array world), the
+            // existing siblings' current array order is baked in BEHIND the newcomers — otherwise giving the
+            // first newcomer an index would silently re-sort everyone else to the alphabetical fallback.
+            const placeNewFoldersAtTop = (folderArr, newFolders) => {
+                if (!newFolders || !newFolders.length) return folderArr;
+                const byParent = new Map();
+                [...newFolders]
+                    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                    .forEach(nf => {
+                        const pid = nf.parentId || null;
+                        if (!byParent.has(pid)) byParent.set(pid, []);
+                        byParent.get(pid).push(nf.id);
+                    });
+                let next = folderArr;
+                for (const [pid, ids] of byParent) {
+                    const idPos = new Map(ids.map((id, i) => [id, i]));
+                    if (pid === null) {
+                        const k = ids.length;
+                        const anyRootIndexed = next.some(f => f.parentId === null && !idPos.has(f.id) && f.sortIndex !== undefined);
+                        if (anyRootIndexed) {
+                            next = next.map(f => {
+                                if (idPos.has(f.id)) return { ...f, sortIndex: idPos.get(f.id) };
+                                if (f.parentId === null && f.sortIndex !== undefined) return { ...f, sortIndex: f.sortIndex + k };
+                                return f;
+                            });
+                        } else {
+                            let pos = k; // bake current array order behind the newcomers
+                            next = next.map(f => {
+                                if (idPos.has(f.id)) return { ...f, sortIndex: idPos.get(f.id) };
+                                if (f.parentId === null) return { ...f, sortIndex: pos++ };
+                                return f;
+                            });
+                        }
+                    } else {
+                        next = next.map(f => {
+                            if (f.id !== pid) return f;
+                            const existing = (f.childFolderIds && f.childFolderIds.length)
+                                ? f.childFolderIds.filter(id => !idPos.has(id))
+                                : folderArr.filter(c => c.parentId === pid && !idPos.has(c.id)).map(c => c.id);
+                            return { ...f, childFolderIds: [...ids, ...existing] };
+                        });
+                    }
+                }
+                return next;
+            };
+
             // v7.6.0-alpha.1 (wave A) - Apply an order-field snapshot to one folder record.
             // Snapshot shape: { sortIndex: {folderId: valueOrNull}, childIds: {folderId: arrayOrNull} }
             // (null = field absent). Used by REPARENT_FOLDER undo/redo to restore order state verbatim.
@@ -2291,7 +2343,7 @@
             const createFolderHere = (parentId) => {
                 const nf = { id: `folder-${Date.now()}`, name: 'New Folder', parentId: parentId || null, bookIds: [], childFolderIds: [], collapsed: false };
                 recordAction({ type: 'CREATE_FOLDER', folderId: nf.id, parentId: parentId || null, folder: { ...nf } });
-                setFolders(prev => [...prev, nf]);
+                setFolders(prev => placeNewFoldersAtTop([...prev, nf], [nf])); // v7.6.0-alpha.11 (wave C) - place at top-below-pins
                 navigateToFolder(nf.id);
                 setEditingFolderId(nf.id);
                 setEditingFolderName('New Folder');
@@ -4541,7 +4593,11 @@
                                     type: 'COPY_PASTE_FOLDER',
                                     newFolderIds: newFolders.map(f => f.id)
                                 });
-                                setFolders(prev => [...prev, ...newFolders]);
+                                // v7.6.0-alpha.11 (wave C) - Strip the sortIndex inherited from the copied source
+                                // (duplicate-position hazard) and PLACE the top copy; descendants keep their structure.
+                                const topCopy = { ...newFolders[0] };
+                                delete topCopy.sortIndex;
+                                setFolders(prev => placeNewFoldersAtTop([...prev, topCopy, ...newFolders.slice(1)], [topCopy]));
                                 console.log(`📌 Pasted (copied) "${folderToPaste.name}" into "${currentFolder.name}"`);
                             }
                         }
@@ -6938,7 +6994,7 @@
                         break;
                     case 'CREATE_FOLDER':
                         // v5.0.0-alpha.51 - Redo folder creation: re-add the folder
-                        setFolders(prev => [...prev, { ...action.folder }]);
+                        setFolders(prev => placeNewFoldersAtTop([...prev, { ...action.folder }], [action.folder])); // v7.6.0-alpha.11 - redo re-places too
                         setSelectedFolderId(action.folderId);
                         break;
                     case 'MOVE_ITEMS': {
@@ -7468,7 +7524,10 @@
             const applyOrganizePlan = (authorGroups, opts, label) => {
                 const plan = computeOrganizePlan(authorGroups, folders, opts);
                 if (plan.totalBooksOrganized > 0) {
-                    setFolders(plan.newFolders);
+                    // v7.6.0-alpha.11 (wave C) - Place the batch of engine-created folders at top-below-pins
+                    // (alphabetized as a block); one renumber for the whole batch, not one per folder.
+                    const createdIds = new Set(plan.subActions.filter(s => s.type === 'CREATE_FOLDER').map(s => s.folderId));
+                    setFolders(placeNewFoldersAtTop(plan.newFolders, plan.newFolders.filter(f => createdIds.has(f.id))));
                     recordAction({
                         type: 'WIZARD_ORGANIZE',
                         description: `${label} (${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''})`,
@@ -7754,7 +7813,9 @@
                     const rem = subActions.find(a => a.type === 'REMOVE_BOOKS_FROM_FOLDER' && a.folderId === sourceFolderId);
                     if (rem) rem.bookIds = [...rem.bookIds, ...selectedFiledIds];
                     else subActions.push({ type: 'REMOVE_BOOKS_FROM_FOLDER', folderId: sourceFolderId, bookIds: selectedFiledIds });
-                    setFolders(newFolders);
+                    // v7.6.0-alpha.11 (wave C) - Place engine-created folders (same as applyOrganizePlan)
+                    const createdIds = new Set(subActions.filter(a => a.type === 'CREATE_FOLDER').map(a => a.folderId));
+                    setFolders(placeNewFoldersAtTop(newFolders, newFolders.filter(f => createdIds.has(f.id))));
                     recordAction({ type: 'WIZARD_ORGANIZE', description: `${label} + removed ${selectedFiledIds.length} already-filed from ${where}`, subActions });
                     showToast(`Organized ${plan.totalBooksOrganized} book${plan.totalBooksOrganized !== 1 ? 's' : ''} and removed ${selectedFiledIds.length} from ${where}`);
                 } else if (willOrganize) {
@@ -13502,7 +13563,7 @@
                                                         parentId: null,
                                                         folder: { ...newFolder }
                                                     });
-                                                    setFolders(prev => [...prev, newFolder]);
+                                                    setFolders(prev => placeNewFoldersAtTop([...prev, newFolder], [newFolder])); // v7.6.0-alpha.11 (wave C)
                                                     navigateToFolder(newFolder.id);
                                                     setEditingFolderId(newFolder.id);
                                                     setEditingFolderName('New Folder');
@@ -14078,10 +14139,11 @@
                                                                             folder: { ...newFolder }
                                                                         });
                                                                         // Expand parent and add subfolder in single update
-                                                                        setFolders(prev => [
+                                                                        // v7.6.0-alpha.11 (wave C) - place at top of the parent's children
+                                                                        setFolders(prev => placeNewFoldersAtTop([
                                                                             ...prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f),
                                                                             newFolder
-                                                                        ]);
+                                                                        ], [newFolder]));
                                                                         navigateToFolder(newFolder.id);
                                                                         setEditingFolderId(newFolder.id);
                                                                         setEditingFolderName('New Subfolder');
@@ -16894,7 +16956,7 @@
                                                     collapsed: false
                                                 };
                                                 recordAction({ type: 'CREATE_FOLDER', folderId: newFolder.id, parentId: null, folder: { ...newFolder } });
-                                                setFolders(prev => [...prev, newFolder]);
+                                                setFolders(prev => placeNewFoldersAtTop([...prev, newFolder], [newFolder])); // v7.6.0-alpha.11 (wave C)
                                                 navigateToFolder(newFolder.id);
                                                 setEditingFolderId(newFolder.id);
                                                 setEditingFolderName('New Folder');
@@ -17192,10 +17254,11 @@
                                             parentId: folder.id,
                                             folder: { ...newFolder }
                                         });
-                                        setFolders(prev => [
+                                        // v7.6.0-alpha.11 (wave C) - place at top of the parent's children
+                                        setFolders(prev => placeNewFoldersAtTop([
                                             ...prev.map(f => f.id === folder.id ? { ...f, collapsed: false } : f),
                                             newFolder
-                                        ]);
+                                        ], [newFolder]));
                                         navigateToFolder(newFolder.id);
                                         setEditingFolderId(newFolder.id);
                                         setEditingFolderName('New Subfolder');
@@ -17317,7 +17380,12 @@
                                                         parentId: folder.id
                                                     });
 
-                                                    setFolders(prev => [...prev, ...newFolders]);
+                                                    // v7.6.0-alpha.11 (wave C) - Strip inherited sortIndex from the top copy and place it
+                                                    setFolders(prev => {
+                                                        const topCopy = { ...newFolders[0] };
+                                                        delete topCopy.sortIndex;
+                                                        return placeNewFoldersAtTop([...prev, topCopy, ...newFolders.slice(1)], [topCopy]);
+                                                    });
                                                     console.log(`📋 Pasted (copied) "${folderToPaste.name}" into "${folder.name}"`);
                                                 }
                                             }
@@ -17562,7 +17630,7 @@
                             setFolders(prev => {
                                 let next = [...prev, newFolder];
                                 if (!isCopy) next = next.map(f => f.id === fromFolderId ? { ...f, bookIds: (f.bookIds || []).filter(id => !ids.includes(id)) } : f);
-                                return next;
+                                return placeNewFoldersAtTop(next, [newFolder]); // v7.6.0-alpha.11 (wave C)
                             });
                             recordAction({ type: 'COMPOUND', label: `${isCopy ? 'Copy' : 'Move'} ${ids.length} book${ids.length !== 1 ? 's' : ''} to new folder '${trimmed}'`, actions: [
                                 { type: 'CREATE_FOLDER', folderId: newId, parentId: parentId || null, folder: { ...newFolder, bookIds: [] } },
