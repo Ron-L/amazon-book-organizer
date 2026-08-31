@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.6";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.7";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -2194,67 +2194,66 @@
 
             // Get child folders of a parent (null = root level)
             // v5.0.0-alpha.66 - Respects custom order from parent's childFolderIds or sortIndex
+            // v7.6.0-alpha.7 (wave B) - The stored-manual-order comparator for one sibling list.
+            // Root: folder.sortIndex; nested: position in the parent's childFolderIds; name tiebreak.
+            const manualComparatorFor = (parentId) => {
+                if (parentId === null) {
+                    return (a, b) => {
+                        const idxA = a.sortIndex ?? Infinity;
+                        const idxB = b.sortIndex ?? Infinity;
+                        if (idxA !== idxB) return idxA - idxB;
+                        return a.name.localeCompare(b.name);
+                    };
+                }
+                const parentFolder = folders.find(f => f.id === parentId);
+                const orderMap = new Map((parentFolder?.childFolderIds || []).map((id, i) => [id, i]));
+                return (a, b) => {
+                    const posA = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
+                    const posB = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
+                    if (posA !== posB) return posA - posB;
+                    return a.name.localeCompare(b.name);
+                };
+            };
+
             const getChildFolders = (parentId) => {
                 const children = folders.filter(f => f.parentId === parentId);
+
+                // v7.6.0-alpha.7 (wave B) - Pinned folders float above the active sort in their own small
+                // MANUAL zone — every display mode; the sort flows beneath them (FOLDER-ORDERING.md, pins).
+                const pinned = children.filter(f => f.pinned);
+                const rest = pinned.length ? children.filter(f => !f.pinned) : children;
+                const pinnedOrdered = pinned.length ? [...pinned].sort(manualComparatorFor(parentId)) : pinned;
 
                 // v6.12.0-alpha.71 - Folder-ordering model: a non-custom sort wins over stored manual order.
                 // Every folder render (sidebar, Folders view, Move/Copy tree) goes through here, so ordering is unified.
                 if (folderListSort.column === 'title') {
                     const dir = folderListSort.direction === 'desc' ? -1 : 1;
-                    return [...children].sort((a, b) => dir * a.name.localeCompare(b.name));
+                    return [...pinnedOrdered, ...[...rest].sort((a, b) => dir * a.name.localeCompare(b.name))];
                 }
 
                 if (parentId === null) {
                     // Root level folders - use sortIndex property if available
-                    const hasSortIndex = children.some(f => f.sortIndex !== undefined);
+                    const hasSortIndex = rest.some(f => f.sortIndex !== undefined);
                     if (hasSortIndex) {
-                        return [...children].sort((a, b) => {
-                            const idxA = a.sortIndex ?? Infinity;
-                            const idxB = b.sortIndex ?? Infinity;
-                            if (idxA !== idxB) return idxA - idxB;
-                            return a.name.localeCompare(b.name);
-                        });
+                        return [...pinnedOrdered, ...[...rest].sort(manualComparatorFor(null))];
                     }
                 } else {
                     // Nested folders - use parent's childFolderIds
                     const parentFolder = folders.find(f => f.id === parentId);
-                    const customOrder = parentFolder?.childFolderIds || [];
-
-                    if (customOrder.length > 0) {
-                        const orderMap = new Map(customOrder.map((id, i) => [id, i]));
-                        return [...children].sort((a, b) => {
-                            const posA = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
-                            const posB = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
-                            if (posA !== posB) return posA - posB;
-                            return a.name.localeCompare(b.name);
-                        });
+                    if ((parentFolder?.childFolderIds || []).length > 0) {
+                        return [...pinnedOrdered, ...[...rest].sort(manualComparatorFor(parentId))];
                     }
                 }
 
-                return children; // No custom order, return as-is (will be sorted alphabetically later)
+                return [...pinnedOrdered, ...rest]; // No custom order: pins first, rest in raw array order
             };
 
             // v7.6.0-alpha.1 (folder-ordering wave A) - Stored MANUAL order of siblings, independent of the
-            // active display sort. Placement writes (reparent, and later create/pin) must compute against
-            // this, never against getChildFolders — whose result follows the display sort.
+            // active display sort AND of pin partitioning. Placement writes (reparent, reorder basis) compute
+            // against this, never against getChildFolders — whose result follows the display sort.
             const manualOrderOf = (parentId) => {
                 const children = folders.filter(f => f.parentId === parentId);
-                if (parentId === null) {
-                    return [...children].sort((a, b) => {
-                        const idxA = a.sortIndex ?? Infinity;
-                        const idxB = b.sortIndex ?? Infinity;
-                        if (idxA !== idxB) return idxA - idxB;
-                        return a.name.localeCompare(b.name);
-                    });
-                }
-                const parentFolder = folders.find(f => f.id === parentId);
-                const orderMap = new Map((parentFolder?.childFolderIds || []).map((id, i) => [id, i]));
-                return [...children].sort((a, b) => {
-                    const posA = orderMap.has(a.id) ? orderMap.get(a.id) : Infinity;
-                    const posB = orderMap.has(b.id) ? orderMap.get(b.id) : Infinity;
-                    if (posA !== posB) return posA - posB;
-                    return a.name.localeCompare(b.name);
-                });
+                return [...children].sort(manualComparatorFor(parentId));
             };
 
             // v7.6.0-alpha.1 (wave A) - Apply an order-field snapshot to one folder record.
@@ -2516,12 +2515,20 @@
             const reorderFoldersInParent = (parentId, folderIdsToMove, targetFolderId, position) => {
                 // v6.12.0-alpha.71 - Manual order only: when a sort (e.g. Name) is active, getChildFolders returns
                 // sorted (not stored) order, so a positional reorder would overwrite the real manual order. Block it.
-                if (folderListSort.column !== 'custom') {
+                // v7.6.0-alpha.7 (wave B) - EXCEPT pinned folders: the pinned zone is a manual mini-list in every
+                // display mode, so moving pins is always allowed.
+                const movedAllPinned = folderIdsToMove.length > 0 &&
+                    folderIdsToMove.every(id => folders.find(f => f.id === id)?.pinned);
+                if (folderListSort.column !== 'custom' && !movedAllPinned) {
                     showToast('Switch folder sort to Manual (⇅ in the FOLDERS header) to rearrange by hand.');
                     return;
                 }
-                // Get current child folders in their current order
-                const currentChildren = getChildFolders(parentId);
+                // v7.6.0-alpha.7 (wave B) - Reorder basis = STORED MANUAL order partitioned pins-first — never the
+                // display order. In Manual mode they're identical; in a sorted mode a pin-zone drag renumbering
+                // against the DISPLAYED order would silently bake the alphabetical order into everyone's manual
+                // positions. The renumber below follows this basis, so unpinned manual order survives untouched.
+                const mo = manualOrderOf(parentId);
+                const currentChildren = [...mo.filter(f => f.pinned), ...mo.filter(f => !f.pinned)];
                 const currentOrder = currentChildren.map(f => f.id);
 
                 // Find target index based on folder ID (not visual index)
@@ -2538,7 +2545,15 @@
 
                 // Adjust target index based on how many items were removed before it
                 const removedBefore = currentOrder.slice(0, targetIndex).filter(id => moveSet.has(id)).length;
-                const adjustedIndex = targetIndex - removedBefore;
+                let adjustedIndex = targetIndex - removedBefore;
+
+                // v7.6.0-alpha.7 (wave B) - The pin boundary is a WALL for drags, both directions
+                // (FOLDER-ORDERING.md): an unpinned folder can't land inside the zone (snaps to just
+                // below it), a pinned folder can't land outside it (snaps to the zone's bottom edge).
+                const remainingPinned = remaining.filter(id => folders.find(f => f.id === id)?.pinned).length;
+                adjustedIndex = movedAllPinned
+                    ? Math.min(adjustedIndex, remainingPinned)
+                    : Math.max(adjustedIndex, remainingPinned);
 
                 // Insert at target position (maintaining relative order of moved items)
                 const orderedToMove = folderIdsToMove.filter(id => currentOrder.includes(id));
@@ -2589,10 +2604,30 @@
             const moveFolderToEdge = (folderId, edge) => {
                 const f = folders.find(x => x.id === folderId);
                 if (!f) return;
-                const sibs = getChildFolders(f.parentId).filter(s => s.id !== folderId);
+                // v7.6.0-alpha.7 (wave B) - Edges are per zone: a pinned folder moves within the pinned
+                // zone, an unpinned one within the rest ("top" = just below the pins). The reorder wall
+                // would clamp anyway; targeting the right group keeps the recorded action honest.
+                const sibs = getChildFolders(f.parentId).filter(s => s.id !== folderId && !!s.pinned === !!f.pinned);
                 if (!sibs.length) return;
                 if (edge === 'top') reorderFoldersInParent(f.parentId, [folderId], sibs[0].id, 'before');
                 else reorderFoldersInParent(f.parentId, [folderId], sibs[sibs.length - 1].id, 'after');
+            };
+
+            // v7.6.0-alpha.7 (wave B) - Pin state toggle: FLAG-ONLY, position is a consequence
+            // (FOLDER-ORDERING.md: "pinning is a state, position is a consequence"). The zone shows its
+            // members in manual order; unpinning returns the folder to its sort-appropriate spot
+            // automatically. Fully reversible, so undo/redo just flip the flag back.
+            const toggleFolderPin = (folderId) => {
+                const f = folders.find(x => x.id === folderId);
+                if (!f) return;
+                const next = !f.pinned;
+                setFolders(prev => prev.map(x => x.id === folderId ? { ...x, pinned: next } : x));
+                recordAction({
+                    type: 'TOGGLE_PIN', folderId, pinned: next,
+                    label: `${next ? 'Pin' : 'Unpin'} "${f.name}"`,
+                    description: `${next ? 'Pin' : 'Unpin'} "${f.name}"`
+                });
+                showToast(next ? `📌 Pinned "${f.name}" to the top` : `Unpinned "${f.name}"`);
             };
 
             // v5.0.0-alpha.78 - Phase D: Reparent folder (move into another folder) with undo
@@ -6538,6 +6573,10 @@
                             return folder;
                         }));
                         break;
+                    case 'TOGGLE_PIN':
+                        // v7.6.0-alpha.7 (wave B) - Undo pin toggle: flip the flag back
+                        setFolders(prev => prev.map(f => f.id === action.folderId ? { ...f, pinned: !action.pinned } : f));
+                        break;
                     case 'REORDER_FOLDER':
                         // v5.0.0-alpha.79 - Undo folder reorder: restore old order
                         if (action.parentId) {
@@ -6967,6 +7006,10 @@
                             }
                             return folder;
                         }));
+                        break;
+                    case 'TOGGLE_PIN':
+                        // v7.6.0-alpha.7 (wave B) - Redo pin toggle: re-apply the flag
+                        setFolders(prev => prev.map(f => f.id === action.folderId ? { ...f, pinned: action.pinned } : f));
                         break;
                     case 'REORDER_FOLDER':
                         // v5.0.0-alpha.79 - Redo folder reorder: apply new order
@@ -13952,6 +13995,17 @@
                                                         ) : (
                                                             <span className="flex-1 pointer-events-none">{folder.name}</span>
                                                         )}
+                                                        {/* v7.6.0-alpha.7 (wave B) - Pin indicator: always visible on pinned rows; clicking it
+                                                            unpins (VS Code tab-pin convention — the indicator doubles as the undo affordance) */}
+                                                        {folder.pinned && (
+                                                            <span
+                                                                className="text-xs cursor-pointer select-none"
+                                                                style={{ pointerEvents: 'auto' }}
+                                                                title={`Pinned to top — click to unpin "${folder.name}"`}
+                                                                onClick={(e) => { e.stopPropagation(); toggleFolderPin(folder.id); }}>
+                                                                📌
+                                                            </span>
+                                                        )}
                                                         {/* v6.13.2-alpha.2 - Count + action buttons live OUTSIDE the edit ternary, so ×/＋ stay reachable while naming a new folder (like Book Lists — delete a mis-created folder without hitting Enter first). */}
                                                                 {/* v6.3.0 - Count hidden on hover; buttons shown in its place (no overlap) */}
                                                                 <span className="group-hover:hidden">
@@ -15254,7 +15308,17 @@
                                                                             onClick={(e) => e.stopPropagation()}
                                                                         />
                                                                     ) : (
-                                                                        folder.name
+                                                                        <span className="flex items-center gap-1">
+                                                                            <span>{folder.name}</span>
+                                                                            {/* v7.6.0-alpha.7 (wave B) - Pin indicator (click to unpin) */}
+                                                                            {folder.pinned && (
+                                                                                <span className="text-xs cursor-pointer select-none"
+                                                                                    title={`Pinned to top — click to unpin "${folder.name}"`}
+                                                                                    onClick={(e) => { e.stopPropagation(); toggleFolderPin(folder.id); }}>
+                                                                                    📌
+                                                                                </span>
+                                                                            )}
+                                                                        </span>
                                                                     )}
                                                                 </td>
                                                                 {/* v5.0.0-alpha.172.1 - Dynamic placeholder cells for folder rows */}
@@ -15889,6 +15953,14 @@
                                                             {/* v5.0.0-alpha.65 - Pin icon for Inbox in My Library view */}
                                                             {selectedFolderId === '__library__' && folder.id === '__inbox__' && (
                                                                 <span className="absolute top-1 right-1 text-xs">📌</span>
+                                                            )}
+                                                            {/* v7.6.0-alpha.7 (wave B) - Pin indicator (click to unpin) */}
+                                                            {folder.pinned && (
+                                                                <span className="absolute top-1 right-1 text-xs cursor-pointer select-none"
+                                                                    title={`Pinned to top — click to unpin "${folder.name}"`}
+                                                                    onClick={(e) => { e.stopPropagation(); toggleFolderPin(folder.id); }}>
+                                                                    📌
+                                                                </span>
                                                             )}
                                                             <span style={{ fontSize: '50cqw' }}>{folder.id === '__inbox__' ? '📥' : '📁'}</span>
                                                         </div>
@@ -17032,10 +17104,22 @@
                                     )
                                 )}
 
+                                {/* v7.6.0-alpha.7 (wave B) - Pin to top / Unpin (state change lives in the menu;
+                                    the row's 📌 indicator is the one-click unpin) */}
+                                <div
+                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3"
+                                    role="menuitem"
+                                    onClick={() => { toggleFolderPin(folder.id); setFolderContextMenu(null); }}>
+                                    <span>📌</span>
+                                    <span>{folder.pinned ? 'Unpin' : 'Pin to top'}</span>
+                                </div>
+
                                 {/* v7.6.0-alpha.1 (wave A, spec item D) - Move to Top / Bottom within siblings (Manual order) */}
                                 {/* v7.6.0-alpha.2 - Disabled-with-tooltip in sorted modes (consistent with Move to's pattern) */}
+                                {/* v7.6.0-alpha.7 (wave B) - Pinned folders stay enabled in sorted modes: the pinned
+                                    zone is a manual mini-list everywhere, so its edges are always reachable */}
                                 {(() => {
-                                    const canRearrange = folderListSort.column === 'custom';
+                                    const canRearrange = folderListSort.column === 'custom' || !!folder.pinned;
                                     const itemClass = canRearrange
                                         ? 'px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-3'
                                         : 'px-4 py-2 text-gray-400 cursor-not-allowed flex items-center gap-3';
