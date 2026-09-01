@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.19";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.20";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -14514,6 +14514,22 @@
                                                 — click to open view
                                             </span>
                                         )}
+                                        {/* v7.6.0-alpha.20 - Empty Trash where the garbage is (Finder/Gmail convention) —
+                                            in RW it's also a FUNCTIONAL step: tombstones need a Trash-empty before a book
+                                            can be re-added. Labeled, not iconic: destructive actions should be readable.
+                                            Reuses permanentlyDeleteBooks (self-confirms). */}
+                                        {selectedFolderId === '__trash__' && (() => {
+                                            const trashCount = books.filter(b => b.isDeleted).length;
+                                            return (
+                                                <button
+                                                    onClick={async () => { await permanentlyDeleteBooks(books.filter(b => b.isDeleted).map(b => b.id)); }}
+                                                    disabled={trashCount === 0}
+                                                    className={`ml-3 text-xs px-2 py-0.5 rounded border ${trashCount === 0 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-red-600 border-red-300 hover:bg-red-50 cursor-pointer'}`}
+                                                    title={trashCount === 0 ? 'Trash is empty' : `Permanently delete all ${trashCount} book${trashCount !== 1 ? 's' : ''} in the Trash`}>
+                                                    🗑️ Empty Trash
+                                                </button>
+                                            );
+                                        })()}
                                     </div>
                                     <div className="flex gap-4 items-center">
                                         {/* v5.0.0-alpha.175.36 - Custom CSS icons for both list and grid */}
