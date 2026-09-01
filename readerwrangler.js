@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.15";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.16";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -13586,11 +13586,24 @@
                                                     direction lives in the right-pane column headers and mirrors here via the
                                                     indicator (the ratified 2026-08-04 model; Ron: the A→Z/Z→A entries "stick out
                                                     like a sore thumb"). Count defaults to most-first (recorded exception). */}
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setFolderSortMenuOpen(o => !o); }}
-                                                    className={`text-xs px-1 hover:bg-gray-200 rounded whitespace-nowrap ${folderListSort.column !== 'custom' ? 'text-blue-600 font-medium' : 'text-gray-400 hover:text-gray-600'}`}
-                                                    title={`Sort folders (currently: ${folderListSort.column === 'title' ? `Name ${folderListSort.direction === 'asc' ? '↑' : '↓'}` : folderListSort.column === 'count' ? `Count ${folderListSort.direction === 'asc' ? '↑' : '↓'}` : 'Manual'}). Flip direction by clicking the Name or Books column in the Folders view.`}
-                                                    aria-label="Sort folders">⇅{folderListSort.column === 'title' ? ` Name ${folderListSort.direction === 'asc' ? '↑' : '↓'}` : folderListSort.column === 'count' ? ` Count ${folderListSort.direction === 'asc' ? '↑' : '↓'}` : ''}</button>
+                                                {/* v7.6.0-alpha.16 - SPLIT control (Ron: "I expected to click the ctl to flip"):
+                                                    ⇅ opens the menu; the visible "Name ↑" state segment IS the direction toggle —
+                                                    discoverable by construction, no double-click timers. Menu re-click still flips too. */}
+                                                <span className="inline-flex items-center whitespace-nowrap">
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setFolderSortMenuOpen(o => !o); }}
+                                                        className={`text-xs px-1 hover:bg-gray-200 rounded ${folderListSort.column !== 'custom' ? 'text-blue-600 font-medium' : 'text-gray-400 hover:text-gray-600'}`}
+                                                        title={`Sort folders (currently: ${folderListSort.column === 'title' ? `Name ${folderListSort.direction === 'asc' ? '↑' : '↓'}` : folderListSort.column === 'count' ? `Count ${folderListSort.direction === 'asc' ? '↑' : '↓'}` : 'Manual'})`}
+                                                        aria-label="Sort folders">⇅</button>
+                                                    {folderListSort.column !== 'custom' && (
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); setFolderListSort(prev => ({ column: prev.column, direction: prev.direction === 'asc' ? 'desc' : 'asc' })); }}
+                                                            className="text-xs px-1 hover:bg-gray-200 rounded text-blue-600 font-medium"
+                                                            title="Reverse the direction"
+                                                            aria-label="Reverse folder sort direction">
+                                                            {folderListSort.column === 'title' ? 'Name' : 'Count'} {folderListSort.direction === 'asc' ? '↑' : '↓'}</button>
+                                                    )}
+                                                </span>
                                                 {folderSortMenuOpen && (
                                                     <>
                                                         <div className="fixed inset-0 z-[59]" onClick={(e) => { e.stopPropagation(); setFolderSortMenuOpen(false); }} />
@@ -14565,11 +14578,27 @@
                                         {/* v6.12.0-alpha.76 - Folder-sort picker for the Folders view (Manual/Name), replacing the hidden book picker so Manual is selectable from the right pane too. All three controls (this, the ⇅ header, the Name column) share folderListSort. */}
                                         {selectedFolderId === '__library__' && (
                                             <div className="flex items-center gap-1 border-l pl-4 text-sm relative" data-folder-sort-picker="">
-                                                <button onClick={() => setFolderSortPickerOpen(o => !o)} className="flex items-center gap-1 hover:bg-gray-100 rounded px-1 py-0.5" style={{ fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer' }} title="Change folder sort">
-                                                    <span className="text-gray-500">Sort:</span>
-                                                    <span className="text-gray-700">{folderListSort.column === 'title' ? `Name ${folderListSort.direction === 'asc' ? '▲' : '▼'}` : folderListSort.column === 'count' ? `Count ${folderListSort.direction === 'asc' ? '▲' : '▼'}` : 'Manual Order'}</span>
-                                                    <span className="text-gray-400 text-xs">▾</span>
-                                                </button>
+                                                {/* v7.6.0-alpha.16 - Split (matches the left ⇅ control): the "Name ▲" state segment
+                                                    flips direction when a sorted key is active; the ▾ caret opens the menu. */}
+                                                <span className="flex items-center" style={{ fontSize: '13px' }}>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (folderListSort.column === 'custom') { setFolderSortPickerOpen(o => !o); return; }
+                                                            setFolderListSort(prev => ({ column: prev.column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }));
+                                                        }}
+                                                        className="flex items-center gap-1 hover:bg-gray-100 rounded px-1 py-0.5"
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                                        title={folderListSort.column === 'custom' ? 'Change folder sort' : 'Reverse the direction'}>
+                                                        <span className="text-gray-500">Sort:</span>
+                                                        <span className="text-gray-700">{folderListSort.column === 'title' ? `Name ${folderListSort.direction === 'asc' ? '▲' : '▼'}` : folderListSort.column === 'count' ? `Count ${folderListSort.direction === 'asc' ? '▲' : '▼'}` : 'Manual Order'}</span>
+                                                    </button>
+                                                    <button onClick={() => setFolderSortPickerOpen(o => !o)}
+                                                        className="hover:bg-gray-100 rounded px-1 py-0.5"
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px' }}
+                                                        title="Change folder sort" aria-label="Change folder sort">
+                                                        <span className="text-gray-400 text-xs">▾</span>
+                                                    </button>
+                                                </span>
                                                 {folderSortPickerOpen && (
                                                     <>
                                                         <div className="fixed inset-0 z-[59]" onClick={() => setFolderSortPickerOpen(false)} />
