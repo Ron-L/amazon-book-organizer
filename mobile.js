@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.0-alpha.13'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.7.0-alpha.14'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -299,6 +299,20 @@ function orderedChildFolders(allFolders, parentId, listSort) {
     if (listSort && listSort.column === 'title') {
         const dir = listSort.direction === 'desc' ? -1 : 1;
         rest.sort((a, b) => dir * a.name.localeCompare(b.name));
+    } else if (listSort && listSort.column === 'count') {
+        // v1.7.0-alpha.14 (wave D mirror) - Count = total incl. subfolders, same as desktop
+        const byParent = new Map();
+        allFolders.forEach(f => { const p = f.parentId || null; if (!byParent.has(p)) byParent.set(p, []); byParent.get(p).push(f); });
+        const totals = new Map();
+        const totalOf = (f) => {
+            if (totals.has(f.id)) return totals.get(f.id);
+            let t = (f.bookIds || []).length;
+            for (const c of (byParent.get(f.id) || [])) t += totalOf(c);
+            totals.set(f.id, t);
+            return t;
+        };
+        const dir = (listSort.direction === 'asc') ? 1 : -1;
+        rest.sort((a, b) => dir * (totalOf(a) - totalOf(b)) || a.name.localeCompare(b.name));
     } else {
         rest.sort(manualCmp);
     }

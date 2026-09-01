@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.13";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.14";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -2215,6 +2215,29 @@
                 };
             };
 
+            // v7.6.0-alpha.14 (wave D) - One-pass bottom-up totals (self + all descendants) per folder —
+            // the same number the Books column displays (sorting a column by a number it doesn't show is
+            // the Date Added bug all over again). A comparator calling the recursive per-call counter
+            // would be O(N × folders); this map is built once per folders change.
+            const folderTotalCounts = useMemo(() => {
+                const byParent = new Map();
+                folders.forEach(f => {
+                    const pid = f.parentId || null;
+                    if (!byParent.has(pid)) byParent.set(pid, []);
+                    byParent.get(pid).push(f);
+                });
+                const totals = new Map();
+                const totalOf = (f) => {
+                    if (totals.has(f.id)) return totals.get(f.id);
+                    let t = (f.bookIds || []).length;
+                    for (const c of (byParent.get(f.id) || [])) t += totalOf(c);
+                    totals.set(f.id, t);
+                    return t;
+                };
+                folders.forEach(totalOf);
+                return totals;
+            }, [folders]);
+
             const getChildFolders = (parentId) => {
                 const children = folders.filter(f => f.parentId === parentId);
 
@@ -2229,6 +2252,16 @@
                 if (folderListSort.column === 'title') {
                     const dir = folderListSort.direction === 'desc' ? -1 : 1;
                     return [...pinnedOrdered, ...[...rest].sort((a, b) => dir * a.name.localeCompare(b.name))];
+                }
+
+                // v7.6.0-alpha.14 (wave D) - Count sort: total incl. subfolders (the Books column's
+                // number); selection default most-first (recorded exception to ascending-first); name
+                // tiebreak keeps equal counts deterministic.
+                if (folderListSort.column === 'count') {
+                    const dir = folderListSort.direction === 'asc' ? 1 : -1;
+                    return [...pinnedOrdered, ...[...rest].sort((a, b) =>
+                        dir * ((folderTotalCounts.get(a.id) || 0) - (folderTotalCounts.get(b.id) || 0))
+                        || a.name.localeCompare(b.name))];
                 }
 
                 if (parentId === null) {
@@ -2689,6 +2722,39 @@
             const toggleFolderPin = (folderId) => {
                 const f = folders.find(x => x.id === folderId);
                 if (f) setFoldersPinned([folderId], !f.pinned);
+            };
+
+            // v7.6.0-alpha.14 (wave D) - Bake the current DISPLAYED order into the stored Manual order —
+            // whole tree, one undoable action (spec: "sort by name → bake to Manual"; ratified whole-tree
+            // 2026-09-01). With pins live this is the general tool, not the daily driver. Ends by
+            // switching to Manual so you SEE what you just baked.
+            const bakeOrderToManual = async () => {
+                if (folderListSort.column === 'custom') return;
+                const modeLabel = folderListSort.column === 'title' ? 'Name' : 'Count';
+                if (!(await showConfirmDialog('Bake Order',
+                    `Make the current ${modeLabel} order the new Manual order? Your previous manual arrangement is overwritten (undoable).`))) return;
+                const sortIndexBefore = {}, sortIndexAfter = {}, childIdsBefore = {}, childIdsAfter = {};
+                getChildFolders(null).forEach((f, idx) => {
+                    const before = f.sortIndex !== undefined ? f.sortIndex : null;
+                    if (before !== idx) { sortIndexBefore[f.id] = before; sortIndexAfter[f.id] = idx; }
+                });
+                folders.forEach(p => {
+                    const kids = getChildFolders(p.id);
+                    if (!kids.length) return;
+                    const ids = kids.map(k => k.id);
+                    const cur = p.childFolderIds && p.childFolderIds.length ? p.childFolderIds : null;
+                    if (JSON.stringify(cur) !== JSON.stringify(ids)) { childIdsBefore[p.id] = cur; childIdsAfter[p.id] = ids; }
+                });
+                const orderBefore = { sortIndex: sortIndexBefore, childIds: childIdsBefore };
+                const orderAfter = { sortIndex: sortIndexAfter, childIds: childIdsAfter };
+                setFolders(prev => prev.map(f => applyOrderFields(f, orderAfter)));
+                recordAction({
+                    type: 'BAKE_ORDER', orderBefore, orderAfter,
+                    label: `Bake ${modeLabel} order into Manual`,
+                    description: `Bake ${modeLabel} order into Manual`
+                });
+                setFolderListSort({ column: 'custom', direction: 'asc' });
+                showToast(`Manual order is now the ${modeLabel} order`);
             };
 
             // v5.0.0-alpha.78 - Phase D: Reparent folder (move into another folder) with undo
@@ -6639,6 +6705,10 @@
                             return folder;
                         }));
                         break;
+                    case 'BAKE_ORDER':
+                        // v7.6.0-alpha.14 (wave D) - Undo bake: restore the pre-bake order fields verbatim
+                        setFolders(prev => prev.map(f => applyOrderFields(f, action.orderBefore)));
+                        break;
                     case 'TOGGLE_PIN': {
                         // v7.6.0-alpha.7 (wave B) - Undo pin toggle: flip the flag back (alpha.8: multi-folder)
                         const ids = action.folderIds || [action.folderId];
@@ -7074,6 +7144,10 @@
                             }
                             return folder;
                         }));
+                        break;
+                    case 'BAKE_ORDER':
+                        // v7.6.0-alpha.14 (wave D) - Redo bake: re-apply the baked order fields
+                        setFolders(prev => prev.map(f => applyOrderFields(f, action.orderAfter)));
                         break;
                     case 'TOGGLE_PIN': {
                         // v7.6.0-alpha.7 (wave B) - Redo pin toggle: re-apply the flag (alpha.8: multi-folder)
@@ -13505,17 +13579,21 @@
                                         <div className="flex items-center gap-1">
                                             {/* v6.12.0-alpha.71 - Folder sort control (Manual / Name); drives the whole folder list */}
                                             <div className="relative">
+                                                {/* v7.6.0-alpha.14 (wave D) - Picker is one entry PER KEY (Manual/Name/Count) —
+                                                    direction lives in the right-pane column headers and mirrors here via the
+                                                    indicator (the ratified 2026-08-04 model; Ron: the A→Z/Z→A entries "stick out
+                                                    like a sore thumb"). Count defaults to most-first (recorded exception). */}
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setFolderSortMenuOpen(o => !o); }}
-                                                    className={`text-xs px-1 hover:bg-gray-200 rounded whitespace-nowrap ${folderListSort.column === 'title' ? 'text-blue-600 font-medium' : 'text-gray-400 hover:text-gray-600'}`}
-                                                    title={`Sort folders (currently: ${folderListSort.column === 'title' ? (folderListSort.direction === 'asc' ? 'Name A→Z' : 'Name Z→A') : 'Manual'})`}
-                                                    aria-label="Sort folders">⇅{folderListSort.column === 'title' ? (folderListSort.direction === 'asc' ? ' A→Z' : ' Z→A') : ''}</button>
+                                                    className={`text-xs px-1 hover:bg-gray-200 rounded whitespace-nowrap ${folderListSort.column !== 'custom' ? 'text-blue-600 font-medium' : 'text-gray-400 hover:text-gray-600'}`}
+                                                    title={`Sort folders (currently: ${folderListSort.column === 'title' ? `Name ${folderListSort.direction === 'asc' ? '↑' : '↓'}` : folderListSort.column === 'count' ? `Count ${folderListSort.direction === 'asc' ? '↑' : '↓'}` : 'Manual'}). Flip direction by clicking the Name or Books column in the Folders view.`}
+                                                    aria-label="Sort folders">⇅{folderListSort.column === 'title' ? ` Name ${folderListSort.direction === 'asc' ? '↑' : '↓'}` : folderListSort.column === 'count' ? ` Count ${folderListSort.direction === 'asc' ? '↑' : '↓'}` : ''}</button>
                                                 {folderSortMenuOpen && (
                                                     <>
                                                         <div className="fixed inset-0 z-[59]" onClick={(e) => { e.stopPropagation(); setFolderSortMenuOpen(false); }} />
                                                         <div className="absolute right-0 mt-1 bg-white border border-gray-300 shadow-lg rounded py-1 z-[60] min-w-[170px] normal-case tracking-normal font-normal" onClick={(e) => e.stopPropagation()}>
-                                                            {[{ label: 'Manual (drag to arrange)', col: 'custom', dir: 'asc' }, { label: 'Name A → Z', col: 'title', dir: 'asc' }, { label: 'Name Z → A', col: 'title', dir: 'desc' }].map(opt => {
-                                                                const active = folderListSort.column === opt.col && (opt.col === 'custom' || folderListSort.direction === opt.dir);
+                                                            {[{ label: 'Manual (drag to arrange)', col: 'custom', dir: 'asc' }, { label: 'Name', col: 'title', dir: 'asc' }, { label: 'Count (most first)', col: 'count', dir: 'desc' }].map(opt => {
+                                                                const active = folderListSort.column === opt.col;
                                                                 return (
                                                                     <div key={opt.label} className={`px-3 py-1.5 text-xs hover:bg-gray-100 cursor-pointer flex items-center gap-2 ${active ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
                                                                         onClick={() => { setFolderListSort({ column: opt.col, direction: opt.dir }); setFolderSortMenuOpen(false); }}>
@@ -13523,6 +13601,15 @@
                                                                     </div>
                                                                 );
                                                             })}
+                                                            {folderListSort.column !== 'custom' && (
+                                                                <>
+                                                                    <div className="border-t border-gray-200 my-1"></div>
+                                                                    <div className="px-3 py-1.5 text-xs hover:bg-gray-100 cursor-pointer flex items-center gap-2 text-gray-700"
+                                                                        onClick={() => { setFolderSortMenuOpen(false); bakeOrderToManual(); }}>
+                                                                        <span className="w-3"></span><span>Bake this order into Manual…</span>
+                                                                    </div>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </>
                                                 )}
@@ -14476,15 +14563,16 @@
                                             <div className="flex items-center gap-1 border-l pl-4 text-sm relative" data-folder-sort-picker="">
                                                 <button onClick={() => setFolderSortPickerOpen(o => !o)} className="flex items-center gap-1 hover:bg-gray-100 rounded px-1 py-0.5" style={{ fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer' }} title="Change folder sort">
                                                     <span className="text-gray-500">Sort:</span>
-                                                    <span className="text-gray-700">{folderListSort.column === 'title' ? `Name ${folderListSort.direction === 'asc' ? '▲' : '▼'}` : 'Manual Order'}</span>
+                                                    <span className="text-gray-700">{folderListSort.column === 'title' ? `Name ${folderListSort.direction === 'asc' ? '▲' : '▼'}` : folderListSort.column === 'count' ? `Count ${folderListSort.direction === 'asc' ? '▲' : '▼'}` : 'Manual Order'}</span>
                                                     <span className="text-gray-400 text-xs">▾</span>
                                                 </button>
                                                 {folderSortPickerOpen && (
                                                     <>
                                                         <div className="fixed inset-0 z-[59]" onClick={() => setFolderSortPickerOpen(false)} />
                                                         <div className="absolute left-0 bg-white border border-gray-300 shadow-lg rounded py-1 z-[60] min-w-[170px]" style={{ top: '28px' }}>
-                                                            {[{ label: 'Manual Order', col: 'custom', dir: 'asc' }, { label: 'Name A→Z', col: 'title', dir: 'asc' }, { label: 'Name Z→A', col: 'title', dir: 'desc' }].map(opt => {
-                                                                const active = folderListSort.column === opt.col && (opt.col === 'custom' || folderListSort.direction === opt.dir);
+                                                            {/* v7.6.0-alpha.14 (wave D) - One entry per key; direction via the column headers */}
+                                                            {[{ label: 'Manual Order', col: 'custom', dir: 'asc' }, { label: 'Name', col: 'title', dir: 'asc' }, { label: 'Count (most first)', col: 'count', dir: 'desc' }].map(opt => {
+                                                                const active = folderListSort.column === opt.col;
                                                                 return (
                                                                     <div key={opt.label} className={`px-3 py-1.5 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2 ${active ? 'text-blue-600 font-medium' : 'text-gray-700'}`}
                                                                         onClick={() => { setFolderListSort({ column: opt.col, direction: opt.dir }); setFolderSortPickerOpen(false); }}>
@@ -14492,6 +14580,15 @@
                                                                     </div>
                                                                 );
                                                             })}
+                                                            {folderListSort.column !== 'custom' && (
+                                                                <>
+                                                                    <div className="border-t border-gray-200 my-1"></div>
+                                                                    <div className="px-3 py-1.5 text-sm hover:bg-gray-100 cursor-pointer flex items-center gap-2 text-gray-700"
+                                                                        onClick={() => { setFolderSortPickerOpen(false); bakeOrderToManual(); }}>
+                                                                        <span className="w-3"></span><span>Bake this order into Manual…</span>
+                                                                    </div>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </>
                                                 )}
@@ -14866,7 +14963,16 @@
                                                             })}>
                                                             Name {folderListSort.column === 'title' ? (folderListSort.direction === 'asc' ? '▲' : '▼') : ''}
                                                         </th>
-                                                        <th className="p-2 text-right font-medium text-sm" style={{ width: '80px' }} title="Total books in this folder and all its subfolders">Books</th>
+                                                        {/* v7.6.0-alpha.14 (wave D) - Count sort anchor: cycles most-first → least-first → Manual */}
+                                                        <th className="p-2 text-right font-medium text-sm cursor-pointer hover:bg-gray-100 select-none" style={{ width: '80px' }}
+                                                            title="Total books in this folder and all its subfolders. Click to cycle folder sort: most first → least first → Manual order."
+                                                            onClick={() => setFolderListSort(prev => {
+                                                                if (prev.column !== 'count') return { column: 'count', direction: 'desc' };
+                                                                if (prev.direction === 'desc') return { column: 'count', direction: 'asc' };
+                                                                return { column: 'custom', direction: 'asc' };
+                                                            })}>
+                                                            Books {folderListSort.column === 'count' ? (folderListSort.direction === 'desc' ? '▼' : '▲') : ''}
+                                                        </th>
                                                         <th className="p-2"></th>
                                                     </tr>
                                                 </thead>
