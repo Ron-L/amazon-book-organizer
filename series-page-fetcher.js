@@ -19,7 +19,7 @@
 async function importSeries() {
     'use strict';
 
-    const FETCHER_VERSION = 'v2.0.1';
+    const FETCHER_VERSION = 'v2.0.2';
     // Minimum latency floor between Amazon API calls (adopted from the 2026-08 external
     // review, item 4): today's politeness is EMERGENT — it comes from Amazon's backend
     // RTT (~400ms), which is their engineering decision and can change without notice.
@@ -354,10 +354,30 @@ async function importSeries() {
         };
 
         doc.querySelectorAll('.series-childAsin-item').forEach(item => {
+            // v2.0.1 - Parse the series position BEFORE the ownership skip. Owned books used to
+            // contribute only a title, so gap detection never saw their positions: an owned #1 was
+            // falsely reported "missing from Amazon's series list", and owned books at the END of a
+            // series silently truncated the detected maximum (live case: Garrett P.I., 2026-08-30).
+            let parsedPosition = null;
+            {
+                const posLabel = item.querySelector('.itemPositionLabel');
+                if (posLabel) {
+                    const ariaLabel = posLabel.getAttribute('aria-label');
+                    if (ariaLabel) {
+                        const posMatch = ariaLabel.match(/Book\s+(\d+)/i);
+                        if (posMatch) parsedPosition = parseInt(posMatch[1], 10);
+                    } else {
+                        const posText = posLabel.textContent.trim();
+                        if (/^\d+$/.test(posText)) parsedPosition = parseInt(posText, 10);
+                    }
+                }
+            }
+
             // Check if owned
             if (item.classList.contains('hasOwnership')) {
                 const titleEl = item.querySelector('.itemBookTitle h3');
-                skippedOwned.push(titleEl?.textContent?.trim() || 'Unknown');
+                // v2.0.1 - Carry the position so detectGaps can count owned books as PRESENT
+                skippedOwned.push({ title: titleEl?.textContent?.trim() || 'Unknown', seriesPosition: parsedPosition });
                 return;
             }
 
@@ -406,20 +426,8 @@ async function importSeries() {
                 if (countStr) reviewCount = parseInt(countStr, 10);
             }
 
-            // Extract series position
-            let seriesPosition = null;
-            const posLabel = item.querySelector('.itemPositionLabel');
-            if (posLabel) {
-                const ariaLabel = posLabel.getAttribute('aria-label');
-                if (ariaLabel) {
-                    const posMatch = ariaLabel.match(/Book\s+(\d+)/i);
-                    if (posMatch) seriesPosition = parseInt(posMatch[1], 10);
-                } else {
-                    const posText = posLabel.textContent.trim();
-                    const posMatch = posText.match(/^\d+$/);
-                    if (posMatch) seriesPosition = parseInt(posMatch[0], 10);
-                }
-            }
+            // v2.0.1 - Series position already parsed above (before the ownership skip)
+            const seriesPosition = parsedPosition;
 
             // Extract Kindle price (try multiple selectors)
             let kindlePrice = null;
@@ -611,7 +619,10 @@ async function importSeries() {
         progressUI.updatePhase('Analyzing Series', 'Checking for gaps...');
         console.log('[4] Detecting gaps in series numbering...');
 
-        const gapInfo = detectGaps(books);
+        // v2.0.2 - Owned books count as PRESENT: gap detection sees wishlisted AND skipped-owned
+        // positions, so an owned #1 is no longer 'missing' and owned books at the top of the
+        // series no longer truncate the detected maximum.
+        const gapInfo = detectGaps([...books, ...skippedOwned]);
         if (gapInfo.hasGaps) {
             console.log(`   ⚠️  Gap detected!`);
             console.log(`   Expected: Books 1-${gapInfo.maxPosition}`);
@@ -688,7 +699,7 @@ async function importSeries() {
         console.log(`   Skipped (owned): ${skippedOwned.length} books`);
         console.log(`   Skipped (duplicate): ${duplicateCount} books`);
         if (gapInfo.hasGaps) {
-            console.log(`   ⚠️  Gap: ${gapInfo.missing.length} books missing from Amazon's series list`);
+            console.log(`   ⚠️  Gap: ${gapInfo.missing.length} book${gapInfo.missing.length !== 1 ? 's' : ''} missing from Amazon's series list`);
             console.log(`      Missing: ${formatGapRanges(gapInfo.missing)}`);
         }
         // Data completeness in final summary
@@ -716,7 +727,7 @@ async function importSeries() {
 
         if (gapInfo.hasGaps) {
             summaryMessage += `<br><span style="color: #f57c00; font-size: 12px;">`;
-            summaryMessage += `⚠️ ${gapInfo.missing.length} books missing from Amazon's series list<br>`;
+            summaryMessage += `⚠️ ${gapInfo.missing.length} book${gapInfo.missing.length !== 1 ? 's' : ''} missing from Amazon's series list<br>`;
             summaryMessage += `(${formatGapRanges(gapInfo.missing)})</span>`;
         }
 
