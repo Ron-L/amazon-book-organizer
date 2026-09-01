@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.20";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.21";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -2167,6 +2167,15 @@
                 })));
 
                 setExplorerSelectedItems(new Set());
+
+                // v7.6.0-alpha.21 - Purge undo/redo entries referencing the wiped books: replaying them
+                // ghost-no-ops (Ron: Ctrl+Z after Empty Trash popped the earlier soft-delete and toasted
+                // "Undone" while nothing happened — the book no longer exists to restore). Permanent
+                // means the history about them goes too; unrelated history survives untouched.
+                const mentionsDoomed = (a) => { const s = JSON.stringify(a); return bookIds.some(id => s.includes(id)); };
+                setUndoStack(prev => prev.filter(a => !mentionsDoomed(a)));
+                setRedoStack(prev => prev.filter(a => !mentionsDoomed(a)));
+
                 showToast(`Permanently deleted ${count} book${count !== 1 ? 's' : ''}`);
 
                 // v6.19.0 - Relay write redesign Phase 1: the app never rewrites the relay library.
