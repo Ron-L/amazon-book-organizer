@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.21";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.22";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -6038,6 +6038,13 @@
                         applyTheme(orgToRestore.theme);
                         console.log(`🎨 Restored theme preference: ${orgToRestore.theme}`);
                     }
+
+                    // v7.6.0-alpha.22 - New world, blank history (Ron-ratified): the pre-restore undo stack
+                    // points at a replaced library — some entries wouldn't just ghost-no-op, they'd CORRUPT
+                    // (e.g. a reorder undo stamping pre-restore order arrays onto the restored folders).
+                    // The blunt sibling of alpha.21's surgical purge; wholesale replacement earns it.
+                    setUndoStack([]);
+                    setRedoStack([]);
 
                     // v6.0.0 - Upload restored library to relay so fetchers/mobile find it
                     // v7.6.0-alpha.19 - Now AFTER the org restore, carrying the applied (integrity-checked)
