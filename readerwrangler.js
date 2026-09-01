@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.18";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.19";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -5858,21 +5858,9 @@
                 const newBookIds = mergedBooks.filter(b => !existingIds.has(b.id) && !b.isDeleted).map(b => b.id);
                 setBooks(mergedBooks);
 
-                // v6.0.0 - Upload restored library to relay so fetchers can find it
-                if (organizationFromFile !== null && window.RWRelay && window.RWRelay.isConfigured()) {
-                    try {
-                        phase('Preparing cloud sync…');
-                        const payload = await buildDeviceStatePayload();
-                        const jsonString = JSON.stringify(payload);
-                        await window.RWRelay.putDeviceState(jsonString, (p, detail) => phase(detail));
-                        console.log(`✅ Backup restored and synced to relay (${mergedBooks.length} books)`);
-                    } catch (err) {
-                        console.warn('⚠️ Backup restored locally but relay sync failed:', err.message);
-                    }
-                    showInfoDialog('Backup Restored', `${mergedBooks.length} books restored and synced to the cloud.`);
-                } else if (organizationFromFile !== null) {
-                    showInfoDialog('Backup Restored', `${mergedBooks.length} books restored.\n\nSet up cloud sync (File → Relay Setup) to keep your library in sync.`);
-                }
+                // v7.6.0-alpha.19 - The relay push MOVED to after the org-restore section (it used to fire
+                // here — before the org was even applied — with the closure's PRE-restore folders and a
+                // stale blob stamp, so phones guard-skipped it and lagged the restore by a debounce cycle).
 
                 // Reset all filters when loading new library (v3.8.0.g, updated v3.8.0.k, v6.10.0-alpha.18)
                 setSearchTerm('');
@@ -5934,10 +5922,14 @@
                 }
 
                 if (orgToRestore) {
+                    // v7.6.0-alpha.19 - The APPLIED org values, captured for the relay push below: mid-restore
+                    // the component closure still holds pre-restore state, so buildDeviceStatePayload's org
+                    // fields must be overridden with what was actually restored.
+                    const pushOrgOverride = {};
                     // v6.12.0 - Restore these only if the source carries them; absent → preserve current
                     // (prevents a relay import / pre-field backup from wiping tags or the blank-image cache)
-                    if (Array.isArray(orgToRestore.blankImageBooks)) setBlankImageBooks(new Set(orgToRestore.blankImageBooks));
-                    if (orgToRestore.tagRegistry && typeof orgToRestore.tagRegistry === 'object') setTagRegistry(orgToRestore.tagRegistry); // v5.0.0-alpha.175.17
+                    if (Array.isArray(orgToRestore.blankImageBooks)) { setBlankImageBooks(new Set(orgToRestore.blankImageBooks)); pushOrgOverride.blankImageBooks = orgToRestore.blankImageBooks; }
+                    if (orgToRestore.tagRegistry && typeof orgToRestore.tagRegistry === 'object') { setTagRegistry(orgToRestore.tagRegistry); pushOrgOverride.tagRegistry = orgToRestore.tagRegistry; } // v5.0.0-alpha.175.17
                     // v6.12.0 - Restore saved searches ONLY if the source carries them (mirrors folders/book lists).
                     // A relay library or pre-6.12 backup has none → leave current searches intact rather than wiping.
                     // Legacy saved-views and pinnedTagFolders are intentionally dropped (not migrated).
@@ -5954,6 +5946,7 @@
                             }
                         }
                         setSavedSearches(restoredViews);
+                        pushOrgOverride.savedSearches = restoredViews; // v7.6.0-alpha.19
                     }
 
                     // v6.12.0 - Restore Book Lists ONLY if the source actually carries them (mirrors folders).
@@ -5964,6 +5957,7 @@
                         const restoredBookLists = orgToRestore.bookLists.map(bl => ({ ...bl, bookIds: bl.bookIds || [] }));
                         setBookLists(restoredBookLists);
                         localStorage.setItem(BOOKLISTS_KEY, JSON.stringify(restoredBookLists));
+                        pushOrgOverride.bookLists = restoredBookLists; // v7.6.0-alpha.19
                     }
 
                     // v5.0.0-alpha.99 - Restore folders from backup (if present)
@@ -5991,6 +5985,7 @@
 
                         setFolders(finalFolders);
                         localStorage.setItem(FOLDERS_KEY, JSON.stringify(finalFolders));
+                        pushOrgOverride.folders = finalFolders; // v7.6.0-alpha.19 - the integrity-checked applied set
                         console.log(`✅ Restored ${restoredFolders.length} folders from ${orgSource}`);
                     } else {
                         // No folders in backup - preserve existing folders from localStorage (backward compatibility)
@@ -6033,6 +6028,26 @@
                     if (orgToRestore.theme) {
                         applyTheme(orgToRestore.theme);
                         console.log(`🎨 Restored theme preference: ${orgToRestore.theme}`);
+                    }
+
+                    // v6.0.0 - Upload restored library to relay so fetchers/mobile find it
+                    // v7.6.0-alpha.19 - Now AFTER the org restore, carrying the applied (integrity-checked)
+                    // org + a FRESH stamp — phones accept it immediately instead of guard-skipping a
+                    // stale-stamped pre-restore payload. Presentation fields stay the CURRENT ones from
+                    // buildDeviceStatePayload (rollbacks keep your eyes — the 7.4.0 cluster rule).
+                    if (organizationFromFile !== null && window.RWRelay && window.RWRelay.isConfigured()) {
+                        try {
+                            phase('Preparing cloud sync…');
+                            const payload = await buildDeviceStatePayload();
+                            payload.organization = { ...payload.organization, ...pushOrgOverride, savedAt: Date.now() };
+                            await window.RWRelay.putDeviceState(JSON.stringify(payload), (p, detail) => phase(detail));
+                            console.log(`✅ Backup restored and synced to relay (${mergedBooks.length} books)`);
+                        } catch (err) {
+                            console.warn('⚠️ Backup restored locally but relay sync failed:', err.message);
+                        }
+                        showInfoDialog('Backup Restored', `${mergedBooks.length} books restored and synced to the cloud.`);
+                    } else if (organizationFromFile !== null) {
+                        showInfoDialog('Backup Restored', `${mergedBooks.length} books restored.\n\nSet up cloud sync (File → Relay Setup) to keep your library in sync.`);
                     }
 
                     console.log(`✅ Restored organization from ${orgSource}`);
