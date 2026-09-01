@@ -433,6 +433,42 @@ async function main() {
     const legacyNowBytes = legacyRaw.ok ? (await legacyRaw.arrayBuffer()).byteLength : 0;
     ok('legacy key UNTOUCHED by putDeviceState (double-write is gone; old seed intact, will TTL away)',
        legacyNowBytes === legacySeedBytes);
+
+    console.log('\n[17] Orphan sweep (7.5.1): torn-push chunks are reaped by the next GC pass');
+    // Fabricate a torn push: mint a gen, upload a chunk, write NO manifest (the tab "died").
+    // KV LISTs lag ~60s behind writes, so poll until the orphan is visible before sweeping —
+    // production orphans are hours old and always visible; only the test races consistency.
+    const tornGen = (await (await fetch(`${DEV_URL}/dstate/${CH6}/begin?device=harness`, { method: 'POST' })).json()).gen;
+    await fetch(`${DEV_URL}/dstate/${CH6}/${tornGen}/chunk/0`, { method: 'POST', body: new Uint8Array([1, 2, 3]).buffer });
+    const listDstate = async () => await (await fetch(`${DEV_URL}/dstate/${CH6}/list`)).json();
+    let lst = await listDstate();
+    let waited = 0;
+    while (!(lst.orphans || []).includes(tornGen) && waited < 150000) {
+      await new Promise(r => setTimeout(r, 10000)); waited += 10000;
+      lst = await listDstate();
+    }
+    ok(`torn gen reported as ORPHAN (chunks, no manifest; visible after ~${waited / 1000}s list lag)`, (lst.orphans || []).includes(tornGen));
+    ok('torn gen NOT in the readable gens list', !(lst.gens || []).includes(tornGen));
+    await RW.putDeviceStateJournal(payload('dstate-after-orphan', 4), null, { gcGraceMs: 0 });
+    // Deletion visibility: the chunk GET is the hard proof (poll briefly for propagation)
+    let chunkStatus = (await fetch(`${DEV_URL}/dstate/${CH6}/${tornGen}/chunk/0`)).status;
+    waited = 0;
+    while (chunkStatus !== 404 && waited < 60000) {
+      await new Promise(r => setTimeout(r, 10000)); waited += 10000;
+      chunkStatus = (await fetch(`${DEV_URL}/dstate/${CH6}/${tornGen}/chunk/0`)).status;
+    }
+    ok('orphan chunk deleted by the push GC pass (GET 404)', chunkStatus === 404);
+
+    // v7.5.1 - Teardown (hygiene): revoke the per-run fresh channel so harness runs stop
+    // littering the dev namespace (the 2026-09-01 inventory found ~5 abandoned run-channels'
+    // letters/gens). Revoke wipes every key for the channel; the tiny blocklist/proof pair it
+    // leaves is the acceptable receipt. The STABLE channel (CH) is reused across runs — never
+    // revoke it (revocation blocklists the id permanently).
+    const revoke = await fetch(`${DEV_URL}/revoke/${CH6}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ proof: 'a'.repeat(64) })
+    });
+    ok('teardown: per-run channel revoked and wiped', revoke.ok);
   }
 
   console.log(`\n=== ${pass} passed, ${fail} failed ===`);

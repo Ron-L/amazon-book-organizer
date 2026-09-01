@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [7.5.1] - 2026-09-01
+
+### Fixed: a cloud-storage leak
+- **Interrupted syncs no longer leave permanent debris in the cloud.** When a sync upload is cut off mid-flight (closing the tab right after leaving it, a tab suspender kicking in), the half-uploaded copy was invisible to the app — by design, no corruption — but also invisible to the cleanup that runs after every sync, so multi-megabyte fragments accumulated forever. Storage had ballooned from ~54 MB to ~678 MB. The cleanup now detects and removes these fragments once they're safely past the in-flight window; the existing backlog clears itself over the next few syncs.
+- The test suite also now cleans up its own throwaway test channels instead of abandoning them (a second, smaller contributor to the pile).
+
 ## [7.5.0] - 2026-08-29
 
 ### Smarter update checks, leaner cloud usage
