@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.22";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.23";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -5866,6 +5866,22 @@
                 const mergedBooks = await saveBooksToIndexedDB(processedBooks, !isBackupRestore);
                 const newBookIds = mergedBooks.filter(b => !existingIds.has(b.id) && !b.isDeleted).map(b => b.id);
                 setBooks(mergedBooks);
+
+                // v7.6.0-alpha.23 - Referential-liveness purge at the import boundary (Ron-ratified): the
+                // fundamental invalidator of an undo entry is a referenced entity ceasing to exist — not
+                // the op type. Books removed by this merge (tombstones absorbed from other devices)
+                // invalidate any history entry naming them; same shape-blind matcher as the Empty-Trash
+                // purge (alpha.21). Backup restores skip this — alpha.22 blanks their whole history.
+                if (!isBackupRestore) {
+                    const mergedIdSet = new Set(mergedBooks.map(b => b.id));
+                    const removedIds = [...existingIds].filter(id => !mergedIdSet.has(id));
+                    if (removedIds.length > 0) {
+                        const mentionsRemoved = (a) => { const s = JSON.stringify(a); return removedIds.some(id => s.includes(id)); };
+                        setUndoStack(prev => prev.filter(a => !mentionsRemoved(a)));
+                        setRedoStack(prev => prev.filter(a => !mentionsRemoved(a)));
+                        console.log(`🧹 Purged undo history referencing ${removedIds.length} import-removed book(s)`);
+                    }
+                }
 
                 // v7.6.0-alpha.19 - The relay push MOVED to after the org-restore section (it used to fire
                 // here — before the org was even applied — with the closure's PRE-restore folders and a
