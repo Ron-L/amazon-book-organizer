@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.1'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.7.2-alpha.1'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -1517,6 +1517,15 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
         try { localStorage.setItem('rw_mobile_shelves_collapsed', JSON.stringify(next)); } catch (e) {}
         return next;
     });
+    // v1.7.2-alpha.1 - Section-wide shelf collapse (desktop's ⊟/⊞ concept): one tap turns a whole
+    // section into a names-only list — scanning 40 folder names stops meaning paging through ten
+    // screens of cover rows (Ron; the drawer also does names-only, but Murphy says 10% won't find it).
+    const setAllShelves = (ids, collapse) => setCollapsedShelves(prev => {
+        const next = { ...prev };
+        ids.forEach(id => { next[id] = collapse; });
+        try { localStorage.setItem('rw_mobile_shelves_collapsed', JSON.stringify(next)); } catch (e) {}
+        return next;
+    });
 
     const filteredBooks = useMemo(() => {
         return filterBooks(books, { showDealsOnly, showHidden });
@@ -1770,6 +1779,22 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
                         <span style={{ fontSize: '11px', width: '10px' }}>{isCollapsed ? '▶' : '▼'}</span>
                         <span style={{ fontSize: '15px' }}>{SECTION_ICON[group.section]}</span>
                         <span>{label}</span>
+                        {/* v1.7.2-alpha.1 - ⊟/⊞: collapse/expand every shelf in this section (names-only browsing) */}
+                        {!isCollapsed && (group.section === 'folder' || group.section === 'booklist') && (() => {
+                            const ids = group.shelves.map(s => s.folderId).filter(Boolean);
+                            if (!ids.length) return null;
+                            const anyOpen = ids.some(id => !collapsedShelves[id]);
+                            return (
+                                <span
+                                    onClick={(e) => { e.stopPropagation(); setAllShelves(ids, anyOpen); }}
+                                    style={{ marginLeft: 'auto', padding: '2px 8px', fontSize: '15px', color: 'var(--text-muted, #94a3b8)', touchAction: 'manipulation' }}
+                                    role="button"
+                                    aria-label={anyOpen ? 'Collapse all shelves — names only' : 'Expand all shelves'}
+                                    title={anyOpen ? 'Collapse all — names only' : 'Expand all'}>
+                                    {anyOpen ? '⊟' : '⊞'}
+                                </span>
+                            );
+                        })()}
                     </div>
                 )}
                 {!isCollapsed && group.shelves.map((shelf, si) => (
