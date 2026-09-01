@@ -404,13 +404,22 @@
     // slow readers mid-assembly. Best-effort; TTL is the ultimate backstop for dstate.
     try {
       const graceMs = (opts && opts.gcGraceMs != null) ? opts.gcGraceMs : GC_GRACE_MS;
-      const listed = (await (await relayFetch(`/dstate/${_channelId}/list`)).json()).gens;
-      const gens = Array.from(new Set([gen, ...listed]))
+      const listedJson = await (await relayFetch(`/dstate/${_channelId}/list`)).json();
+      const gens = Array.from(new Set([gen, ...listedJson.gens]))
         .sort((a, b) => idTimestamp(b) - idTimestamp(a));
       for (const old of gens.slice(KEEP_GENS)) {
         if (old === gen) continue;
         if (Date.now() - idTimestamp(old) < graceMs) continue;
         try { await relayFetch(`/dstate/${_channelId}/${old}`, { method: 'DELETE' }); } catch { /* pointed or racing */ }
+      }
+      // v7.5.1 - Orphan sweep: torn pushes (tab killed between chunk and manifest) leave
+      // manifest-less chunks that no reader sees and keep-2 never listed — they leaked
+      // forever. The worker now reports them; reap past-grace ones (grace covers a push
+      // legitimately in flight right now).
+      for (const orphan of (listedJson.orphans || [])) {
+        if (orphan === gen) continue;
+        if (Date.now() - idTimestamp(orphan) < graceMs) continue;
+        try { await relayFetch(`/dstate/${_channelId}/${orphan}`, { method: 'DELETE' }); } catch { /* racing */ }
       }
     } catch { /* GC is best-effort */ }
 
@@ -782,13 +791,21 @@
       // Union the just-committed gen into the candidate set: KV list may not show it yet
       // (eventual consistency), and it must count as one of the keep-2 or a sweep right
       // after commit keeps 2 listed gens PLUS this one.
-      const listed = (await (await relayFetch(`/gen/${_channelId}/list`)).json()).gens;
-      const gens = Array.from(new Set([gen, ...listed]))
+      const listedJson = await (await relayFetch(`/gen/${_channelId}/list`)).json();
+      const gens = Array.from(new Set([gen, ...listedJson.gens]))
         .sort((a, b) => idTimestamp(b) - idTimestamp(a));
       for (const old of gens.slice(KEEP_GENS)) {
         if (old === gen) continue;
         if (Date.now() - idTimestamp(old) < graceMs) continue;
         try { await relayFetch(`/gen/${_channelId}/${old}`, { method: 'DELETE' }); } catch { /* pointed or racing */ }
+      }
+      // v7.5.1 - Orphan sweep (see the dstate GC twin): reap past-grace manifest-less
+      // generations. Canonical gens have NO TTL, so without this a torn merge's chunks
+      // were permanent.
+      for (const orphan of (listedJson.orphans || [])) {
+        if (orphan === gen) continue;
+        if (Date.now() - idTimestamp(orphan) < graceMs) continue;
+        try { await relayFetch(`/gen/${_channelId}/${orphan}`, { method: 'DELETE' }); } catch { /* racing */ }
       }
     } catch { /* GC is best-effort */ }
 

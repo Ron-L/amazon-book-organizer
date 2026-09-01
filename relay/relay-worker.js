@@ -573,18 +573,31 @@ async function handleGenList(env, store, channelId) {
   if (await isBlocked(env, channelId)) return jsonResponse({ error: 'Channel revoked' }, 403);
 
   const prefix = `relay:${channelId}:${store.seg}:`;
-  const gens = [];
+  const manifested = new Set();
+  const chunked = new Set();
   let cursor;
   for (let page = 0; page < LIST_PAGE_CAP; page++) {
     const res = await env.RELAY_KV.list({ prefix, cursor });
     for (const k of res.keys) {
       const rest = k.name.slice(prefix.length); // "{gen}:manifest" or "{gen}:chunk:{i}"
-      if (rest.endsWith(':manifest')) gens.push(rest.slice(0, -':manifest'.length));
+      if (rest.endsWith(':manifest')) {
+        manifested.add(rest.slice(0, -':manifest'.length));
+      } else {
+        const m = rest.match(/^(.+):chunk:[0-9]+$/);
+        if (m) chunked.add(m[1]);
+      }
     }
     if (res.list_complete) break;
     cursor = res.cursor;
   }
-  return jsonResponse({ ok: true, gens });
+  // v7.5.1 - Orphans: generations with chunks but NO manifest — a torn push (the tab died
+  // between chunk upload and manifest write; flush-on-blur invites exactly this). Invisible
+  // to readers by design, but until now also invisible to GC, so 17-20 MB chunks leaked
+  // forever (the 2026-09-01 storage mystery: ~15 manifest-less chunks on prod alone).
+  // The client reaps past-grace orphans via the ordinary DELETE endpoint.
+  const gens = [...manifested];
+  const orphans = [...chunked].filter(g => !manifested.has(g));
+  return jsonResponse({ ok: true, gens, orphans });
 }
 
 async function handleGetGenChunk(env, store, channelId, gen, chunkNum) {
@@ -627,12 +640,24 @@ async function handleDeleteGen(env, store, channelId, gen) {
   const manifestKey = `relay:${channelId}:${store.seg}:${gen}:manifest`;
   const manifestStr = await env.RELAY_KV.get(manifestKey);
   const deletes = [env.RELAY_KV.delete(manifestKey)];
-  let chunkCount = 1;
   if (manifestStr) {
+    let chunkCount = 1;
     try { chunkCount = JSON.parse(manifestStr).chunkCount || 1; } catch { /* best effort */ }
-  }
-  for (let i = 0; i < chunkCount; i++) {
-    deletes.push(env.RELAY_KV.delete(`relay:${channelId}:${store.seg}:${gen}:chunk:${i}`));
+    for (let i = 0; i < chunkCount; i++) {
+      deletes.push(env.RELAY_KV.delete(`relay:${channelId}:${store.seg}:${gen}:chunk:${i}`));
+    }
+  } else {
+    // v7.5.1 - No manifest = torn/orphaned generation. The chunk count is unknowable without
+    // a manifest, so enumerate the chunk keys by prefix and delete what actually exists
+    // (the old chunkCount=1 guess left chunk:1+ of multi-chunk orphans behind forever).
+    const prefix = `relay:${channelId}:${store.seg}:${gen}:chunk:`;
+    let cursor;
+    for (let page = 0; page < LIST_PAGE_CAP; page++) {
+      const res = await env.RELAY_KV.list({ prefix, cursor });
+      for (const k of res.keys) deletes.push(env.RELAY_KV.delete(k.name));
+      if (res.list_complete) break;
+      cursor = res.cursor;
+    }
   }
   await Promise.all(deletes);
   return jsonResponse({ ok: true, gen, deleted: deletes.length });
