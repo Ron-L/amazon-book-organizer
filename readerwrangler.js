@@ -8,7 +8,7 @@
         // Clear emergency reset timer — app code loaded successfully
         if (window._appMountTimer) { clearTimeout(window._appMountTimer); window._appMountTimer = null; }
 
-        const ORGANIZER_VERSION = "7.6.0-alpha.17";  // Build version for this file
+        const ORGANIZER_VERSION = "7.6.0-alpha.18";  // Build version for this file
 
         // v6.19.0 - Dev environments talk to the DEV relay worker (isolated KV namespace), so
         // local/dev testing can never touch production relay data. Mirrors the nav-hub's rule,
@@ -13602,7 +13602,8 @@
                                                             className="text-xs px-1 hover:bg-gray-200 rounded text-blue-600 font-medium"
                                                             title="Reverse the direction"
                                                             aria-label="Reverse folder sort direction">
-                                                            {folderListSort.direction === 'asc' ? '↑' : '↓'}</button>
+                                                            {/* v7.6.0-alpha.18 - Solid triangles matching the right pane (the thin ↑/↓ were hard to tell apart) */}
+                                                            {folderListSort.direction === 'asc' ? '▲' : '▼'}</button>
                                                     )}
                                                 </span>
                                                 {folderSortMenuOpen && (
