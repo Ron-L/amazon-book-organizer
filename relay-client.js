@@ -440,6 +440,20 @@
     return putDeviceStateJournal(jsonString, onProgress);
   }
 
+  /**
+   * v7.6.0 - Freshness probe (mobile's "newer library available" nudge): ONE KV read of the
+   * device-state pointer. Returns the pointed generation id — its prefix embeds the commit
+   * time (see idTimestamp) — or null (no pointer / not configured / fetch failed).
+   */
+  async function getDeviceStatePointerGen() {
+    if (!isConfigured()) return null;
+    try {
+      const res = await relayFetch(`/dstate-pointer/${_channelId}`);
+      if (!res.ok) return null;
+      return (await res.json()).gen || null;
+    } catch { return null; }
+  }
+
   /** Legacy single-key writer — kept ONLY as a harness/test helper (exercises the
    *  dual-reader's fallback path); no production caller since v7.5.0. */
   async function putDeviceStateLegacy(jsonString) {
@@ -1189,6 +1203,8 @@
     download: download,
     cleanup: cleanup,
     getDeviceState: getDeviceState,
+    getDeviceStatePointerGen: getDeviceStatePointerGen, // v7.6.0 - mobile freshness nudge
+    genTimestamp: idTimestamp, // v7.6.0 - commit time embedded in a minted id
     putDeviceState: putDeviceState,
     putDeviceStateJournal: putDeviceStateJournal,
     putDeviceStateLegacy: putDeviceStateLegacy,

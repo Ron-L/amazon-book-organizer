@@ -1,6 +1,6 @@
 // mobile.js — ReaderWrangler Mobile Viewer
 // MOBILE_VERSION tracks mobile-specific iterations
-const MOBILE_VERSION = '1.7.0-alpha.14'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
+const MOBILE_VERSION = '1.7.0-alpha.24'; // suffix mirrors ORGANIZER_VERSION's -alpha.N in any alpha commit touching this file (Ron, 2026-08-30: invisible changes + no build marker = guaranteed mystery)
 console.log(`✅ Mobile viewer ${MOBILE_VERSION} | APP_VERSION: ${APP_VERSION}`);
 
 // v1.7.0 - Which server is this copy talking to? Derived from the page's own address, so an
@@ -879,7 +879,7 @@ function FolderDrawer({ folders, books, pinnedTagFolders, tagRegistry, bookLists
 
 // --- App Menu ---
 
-function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApplyTheme, onToggleViewMode, onToggleDeals, onToggleHidden, onDesktopMode, onUnpair, onPair, onReset, relayCreds, onClose }) {
+function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApplyTheme, onToggleViewMode, onToggleDeals, onToggleHidden, onDesktopMode, onUnpair, onPair, onReset, relayCreds, libraryAsOf, onClose }) {
     const themeLabels = { auto: 'Auto', light: 'Light', dark: 'Dark' };
     const nextTheme = { auto: 'light', light: 'dark', dark: 'auto' };
     const [showCreds, setShowCreds] = useState(false);
@@ -1034,6 +1034,7 @@ function AppMenu({ themePreference, viewMode, showDealsOnly, showHidden, onApply
                     <p><a href="changelog.html" style={{ color: 'var(--text-link, #2563eb)', textDecoration: 'none' }}>App v{APP_VERSION}</a></p>
                     <p>Mobile v{MOBILE_VERSION}</p>
                     <p>Server: {SERVER_ENV.label}</p>
+                    {libraryAsOf && <p>Library as of {new Date(libraryAsOf).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>}
                 </div>
             </div>
         </div>
@@ -1502,7 +1503,7 @@ function Shelf({ title, count, sections, isCapped, isExpanded, coverUrlMap, blan
 
 // --- Dashboard component ---
 
-function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, folderListSort, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves, collapsed, toggleSection }) {
+function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, savedSearches, showDealsOnly, showHidden, folderListSort, libraryAsOf, coverUrlMap, blankImageBooks, setBlankImageBooks, onTapBook, onTapFolderTitle, onTapSeries, expandedShelves, setExpandedShelves, collapsed, toggleSection }) {
     // v1.6.10 - per-shelf collapse on the Dashboard (folder shelves), Dashboard-local + persisted
     const [collapsedShelves, setCollapsedShelves] = useState(() => {
         try { return JSON.parse(localStorage.getItem('rw_mobile_shelves_collapsed')) || {}; } catch (e) { return {}; }
@@ -1794,6 +1795,12 @@ function Dashboard({ books, folders, pinnedTagFolders, tagRegistry, bookLists, s
     return (
         <div style={{ paddingTop: '12px', paddingBottom: '24px' }}>
             {rows}
+            {/* v1.7.0-alpha.24 - Staleness made legible (freshness nudge layer 1) */}
+            {libraryAsOf && (
+                <div style={{ textAlign: 'center', padding: '16px 0 4px', fontSize: '11px', color: 'var(--text-muted, #94a3b8)' }}>
+                    Library as of {new Date(libraryAsOf).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </div>
+            )}
         </div>
     );
 }
@@ -2456,6 +2463,13 @@ function MobileApp() {
     const [showDealsOnly, setShowDealsOnly] = useState(savedPrefs.showDealsOnly || false);
     const [showHidden, setShowHidden] = useState(savedPrefs.showHidden || false);
     const [folderListSort, setFolderListSort] = useState(null); // v1.7.0-alpha.13 - desktop folder-tree sort mode (order mirror)
+    // v1.7.0-alpha.24 - Freshness nudge state (FOLDER... see TODO 'mobile freshness nudge'):
+    // libraryAsOf = the cached payload's source stamp (staleness made legible);
+    // newerAvailable = pointer gen newer than the cache → banner; dismissible per-gen.
+    const [libraryAsOf, setLibraryAsOf] = useState(null);
+    const [newerAvailable, setNewerAvailable] = useState(null);
+    const dismissedGenRef = useRef(null);
+    const lastFreshCheckRef = useRef(0);
 
     const savePrefs = (updates) => {
         const current = JSON.parse(localStorage.getItem(MOBILE_PREFS_KEY) || '{}');
@@ -2549,6 +2563,7 @@ function MobileApp() {
         let fls = org.folderListSort || null;
         if (!fls) { try { fls = JSON.parse(localStorage.getItem(EXPLORER_KEY) || '{}').folderListSort || null; } catch (e) {} }
         setFolderListSort(fls);
+        setLibraryAsOf(orgState.savedAt || null); // v1.7.0-alpha.24 - the cache's source stamp
 
         if (loadedBooks.length > 0) {
             const urlMap = await buildCoverUrlMap(loadedBooks);
@@ -2932,8 +2947,52 @@ function MobileApp() {
 
     const hasBooks = books.length > 0;
 
+    // v1.7.0-alpha.24 - Freshness check: on load + every tab-return (60s dedupe), ONE KV read of
+    // the device-state pointer; the gen id's prefix is its commit time, compared against the
+    // cache's source stamp (same clock lineage as the guest guard — on a dev machine the local
+    // cache is always fresh, so the banner correctly never fires there).
+    useEffect(() => {
+        const check = async () => {
+            try {
+                const creds = JSON.parse(localStorage.getItem(RELAY_KEY) || 'null');
+                if (!creds || !creds.channelId || !window.RWRelay) return;
+                if (Date.now() - lastFreshCheckRef.current < 60000) return;
+                lastFreshCheckRef.current = Date.now();
+                window.RWRelay.initFromStorage();
+                const gen = await window.RWRelay.getDeviceStatePointerGen?.();
+                if (!gen) return;
+                const genTime = (window.RWRelay.genTimestamp?.(gen)) || 0;
+                const localStamp = (() => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}').savedAt || 0; } catch (e) { return 0; } })();
+                if (genTime > localStamp + 5000 && gen !== dismissedGenRef.current) {
+                    setNewerAvailable(gen);
+                } else if (genTime <= localStamp + 5000) {
+                    setNewerAvailable(null);
+                }
+            } catch (e) { /* freshness is best-effort */ }
+        };
+        const t = setTimeout(check, 3000); // after the initial load settles
+        const onVis = () => { if (document.visibilityState === 'visible') check(); };
+        document.addEventListener('visibilitychange', onVis);
+        return () => { clearTimeout(t); document.removeEventListener('visibilitychange', onVis); };
+    }, []);
+
     return (
         <div className="min-h-screen" style={{ background: 'var(--bg-page, #ffffff)', color: 'var(--text-primary, #1e293b)' }}>
+            {/* v1.7.0-alpha.24 - Freshness banner (mobile twin of desktop's 📡 strip) */}
+            {newerAvailable && (
+                <div onClick={() => location.reload()} style={{
+                    position: 'fixed', top: '48px', left: 0, right: 0, zIndex: 35,
+                    background: 'linear-gradient(135deg, #dbeafe, #ede9fe)',
+                    borderBottom: '1px solid var(--border-default, #e2e8f0)',
+                    padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    fontSize: '13px', cursor: 'pointer', touchAction: 'manipulation'
+                }}>
+                    <span style={{ color: '#1e293b' }}>📡 Newer library available — tap to refresh</span>
+                    <button onClick={(e) => { e.stopPropagation(); dismissedGenRef.current = newerAvailable; setNewerAvailable(null); }}
+                        style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '16px', cursor: 'pointer', padding: '0 4px', touchAction: 'manipulation' }}
+                        aria-label="Dismiss">✕</button>
+                </div>
+            )}
             {/* Header */}
             <Header
                 currentNav={currentNav} navStack={navStack} folders={folders} books={books} tagRegistry={tagRegistry} bookLists={bookLists} savedSearches={savedSearches}
@@ -2987,6 +3046,7 @@ function MobileApp() {
                     onPair={() => setPairingScreen('prompt')}
                     onReset={handleReset}
                     relayCreds={(() => { try { return JSON.parse(localStorage.getItem(RELAY_KEY)); } catch { return null; } })()}
+                    libraryAsOf={libraryAsOf}
                     onClose={closeOverlay}
                 />
             )}
@@ -3053,7 +3113,7 @@ function MobileApp() {
                     <Dashboard
                         collapsed={drawerCollapsed} toggleSection={toggleSection}
                         books={books} folders={folders} pinnedTagFolders={pinnedTagFolders} tagRegistry={tagRegistry} bookLists={bookLists} savedSearches={savedSearches}
-                        showDealsOnly={showDealsOnly} showHidden={showHidden} folderListSort={folderListSort}
+                        showDealsOnly={showDealsOnly} showHidden={showHidden} folderListSort={folderListSort} libraryAsOf={libraryAsOf}
                         coverUrlMap={coverUrlMap} blankImageBooks={blankImageBooks}
                         setBlankImageBooks={setBlankImageBooks}
                         onTapBook={(bookId) => navigateTo('detail', { bookId })}
